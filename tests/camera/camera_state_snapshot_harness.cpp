@@ -28,6 +28,10 @@ int main()
         EvidenceProvenance::NativeNumericObservation,
         EvidenceProvenance::NativeNumericObservation,
         EvidenceProvenance::ModDerivedState, false };
+    input.evidence.retainedGameplayFov = 90.6557f;
+    input.evidence.retainedGameplayFovValid = true;
+    input.evidence.retainedGameplayFovProvenance =
+        EvidenceProvenance::NativeNumericObservation;
     input.source.gameplayWriter = { 0x1000, true };
     input.generation = { 1, true, 1, true };
     const auto gameplay = BuildCameraStateSnapshot(input);
@@ -35,6 +39,12 @@ int main()
         "gameplay_dialogue_inactive");
     pass &= Check(gameplay.evidence.configuredGameplayFovKnown == false,
         "configured_fov_unknown");
+    pass &= Check(gameplay.evidence.retainedGameplayFovValid &&
+        std::fabs(gameplay.evidence.retainedGameplayFov - 90.6557f) < 0.001f,
+        "retained_neutral_gameplay_fov");
+    pass &= Check(std::fabs(gameplay.evidence.nativeWriterFov - 90.0f) < 0.001f &&
+        std::fabs(gameplay.evidence.transformedFov - 126.87f) < 0.001f,
+        "coherent_native_horplus_pair");
 
     input.dialogue.state = DialogueState::Candidate;
     input.dialogue.provenance = EvidenceProvenance::ClassifierHypothesis;
@@ -64,7 +74,7 @@ int main()
         "cinematic_dialogue_preserved");
 
     input.zoom = { ZoomDirection::In, EvidenceProvenance::NativeEvent, 7, true,
-        0.25f, 0.75f, { 0x2000, true } };
+        0.25f, 0.75f, { 0x2000, true }, true };
     const auto zoom = BuildCameraStateSnapshot(input);
     pass &= Check(zoom.zoom.provenance == EvidenceProvenance::NativeEvent,
         "zoom_is_native_observation");
@@ -82,6 +92,19 @@ int main()
     pass &= Check(zoom.zoom.direction == ZoomDirection::In &&
         zoom.zoom.sequence == 7 && zoom.zoom.valid,
         "zoom_is_last_observation");
+    pass &= Check(zoom.zoom.active, "zoom_activity_is_explicit");
+
+    auto zoomEndpoint = gameplay;
+    zoomEndpoint.zoom = { ZoomDirection::Out, EvidenceProvenance::NativeEvent, 8, true,
+        0.75f, 0.25f, { 0x2000, true }, false };
+    zoomEndpoint.evidence.nativeWriterFov = 26.1406f;
+    zoomEndpoint.evidence.transformedFov = 49.813f;
+    pass &= Check(zoomEndpoint.evidence.retainedGameplayFovValid &&
+        std::fabs(zoomEndpoint.evidence.retainedGameplayFov - 90.6557f) < 0.001f,
+        "zoom_endpoint_does_not_replace_retained_gameplay_fov");
+    pass &= Check(std::fabs(zoomEndpoint.evidence.nativeWriterFov - 26.1406f) < 0.001f &&
+        std::fabs(zoomEndpoint.evidence.transformedFov - 49.813f) < 0.001f,
+        "zoom_endpoint_keeps_coherent_live_pair");
 
     input.dialogue.source = { 0x3000, true };
     const auto dialogueSource = BuildCameraStateSnapshot(input);
@@ -103,6 +126,11 @@ int main()
     pass &= Check(!SnapshotSemanticsChanged(unavailable, unavailable),
         "identical_semantics_are_quiet");
     pass &= Check(!SnapshotChanged(unavailable, unavailable), "identical_snapshot_is_quiet");
+
+    const auto diagnosticsOffState = BuildCameraStateSnapshot(input);
+    const auto diagnosticsOnState = BuildCameraStateSnapshot(input);
+    pass &= Check(!SnapshotChanged(diagnosticsOffState, diagnosticsOnState),
+        "diagnostics_do_not_change_camera_state");
 
     auto numericOnly = unavailable;
     numericOnly.evidence.nativeWriterFov += 1.0f;

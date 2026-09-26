@@ -1,4 +1,5 @@
 #include "runtime.hpp"
+#include "runtime_settings.hpp"
 #include "../config/feature_config.hpp"
 #include "../config/config_repository.hpp"
 #include "../config/config_template.hpp"
@@ -18,14 +19,13 @@
 #include "../dialogue/dialogue_fov.hpp"
 #include "../dialogue/dialogue_state.hpp"
 #include "../diagnostics/diagnostic_runtime.hpp"
+#include "../diagnostics/performance_telemetry.hpp"
 #include "../camera/fov_observation.hpp"
 #include "../camera/gameplay_baseline.hpp"
 #include "../camera/gameplay_aspect_restoration.hpp"
 #include "../camera/horplus.hpp"
 #include "../camera/presentation_state.hpp"
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
 #include "../camera/camera_state_snapshot.hpp"
-#endif
 #include "../platform/win32/memory.hpp"
 #include "../platform/win32/sha256.hpp"
 #include "../platform/win32/viewport.hpp"
@@ -43,6 +43,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -54,6 +55,10 @@
 #include <vector>
 
 #pragma comment(lib, "bcrypt.lib")
+
+#ifdef OVERLAY_COMBINED
+extern "C" void StartOverlayDiscovery(HMODULE module);
+#endif
 
 #if defined(POST_EXIT_RAW_TRACE_DIAGNOSTIC) || \
     defined(POST_EXIT_INTERPOLATED_FOV_PRODUCER_TRACE) || \
@@ -68,6 +73,10 @@
 
 namespace
 {
+    plugin::RuntimeSettingsApi g_runtimeSettings;
+    std::mutex g_notificationMutex;
+    std::deque<plugin::OverlayNotification> g_pendingNotifications;
+    std::uint64_t g_nextNotificationId{};
     using plugin::FeatureStatus;
     using plugin::FeatureStatusName;
     using config::CinematicAspectPolicy;
@@ -97,8 +106,6 @@ namespace
     constexpr std::uintptr_t kAspectOffset = 0x254;
     constexpr std::uintptr_t kFlagsOffset = 0x259;
     constexpr float kWideAspect = 32.0f / 9.0f;
-    // Canonical PC 21:9 framing used by the validated 3440x1440 profile.
-    constexpr float kCinemaAspect = 3440.0f / 1440.0f;
     constexpr float kNativeAspect = 16.0f / 9.0f;
     constexpr std::uint8_t kCinematicStorePrefix[] = { 0xC7, 0x80, 0x54, 0x02, 0x00, 0x00 };
     constexpr std::uint8_t kCinematicOriginalImmediate[] = { 0x39, 0x8E, 0xE3, 0x3F };
@@ -126,7 +133,15 @@ namespace
         hooks::HookSet hooks;
         std::shared_ptr<spdlog::logger> logger;
         config::FeatureConfig config{};
-        std::atomic<bool> gameplayAvailable{false};
+        std::mutex hotkeyConfigMutex;
+        std::atomic<bool> hotkeyRebindCaptureActive{};
+        std::atomic<int> hotkeyRebindConsumedKey{};
+        std::atomic<bool> gameplayRecoveryObservationAvailable{false};
+        std::atomic<bool> runtimeInitializationComplete{false};
+        std::atomic<bool> runtimeGameplayEnabled{true};
+        std::atomic<bool> gameplayEnableApplyPending{};
+        std::atomic<bool> gameplayDisableRestorePending{};
+        std::atomic<bool> gameplayEnabledTransitionDeferralLogged{};
         std::atomic<config::GameplayMode> runtimeGameplayMode{
             config::GameplayMode::HorPlus};
         std::atomic<bool> gameplayModeTransitionPending{};
@@ -148,7 +163,14 @@ namespace
         std::atomic<bool> stopping{};
         std::atomic<config::DialogueZoomPolicy> runtimeDialoguePolicy{
             config::DialogueZoomPolicy::Native};
+        std::atomic<const localization::LocaleDescriptor*> runtimeOverlayLocale{
+            localization::CanonicalLocaleDescriptor()};
+        std::atomic<bool> runtimeOverlayLocaleAuto{true};
+        std::atomic<bool> runtimeOverlayAutoLocaleSynchronized{};
+        std::atomic<int> runtimeOverlayFontSize{config::OverlayFontSizeDefault};
         std::atomic<bool> cinematicLifecycleObservationAvailable{};
+        std::atomic<bool> cinematicAspectComponentAvailable{};
+        std::atomic<bool> dialogueBoundaryHookAvailable{};
         std::atomic<bool> dialogueNonNativeCapabilityAvailable{};
         std::filesystem::path configPath;
         std::atomic<ReplayState> state{ReplayState::WaitingForAutomaticUpdate};
@@ -158,6 +180,12 @@ namespace
         camera::CameraFovObservationStore fovObservationStore{};
         camera::GameplayBaselineStore gameplayBaselineStore{};
         camera::GameplayAspectRestorationStore gameplayAspectRestorationStore{};
+        std::mutex cameraStateMutex;
+        camera::CameraStateSnapshot cameraStateSnapshot{};
+        bool cameraStateSnapshotValid{};
+        float neutralGameplayFovCandidate{std::numeric_limits<float>::quiet_NaN()};
+        std::uint32_t neutralGameplayFovSamples{};
+        std::uintptr_t neutralGameplayFovCandidateSource{};
         std::atomic<bool> cinematicFovApplied{false};
         std::atomic<float> cinematicTransformedFov{std::numeric_limits<float>::quiet_NaN()};
         std::atomic<float> matchGameplayEnterNativeFov{std::numeric_limits<float>::quiet_NaN()};
@@ -201,29 +229,22 @@ namespace
         std::atomic<std::uint64_t> dialogueDiscoveryChanges{0};
         std::atomic<std::uint64_t> dialogueDiscoveryResetGeneration{0};
 #endif
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
         SafetyHookMid zoomInHook;
         SafetyHookMid zoomOutHook;
-#endif
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
         std::atomic<std::uint64_t> zoomInHits{0};
         std::atomic<std::uint64_t> zoomOutHits{0};
         std::atomic<std::uint64_t> zoomLoggedEdges{0};
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
         std::atomic<std::uint8_t> snapshotZoomDirection{};
         std::atomic<std::uint64_t> snapshotZoomSequence{};
         std::atomic<std::uintptr_t> snapshotZoomSource{};
         std::atomic<float> snapshotZoomPrimary{std::numeric_limits<float>::quiet_NaN()};
         std::atomic<float> snapshotZoomSecondary{std::numeric_limits<float>::quiet_NaN()};
-#endif
-#endif
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
+        std::atomic<bool> snapshotZoomActive{};
+        std::atomic<bool> snapshotZoomHold{};
         std::atomic<std::uint64_t> snapshotEventSequence{};
         std::atomic<std::uintptr_t> snapshotDialogueSource{};
         std::atomic<float> snapshotDialogueTarget{std::numeric_limits<float>::quiet_NaN()};
         std::atomic<bool> snapshotDialogueTargetValid{};
-#endif
-#ifdef HORPLUS_FOV_STATE_DIAGNOSTIC
         std::mutex horPlusFovTelemetryMutex;
         bool horPlusFovTelemetryValid{};
         bool horPlusGameplayCacheValid{};
@@ -237,7 +258,6 @@ namespace
         std::uint8_t horPlusTelemetryFlags{};
         config::GameplayMode horPlusTelemetryMode{config::GameplayMode::AspectRecalculation};
         std::uint8_t horPlusTelemetryOwner{};
-#endif
 #ifdef POST_EXIT_CAMERA_FOV_WRITE_OWNER_TRACE
         std::atomic<std::uint32_t> postExitWriteOwnerHitCount{0};
 #endif
@@ -277,7 +297,16 @@ namespace
     auto& g_hook = g_hooks.gameplay;
     auto& g_logger = g_runtime.logger;
     auto& g_config = g_runtime.config;
-    auto& g_gameplayAvailable = g_runtime.gameplayAvailable;
+    auto& g_hotkeyConfigMutex = g_runtime.hotkeyConfigMutex;
+    auto& g_hotkeyRebindCaptureActive = g_runtime.hotkeyRebindCaptureActive;
+    auto& g_hotkeyRebindConsumedKey = g_runtime.hotkeyRebindConsumedKey;
+    auto& g_gameplayRecoveryObservationAvailable =
+        g_runtime.gameplayRecoveryObservationAvailable;
+    auto& g_runtimeGameplayEnabled = g_runtime.runtimeGameplayEnabled;
+    auto& g_gameplayEnableApplyPending = g_runtime.gameplayEnableApplyPending;
+    auto& g_gameplayDisableRestorePending = g_runtime.gameplayDisableRestorePending;
+    auto& g_gameplayEnabledTransitionDeferralLogged =
+        g_runtime.gameplayEnabledTransitionDeferralLogged;
     auto& g_runtimeGameplayMode = g_runtime.runtimeGameplayMode;
     auto& g_gameplayModeTransitionPending = g_runtime.gameplayModeTransitionPending;
     auto& g_gameplayModeTransitionDeferralLogged = g_runtime.gameplayModeTransitionDeferralLogged;
@@ -292,21 +321,36 @@ namespace
     auto& g_cinematicHookGate = g_runtime.cinematicHookGate;
     auto& g_stopping = g_runtime.stopping;
     auto& g_runtimeDialoguePolicy = g_runtime.runtimeDialoguePolicy;
+    auto& g_runtimeOverlayLocale = g_runtime.runtimeOverlayLocale;
+    auto& g_runtimeOverlayLocaleAuto = g_runtime.runtimeOverlayLocaleAuto;
+    auto& g_runtimeOverlayAutoLocaleSynchronized =
+        g_runtime.runtimeOverlayAutoLocaleSynchronized;
+    auto& g_runtimeOverlayFontSize = g_runtime.runtimeOverlayFontSize;
     auto& g_cinematicLifecycleObservationAvailable =
         g_runtime.cinematicLifecycleObservationAvailable;
+    auto& g_cinematicAspectComponentAvailable =
+        g_runtime.cinematicAspectComponentAvailable;
+    auto& g_dialogueBoundaryHookAvailable =
+        g_runtime.dialogueBoundaryHookAvailable;
+    auto& g_runtimeInitializationComplete = g_runtime.runtimeInitializationComplete;
     auto& g_dialogueNonNativeCapabilityAvailable =
         g_runtime.dialogueNonNativeCapabilityAvailable;
-#ifdef HORPLUS_FOV_STATE_DIAGNOSTIC
     auto& g_horPlusFovTelemetryMutex = g_runtime.horPlusFovTelemetryMutex;
-#endif
     auto& g_configPath = g_runtime.configPath;
     auto& g_state = g_runtime.state;
     auto& g_lastCameraMode = g_runtime.lastCameraMode;
     auto& g_transitionTraceSequence = g_runtime.transitionTraceSequence;
     auto& g_coordinator = g_runtime.coordinator;
+    auto& g_coordinatorState = g_runtime.coordinator;
     auto& g_fovObservationStore = g_runtime.fovObservationStore;
     auto& g_gameplayBaselineStore = g_runtime.gameplayBaselineStore;
     auto& g_gameplayAspectRestorationStore = g_runtime.gameplayAspectRestorationStore;
+    auto& g_cameraStateMutex = g_runtime.cameraStateMutex;
+    auto& g_cameraStateSnapshot = g_runtime.cameraStateSnapshot;
+    auto& g_cameraStateSnapshotValid = g_runtime.cameraStateSnapshotValid;
+    auto& g_neutralGameplayFovCandidate = g_runtime.neutralGameplayFovCandidate;
+    auto& g_neutralGameplayFovSamples = g_runtime.neutralGameplayFovSamples;
+    auto& g_neutralGameplayFovCandidateSource = g_runtime.neutralGameplayFovCandidateSource;
     auto& g_cinematicFovApplied = g_runtime.cinematicFovApplied;
     auto& g_cinematicTransformedFov = g_runtime.cinematicTransformedFov;
 #ifdef HORPLUS_CINEMATIC_WRITER_TRACE_DIAGNOSTIC
@@ -356,13 +400,13 @@ namespace
     auto& g_dialogueDiscoveryChanges = g_runtime.dialogueDiscoveryChanges;
     constexpr std::int64_t kDialogueDiscoveryDurationNs = 10'000'000'000LL;
 #endif
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
     auto& g_zoomInHook = g_runtime.zoomInHook;
     auto& g_zoomOutHook = g_runtime.zoomOutHook;
     auto& g_zoomInHits = g_runtime.zoomInHits;
     auto& g_zoomOutHits = g_runtime.zoomOutHits;
     auto& g_zoomLoggedEdges = g_runtime.zoomLoggedEdges;
-#endif
+    auto& g_snapshotZoomActive = g_runtime.snapshotZoomActive;
+    auto& g_snapshotZoomHold = g_runtime.snapshotZoomHold;
 #ifdef POST_EXIT_CAMERA_FOV_WRITE_OWNER_TRACE
     auto& g_postExitWriteOwnerHitCount = g_runtime.postExitWriteOwnerHitCount;
 #endif
@@ -459,12 +503,10 @@ namespace
         g_dialogueExitIncomingStart = std::numeric_limits<float>::quiet_NaN();
         g_dialogueCandidate.Reset();
         g_dialogueRecoveryRearm.Reset();
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
         g_runtime.snapshotDialogueSource.store(0, std::memory_order_release);
         g_runtime.snapshotDialogueTarget.store(std::numeric_limits<float>::quiet_NaN(),
             std::memory_order_release);
         g_runtime.snapshotDialogueTargetValid.store(false, std::memory_order_release);
-#endif
     }
 
     void ResetPostCinematicDialogueExclusion(const char* reason)
@@ -497,6 +539,9 @@ namespace
     void ResetAllRuntimeResources()
     {
         g_stopping.store(true, std::memory_order_release);
+        g_runtimeInitializationComplete.store(false, std::memory_order_release);
+        g_hotkeyRebindCaptureActive.store(false, std::memory_order_release);
+        g_hotkeyRebindConsumedKey.store(0, std::memory_order_release);
         g_gameplayHookGate.store(false, std::memory_order_release);
         g_cinematicHookGate.store(false, std::memory_order_release);
         if (!StopWorkers(true)) {
@@ -519,21 +564,22 @@ namespace
 #ifdef POST_EXIT_FOV_STATE_CONSUMER_TRACE
         g_postExitConsumerHook.reset();
 #endif
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
         g_zoomInHook.reset();
         g_zoomOutHook.reset();
-        if (g_zoomInHits.load(std::memory_order_relaxed) != 0 ||
-            g_zoomOutHits.load(std::memory_order_relaxed) != 0)
+        if (diagnostics::Enabled() && (g_zoomInHits.load(std::memory_order_relaxed) != 0 ||
+            g_zoomOutHits.load(std::memory_order_relaxed) != 0))
             Log("ZOOM_TRANSITION SUMMARY inHits=", g_zoomInHits.load(std::memory_order_relaxed),
                 " outHits=", g_zoomOutHits.load(std::memory_order_relaxed),
                 " loggedEdges=", g_zoomLoggedEdges.load(std::memory_order_relaxed), ".");
-#endif
         g_hook.reset();
         g_dialogueBoundaryHook.reset();
         g_cinematicExitHook.reset();
         g_cinematicEnterHook.reset();
         RestoreCinematicAspect();
-        g_gameplayAvailable.store(false, std::memory_order_release);
+        g_gameplayRecoveryObservationAvailable.store(false, std::memory_order_release);
+        g_cinematicLifecycleObservationAvailable.store(false, std::memory_order_release);
+        g_cinematicAspectComponentAvailable.store(false, std::memory_order_release);
+        g_dialogueBoundaryHookAvailable.store(false, std::memory_order_release);
         g_cinematicSelectionValid.store(false, std::memory_order_release);
     }
 #ifdef GAMEPLAY_ONE_SHOT_CINEMATIC_TRIGGER
@@ -614,6 +660,7 @@ namespace
     {
         try {
             if (!g_logger) return;
+            diagnostics::ScopedRuntimeLog measuredLog;
             std::ostringstream message;
             (message << ... << args);
             g_logger->info("{}", message.str());
@@ -739,7 +786,7 @@ namespace
         const auto coordinator = g_coordinator.load(std::memory_order_acquire);
         DialoguePhase dialoguePhase = DialoguePhase::Inactive;
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             dialoguePhase = g_dialoguePhase;
         }
         Log("Gameplay FOV source change: event=", CoordinatorStateName(coordinator),
@@ -795,7 +842,7 @@ namespace
         const auto elapsedUs = startNs > 0 ? (nowNs - startNs) / 1000 : -1;
         DialoguePhase dialoguePhase = DialoguePhase::Inactive;
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             dialoguePhase = g_dialoguePhase;
         }
 
@@ -1149,12 +1196,12 @@ namespace
     float ResolveCinematicAspect()
     {
         return cinematics::ResolveAspect(g_activeCinematicAspectPolicy.load(std::memory_order_acquire),
-            kNativeAspect, kCinemaAspect, kWideAspect, ResolveAutoAspect);
+            kNativeAspect, cinematics::Forced21x9Aspect, kWideAspect, ResolveAutoAspect);
     }
 
     float ResolveCinematicAspect(config::CinematicAspectPolicy policy)
     {
-        return cinematics::ResolveAspect(policy, kNativeAspect, kCinemaAspect,
+        return cinematics::ResolveAspect(policy, kNativeAspect, cinematics::Forced21x9Aspect,
             kWideAspect, ResolveAutoAspect);
     }
 
@@ -1174,7 +1221,7 @@ namespace
         if (!g_gameplayModeTransitionPending.load(std::memory_order_acquire) ||
             g_gameplayModeTransitionTarget.load(std::memory_order_acquire) !=
                 config::GameplayMode::HorPlus ||
-            !g_config.gameplayEnabled ||
+            !g_runtimeGameplayEnabled.load(std::memory_order_acquire) ||
             g_coordinator.load(std::memory_order_acquire) != CoordinatorState::Gameplay)
             return false;
 
@@ -1184,7 +1231,8 @@ namespace
         if (!source || !SafeRead(source + kAspectOffset, currentAspect) ||
             !SafeRead(source + kFlagsOffset, flags)) {
             if (!g_gameplayModeTransitionDeferralLogged.exchange(true, std::memory_order_acq_rel))
-                Log("Gameplay mode transition deferred: reason=unreadable_camera_state.");
+                Log("Gameplay mode transition deferred: reason=unreadable_camera_state",
+                    " retryBoundary=GameplayCameraWriter.");
             if (diagnostics::Enabled())
                 Log("RESTORATION_CONSUMER decision=DEFER reason=unreadable_camera_state.");
             return false;
@@ -1194,7 +1242,7 @@ namespace
         const camera::GameplayAspectRestorationDecisionInput decisionInput{
             true,
             true,
-            g_config.gameplayEnabled,
+            g_runtimeGameplayEnabled.load(std::memory_order_acquire),
             g_coordinator.load(std::memory_order_acquire) == CoordinatorState::Gameplay,
             true,
             IsValidAspect(currentAspect),
@@ -1220,13 +1268,21 @@ namespace
             g_gameplayModeTransitionDeferralLogged.store(false, std::memory_order_release);
             Log("Gameplay mode transition applied: AspectRecalculation -> HorPlus; "
                 "actual runtime aspect already available aspect=", currentAspect,
+                " retryBoundary=GameplayCameraWriter",
                 " flags=0x", std::hex, static_cast<unsigned>(flags), std::dec, ".");
             return false;
         }
 
         if (decision.decision != camera::GameplayAspectRestorationDecision::Restore) {
-            if (!g_gameplayModeTransitionDeferralLogged.exchange(true, std::memory_order_acq_rel))
-                Log("Gameplay mode transition deferred: reason=actual_runtime_aspect_not_established.");
+            if (!g_gameplayModeTransitionDeferralLogged.exchange(true, std::memory_order_acq_rel)) {
+                Log("Gameplay mode transition deferred: reason=actual_runtime_aspect_not_established",
+                    " currentAspect=", currentAspect,
+                    " restorationAspect=", restoration.aspect,
+                    " restorationValid=", restoration.valid ? "true" : "false",
+                    " restorationSource=0x", std::hex, restoration.source.value, std::dec,
+                    " currentSource=0x", std::hex, source, std::dec,
+                    " retryBoundary=GameplayCameraWriter.");
+            }
             return false;
         }
         const float restorationAspect = decision.restorationAspect;
@@ -1237,14 +1293,143 @@ namespace
                 " writeSuccess=", writeSuccess ? "true" : "false", ".");
         if (!writeSuccess) {
             if (!g_gameplayModeTransitionDeferralLogged.exchange(true, std::memory_order_acq_rel))
-                Log("Gameplay mode transition deferred: reason=actual_aspect_restore_not_writable.");
+                Log("Gameplay mode transition deferred: reason=actual_aspect_restore_not_writable",
+                    " retryBoundary=GameplayCameraWriter.");
             return false;
         }
 
         g_gameplayModeTransitionPending.store(false, std::memory_order_release);
         g_gameplayModeTransitionDeferralLogged.store(false, std::memory_order_release);
         Log("Gameplay mode transition applied: AspectRecalculation -> HorPlus; restored aspect=",
-            restorationAspect, " flags=0x", std::hex, static_cast<unsigned>(flags), std::dec, ".");
+            restorationAspect, " flags=0x", std::hex, static_cast<unsigned>(flags), std::dec,
+            " retryBoundary=GameplayCameraWriter.");
+        return false;
+    }
+
+    bool ProcessGameplayEnabledTransition(SafetyHookContext& context)
+    {
+        const bool enabled = g_runtimeGameplayEnabled.load(std::memory_order_acquire);
+        const bool pending = enabled
+            ? g_gameplayEnableApplyPending.load(std::memory_order_acquire)
+            : g_gameplayDisableRestorePending.load(std::memory_order_acquire);
+        if (!pending) return false;
+
+        // Let the established HorPlus mode-transition consumer own recovery;
+        // it publishes the next writer observation before retrying the same
+        // pending request.
+        if (enabled && g_runtimeGameplayMode.load(std::memory_order_acquire) ==
+                config::GameplayMode::HorPlus &&
+            g_gameplayModeTransitionPending.load(std::memory_order_acquire))
+            return false;
+
+        const auto coordinator = g_coordinator.load(std::memory_order_acquire);
+        const auto selectedMode = g_runtimeGameplayMode.load(std::memory_order_acquire);
+        const auto replayState = g_state.load(std::memory_order_acquire);
+        const auto source = static_cast<std::uintptr_t>(context.rsi);
+        float currentAspect = 0.0f;
+        std::uint8_t flags = 0;
+        const bool cameraReadable = source &&
+            SafeRead(source + kAspectOffset, currentAspect) &&
+            SafeRead(source + kFlagsOffset, flags);
+        const bool currentAspectValid = cameraReadable && IsValidAspect(currentAspect);
+        const auto restoration = g_gameplayAspectRestorationStore.Read();
+        const bool currentUltrawide = currentAspectValid &&
+            gameplay::IsUltrawideAspect(currentAspect, kNativeAspect);
+        const bool restorationAspectValid = restoration.valid && IsValidAspect(restoration.aspect);
+        const bool restorationSourceMatches = restoration.source.valid &&
+            restoration.source.value == source;
+        const auto action = gameplay::ResolveGameplayEnabledTransition({
+            enabled,
+            selectedMode,
+            coordinator,
+            replayState,
+            cameraReadable,
+            currentAspect,
+            currentAspectValid && currentUltrawide && flags == 0x4,
+            restoration.aspect,
+            restorationSourceMatches,
+        });
+
+        if (action == gameplay::GameplayEnabledAction::Defer) {
+            if (!g_gameplayEnabledTransitionDeferralLogged.exchange(true,
+                    std::memory_order_acq_rel)) {
+                const char* reason = coordinator != CoordinatorState::Gameplay
+                    ? "coordinator_not_gameplay"
+                    : (!currentAspectValid ? "camera_aspect_unavailable"
+                        : (selectedMode == config::GameplayMode::AspectRecalculation
+                            ? "native_transition_not_ready"
+                            : "restoration_target_unavailable"));
+                Log("Gameplay.Enabled transition deferred: enabled=", enabled ? "true" : "false",
+                    " reason=", reason,
+                    " mode=", config::GameplayModeName(selectedMode),
+                    " coordinator=", CoordinatorStateName(coordinator),
+                    " replayState=", ReplayStateName(replayState),
+                    " cameraReadable=", cameraReadable ? "true" : "false",
+                    " aspect=", currentAspect,
+                    " restorationAspect=", restoration.aspect,
+                    " restorationValid=", restorationAspectValid ? "true" : "false",
+                    " restorationSourceMatches=", restorationSourceMatches ? "true" : "false",
+                    " retryBoundary=GameplayCameraWriter.");
+            }
+            return !enabled || coordinator == CoordinatorState::Gameplay;
+        }
+
+        if (action == gameplay::GameplayEnabledAction::RestoreNativeAspect) {
+            const bool writeSuccess = WriteAspectAndFlags(source, restoration.aspect, flags);
+            if (!writeSuccess) {
+                if (!g_gameplayEnabledTransitionDeferralLogged.exchange(true,
+                        std::memory_order_acq_rel)) {
+                    Log("Gameplay.Enabled transition failed: reason=native_aspect_restore_not_writable",
+                        " enabled=", enabled ? "true" : "false",
+                        " pending=true retryBoundary=GameplayCameraWriter.");
+                }
+                return true;
+            }
+
+            g_state.store(ReplayState::WaitingForAutomaticUpdate, std::memory_order_release);
+            g_lastAutoRestoreSource.store(0, std::memory_order_release);
+            UpdateGameplayAspectRestorationState(restoration.aspect, source);
+            g_gameplayEnabledTransitionDeferralLogged.store(false, std::memory_order_release);
+            if (!enabled) {
+                g_gameplayDisableRestorePending.store(false, std::memory_order_release);
+                Log("Gameplay.Enabled disable restoration applied: mode=",
+                    config::GameplayModeName(selectedMode), " restoredAspect=", restoration.aspect,
+                    " flags=0x", std::hex, static_cast<unsigned>(flags), std::dec,
+                    " boundary=GameplayCameraWriter.");
+                return true;
+            }
+
+            Log("Gameplay.Enabled re-enable restored prior AspectRecalculation state before applying mode=",
+                config::GameplayModeName(selectedMode), " aspect=", restoration.aspect,
+                " boundary=GameplayCameraWriter.");
+            return false;
+        }
+
+        if (!enabled) {
+            g_gameplayDisableRestorePending.store(false, std::memory_order_release);
+            if (replayState != ReplayState::WaitingForAutomaticUpdate)
+                g_state.store(ReplayState::WaitingForAutomaticUpdate, std::memory_order_release);
+            if (currentAspectValid)
+                UpdateGameplayAspectRestorationState(currentAspect, source);
+            g_gameplayEnabledTransitionDeferralLogged.store(false, std::memory_order_release);
+            Log("Gameplay.Enabled disable restoration complete: result=already_native",
+                " mode=", config::GameplayModeName(selectedMode),
+                " aspect=", currentAspect, " boundary=GameplayCameraWriter.");
+            return true;
+        }
+
+        if (action == gameplay::GameplayEnabledAction::ApplyHorPlus &&
+            replayState != ReplayState::WaitingForAutomaticUpdate && currentUltrawide)
+            g_state.store(ReplayState::WaitingForAutomaticUpdate, std::memory_order_release);
+
+        if (action == gameplay::GameplayEnabledAction::AlreadyApplied) {
+            g_gameplayEnableApplyPending.store(false, std::memory_order_release);
+            g_gameplayEnabledTransitionDeferralLogged.store(false, std::memory_order_release);
+            Log("Gameplay.Enabled re-enable applied: mode=AspectRecalculation",
+                " result=already_active boundary=GameplayCameraWriter.");
+            return false;
+        }
+
         return false;
     }
 
@@ -1262,11 +1447,22 @@ namespace
             std::dec, " fov=", fov, " aspect=", kNativeAspect,
             " flags=0x4 previousAspect=", previousAspect, " previousFlags=0x",
             std::hex, static_cast<unsigned>(previousFlags), std::dec, ".");
+        if (g_gameplayEnableApplyPending.load(std::memory_order_acquire) &&
+            g_runtimeGameplayEnabled.load(std::memory_order_acquire) &&
+            g_runtimeGameplayMode.load(std::memory_order_acquire) ==
+                config::GameplayMode::AspectRecalculation &&
+            g_coordinator.load(std::memory_order_acquire) == CoordinatorState::Gameplay) {
+            g_gameplayEnableApplyPending.store(false, std::memory_order_release);
+            g_gameplayEnabledTransitionDeferralLogged.store(false, std::memory_order_release);
+            Log("Gameplay.Enabled re-enable applied: mode=AspectRecalculation",
+                " result=native_transition_applied boundary=GameplayCameraWriter.");
+        }
         return true;
     }
 
     void ApplyCinematicAspectStore(SafetyHookContext& context)
     {
+        diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::CinematicAspectCallback);
         // Complete the replaced ten-byte store's control-flow adjustment
         // before any auxiliary processing can throw.
         context.rip += kCinematicStoreInstructionLength;
@@ -1279,20 +1475,27 @@ namespace
         }
         const auto policy = g_activeCinematicAspectPolicy.load(std::memory_order_acquire);
         const float autoViewportAspect = policy == CinematicAspectPolicy::Auto
-            ? ReadClientViewportAspect() : 0.0f;
+            ? (diagnostics::RecordRuntimeEvent(
+                diagnostics::RuntimeEvent::CinematicViewportQuery),
+                ReadClientViewportAspect()) : 0.0f;
         // For Auto, the native store may already have written 16:9 into the
         // object by the time this boundary is observed. The resolved Auto
         // value comes from the client/display viewport, not this camera field.
+        if (policy == CinematicAspectPolicy::Auto)
+            diagnostics::RecordRuntimeEvent(
+                diagnostics::RuntimeEvent::CinematicViewportQuery);
         const float resolvedAspect = ResolveCinematicAspect(policy);
         const auto application = cinematics::ApplyAspectStore(targetObject, resolvedAspect,
             kNativeAspect, kAspectOffset, IsWritable, IsValidAspect);
         if (application.writable) {
+            diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::CinematicAspectLog);
             Log("Cinematic aspect store: object=0x", std::hex, targetObject, std::dec,
                 " aspect=", application.aspect, " policy=", CinematicAspectPolicyName(policy),
                 " source=", policy == CinematicAspectPolicy::Auto
                     ? (IsValidAspect(autoViewportAspect) ? "client-display-viewport" : "native-fallback")
                     : "configured", ".");
         } else {
+            diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::CinematicAspectLog);
             Log("Cinematic aspect store refused: target object was not writable; native store skipped.");
         }
         // The hook replaces C7 80 [disp32] [imm32]. The original store has no
@@ -1532,7 +1735,7 @@ namespace
         const auto contextChange = gameplay::EvaluateGameplayContextChange(
             previousSource, previousFov, source, fov, kDialogueContextFovJump);
         if (contextChange.InvalidatesDialogue()) {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             if (g_dialoguePhase != DialoguePhase::Inactive) {
                 Log("Dialogue runtime invalidated by gameplay camera context change: sourceChanged=",
                     contextChange.sourceChanged, " previousSource=0x", std::hex, previousSource,
@@ -1641,7 +1844,7 @@ namespace
             // Cutscenes can rebuild the gameplay camera and restore the same broken
             // Auto state seen during startup. Arm the proven two-pass transition again.
             {
-                std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
                 ResetDialogueRuntimeState();
             }
 #ifdef COMBINED_GAMEPLAY_DIAGNOSTIC
@@ -1688,7 +1891,7 @@ namespace
 
         bool dialogueActive = false;
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             dialogueActive = g_dialoguePhase != DialoguePhase::Inactive;
         }
         if (g_coordinator.load(std::memory_order_acquire) != CoordinatorState::Gameplay) {
@@ -2080,13 +2283,14 @@ namespace
         g_matchGameplayPreEnterPairValid.store(false, std::memory_order_release);
         g_cinematicSelectionValid.store(false, std::memory_order_release);
         const auto exitTransition = gameplay::ResolveCinematicExitTransition(
-            g_gameplayAvailable.load(std::memory_order_acquire),
+            g_gameplayRecoveryObservationAvailable.load(std::memory_order_acquire) &&
+                g_runtimeGameplayEnabled.load(std::memory_order_acquire),
             g_runtimeGameplayMode.load(std::memory_order_acquire));
         g_coordinator.store(exitTransition.nextState, std::memory_order_release);
         if (exitTransition.armGameplayHandoff) {
             ArmAtomicExitHandoff();
         } else {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             ResetDialogueRuntimeState();
         }
         Log("Global cinematic EXIT: nativeTargetFov=", context.xmm0.f32[0],
@@ -2135,13 +2339,6 @@ namespace
             static_cast<void>(g_cinematicExitHook.disable());
             return false;
         }
-        g_cinematicHookGate.store(true, std::memory_order_release);
-        return true;
-    }
-
-    bool CommitCinematicObservationOnly()
-    {
-        if (!g_cinematicEnterHook.enable() || !g_cinematicExitHook.enable()) return false;
         g_cinematicHookGate.store(true, std::memory_order_release);
         return true;
     }
@@ -2292,6 +2489,7 @@ namespace
 
     void TraceDialogueBoundary(SafetyHookContext& context)
     {
+        diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::DialogueCameraSample);
 #ifdef DIALOGUE_DISCOVERY_DIAGNOSTIC
         TraceDialogueDiscovery(context);
 #endif
@@ -2300,7 +2498,7 @@ namespace
 #endif
         const float incoming = context.xmm6.f32[0];
         if (!std::isfinite(incoming) || incoming <= 1.0f || incoming >= 179.0f) {
-            std::lock_guard lock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex lock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             if (g_dialoguePhase == DialoguePhase::Candidate) {
                 Log("Dialogue candidate cancelled: reason=invalid-sample.");
                 ResetDialogueRuntimeState();
@@ -2311,8 +2509,7 @@ namespace
             return;
         }
 
-        std::lock_guard lock(g_dialogueMutex);
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
+        diagnostics::ScopedRuntimeMutex lock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
         const auto snapshotDialogueSource = static_cast<std::uintptr_t>(context.rsi);
         float snapshotDialogueTarget = std::numeric_limits<float>::quiet_NaN();
         const bool snapshotDialogueTargetReadable = snapshotDialogueSource != 0 &&
@@ -2324,7 +2521,6 @@ namespace
             std::memory_order_release);
         g_runtime.snapshotDialogueTargetValid.store(snapshotDialogueTargetReadable,
             std::memory_order_release);
-#endif
 #ifdef DIALOGUE_RECOVERY_ENDPOINT_DIAGNOSTIC
         const auto recoveryPhase = g_dialoguePhase;
         const auto stableSamples = g_dialogueRecoveryRearm.StableSamples();
@@ -2527,6 +2723,7 @@ namespace
             Log("Dialogue boundary hook setup failed. Native pass-through retained.");
             return false;
         }
+        g_dialogueBoundaryHookAvailable.store(true, std::memory_order_release);
         Log("Dialogue boundary hook installed: RVA=0x", std::hex,
             reinterpret_cast<std::uintptr_t>(hook) - reinterpret_cast<std::uintptr_t>(g_executable),
             std::dec, " policy=", DialogueZoomPolicyName(g_runtimeDialoguePolicy.load(std::memory_order_acquire)), ".");
@@ -2542,7 +2739,7 @@ namespace
         }
 
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+        diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             if (g_dialoguePhase != DialoguePhase::Inactive) {
                 ResetAtomicExitHandoff("dialogue-active");
                 return false;
@@ -2759,6 +2956,234 @@ namespace
 
     HorPlusGameplayApplyResult ApplyHorPlusGameplay(SafetyHookContext& context);
 
+    struct GameplayFovSourceTraceSnapshot
+    {
+        bool initialized{};
+        std::uintptr_t source{};
+        bool selectedFieldReadable{};
+        float selectedField{};
+        bool primaryFieldReadable{};
+        float primaryField{};
+        float writerInput{};
+        float horPlusResult{};
+        float aspect{};
+        std::uint8_t flags{};
+        CoordinatorState coordinator{CoordinatorState::Gameplay};
+        bool gameplayEnabled{};
+        config::GameplayMode gameplayMode{config::GameplayMode::HorPlus};
+    };
+
+    bool FovTraceValueChanged(float current, float previous, float threshold) noexcept
+    {
+        const bool currentFinite = std::isfinite(current);
+        const bool previousFinite = std::isfinite(previous);
+        return currentFinite != previousFinite ||
+            (currentFinite && previousFinite && std::fabs(current - previous) >= threshold);
+    }
+
+    void TraceGameplayFovSourceSample(const HorPlusGameplayApplyResult& result,
+        bool selectedFieldReadable, float selectedField,
+        bool primaryFieldReadable, float primaryField,
+        CoordinatorState coordinator, bool gameplayEnabled,
+        config::GameplayMode gameplayMode)
+    {
+        if (!diagnostics::Enabled()) return;
+        thread_local GameplayFovSourceTraceSnapshot previous{};
+        static std::atomic<std::uint64_t> nextTraceSequence{};
+
+        const bool selectedFieldValid = selectedFieldReadable &&
+            std::isfinite(selectedField) && selectedField > 1.0f && selectedField < 179.0f;
+        const bool primaryFieldValid = primaryFieldReadable &&
+            std::isfinite(primaryField) && primaryField > 1.0f && primaryField < 179.0f;
+        constexpr float candidateThreshold = 0.01f;
+        constexpr float cameraFovEventThreshold = 1.0f;
+        constexpr float aspectEventThreshold = 0.001f;
+
+        const bool event = !previous.initialized ||
+            previous.source != result.source ||
+            previous.selectedFieldReadable != selectedFieldReadable ||
+            FovTraceValueChanged(selectedField, previous.selectedField, candidateThreshold) ||
+            previous.primaryFieldReadable != primaryFieldReadable ||
+            FovTraceValueChanged(primaryField, previous.primaryField, cameraFovEventThreshold) ||
+            FovTraceValueChanged(result.inputFov, previous.writerInput, cameraFovEventThreshold) ||
+            FovTraceValueChanged(result.outputFov, previous.horPlusResult, cameraFovEventThreshold) ||
+            FovTraceValueChanged(result.aspect, previous.aspect, aspectEventThreshold) ||
+            result.flags != previous.flags || coordinator != previous.coordinator ||
+            gameplayEnabled != previous.gameplayEnabled || gameplayMode != previous.gameplayMode;
+        if (!event) return;
+
+        const auto sequence = nextTraceSequence.fetch_add(1, std::memory_order_relaxed) + 1;
+        const float unavailable = std::numeric_limits<float>::quiet_NaN();
+        Log("GAMEPLAY_FOV_SOURCE_TRACE seq=", sequence,
+            " writerSeq=", result.observationPublished
+                ? result.observation.publicationSequence : 0,
+            " threadId=", GetCurrentThreadId(),
+            " source=0x", std::hex, result.source, std::dec,
+            " coordinator=", CoordinatorStateName(coordinator),
+            " gameplayEnabled=", gameplayEnabled ? "true" : "false",
+            " gameplayMode=", config::GameplayModeName(gameplayMode),
+            " flags=0x", std::hex, static_cast<unsigned>(result.flags), std::dec,
+            " aspect=", result.aspect,
+            " selectedCandidate(+0x234)=", selectedFieldReadable ? selectedField : unavailable,
+            " selectedFieldReadable=", selectedFieldReadable ? "true" : "false",
+            " selectedFieldValid=", selectedFieldValid ? "true" : "false",
+            " primaryFov(+0x230)=", primaryFieldReadable ? primaryField : unavailable,
+            " primaryFieldValid=", primaryFieldValid ? "true" : "false",
+            " writerInput=", result.inputFov,
+            " horPlusResult=", result.outputFov,
+            " eligible=", result.eligible ? "true" : "false",
+            " applied=", result.applied ? "true" : "false",
+            " reason=", result.reason, ".");
+
+        previous = GameplayFovSourceTraceSnapshot{
+            true, result.source, selectedFieldReadable, selectedField,
+            primaryFieldReadable, primaryField, result.inputFov, result.outputFov,
+            result.aspect, result.flags, coordinator, gameplayEnabled, gameplayMode };
+    }
+
+    void PublishCameraStateSnapshot(const HorPlusGameplayApplyResult& result)
+    {
+        if (!result.observationPublished) return;
+        diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::CameraStatePublish);
+
+        const auto coordinator = g_coordinator.load(std::memory_order_acquire);
+        const auto mode = g_runtimeGameplayMode.load(std::memory_order_acquire);
+        const bool zoomActive = g_snapshotZoomActive.load(std::memory_order_acquire);
+        const bool recoveryExcluded = g_postCinematicDialogueExclusion.IsActive();
+        DialoguePhase dialoguePhase = DialoguePhase::Inactive;
+        {
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
+            dialoguePhase = g_dialoguePhase;
+        }
+
+        const auto& observation = result.observation;
+        const float nativeFov = observation.inputFov.value;
+        const bool nativeValid = observation.inputFov.valid &&
+            observation.inputFov.space == camera::FovSpace::Native &&
+            std::isfinite(nativeFov);
+        const bool horPlusValid = observation.resultFov.valid &&
+            observation.resultFov.space == camera::FovSpace::Transformed &&
+            std::isfinite(observation.resultFov.value);
+        const bool neutralContext = coordinator == CoordinatorState::Gameplay &&
+            dialoguePhase == DialoguePhase::Inactive && !recoveryExcluded &&
+            !g_gameplayModeTransitionPending.load(std::memory_order_acquire) &&
+            !zoomActive && result.applied && nativeValid &&
+            gameplay::IsUltrawideAspect(observation.aspect.value, kNativeAspect);
+
+            diagnostics::ScopedRuntimeMutex stateLock(g_cameraStateMutex, diagnostics::RuntimeLockPath::CameraState);
+        const auto previousSnapshot = g_cameraStateSnapshotValid
+            ? g_cameraStateSnapshot : camera::CameraStateSnapshot{};
+        auto next = previousSnapshot;
+
+        if (neutralContext) {
+            if (g_snapshotZoomHold.load(std::memory_order_acquire)) {
+                if (next.evidence.retainedGameplayFovValid &&
+                    std::fabs(next.evidence.retainedGameplayFov - nativeFov) <= 0.01f) {
+                    ++g_neutralGameplayFovSamples;
+                    if (g_neutralGameplayFovSamples >= 3) {
+                        g_snapshotZoomHold.store(false, std::memory_order_release);
+                        g_neutralGameplayFovSamples = 0;
+                    }
+                } else {
+                    g_neutralGameplayFovSamples = 0;
+                }
+            } else if (std::isfinite(g_neutralGameplayFovCandidate) &&
+                g_neutralGameplayFovCandidateSource == result.source &&
+                std::fabs(g_neutralGameplayFovCandidate - nativeFov) <= 0.01f) {
+                ++g_neutralGameplayFovSamples;
+            } else {
+                g_neutralGameplayFovCandidate = nativeFov;
+                g_neutralGameplayFovCandidateSource = result.source;
+                g_neutralGameplayFovSamples = 1;
+            }
+
+            if (g_neutralGameplayFovSamples >= 3 &&
+                (!next.evidence.retainedGameplayFovValid ||
+                    std::fabs(next.evidence.retainedGameplayFov - nativeFov) > 0.01f)) {
+                next.evidence.retainedGameplayFov = nativeFov;
+                next.evidence.retainedGameplayFovValid = true;
+                next.evidence.retainedGameplayFovProvenance =
+                    camera::EvidenceProvenance::NativeNumericObservation;
+            }
+        }
+
+        next.presentation.state = coordinator == CoordinatorState::CinematicActive
+            ? camera::PresentationState::CinematicActive
+            : coordinator == CoordinatorState::CinematicExiting
+                ? camera::PresentationState::CinematicExiting
+                : coordinator == CoordinatorState::Gameplay
+                    ? camera::PresentationState::Gameplay
+                    : camera::PresentationState::Unknown;
+        next.presentation.provenance = camera::EvidenceProvenance::ModDerivedState;
+        switch (dialoguePhase) {
+        case DialoguePhase::Inactive:
+            next.dialogue.state = camera::DialogueState::Inactive;
+            next.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
+            break;
+        case DialoguePhase::Candidate:
+            next.dialogue.state = camera::DialogueState::Candidate;
+            next.dialogue.provenance = camera::EvidenceProvenance::ClassifierHypothesis;
+            break;
+        case DialoguePhase::Active:
+            next.dialogue.state = camera::DialogueState::Active;
+            next.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
+            next.dialogue.activePolicyValid = g_activeDialoguePolicy.IsValid();
+            break;
+        case DialoguePhase::Exiting:
+            next.dialogue.state = camera::DialogueState::Exiting;
+            next.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
+            next.dialogue.activePolicyValid = g_activeDialoguePolicy.IsValid();
+            break;
+        case DialoguePhase::RearmPending:
+            next.dialogue.state = camera::DialogueState::Recovery;
+            next.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
+            next.dialogue.activePolicyValid = g_activeDialoguePolicy.IsValid();
+            break;
+        }
+        next.dialogue.recoveryExclusionActive = recoveryExcluded;
+        next.evidence.nativeWriterFov = nativeFov;
+        next.evidence.nativeWriterFovValid = nativeValid;
+        next.evidence.nativeWriterFovProvenance =
+            camera::EvidenceProvenance::NativeNumericObservation;
+        next.evidence.transformedFov = horPlusValid
+            ? observation.resultFov.value : std::numeric_limits<float>::quiet_NaN();
+        next.evidence.transformedFovValid = horPlusValid;
+        next.evidence.transformedFovProvenance = horPlusValid
+            ? camera::EvidenceProvenance::ModDerivedState
+            : camera::EvidenceProvenance::Unavailable;
+        next.evidence.aspect = observation.aspect.value;
+        next.evidence.aspectValid = observation.aspect.valid &&
+            std::isfinite(observation.aspect.value);
+        next.evidence.aspectProvenance = camera::EvidenceProvenance::NativeNumericObservation;
+        next.evidence.flags = observation.writerFlags;
+        next.evidence.configuredGameplayFovKnown = false;
+        next.zoom.active = zoomActive;
+        next.zoom.direction = g_runtime.snapshotZoomDirection.load(std::memory_order_acquire) == 1
+            ? camera::ZoomDirection::In
+            : g_runtime.snapshotZoomDirection.load(std::memory_order_acquire) == 2
+                ? camera::ZoomDirection::Out : camera::ZoomDirection::None;
+        next.zoom.sequence = g_runtime.snapshotZoomSequence.load(std::memory_order_acquire);
+        next.zoom.valid = next.zoom.sequence != 0;
+        next.zoom.provenance = next.zoom.valid
+            ? camera::EvidenceProvenance::NativeEvent
+            : camera::EvidenceProvenance::Unavailable;
+        next.source.gameplayWriter = {result.source, result.source != 0};
+        next.gameplayMode = {static_cast<std::uint8_t>(mode),
+            camera::EvidenceProvenance::ModDerivedState, true};
+        next.generation.eventSequence =
+            g_runtime.snapshotEventSequence.fetch_add(1, std::memory_order_acq_rel) + 1;
+        next.generation.eventSequenceValid = true;
+        g_cameraStateSnapshot = next;
+        g_cameraStateSnapshotValid = true;
+
+        if (diagnostics::Enabled() && camera::SnapshotSemanticsChanged(next, previousSnapshot))
+            Log("CAMERA_STATE_SNAPSHOT updated eventSequence=", next.generation.eventSequence,
+                " nativeFov=", next.evidence.nativeWriterFov,
+                " horPlusFov=", next.evidence.transformedFov,
+                " gameplayFov=", next.evidence.retainedGameplayFov,
+                " zoomActive=", next.zoom.active ? "true" : "false", ".");
+    }
+
 #ifdef HORPLUS_FOV_STATE_DIAGNOSTIC
     enum class HorPlusTelemetryOwner : std::uint8_t
     {
@@ -2788,7 +3213,7 @@ namespace
         if (g_postCinematicDialogueExclusion.IsActive())
             return HorPlusTelemetryOwner::Recovery;
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             if (g_dialoguePhase == DialoguePhase::Active ||
                 g_dialoguePhase == DialoguePhase::Exiting ||
                 g_dialoguePhase == DialoguePhase::RearmPending)
@@ -2817,7 +3242,7 @@ namespace
         const auto currentCoordinator = g_coordinator.load(std::memory_order_acquire);
         DialoguePhase dialoguePhase = DialoguePhase::Inactive;
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             dialoguePhase = g_dialoguePhase;
         }
         const bool stableContext = owner == HorPlusTelemetryOwner::Gameplay &&
@@ -2938,125 +3363,12 @@ namespace
         g_runtime.horPlusTelemetryMode = mode;
         g_runtime.horPlusTelemetryOwner = ownerValue;
 
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
-        thread_local camera::CameraStateSnapshot previousSnapshot{};
-        thread_local bool previousSnapshotValid = false;
-        camera::CameraStateInput snapshotInput{};
-        const auto coordinator = g_coordinator.load(std::memory_order_acquire);
-        snapshotInput.presentation.state = coordinator == CoordinatorState::CinematicActive
-            ? camera::PresentationState::CinematicActive
-            : coordinator == CoordinatorState::CinematicExiting
-                ? camera::PresentationState::CinematicExiting
-                : coordinator == CoordinatorState::Gameplay
-                    ? camera::PresentationState::Gameplay
-                    : camera::PresentationState::Unknown;
-        snapshotInput.presentation.provenance = camera::EvidenceProvenance::ModDerivedState;
-        {
-            std::lock_guard dialogueLock(g_dialogueMutex);
-            switch (g_dialoguePhase) {
-            case DialoguePhase::Inactive:
-                snapshotInput.dialogue.state = camera::DialogueState::Inactive;
-                snapshotInput.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
-                break;
-            case DialoguePhase::Candidate:
-                snapshotInput.dialogue.state = camera::DialogueState::Candidate;
-                snapshotInput.dialogue.provenance = camera::EvidenceProvenance::ClassifierHypothesis;
-                break;
-            case DialoguePhase::Active:
-                snapshotInput.dialogue.state = camera::DialogueState::Active;
-                snapshotInput.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
-                snapshotInput.dialogue.activePolicyValid = g_activeDialoguePolicy.IsValid();
-                break;
-            case DialoguePhase::Exiting:
-                snapshotInput.dialogue.state = camera::DialogueState::Exiting;
-                snapshotInput.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
-                snapshotInput.dialogue.activePolicyValid = g_activeDialoguePolicy.IsValid();
-                break;
-            case DialoguePhase::RearmPending:
-                snapshotInput.dialogue.state = camera::DialogueState::Recovery;
-                snapshotInput.dialogue.provenance = camera::EvidenceProvenance::ConfirmedModLifecycle;
-                snapshotInput.dialogue.activePolicyValid = g_activeDialoguePolicy.IsValid();
-                break;
-            }
-        }
-        snapshotInput.dialogue.recoveryExclusionActive =
-            g_postCinematicDialogueExclusion.IsActive();
-        const auto dialogueSource = g_runtime.snapshotDialogueSource.load(std::memory_order_acquire);
-        snapshotInput.dialogue.source = { dialogueSource, dialogueSource != 0 };
-        snapshotInput.dialogue.nativeTarget = g_runtime.snapshotDialogueTarget.load(
-            std::memory_order_acquire);
-        snapshotInput.dialogue.nativeTargetValid =
-            g_runtime.snapshotDialogueTargetValid.load(std::memory_order_acquire);
-        snapshotInput.gameplayMode = {
-            static_cast<std::uint8_t>(mode),
-            camera::EvidenceProvenance::ModDerivedState, true };
-        snapshotInput.evidence.nativeWriterFov = nativeFov;
-        snapshotInput.evidence.aspect = aspect;
-        snapshotInput.evidence.flags = flags;
-        snapshotInput.evidence.transformedFov = transformedFov;
-        snapshotInput.evidence.nativeWriterFovValid = std::isfinite(nativeFov);
-        snapshotInput.evidence.aspectValid = std::isfinite(aspect);
-        snapshotInput.evidence.transformedFovValid = std::isfinite(transformedFov);
-        snapshotInput.evidence.nativeWriterFovProvenance =
-            camera::EvidenceProvenance::NativeNumericObservation;
-        snapshotInput.evidence.aspectProvenance =
-            camera::EvidenceProvenance::NativeNumericObservation;
-        snapshotInput.evidence.transformedFovProvenance =
-            camera::EvidenceProvenance::ModDerivedState;
-        snapshotInput.evidence.configuredGameplayFovKnown = false;
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
-        const auto zoomDirection = g_runtime.snapshotZoomDirection.load(std::memory_order_acquire);
-        snapshotInput.zoom.direction = zoomDirection == 1 ? camera::ZoomDirection::In :
-            zoomDirection == 2 ? camera::ZoomDirection::Out : camera::ZoomDirection::None;
-        snapshotInput.zoom.provenance = zoomDirection == 0
-            ? camera::EvidenceProvenance::Unavailable : camera::EvidenceProvenance::NativeEvent;
-        snapshotInput.zoom.sequence = g_runtime.snapshotZoomSequence.load(std::memory_order_acquire);
-        snapshotInput.zoom.valid = zoomDirection != 0;
-        snapshotInput.zoom.primaryWeight = g_runtime.snapshotZoomPrimary.load(std::memory_order_acquire);
-        snapshotInput.zoom.secondaryWeight = g_runtime.snapshotZoomSecondary.load(std::memory_order_acquire);
-        const auto zoomSource = g_runtime.snapshotZoomSource.load(std::memory_order_acquire);
-        snapshotInput.zoom.source = { zoomSource, zoomSource != 0 };
-#endif
-        const auto gameplayWriterSource = applyResult.source;
-        snapshotInput.source.gameplayWriter = {
-            gameplayWriterSource, gameplayWriterSource != 0 };
-        const auto snapshot = camera::BuildCameraStateSnapshot(snapshotInput);
-        if (!previousSnapshotValid || camera::SnapshotSemanticsChanged(snapshot, previousSnapshot)) {
-            auto semanticSnapshot = snapshot;
-            semanticSnapshot.generation.eventSequence =
-                g_runtime.snapshotEventSequence.fetch_add(1, std::memory_order_acq_rel) + 1;
-            semanticSnapshot.generation.eventSequenceValid = true;
-            Log("CAMERA_STATE_SNAPSHOT presentation=",
-                camera::PresentationStateName(semanticSnapshot.presentation.state),
-                " dialogue=", camera::DialogueStateName(semanticSnapshot.dialogue.state),
-                " dialogueProvenance=", camera::EvidenceProvenanceName(
-                    semanticSnapshot.dialogue.provenance),
-                " recoveryExclusion=", semanticSnapshot.dialogue.recoveryExclusionActive ? "true" : "false",
-                " lastZoomDirection=", camera::ZoomDirectionName(semanticSnapshot.zoom.direction),
-                " lastZoomProvenance=", camera::EvidenceProvenanceName(semanticSnapshot.zoom.provenance),
-                " lastZoomSequence=", semanticSnapshot.zoom.sequence,
-                " zoomObservationAvailable=", semanticSnapshot.zoom.valid ? "true" : "false",
-                " mode=", config::GameplayModeName(mode),
-                " nativeFov=", nativeFov, " aspect=", aspect, " flags=0x", std::hex,
-                static_cast<unsigned>(flags), std::dec, " horPlusFov=", transformedFov,
-                " gameplaySource=0x", std::hex, semanticSnapshot.source.gameplayWriter.value,
-                " dialogueSource=0x", semanticSnapshot.dialogue.source.value, std::dec,
-                " dialogueSourceAvailable=", semanticSnapshot.dialogue.source.valid ? "true" : "false",
-                " zoomSource=0x", std::hex, semanticSnapshot.zoom.source.value, std::dec,
-                " zoomSourceAvailable=", semanticSnapshot.zoom.source.valid ? "true" : "false",
-                " nativeTarget=", semanticSnapshot.dialogue.nativeTarget,
-                " eventSequence=", semanticSnapshot.generation.eventSequence, ".");
-            previousSnapshot = semanticSnapshot;
-        } else {
-            previousSnapshot = snapshot;
-        }
-        previousSnapshotValid = true;
-#endif
     }
 #endif
 
     void ReplayManualTransition(SafetyHookContext& context)
     {
+        diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::GameplayCameraSample);
         if (!g_gameplayHookGate.load(std::memory_order_acquire) ||
             g_stopping.load(std::memory_order_acquire)) return;
 #ifdef HORPLUS_CINEMATIC_WRITER_TRACE_DIAGNOSTIC
@@ -3067,10 +3379,13 @@ namespace
         ObservePostExitRawWriterEntry(context);
 #endif
         ObservePostCinematicDialogueRecovery(context);
-        if (!g_config.gameplayEnabled) {
+        const bool enabledTransitionHandled = ProcessGameplayEnabledTransition(context);
+        if (enabledTransitionHandled) return;
+        if (!g_runtimeGameplayEnabled.load(std::memory_order_acquire)) {
             float aspect = 0.0f;
             const auto source = static_cast<std::uintptr_t>(context.rsi);
-            if (SafeRead(source + kAspectOffset, aspect) && IsValidAspect(aspect)) {
+            if (g_coordinator.load(std::memory_order_acquire) == CoordinatorState::Gameplay &&
+                SafeRead(source + kAspectOffset, aspect) && IsValidAspect(aspect)) {
                 UpdateGameplayAspectRestorationState(aspect, source);
             }
             return;
@@ -3078,7 +3393,27 @@ namespace
         if (g_runtimeGameplayMode.load(std::memory_order_acquire) ==
             config::GameplayMode::HorPlus) {
             ApplyPendingGameplayModeTransition(context);
+            const bool modeTransitionStillPending =
+                g_gameplayModeTransitionPending.load(std::memory_order_acquire);
             const auto applyResult = ApplyHorPlusGameplay(context);
+            if (modeTransitionStillPending &&
+                g_coordinator.load(std::memory_order_acquire) == CoordinatorState::Gameplay) {
+                context.xmm0.f32[0] = applyResult.inputFov;
+            }
+            if (!modeTransitionStillPending &&
+                g_gameplayEnableApplyPending.load(std::memory_order_acquire) &&
+                !g_gameplayModeTransitionPending.load(std::memory_order_acquire) &&
+                g_coordinator.load(std::memory_order_acquire) == CoordinatorState::Gameplay &&
+                applyResult.sourceReadable && IsValidAspect(applyResult.aspect) &&
+                IsValidFovValue(applyResult.inputFov)) {
+                g_gameplayEnableApplyPending.store(false, std::memory_order_release);
+                g_gameplayEnabledTransitionDeferralLogged.store(false, std::memory_order_release);
+                Log("Gameplay.Enabled re-enable applied: mode=HorPlus",
+                    " result=writer_transform_ready aspect=", applyResult.aspect,
+                    " outputFov=", applyResult.outputFov,
+                    " boundary=GameplayCameraWriter.");
+            }
+            PublishCameraStateSnapshot(applyResult);
 #ifdef HORPLUS_FOV_STATE_DIAGNOSTIC
             TraceHorPlusFovState(applyResult);
 #endif
@@ -3109,7 +3444,7 @@ namespace
             if (flags == 0x04 && std::isfinite(currentFov) && std::isfinite(targetFov) && delta <= kRecoveryEpsilon) {
                 g_coordinator.store(CoordinatorState::Gameplay, std::memory_order_release);
                 {
-                    std::lock_guard dialogueLock(g_dialogueMutex);
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
                     ResetDialogueRuntimeState();
                 }
                 Log("Global coordinator: native recovery complete; delta=", delta,
@@ -3121,7 +3456,7 @@ namespace
 #ifdef POST_CINEMATIC_GAMEPLAY_REPLAY_DEFER_TEST
 #if defined(POST_CINEMATIC_GAMEPLAY_REPLAY_AT_RECOVERY_TEST) && \
     !defined(POST_CINEMATIC_GAMEPLAY_REPLAY_ATOMIC_EXIT_HANDOFF_TEST)
-                if (g_gameplayAvailable.load(std::memory_order_acquire)) {
+                if (g_gameplayRecoveryObservationAvailable.load(std::memory_order_acquire)) {
                     const auto source = static_cast<std::uintptr_t>(context.rsi);
                     std::uint8_t currentFlags{};
                     float currentAspect = 0.0f;
@@ -3139,7 +3474,8 @@ namespace
                     }
                 }
 #elif !defined(POST_CINEMATIC_GAMEPLAY_REPLAY_ATOMIC_EXIT_HANDOFF_TEST)
-                if (g_gameplayAvailable.load(std::memory_order_acquire)) ArmDeferredGameplayReplay(targetFov);
+                if (g_gameplayRecoveryObservationAvailable.load(std::memory_order_acquire))
+                    ArmDeferredGameplayReplay(targetFov);
 #endif
 #endif
             }
@@ -3154,7 +3490,6 @@ namespace
 #endif
     }
 
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
     constexpr char kZoomTransitionGameSha256[] =
         "61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B";
     constexpr std::size_t kZoomTransitionPostLoadOffset = 13;
@@ -3186,11 +3521,13 @@ namespace
 
     void TraceZoomTransition(SafetyHookContext& context, bool entering)
     {
-        if (!diagnostics::Enabled()) return;
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
         auto& hitCounter = entering ? g_zoomInHits : g_zoomOutHits;
         hitCounter.fetch_add(1, std::memory_order_relaxed);
-#endif
+        g_snapshotZoomActive.store(entering, std::memory_order_release);
+        if (entering) {
+            g_snapshotZoomHold.store(true, std::memory_order_release);
+            g_neutralGameplayFovSamples = 0;
+        }
 
         const auto rax = static_cast<std::uintptr_t>(context.rax);
         const auto rsi = static_cast<std::uintptr_t>(context.rsi);
@@ -3213,7 +3550,6 @@ namespace
             !SafeRead(rsi + 0x13C, current.rsi13c))
             return;
 
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
         auto& previous = entering ? g_previousZoomIn : g_previousZoomOut;
         const bool changed = !previous.valid || previous.rcx != current.rcx ||
             previous.rsi != current.rsi || previous.rax != current.rax ||
@@ -3226,14 +3562,12 @@ namespace
             ZoomTransitionFloatChanged(current.xmm6, previous.xmm6);
         if (changed) {
             const auto sequence = g_zoomLoggedEdges.fetch_add(1, std::memory_order_relaxed) + 1;
-#ifdef CAMERA_STATE_SNAPSHOT_DIAGNOSTIC
             g_runtime.snapshotZoomDirection.store(entering ? 1 : 2, std::memory_order_release);
             g_runtime.snapshotZoomSequence.store(sequence, std::memory_order_release);
             g_runtime.snapshotZoomSource.store(rsi, std::memory_order_release);
             g_runtime.snapshotZoomPrimary.store(current.rax4c, std::memory_order_release);
             g_runtime.snapshotZoomSecondary.store(current.rax50, std::memory_order_release);
-#endif
-            Log(entering ? "ZOOM_IN" : "ZOOM_OUT",
+            if (diagnostics::Enabled()) Log(entering ? "ZOOM_IN" : "ZOOM_OUT",
                 " seq=", sequence,
                 " thread=", GetCurrentThreadId(),
                 " rcx=0x", std::hex, current.rcx,
@@ -3246,23 +3580,21 @@ namespace
                 " cinematicRecovery=", ReplayStateName(g_state.load(std::memory_order_acquire)), ".");
         }
         previous = current;
-#endif
     }
 
     void TraceZoomIn(SafetyHookContext& context) { TraceZoomTransition(context, true); }
     void TraceZoomOut(SafetyHookContext& context) { TraceZoomTransition(context, false); }
 
-    bool InstallZoomTransitionDiagnostic(const std::string& gameHash)
+    bool InstallZoomTransitionObservation(const std::string& gameHash)
     {
-        if (!diagnostics::Enabled()) return false;
         if (_stricmp(gameHash.c_str(), kZoomTransitionGameSha256) != 0) {
-            Log("Zoom transition diagnostic rejected: executable hash mismatch.");
+            if (diagnostics::Enabled()) Log("Zoom transition observation rejected: executable hash mismatch.");
             return false;
         }
         const auto inMatches = hooks::FindAll(g_executable, ZoomIn);
         const auto outMatches = hooks::FindAll(g_executable, ZoomOut);
         if (inMatches.size() != 1 || outMatches.size() != 1) {
-            Log("Zoom transition diagnostic rejected: inMatches=", inMatches.size(),
+            if (diagnostics::Enabled()) Log("Zoom transition observation rejected: inMatches=", inMatches.size(),
                 " outMatches=", outMatches.size(), ".");
             return false;
         }
@@ -3271,14 +3603,14 @@ namespace
             return std::memcmp(match + kZoomTransitionPostLoadOffset, expected, sizeof(expected)) == 0;
         };
         if (!validatePostLoad(inMatches.front()) || !validatePostLoad(outMatches.front())) {
-            Log("Zoom transition diagnostic rejected: post-load instruction contract mismatch.");
+            if (diagnostics::Enabled()) Log("Zoom transition observation rejected: post-load instruction contract mismatch.");
             return false;
         }
         g_zoomInHook = safetyhook::create_mid(
             inMatches.front() + kZoomTransitionPostLoadOffset, TraceZoomIn);
         if (!g_zoomInHook || !g_zoomInHook.enable()) {
             g_zoomInHook.reset();
-            Log("ZOOM_IN diagnostic hook setup failed.");
+            if (diagnostics::Enabled()) Log("ZOOM_IN observation hook setup failed.");
             return false;
         }
         g_zoomOutHook = safetyhook::create_mid(
@@ -3286,10 +3618,10 @@ namespace
         if (!g_zoomOutHook || !g_zoomOutHook.enable()) {
             g_zoomOutHook.reset();
             g_zoomInHook.reset();
-            Log("ZOOM_OUT diagnostic hook setup failed; ZOOM_IN hook rolled back.");
+            if (diagnostics::Enabled()) Log("ZOOM_OUT observation hook setup failed; ZOOM_IN hook rolled back.");
             return false;
         }
-        Log("Zoom transition diagnostic hooks installed: ZOOM_IN RVA=0x", std::hex,
+        if (diagnostics::Enabled()) Log("Zoom transition observation hooks installed: ZOOM_IN RVA=0x", std::hex,
             reinterpret_cast<std::uintptr_t>(inMatches.front()) + kZoomTransitionPostLoadOffset -
                 reinterpret_cast<std::uintptr_t>(g_executable),
             " ZOOM_OUT RVA=0x", reinterpret_cast<std::uintptr_t>(outMatches.front()) +
@@ -3297,7 +3629,6 @@ namespace
             std::dec, ". Read-only edge telemetry enabled.");
         return true;
     }
-#endif
 
     bool VerifyExecutableAndInstruction()
     {
@@ -3339,6 +3670,14 @@ namespace
         result.sourceReadable = true;
         result.aspect = aspect;
         result.flags = flags;
+        float selectedFovCandidate = std::numeric_limits<float>::quiet_NaN();
+        bool selectedFovCandidateReadable = false;
+        float primaryCameraFov = std::numeric_limits<float>::quiet_NaN();
+        bool primaryCameraFovReadable = false;
+        if (diagnostics::Enabled()) {
+            selectedFovCandidateReadable = SafeRead(source + 0x234, selectedFovCandidate);
+            primaryCameraFovReadable = SafeRead(source + 0x230, primaryCameraFov);
+        }
 
         const auto previousSource = g_lastGameplayCameraSource.exchange(
             source, std::memory_order_acq_rel);
@@ -3347,7 +3686,7 @@ namespace
         const auto contextChange = gameplay::EvaluateGameplayContextChange(
             previousSource, previousFov, source, result.inputFov, kDialogueContextFovJump);
         if (contextChange.InvalidatesDialogue()) {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             if (g_dialoguePhase != DialoguePhase::Inactive) {
                 Log("Dialogue runtime invalidated by gameplay camera context change: sourceChanged=",
                     contextChange.sourceChanged, " previousSource=0x", std::hex, previousSource,
@@ -3364,6 +3703,15 @@ namespace
         if (coordinator == CoordinatorState::Gameplay &&
             IsValidFovValue(result.inputFov) && IsValidAspect(aspect)) {
             UpdateGameplayAspectRestorationState(aspect, source);
+            // A HorPlus request can arrive while the native aspect transition
+            // is still settling. The observation above is the deterministic
+            // establishment boundary: retry once with the newly published
+            // coherent aspect instead of waiting for a later writer sample.
+            if (g_gameplayModeTransitionPending.load(std::memory_order_acquire)) {
+                ApplyPendingGameplayModeTransition(context);
+                SafeRead(source + kAspectOffset, aspect);
+                SafeRead(source + kFlagsOffset, flags);
+            }
         }
 
         bool cachedEnter = false;
@@ -3414,6 +3762,11 @@ namespace
             result.baselineProjection = g_gameplayBaselineStore.Project(
                 result.observation, coordinator == CoordinatorState::Gameplay);
         }
+        TraceGameplayFovSourceSample(result,
+            selectedFovCandidateReadable, selectedFovCandidate,
+            primaryCameraFovReadable, primaryCameraFov, coordinator,
+            g_runtimeGameplayEnabled.load(std::memory_order_acquire),
+            g_runtimeGameplayMode.load(std::memory_order_acquire));
         return result;
     }
 
@@ -3655,7 +4008,7 @@ namespace
         current.replayState = g_state.load(std::memory_order_acquire);
         current.policy = g_runtimeDialoguePolicy.load(std::memory_order_acquire);
         {
-            std::lock_guard dialogueLock(g_dialogueMutex);
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
             current.dialoguePhase = g_dialoguePhase;
             current.activePolicy = g_activeDialoguePolicy.Value();
             current.activePolicyValid = g_activeDialoguePolicy.IsValid();
@@ -3728,6 +4081,16 @@ namespace
             return;
         }
 
+        if (!g_runtimeGameplayEnabled.load(std::memory_order_acquire)) {
+            g_gameplayModeTransitionPending.store(false, std::memory_order_release);
+            g_gameplayModeTransitionDeferralLogged.store(false, std::memory_order_release);
+            g_runtimeGameplayMode.store(newMode, std::memory_order_release);
+            Log("Gameplay mode selected while disabled: ", config::GameplayModeName(oldMode),
+                " -> ", config::GameplayModeName(newMode),
+                "; physical application deferred until Gameplay.Enabled=true.");
+            return;
+        }
+
         if (oldMode == config::GameplayMode::AspectRecalculation &&
             newMode == config::GameplayMode::HorPlus) {
             g_state.store(ReplayState::WaitingForAutomaticUpdate, std::memory_order_release);
@@ -3761,6 +4124,409 @@ namespace
             " physicalBoundary=", plan.deferPhysicalTransition ? "deferred" : "Gameplay", ".");
     }
 
+    bool RuntimeHotkeyBinding(plugin::RuntimeSettingKind kind,
+        config::HotkeyBindingId& binding) noexcept
+    {
+        switch (kind) {
+        case plugin::RuntimeSettingKind::GameplayCycleKey:
+            binding = config::HotkeyBindingId::GameplayMode; return true;
+        case plugin::RuntimeSettingKind::CinematicCycleKey:
+            binding = config::HotkeyBindingId::CinematicAspect; return true;
+        case plugin::RuntimeSettingKind::CinematicFovCycleKey:
+            binding = config::HotkeyBindingId::CinematicFov; return true;
+        case plugin::RuntimeSettingKind::DialogueCycleKey:
+            binding = config::HotkeyBindingId::DialogueZoom; return true;
+        case plugin::RuntimeSettingKind::OverlayToggleKey:
+            binding = config::HotkeyBindingId::OverlayToggle; return true;
+        default: return false;
+        }
+    }
+
+    plugin::RuntimeMutationResult ApplyRuntimeSetting(
+        const plugin::RuntimeSettingMutation& mutation, void*)
+    {
+        switch (mutation.kind) {
+        case plugin::RuntimeSettingKind::GameplayEnabled: {
+            const auto* value = std::get_if<bool>(&mutation.value);
+            if (!value) return {};
+            if (*value && !g_gameplayRecoveryObservationAvailable.load(std::memory_order_acquire)) {
+                Log("Gameplay.Enabled transition rejected: reason=gameplay_hook_unavailable.");
+                return {};
+            }
+            const auto old = g_runtimeGameplayEnabled.load(std::memory_order_acquire);
+            if (old == *value) return {true, false};
+            g_gameplayEnabledTransitionDeferralLogged.store(false, std::memory_order_release);
+            if (*value) {
+                g_gameplayDisableRestorePending.store(false, std::memory_order_release);
+                g_gameplayEnableApplyPending.store(true, std::memory_order_release);
+                g_runtimeGameplayEnabled.store(true, std::memory_order_release);
+                Log("Gameplay.Enabled transition requested: false -> true mode=",
+                    config::GameplayModeName(g_runtimeGameplayMode.load(std::memory_order_acquire)),
+                    " applyBoundary=GameplayCameraWriter.");
+            } else {
+                g_gameplayEnableApplyPending.store(false, std::memory_order_release);
+                g_gameplayModeTransitionPending.store(false, std::memory_order_release);
+                g_gameplayModeTransitionDeferralLogged.store(false, std::memory_order_release);
+                g_gameplayDisableRestorePending.store(true, std::memory_order_release);
+                g_runtimeGameplayEnabled.store(false, std::memory_order_release);
+                Log("Gameplay.Enabled transition requested: true -> false mode=",
+                    config::GameplayModeName(g_runtimeGameplayMode.load(std::memory_order_acquire)),
+                    " restoreBoundary=GameplayCameraWriter.");
+            }
+            return {true, true};
+        }
+        case plugin::RuntimeSettingKind::GameplayMode: {
+            const auto* value = std::get_if<config::GameplayMode>(&mutation.value);
+            if (!value) return {};
+            const auto old = g_runtimeGameplayMode.load(std::memory_order_acquire);
+            SelectGameplayMode(*value);
+            return {true, old != *value};
+        }
+        case plugin::RuntimeSettingKind::CinematicAspectPolicy: {
+            const auto* value = std::get_if<config::CinematicAspectPolicy>(&mutation.value);
+            if (!value) return {};
+            const auto old = g_runtimeCinematicPolicy.load(std::memory_order_acquire);
+            g_runtimeCinematicPolicy.store(*value, std::memory_order_release);
+            return {true, old != *value};
+        }
+        case plugin::RuntimeSettingKind::CinematicFovMode: {
+            const auto* value = std::get_if<config::CinematicFovMode>(&mutation.value);
+            if (!value) return {};
+            const auto old = g_runtimeCinematicFovMode.load(std::memory_order_acquire);
+            g_runtimeCinematicFovMode.store(*value, std::memory_order_release);
+            return {true, old != *value};
+        }
+        case plugin::RuntimeSettingKind::DialogueZoomPolicy: {
+            const auto* value = std::get_if<config::DialogueZoomPolicy>(&mutation.value);
+            if (!value) return {};
+            if (*value != DialogueZoomPolicy::Native &&
+                !g_dialogueNonNativeCapabilityAvailable.load(std::memory_order_acquire))
+                return {};
+            const auto old = g_runtimeDialoguePolicy.load(std::memory_order_acquire);
+            g_runtimeDialoguePolicy.store(*value, std::memory_order_release);
+            return {true, old != *value};
+        }
+        case plugin::RuntimeSettingKind::OverlayLocaleCode: {
+            const auto* value = std::get_if<std::string>(&mutation.value);
+            const auto* descriptor = value
+                ? localization::FindLocaleDescriptor(*value) : nullptr;
+            if (!descriptor) return {};
+            const auto* old = g_runtimeOverlayLocale.exchange(descriptor,
+                std::memory_order_acq_rel);
+            g_runtimeOverlayLocaleAuto.store(false, std::memory_order_release);
+            g_runtimeOverlayAutoLocaleSynchronized.store(false, std::memory_order_release);
+            const int oldFontSize = g_runtimeOverlayFontSize.exchange(
+                descriptor->initialFontSize, std::memory_order_acq_rel);
+            return {true, old != descriptor ||
+                oldFontSize != descriptor->initialFontSize};
+        }
+        case plugin::RuntimeSettingKind::OverlayAutoLocale: {
+            const auto* value = std::get_if<bool>(&mutation.value);
+            if (!value) return {};
+            const bool old = g_runtimeOverlayLocaleAuto.exchange(*value,
+                std::memory_order_acq_rel);
+            if (*value)
+                g_runtimeOverlayAutoLocaleSynchronized.store(false, std::memory_order_release);
+            return {true, old != *value};
+        }
+        case plugin::RuntimeSettingKind::OverlayFontSize: {
+            const auto* value = std::get_if<int>(&mutation.value);
+            if (!value || *value < config::OverlayFontSizeMin ||
+                *value > config::OverlayFontSizeMax) return {};
+            const int old = g_runtimeOverlayFontSize.exchange(*value,
+                std::memory_order_acq_rel);
+            return {true, old != *value};
+        }
+        case plugin::RuntimeSettingKind::HotkeysEnabled: {
+            const auto* value = std::get_if<bool>(&mutation.value);
+            if (!value) return {};
+            std::lock_guard hotkeyLock(g_hotkeyConfigMutex);
+            const bool changed = g_config.hotkeysEnabled != *value;
+            g_config.hotkeysEnabled = *value;
+            return {true, changed};
+        }
+        case plugin::RuntimeSettingKind::GameplayCycleKey:
+        case plugin::RuntimeSettingKind::CinematicCycleKey:
+        case plugin::RuntimeSettingKind::CinematicFovCycleKey:
+        case plugin::RuntimeSettingKind::DialogueCycleKey:
+        case plugin::RuntimeSettingKind::OverlayToggleKey: {
+            const auto* value = std::get_if<int>(&mutation.value);
+            if (!value || !config::IsSupportedHotkey(*value))
+                return {};
+            std::lock_guard hotkeyLock(g_hotkeyConfigMutex);
+            config::HotkeyBindingId binding{};
+            if (!RuntimeHotkeyBinding(mutation.kind, binding) ||
+                config::HasHotkeyConflict(g_config, *value, binding)) return {};
+            const bool changed = config::HotkeyBindingValue(g_config, binding) != *value;
+            config::SetHotkeyBindingValue(g_config, binding, *value);
+            return {true, changed};
+        }
+        }
+        return {};
+    }
+
+    bool ReadRuntimeSettings(plugin::RuntimeSettingsSnapshot& snapshot, void*)
+    {
+        snapshot.gameplayEnabled = g_runtimeGameplayEnabled.load(std::memory_order_acquire);
+        snapshot.gameplayMode = g_runtimeGameplayMode.load(std::memory_order_acquire);
+        snapshot.cinematicAspectPolicy = g_runtimeCinematicPolicy.load(std::memory_order_acquire);
+        snapshot.cinematicFovMode = g_runtimeCinematicFovMode.load(std::memory_order_acquire);
+        snapshot.dialogueZoomPolicy = g_runtimeDialoguePolicy.load(std::memory_order_acquire);
+        const auto* locale = g_runtimeOverlayLocale.load(std::memory_order_acquire);
+        snapshot.overlayLocaleCode = locale
+            ? std::string(locale->code) : std::string(localization::CanonicalLocaleCode);
+        snapshot.overlayLocaleAuto = g_runtimeOverlayLocaleAuto.load(std::memory_order_acquire);
+        snapshot.overlayLocaleAutoSynchronized =
+            g_runtimeOverlayAutoLocaleSynchronized.load(std::memory_order_acquire);
+        snapshot.overlayFontSize = g_runtimeOverlayFontSize.load(std::memory_order_acquire);
+        {
+            std::lock_guard hotkeyLock(g_hotkeyConfigMutex);
+            snapshot.hotkeysEnabled = g_config.hotkeysEnabled;
+            snapshot.overlayToggleKey = g_config.overlayToggleKey;
+            snapshot.gameplayCycleKey = g_config.gameplayCycleKey;
+            snapshot.cinematicCycleKey = g_config.cinematicCycleKey;
+            snapshot.cinematicFovCycleKey = g_config.cinematicFovCycleKey;
+            snapshot.dialogueCycleKey = g_config.dialogueCycleKey;
+        }
+        return true;
+    }
+
+    bool ReadOverlaySemanticSnapshot(plugin::OverlaySemanticSnapshot& snapshot, void*)
+    {
+        diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::SemanticSnapshotRead);
+        if (!g_runtimeInitializationComplete.load(std::memory_order_acquire) ||
+            g_stopping.load(std::memory_order_acquire))
+            return false;
+
+        snapshot = {};
+        const auto setCurrentFact = [](auto& fact, auto value,
+            plugin::SemanticProvenance provenance) {
+            fact.value = value;
+            fact.valid = true;
+            fact.provenance = provenance;
+            fact.freshness = plugin::SemanticFreshness::AtRead;
+        };
+
+        setCurrentFact(snapshot.gameplayEnabled,
+            g_runtimeGameplayEnabled.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::RuntimeSettings);
+        setCurrentFact(snapshot.gameplayMode,
+            g_runtimeGameplayMode.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::RuntimeSettings);
+        setCurrentFact(snapshot.cinematicAspectPolicy,
+            g_runtimeCinematicPolicy.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::RuntimeSettings);
+        setCurrentFact(snapshot.cinematicFovMode,
+            g_runtimeCinematicFovMode.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::RuntimeSettings);
+        setCurrentFact(snapshot.dialogueZoomPolicy,
+            g_runtimeDialoguePolicy.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::RuntimeSettings);
+
+        setCurrentFact(snapshot.gameplayHookAvailable,
+            g_gameplayHookGate.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::GameplayHookGate);
+        setCurrentFact(snapshot.gameplayEnableApplyPending,
+            g_gameplayEnableApplyPending.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::GameplayTransition);
+        setCurrentFact(snapshot.gameplayDisableRestorePending,
+            g_gameplayDisableRestorePending.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::GameplayTransition);
+        setCurrentFact(snapshot.gameplayModeTransitionPending,
+            g_gameplayModeTransitionPending.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::GameplayTransition);
+        setCurrentFact(snapshot.cinematicAspectComponentAvailable,
+            g_cinematicAspectComponentAvailable.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::CinematicHookState);
+        setCurrentFact(snapshot.cinematicFovLifecycleAvailable,
+            g_cinematicLifecycleObservationAvailable.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::CinematicHookState);
+
+        const bool cinematicSelectionActive =
+            g_cinematicSelectionValid.load(std::memory_order_acquire);
+        setCurrentFact(snapshot.cinematicSelectionActive, cinematicSelectionActive,
+            plugin::SemanticProvenance::CinematicSelection);
+        if (cinematicSelectionActive) {
+            auto& activeAspect = snapshot.activeCinematicAspectPolicy;
+            activeAspect.value = g_activeCinematicAspectPolicy.load(std::memory_order_acquire);
+            activeAspect.valid = true;
+            activeAspect.provenance = plugin::SemanticProvenance::CinematicSelection;
+            activeAspect.freshness = plugin::SemanticFreshness::LifecycleScoped;
+
+            auto& activeFov = snapshot.activeCinematicFovMode;
+            activeFov.value = g_activeCinematicFovMode.load(std::memory_order_acquire);
+            activeFov.valid = true;
+            activeFov.provenance = plugin::SemanticProvenance::CinematicSelection;
+            activeFov.freshness = plugin::SemanticFreshness::LifecycleScoped;
+        }
+
+        setCurrentFact(snapshot.dialogueBoundaryHookAvailable,
+            g_dialogueBoundaryHookAvailable.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::DialogueHookState);
+        setCurrentFact(snapshot.dialogueNonNativeCapabilityAvailable,
+            g_dialogueNonNativeCapabilityAvailable.load(std::memory_order_acquire),
+            plugin::SemanticProvenance::DialogueHookState);
+        {
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
+            auto& phase = snapshot.dialoguePhase;
+            switch (g_dialoguePhase) {
+            case DialoguePhase::Inactive:
+                phase.value = plugin::OverlayDialoguePhase::Inactive;
+                break;
+            case DialoguePhase::Candidate:
+                phase.value = plugin::OverlayDialoguePhase::Candidate;
+                break;
+            case DialoguePhase::Active:
+                phase.value = plugin::OverlayDialoguePhase::Active;
+                break;
+            case DialoguePhase::Exiting:
+                phase.value = plugin::OverlayDialoguePhase::Exiting;
+                break;
+            case DialoguePhase::RearmPending:
+                phase.value = plugin::OverlayDialoguePhase::RearmPending;
+                break;
+            }
+            phase.valid = true;
+            phase.provenance = plugin::SemanticProvenance::DialogueLifecycle;
+            phase.freshness = plugin::SemanticFreshness::LifecycleScoped;
+
+            if (g_activeDialoguePolicy.IsValid()) {
+                auto& activePolicy = snapshot.activeDialogueZoomPolicy;
+                activePolicy.value = g_activeDialoguePolicy.Value();
+                activePolicy.valid = true;
+                activePolicy.provenance = plugin::SemanticProvenance::DialogueLifecycle;
+                activePolicy.freshness = plugin::SemanticFreshness::LifecycleScoped;
+            }
+        }
+
+        const auto baseline = g_gameplayBaselineStore.Read();
+        auto& baselineFact = snapshot.gameplayBaselineUsable;
+        baselineFact.value = camera::IsUsableGameplayBaseline(baseline);
+        baselineFact.valid = true;
+        baselineFact.provenance = plugin::SemanticProvenance::GameplayBaselineStore;
+        baselineFact.freshness = plugin::SemanticFreshness::RetainedUntilInvalidated;
+
+        camera::CameraStateSnapshot cameraState{};
+        bool cameraStateValid = false;
+        {
+            diagnostics::ScopedRuntimeMutex stateLock(g_cameraStateMutex, diagnostics::RuntimeLockPath::CameraState);
+            cameraState = g_cameraStateSnapshot;
+            cameraStateValid = g_cameraStateSnapshotValid;
+        }
+        snapshot.cameraState = cameraState;
+        snapshot.cameraStateValid = cameraStateValid;
+
+        const auto coordinator = g_coordinatorState.load(std::memory_order_acquire);
+        auto& coordinatorFact = snapshot.coordinator;
+        switch (coordinator) {
+        case CoordinatorState::Gameplay:
+            coordinatorFact.value = plugin::OverlayCoordinatorState::Gameplay;
+            break;
+        case CoordinatorState::CinematicActive:
+            coordinatorFact.value = plugin::OverlayCoordinatorState::CinematicActive;
+            break;
+        case CoordinatorState::CinematicExiting:
+            coordinatorFact.value = plugin::OverlayCoordinatorState::CinematicExiting;
+            break;
+        }
+        coordinatorFact.valid = true;
+        coordinatorFact.provenance = plugin::SemanticProvenance::PresentationCoordinator;
+        coordinatorFact.freshness = plugin::SemanticFreshness::AtRead;
+
+        auto& viewport = snapshot.runtimeViewportAspect;
+        viewport.value = platform::win32::ReadCurrentProcessClientViewportAspect();
+        viewport.valid = std::isfinite(viewport.value) && viewport.value > 0.0f;
+        viewport.provenance = plugin::SemanticProvenance::RuntimeViewportResolver;
+        viewport.freshness = plugin::SemanticFreshness::AtRead;
+        return true;
+    }
+
+    bool PersistHotkeyActionValue(const char* section, const char* key,
+        const char* value)
+    {
+        return config::PersistConfigValue(g_configPath, section, key, value,
+            [](std::string message) { Log(message); });
+    }
+
+    bool PersistRuntimeSetting(const plugin::RuntimeSettingMutation& mutation, void*)
+    {
+        switch (mutation.kind) {
+        case plugin::RuntimeSettingKind::GameplayEnabled: {
+            const auto* value = std::get_if<bool>(&mutation.value);
+            return value && config::PersistConfigValue(g_configPath, "Gameplay", "Enabled",
+                *value ? "true" : "false", [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::GameplayMode: {
+            const auto* value = std::get_if<config::GameplayMode>(&mutation.value);
+            return value && config::PersistConfigValue(g_configPath, "Gameplay", "Mode",
+                config::GameplayModeName(*value), [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::CinematicAspectPolicy: {
+            const auto* value = std::get_if<config::CinematicAspectPolicy>(&mutation.value);
+            return value && config::PersistConfigValue(g_configPath, "Cinematics", "AspectRatio",
+                config::CinematicAspectPolicyName(*value), [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::CinematicFovMode: {
+            const auto* value = std::get_if<config::CinematicFovMode>(&mutation.value);
+            return value && config::PersistConfigValue(g_configPath, "Cinematics", "FovMode",
+                config::CinematicFovModeName(*value), [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::DialogueZoomPolicy: {
+            const auto* value = std::get_if<config::DialogueZoomPolicy>(&mutation.value);
+            return value && config::PersistConfigValue(g_configPath, "Dialogue", "Zoom",
+                config::DialogueZoomPolicyName(*value), [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::OverlayLocaleCode: {
+            const auto* value = std::get_if<std::string>(&mutation.value);
+            const auto* descriptor = value
+                ? localization::FindLocaleDescriptor(*value) : nullptr;
+            if (!descriptor) return false;
+            const bool languagePersisted = config::PersistConfigValue(
+                g_configPath, "Overlay", "Language",
+                *value,
+                [](std::string message) { Log(message); });
+            const bool fontSizePersisted = config::PersistConfigValue(
+                g_configPath, "Overlay", "FontSize",
+                std::to_string(descriptor->initialFontSize),
+                [](std::string message) { Log(message); });
+            return languagePersisted && fontSizePersisted;
+        }
+        case plugin::RuntimeSettingKind::OverlayAutoLocale:
+            return config::PersistConfigValue(g_configPath, "Overlay", "Language",
+                std::get<bool>(mutation.value) ? std::string("Auto") :
+                    std::string(g_runtimeOverlayLocale.load(std::memory_order_acquire)->code),
+                [](std::string message) { Log(message); });
+        case plugin::RuntimeSettingKind::OverlayFontSize: {
+            const auto* value = std::get_if<int>(&mutation.value);
+            if (!value || *value < config::OverlayFontSizeMin ||
+                *value > config::OverlayFontSizeMax) return false;
+            const auto valueText = std::to_string(*value);
+            return config::PersistConfigValue(g_configPath, "Overlay", "FontSize",
+                valueText, [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::HotkeysEnabled: {
+            const auto* value = std::get_if<bool>(&mutation.value);
+            return value && config::PersistConfigValue(g_configPath, "Hotkeys", "Enabled",
+                *value ? "true" : "false", [](std::string message) { Log(message); });
+        }
+        case plugin::RuntimeSettingKind::GameplayCycleKey:
+        case plugin::RuntimeSettingKind::CinematicCycleKey:
+        case plugin::RuntimeSettingKind::CinematicFovCycleKey:
+        case plugin::RuntimeSettingKind::DialogueCycleKey:
+        case plugin::RuntimeSettingKind::OverlayToggleKey: {
+            const auto* value = std::get_if<int>(&mutation.value);
+            if (!value) return false;
+            config::HotkeyBindingId binding{};
+            if (!RuntimeHotkeyBinding(mutation.kind, binding)) return false;
+            const auto* descriptor = config::FindHotkeyBinding(binding);
+            return descriptor && config::PersistConfigValue(g_configPath,
+                descriptor->section, descriptor->configKey,
+                config::HotkeyConfigValue(*value), [](std::string message) { Log(message); });
+        }
+        }
+        return false;
+    }
+
     void HotkeyLoop()
     {
         bool previousDialogueKey = false;
@@ -3768,29 +4534,62 @@ namespace
         bool previousCinematicFovKey = false;
         bool previousGameplayKey = false;
         while (!WaitForWorkerStop(50)) {
-            const bool dialogueKey = (GetAsyncKeyState(g_config.dialogueCycleKey) & 0x8000) != 0;
-            const bool cinematicKey = (GetAsyncKeyState(g_config.cinematicCycleKey) & 0x8000) != 0;
-            const bool cinematicFovKey = (GetAsyncKeyState(g_config.cinematicFovCycleKey) & 0x8000) != 0;
-            const bool gameplayKey = (GetAsyncKeyState(g_config.gameplayCycleKey) & 0x8000) != 0;
-            if (g_config.hotkeysEnabled) {
-                if (gameplayKey && !previousGameplayKey) {
+            std::string performanceSummary;
+            if (diagnostics::TakeRuntimePerformanceSummary(performanceSummary))
+                Log(performanceSummary);
+            const auto hotkeySettings = plugin::GetRuntimeSettingsSnapshot();
+            const bool dialogueKey = (GetAsyncKeyState(hotkeySettings.dialogueCycleKey) & 0x8000) != 0;
+            const bool cinematicKey = (GetAsyncKeyState(hotkeySettings.cinematicCycleKey) & 0x8000) != 0;
+            const bool cinematicFovKey = (GetAsyncKeyState(hotkeySettings.cinematicFovCycleKey) & 0x8000) != 0;
+            const bool gameplayKey = (GetAsyncKeyState(hotkeySettings.gameplayCycleKey) & 0x8000) != 0;
+            const bool captureActive = g_hotkeyRebindCaptureActive.load(std::memory_order_acquire);
+            const int consumedKey = g_hotkeyRebindConsumedKey.load(std::memory_order_acquire);
+            if (consumedKey != 0 && (GetAsyncKeyState(consumedKey) & 0x8000) == 0) {
+                int expectedConsumedKey = consumedKey;
+                g_hotkeyRebindConsumedKey.compare_exchange_strong(
+                    expectedConsumedKey, 0, std::memory_order_acq_rel);
+            }
+            if (plugin::ShouldDispatchHotkeyAction(hotkeySettings.hotkeysEnabled,
+                captureActive, gameplayKey, previousGameplayKey,
+                consumedKey == hotkeySettings.gameplayCycleKey)) {
+                    const auto previousMode = g_runtimeGameplayMode.load(std::memory_order_acquire);
                     const auto mode = config::NextGameplayMode(
-                        g_runtimeGameplayMode.load(std::memory_order_acquire));
-                    SelectGameplayMode(mode);
-                    if (config::PersistConfigValue(g_configPath, "Gameplay", "Mode", config::GameplayModeName(mode),
-                        [](std::string message) { Log(message); }))
-                        Log("Hotkey ", HotkeyName(g_config.gameplayCycleKey), ": Gameplay.Mode=",
+                        previousMode);
+                    const auto result = g_runtimeSettings.Apply(
+                        plugin::RuntimeSettingMutation::Gameplay(mode));
+                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                        plugin::OverlayNotificationAction::GameplayMode,
+                        config::GameplayModeName(previousMode), config::GameplayModeName(mode),
+                        result.accepted
+                            ? (g_gameplayModeTransitionPending.load(std::memory_order_acquire)
+                                ? plugin::OverlayNotificationStatus::Pending
+                                : plugin::OverlayNotificationStatus::Applied)
+                            : plugin::OverlayNotificationStatus::Error);
+                    if (result.accepted && PersistHotkeyActionValue("Gameplay", "Mode",
+                        config::GameplayModeName(mode)))
+                        Log("Hotkey ", HotkeyName(hotkeySettings.gameplayCycleKey), ": Gameplay.Mode=",
                             config::GameplayModeName(mode), " persisted.");
-                    else
-                        Log("Hotkey ", HotkeyName(g_config.gameplayCycleKey), ": Gameplay.Mode=",
+                    else if (result.accepted)
+                        Log("Hotkey ", HotkeyName(hotkeySettings.gameplayCycleKey), ": Gameplay.Mode=",
                             config::GameplayModeName(mode), " active; persistence failed.");
+                    else
+                        Log("Hotkey ", HotkeyName(hotkeySettings.gameplayCycleKey), ": Gameplay.Mode rejected.");
                 }
-                if (dialogueKey && !previousDialogueKey) {
+                if (plugin::ShouldDispatchHotkeyAction(hotkeySettings.hotkeysEnabled,
+                    captureActive, dialogueKey, previousDialogueKey,
+                    consumedKey == hotkeySettings.dialogueCycleKey)) {
+                    const auto previousPolicy = g_runtimeDialoguePolicy.load(std::memory_order_acquire);
                     const auto policy = NextDialogueZoomPolicy(
-                        g_runtimeDialoguePolicy.load(std::memory_order_acquire));
-                    if (policy != DialogueZoomPolicy::Native &&
-                        !g_dialogueNonNativeCapabilityAvailable.load(std::memory_order_acquire)) {
-                        Log("Hotkey ", HotkeyName(g_config.dialogueCycleKey),
+                        previousPolicy);
+                    const auto result = g_runtimeSettings.Apply(
+                        plugin::RuntimeSettingMutation::Dialogue(policy));
+                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                        plugin::OverlayNotificationAction::DialogueZoom,
+                        DialogueZoomPolicyName(previousPolicy), DialogueZoomPolicyName(policy),
+                        result.accepted ? plugin::OverlayNotificationStatus::Ready
+                            : plugin::OverlayNotificationStatus::Error);
+                    if (!result.accepted) {
+                        Log("Hotkey ", HotkeyName(hotkeySettings.dialogueCycleKey),
                             ": Dialogue.Zoom=", DialogueZoomPolicyName(policy),
                             " rejected; required lifecycle/recovery capability unavailable.");
                         previousDialogueKey = dialogueKey;
@@ -3799,51 +4598,71 @@ namespace
                         previousGameplayKey = gameplayKey;
                         continue;
                     }
-                    g_runtimeDialoguePolicy.store(policy, std::memory_order_release);
                     DialogueZoomPolicy activePolicy = DialogueZoomPolicy::Native;
                     bool activePolicyValid = false;
                     {
-                        std::lock_guard dialogueLock(g_dialogueMutex);
+            diagnostics::ScopedRuntimeMutex dialogueLock(g_dialogueMutex, diagnostics::RuntimeLockPath::Dialogue);
                         activePolicy = g_activeDialoguePolicy.Value();
                         activePolicyValid = g_activeDialoguePolicy.IsValid();
                     }
-                    if (config::PersistConfigValue(g_configPath, "Dialogue", "Zoom", DialogueZoomPolicyName(policy),
-                        [](std::string message) { Log(message); }))
-                        Log("Hotkey ", HotkeyName(g_config.dialogueCycleKey), ": Dialogue.Zoom selected=",
+                    if (PersistHotkeyActionValue("Dialogue", "Zoom",
+                        DialogueZoomPolicyName(policy)))
+                        Log("Hotkey ", HotkeyName(hotkeySettings.dialogueCycleKey), ": Dialogue.Zoom selected=",
                             DialogueZoomPolicyName(policy), " active=", DialogueZoomPolicyName(activePolicy),
                             " activeValid=", activePolicyValid, " persisted.");
                     else
-                        Log("Hotkey ", HotkeyName(g_config.dialogueCycleKey), ": Dialogue.Zoom selected=",
+                        Log("Hotkey ", HotkeyName(hotkeySettings.dialogueCycleKey), ": Dialogue.Zoom selected=",
                             DialogueZoomPolicyName(policy), " active=", DialogueZoomPolicyName(activePolicy),
                             " activeValid=", activePolicyValid, " active; persistence failed.");
                 }
-                if (cinematicKey && !previousCinematicKey) {
+                if (plugin::ShouldDispatchHotkeyAction(hotkeySettings.hotkeysEnabled,
+                    captureActive, cinematicKey, previousCinematicKey,
+                    consumedKey == hotkeySettings.cinematicCycleKey)) {
+                    const auto previousPolicy = g_runtimeCinematicPolicy.load(std::memory_order_acquire);
                     const auto policy = NextCinematicAspectPolicy(
-                        g_runtimeCinematicPolicy.load(std::memory_order_acquire));
-                    g_runtimeCinematicPolicy.store(policy, std::memory_order_release);
-                    if (config::PersistConfigValue(g_configPath, "Cinematics", "AspectRatio", CinematicAspectPolicyName(policy),
-                        [](std::string message) { Log(message); }))
-                        Log("Hotkey ", HotkeyName(g_config.cinematicCycleKey), ": Cinematics.AspectRatio=", CinematicAspectPolicyName(policy),
+                        previousPolicy);
+                    const auto result = g_runtimeSettings.Apply(
+                        plugin::RuntimeSettingMutation::CinematicAspect(policy));
+                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                        plugin::OverlayNotificationAction::CinematicAspect,
+                        CinematicAspectPolicyName(previousPolicy), CinematicAspectPolicyName(policy),
+                        result.accepted ? plugin::OverlayNotificationStatus::Ready
+                            : plugin::OverlayNotificationStatus::Error);
+                    if (result.accepted && PersistHotkeyActionValue("Cinematics",
+                        "AspectRatio", CinematicAspectPolicyName(policy)))
+                        Log("Hotkey ", HotkeyName(hotkeySettings.cinematicCycleKey), ": Cinematics.AspectRatio=", CinematicAspectPolicyName(policy),
                             " persisted for next cinematic.");
-                    else
-                        Log("Hotkey ", HotkeyName(g_config.cinematicCycleKey), ": Cinematics.AspectRatio=", CinematicAspectPolicyName(policy),
+                    else if (result.accepted)
+                        Log("Hotkey ", HotkeyName(hotkeySettings.cinematicCycleKey), ": Cinematics.AspectRatio=", CinematicAspectPolicyName(policy),
                             " active for next cinematic; persistence failed.");
+                    else
+                        Log("Hotkey ", HotkeyName(hotkeySettings.cinematicCycleKey), ": Cinematics.AspectRatio rejected.");
                 }
-                if (cinematicFovKey && !previousCinematicFovKey) {
+                if (plugin::ShouldDispatchHotkeyAction(hotkeySettings.hotkeysEnabled,
+                    captureActive, cinematicFovKey, previousCinematicFovKey,
+                    consumedKey == hotkeySettings.cinematicFovCycleKey)) {
+                    const auto previousMode = g_runtimeCinematicFovMode.load(std::memory_order_acquire);
                     const auto mode = config::NextCinematicFovMode(
-                        g_runtimeCinematicFovMode.load(std::memory_order_acquire));
-                    g_runtimeCinematicFovMode.store(mode, std::memory_order_release);
-                    if (config::PersistConfigValue(g_configPath, "Cinematics", "FovMode",
-                        config::CinematicFovModeName(mode), [](std::string message) { Log(message); }))
-                        Log("Hotkey ", HotkeyName(g_config.cinematicFovCycleKey),
+                        previousMode);
+                    const auto result = g_runtimeSettings.Apply(
+                        plugin::RuntimeSettingMutation::CinematicFov(mode));
+                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                        plugin::OverlayNotificationAction::CinematicFov,
+                        config::CinematicFovModeName(previousMode), config::CinematicFovModeName(mode),
+                        result.accepted ? plugin::OverlayNotificationStatus::Ready
+                            : plugin::OverlayNotificationStatus::Error);
+                    if (result.accepted && PersistHotkeyActionValue("Cinematics", "FovMode",
+                        config::CinematicFovModeName(mode)))
+                        Log("Hotkey ", HotkeyName(hotkeySettings.cinematicFovCycleKey),
                             ": Cinematics.FovMode=", config::CinematicFovModeName(mode),
                             " persisted for next cinematic.");
-                    else
-                        Log("Hotkey ", HotkeyName(g_config.cinematicFovCycleKey),
+                    else if (result.accepted)
+                        Log("Hotkey ", HotkeyName(hotkeySettings.cinematicFovCycleKey),
                             ": Cinematics.FovMode=", config::CinematicFovModeName(mode),
                             " active for next cinematic; persistence failed.");
+                    else
+                        Log("Hotkey ", HotkeyName(hotkeySettings.cinematicFovCycleKey), ": Cinematics.FovMode rejected.");
                 }
-            }
             previousDialogueKey = dialogueKey;
             previousCinematicKey = cinematicKey;
             previousCinematicFovKey = cinematicFovKey;
@@ -3853,6 +4672,7 @@ namespace
 
     DWORD WINAPI Initialize(void*)
     {
+        g_runtimeInitializationComplete.store(false, std::memory_order_release);
         WCHAR modulePath[MAX_PATH]{};
         GetModuleFileNameW(g_module, modulePath, MAX_PATH);
         const auto moduleDirectory = std::filesystem::path(modulePath).remove_filename();
@@ -3901,7 +4721,22 @@ namespace
             g_runtimeCinematicPolicy.store(g_config.cinematicAspectPolicy, std::memory_order_release);
             g_runtimeCinematicFovMode.store(g_config.cinematicFovMode, std::memory_order_release);
             g_runtimeDialoguePolicy.store(g_config.dialogueZoomPolicy, std::memory_order_release);
+            const auto* locale = localization::FindLocaleDescriptor(
+                g_config.overlayLocaleCode);
+            g_runtimeOverlayLocale.store(locale ? locale :
+                localization::CanonicalLocaleDescriptor(), std::memory_order_release);
+            g_runtimeOverlayLocaleAuto.store(g_config.overlayLocaleAuto,
+                std::memory_order_release);
+            g_runtimeOverlayFontSize.store(g_config.overlayFontSize, std::memory_order_release);
             g_runtimeGameplayMode.store(g_config.gameplayMode, std::memory_order_release);
+            g_runtimeGameplayEnabled.store(g_config.gameplayEnabled, std::memory_order_release);
+            if (!g_runtimeSettings.Publish({
+                &ApplyRuntimeSetting, nullptr,
+                &ReadRuntimeSettings, nullptr,
+                &ReadOverlaySemanticSnapshot, nullptr,
+                &PersistRuntimeSetting, nullptr})) {
+                Log("Runtime settings API publication failed; overlay settings remain unavailable.");
+            }
             const bool gameplayRequested = g_config.gameplayEnabled;
 #ifdef NATIVE_GAMEPLAY_BASELINE_DIAGNOSTIC
             if (!gameplayRequested) {
@@ -3914,29 +4749,24 @@ namespace
                 Log("Native gameplay baseline diagnostic armed: read-only steady-state trace.");
             }
 #endif
-            const bool cinematicRequested = CinematicAspectOverrideEnabled() ||
-                g_config.cinematicFovMode == config::CinematicFovMode::GameplayHorPlus ||
-                g_config.hotkeysEnabled;
-            const bool dialogueRequested = g_config.dialogueZoomPolicy != DialogueZoomPolicy::Native ||
-                g_config.hotkeysEnabled;
+            // Runtime controls can change after startup, so install their
+            // pass-through-capable observation/components independently of
+            // whether the associated feature or hotkey action is enabled now.
+            constexpr bool cinematicRequested = true;
+            constexpr bool dialogueRequested = true;
             const bool nonNativeDialogueRequested =
                 g_config.dialogueZoomPolicy != DialogueZoomPolicy::Native;
             auto gameplayStatus = gameplayRequested ? FeatureStatus::Failed : FeatureStatus::Disabled;
             auto cinematicStatus = cinematicRequested ? FeatureStatus::Failed : FeatureStatus::Disabled;
             auto dialogueStatus = dialogueRequested ? FeatureStatus::Failed : FeatureStatus::Disabled;
-            auto hotkeyStatus = g_config.hotkeysEnabled ? FeatureStatus::Failed : FeatureStatus::Disabled;
+            auto hotkeyStatus = FeatureStatus::Failed;
             auto diagnosticStatus = FeatureStatus::Disabled;
-#ifdef ZOOM_TRANSITION_DIAGNOSTIC
-            const bool zoomTransitionInstalled = g_config.diagnosticsEnabled && gameHashAvailable &&
-                InstallZoomTransitionDiagnostic(gameHash);
-            if (!g_config.diagnosticsEnabled) {
-                Log("Diagnostics disabled; supported telemetry hooks not installed.");
-            } else if (!zoomTransitionInstalled) {
-                Log("Zoom transition diagnostic: NOT_INSTALLED; production behavior unchanged.");
-            } else {
+            const bool zoomTransitionInstalled = gameHashAvailable &&
+                InstallZoomTransitionObservation(gameHash);
+            if (g_config.diagnosticsEnabled && !zoomTransitionInstalled)
+                Log("Zoom transition observation: NOT_INSTALLED; production behavior unchanged.");
+            if (g_config.diagnosticsEnabled && zoomTransitionInstalled)
                 diagnosticStatus = FeatureStatus::Available;
-            }
-#endif
             Log("Configuration: Gameplay.Enabled=", g_config.gameplayEnabled,
                 " Gameplay.Mode=", config::GameplayModeName(g_config.gameplayMode),
                 " Cinematic.AspectRatio=", CinematicAspectPolicyName(g_config.cinematicAspectPolicy),
@@ -3948,20 +4778,10 @@ namespace
                 InstallCinematicAspectComponent, InstallCinematicFovComponent,
                 RollbackCinematicAspectComponent, RollbackCinematicFovComponent,
                 CommitCinematicComponents);
-            bool lifecycleObservationAvailable = cinematicStatus == FeatureStatus::Available;
-            if (!cinematicRequested && (nonNativeDialogueRequested || g_config.hotkeysEnabled)) {
-                try {
-                    if (!InstallCinematicFovComponent())
-                        throw std::runtime_error("cinematic lifecycle observation setup failed");
-                    if (!CommitCinematicObservationOnly())
-                        throw std::runtime_error("cinematic lifecycle observation commit failed");
-                    lifecycleObservationAvailable = true;
-                    Log("Cinematic lifecycle observation installed; presentation intervention disabled.");
-                } catch (...) {
-                    RollbackCinematicFovComponent();
-                    Log("Cinematic lifecycle observation unavailable; presentation intervention unchanged.");
-                }
-            }
+            g_cinematicAspectComponentAvailable.store(
+                cinematicStatus == FeatureStatus::Available, std::memory_order_release);
+            const bool lifecycleObservationAvailable =
+                cinematicStatus == FeatureStatus::Available;
             g_cinematicLifecycleObservationAvailable.store(lifecycleObservationAvailable,
                 std::memory_order_release);
             if (cinematicStatus == FeatureStatus::Available)
@@ -3971,47 +4791,49 @@ namespace
                 Log("Cinematics feature failed transactionally; native cinematic behavior retained.");
             else
                 Log("Cinematics policy is Native; cinematic override hooks bypassed.");
-            if (gameplayRequested) {
-                try {
-                    if (!VerifyExecutableAndInstruction())
-                        throw std::runtime_error("camera-writer signature or validated FOV instruction did not match");
-                    Log("Installing validated gameplay hook.");
-                    auto gameplayHook = safetyhook::MidHook::create(
-                        g_fovWriteAddress, SafeMidHookEntry<&ReplayManualTransition>,
-                        safetyhook::MidHook::StartDisabled);
-                    if (!gameplayHook) throw std::runtime_error("validated gameplay hook creation failed");
-                    g_hook = std::move(*gameplayHook);
-                    gameplayStatus = FeatureStatus::Available;
-                    g_gameplayAvailable.store(true, std::memory_order_release);
-                    if (!g_hook.enable()) throw std::runtime_error("validated gameplay hook activation failed");
-                    g_gameplayHookGate.store(true, std::memory_order_release);
-                    Log("Validated gameplay hook installed: true.");
-                } catch (...) {
-                    g_hook.reset();
-                    g_fovWriteAddress = nullptr;
-                    gameplayStatus = FeatureStatus::Failed;
-                    g_gameplayAvailable.store(false, std::memory_order_release);
-                    Log("Gameplay feature failed locally; gameplay correction is unavailable.");
-                }
-            } else {
-                gameplayStatus = FeatureStatus::Disabled;
-                Log("Gameplay aspect fix disabled by configuration; camera-writer observer bypassed.");
+            try {
+                if (!VerifyExecutableAndInstruction())
+                    throw std::runtime_error("camera-writer signature or validated FOV instruction did not match");
+                Log("Installing validated gameplay camera-writer observer.");
+                auto gameplayHook = safetyhook::MidHook::create(
+                    g_fovWriteAddress, SafeMidHookEntry<&ReplayManualTransition>,
+                    safetyhook::MidHook::StartDisabled);
+                if (!gameplayHook) throw std::runtime_error("validated gameplay hook creation failed");
+                g_hook = std::move(*gameplayHook);
+                if (!g_hook.enable()) throw std::runtime_error("validated gameplay hook activation failed");
+                g_gameplayHookGate.store(true, std::memory_order_release);
+                g_gameplayRecoveryObservationAvailable.store(true, std::memory_order_release);
+                gameplayStatus = gameplayRequested ? FeatureStatus::Available : FeatureStatus::Disabled;
+                Log("Validated gameplay camera-writer observer installed: true correctionEnabled=",
+                    gameplayRequested ? "true" : "false", ".");
+                if (!gameplayRequested)
+                    Log("Gameplay correction disabled by configuration; observer remains active for runtime enabling and recovery.");
+            } catch (...) {
+                g_hook.reset();
+                g_fovWriteAddress = nullptr;
+                gameplayStatus = FeatureStatus::Failed;
+                g_gameplayRecoveryObservationAvailable.store(false, std::memory_order_release);
+                Log("Gameplay camera-writer observer failed locally; runtime Gameplay activation is unavailable.");
+            }
 #ifdef POST_EXIT_GAMEPLAY_OBSERVER_DIAGNOSTIC
+            if (!gameplayRequested) {
                 if (!InstallPostExitGameplayObserverDiagnostic())
                     Log("Post-EXIT diagnostic gameplay observer: NOT_INSTALLED; production behavior unchanged.");
-#endif
             }
+#endif
+            const bool gameplayRecoveryObservationAvailable =
+                g_gameplayRecoveryObservationAvailable.load(std::memory_order_acquire);
             const bool nonNativeDialogueCapability =
                 plugin::DialogueLifecycleCapabilityAvailable(
                     true, lifecycleObservationAvailable,
-                    gameplayStatus == FeatureStatus::Available);
+                    gameplayRecoveryObservationAvailable);
             g_dialogueNonNativeCapabilityAvailable.store(nonNativeDialogueCapability,
                 std::memory_order_release);
             if (dialogueRequested) {
                 const bool currentDialogueCapability =
                     plugin::DialogueLifecycleCapabilityAvailable(
                         nonNativeDialogueRequested, lifecycleObservationAvailable,
-                        gameplayStatus == FeatureStatus::Available);
+                        gameplayRecoveryObservationAvailable);
                 if (!currentDialogueCapability) {
                     dialogueStatus = FeatureStatus::Failed;
                     Log("Dialogue feature unavailable: non-Native Dialogue requires "
@@ -4034,16 +4856,18 @@ namespace
             Log("Initialization summary: Gameplay=", FeatureStatusName(gameplayStatus),
                 " Cinematics=", FeatureStatusName(cinematicStatus),
                 " Dialogue=", FeatureStatusName(dialogueStatus), ".");
-            if (g_config.hotkeysEnabled) {
-                if (!StartWorker(
-                    [](void*) -> DWORD { HotkeyLoop(); return 0; }, "hotkey"))
-                    Log("Hotkey feature failed locally; production hooks remain active.");
-                else
-                    hotkeyStatus = FeatureStatus::Available;
-                    Log("Hotkeys enabled: F9=Gameplay mode cycle, F10=Cinematics aspect cycle, F11=Cinematics FOV cycle for next cinematic, F12=Dialogue cycle.");
-            } else {
-                hotkeyStatus = FeatureStatus::Disabled;
-                Log("Hotkeys disabled by configuration.");
+            if (!StartWorker(
+                [](void*) -> DWORD { HotkeyLoop(); return 0; }, "hotkey"))
+                Log("Hotkey worker failed locally; production hooks remain active.");
+            else {
+                hotkeyStatus = FeatureStatus::Available;
+                const auto bindings = plugin::GetRuntimeSettingsSnapshot();
+                Log("Hotkey worker active: OverlayToggle=", HotkeyName(bindings.overlayToggleKey),
+                    " Enabled=", bindings.hotkeysEnabled ? "true" : "false",
+                    " Gameplay=", HotkeyName(bindings.gameplayCycleKey),
+                    " CinematicAspect=", HotkeyName(bindings.cinematicCycleKey),
+                    " CinematicFov=", HotkeyName(bindings.cinematicFovCycleKey),
+                    " Dialogue=", HotkeyName(bindings.dialogueCycleKey), ".");
             }
 #ifdef GAMEPLAY_ONE_SHOT_CINEMATIC_TRIGGER
             diagnosticStatus = FeatureStatus::Failed;
@@ -4085,12 +4909,96 @@ namespace
             Log("Gameplay hook setup failed safely with an unknown exception.");
             g_logger->flush();
         }
+        g_runtimeInitializationComplete.store(true, std::memory_order_release);
         return 0;
     }
 }
 
 namespace plugin
 {
+    void PublishOverlayNotification(OverlayNotificationKind kind,
+        OverlayNotificationAction action, std::string primaryValue,
+        std::string secondaryValue,
+        OverlayNotificationStatus status, std::uint32_t durationMs) noexcept
+    {
+        try {
+            std::lock_guard lock(g_notificationMutex);
+            if (g_pendingNotifications.size() >= 8)
+                g_pendingNotifications.pop_front();
+            g_pendingNotifications.push_back({++g_nextNotificationId,
+                kind, action, std::move(primaryValue), std::move(secondaryValue), status,
+                static_cast<std::uint64_t>(GetTickCount64()), durationMs});
+        } catch (...) {
+            // Notifications are optional UX; never affect the setting mutation path.
+        }
+    }
+
+    void DrainOverlayNotifications(std::vector<OverlayNotification>& notifications) noexcept
+    {
+        try {
+            std::lock_guard lock(g_notificationMutex);
+            while (!g_pendingNotifications.empty()) {
+                notifications.push_back(std::move(g_pendingNotifications.front()));
+                g_pendingNotifications.pop_front();
+            }
+        } catch (...) {
+            // Keep rendering and settings behavior alive if allocation fails.
+        }
+    }
+
+    void SetHotkeyRebindCaptureActive(bool active) noexcept
+    {
+        g_hotkeyRebindCaptureActive.store(active, std::memory_order_release);
+    }
+
+    void MarkHotkeyRebindKeyConsumed(int key) noexcept
+    {
+        g_hotkeyRebindConsumedKey.store(key, std::memory_order_release);
+    }
+
+    RuntimeSettingsApi& GetRuntimeSettingsApi() noexcept
+    {
+        return g_runtimeSettings;
+    }
+
+    bool SetDetectedOverlayLocale(std::string_view localeCode) noexcept
+    {
+        if (!g_runtimeOverlayLocaleAuto.load(std::memory_order_acquire)) return false;
+        if (localeCode == "sr") localeCode = "sr-Cyrl";
+        else if (localeCode == "es") localeCode = "es-ES";
+        const auto* descriptor = localization::FindLocaleDescriptor(localeCode);
+        if (!descriptor) descriptor = localization::FindLocaleDescriptor("en");
+        if (!descriptor) return false;
+        const auto* old = g_runtimeOverlayLocale.exchange(descriptor,
+            std::memory_order_acq_rel);
+        const bool firstSync = !g_runtimeOverlayAutoLocaleSynchronized.exchange(true,
+            std::memory_order_acq_rel);
+        if (firstSync || old != descriptor) {
+            g_runtimeOverlayFontSize.store(descriptor->initialFontSize,
+                std::memory_order_release);
+            Log("Overlay Auto locale synchronized: game=", descriptor->code,
+                " font_size=", descriptor->initialFontSize);
+        }
+        return true;
+    }
+
+    RuntimeSettingsSnapshot GetRuntimeSettingsSnapshot() noexcept
+    {
+        RuntimeSettingsSnapshot snapshot{};
+        ReadRuntimeSettings(snapshot, nullptr);
+        return snapshot;
+    }
+
+    bool GetOverlaySemanticSnapshot(OverlaySemanticSnapshot& snapshot) noexcept
+    {
+        return g_runtimeSettings.SemanticSnapshot(snapshot);
+    }
+
+    float GetRuntimeViewportAspect() noexcept
+    {
+        return platform::win32::ReadClientViewportAspect();
+    }
+
     void SetModuleHandle(HMODULE module)
     {
         g_module = module;
@@ -4098,6 +5006,9 @@ namespace plugin
 
     DWORD WINAPI InitializeThread(void* parameter)
     {
+#ifdef OVERLAY_COMBINED
+        StartOverlayDiscovery(g_module);
+#endif
         return Initialize(parameter);
     }
 

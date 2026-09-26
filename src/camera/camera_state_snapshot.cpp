@@ -78,6 +78,7 @@ namespace camera
             current.zoom.direction != previous.zoom.direction ||
             current.zoom.provenance != previous.zoom.provenance ||
             current.zoom.valid != previous.zoom.valid ||
+            current.zoom.active != previous.zoom.active ||
             FloatChanged(current.zoom.primaryWeight, previous.zoom.primaryWeight) ||
             FloatChanged(current.zoom.secondaryWeight, previous.zoom.secondaryWeight) ||
             current.zoom.source.value != previous.zoom.source.value ||
@@ -93,13 +94,16 @@ namespace camera
             current.gameplayMode.value != previous.gameplayMode.value ||
             current.gameplayMode.provenance != previous.gameplayMode.provenance ||
             current.gameplayMode.valid != previous.gameplayMode.valid ||
+            FloatChanged(current.evidence.retainedGameplayFov, previous.evidence.retainedGameplayFov) ||
             FloatChanged(current.evidence.nativeWriterFov, previous.evidence.nativeWriterFov) ||
             FloatChanged(current.evidence.aspect, previous.evidence.aspect) ||
             current.evidence.flags != previous.evidence.flags ||
             FloatChanged(current.evidence.transformedFov, previous.evidence.transformedFov) ||
+            current.evidence.retainedGameplayFovValid != previous.evidence.retainedGameplayFovValid ||
             current.evidence.nativeWriterFovValid != previous.evidence.nativeWriterFovValid ||
             current.evidence.aspectValid != previous.evidence.aspectValid ||
             current.evidence.transformedFovValid != previous.evidence.transformedFovValid ||
+            current.evidence.retainedGameplayFovProvenance != previous.evidence.retainedGameplayFovProvenance ||
             current.evidence.nativeWriterFovProvenance != previous.evidence.nativeWriterFovProvenance ||
             current.evidence.aspectProvenance != previous.evidence.aspectProvenance ||
             current.evidence.transformedFovProvenance != previous.evidence.transformedFovProvenance ||
@@ -124,6 +128,7 @@ namespace camera
             current.zoom.direction != previous.zoom.direction ||
             current.zoom.provenance != previous.zoom.provenance ||
             current.zoom.valid != previous.zoom.valid ||
+            current.zoom.active != previous.zoom.active ||
             current.zoom.source.value != previous.zoom.source.value ||
             current.zoom.source.valid != previous.zoom.source.valid ||
             current.dialogue.state != previous.dialogue.state ||
@@ -137,9 +142,11 @@ namespace camera
             current.gameplayMode.provenance != previous.gameplayMode.provenance ||
             current.gameplayMode.valid != previous.gameplayMode.valid ||
             current.evidence.flags != previous.evidence.flags ||
+            current.evidence.retainedGameplayFovValid != previous.evidence.retainedGameplayFovValid ||
             current.evidence.nativeWriterFovValid != previous.evidence.nativeWriterFovValid ||
             current.evidence.aspectValid != previous.evidence.aspectValid ||
             current.evidence.transformedFovValid != previous.evidence.transformedFovValid ||
+            current.evidence.retainedGameplayFovProvenance != previous.evidence.retainedGameplayFovProvenance ||
             current.evidence.nativeWriterFovProvenance != previous.evidence.nativeWriterFovProvenance ||
             current.evidence.aspectProvenance != previous.evidence.aspectProvenance ||
             current.evidence.transformedFovProvenance != previous.evidence.transformedFovProvenance ||

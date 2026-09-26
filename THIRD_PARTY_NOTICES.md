@@ -71,6 +71,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Dear ImGui — MIT License
+
+The overlay vendors a pinned subset of Dear ImGui v1.91.9b from
+ocornut/imgui. The complete applicable license text is retained in
+`external/imgui/LICENSE.txt`.
+
+## ProggyVector Regular — MIT / Bitstream Vera License
+
+The embedded Cyrillic font resource is ProggyVector Regular, supplied in
+`assets/fonts/ProggyVector/ProggyVector-Regular.ttf`. Its complete upstream
+license and copyright notices are retained alongside the font and embedded in
+the ASI as `IDR_PROGGY_VECTOR_LICENSE`. The notice covers the ProggyVector,
+Hack, DejaVu, and Bitstream Vera components as stated in that license file.
+
+## Noto catalog glyph subsets — SIL Open Font License 1.1
+
+The overlay embeds catalog-derived glyph subsets from Noto Sans Mono v2.014,
+Noto Sans Arabic v2.013, and Noto Sans CJK v2.004 JP/KR/SC/TC. Their source
+attributions and versions are recorded in
+`assets/fonts/CatalogSubsets/README.md`; complete OFL text and attribution
+notices are embedded as Windows resources in the ASI. The catalog-only
+subset binaries, source hashes, generated hashes, exact Unicode contract and
+reproduction script are retained under `assets/fonts/CatalogSubsets/` and
+`tools/fonts/`.
+
 ## spdlog — MIT License
 
 The vendored spdlog headers in external/spdlog/ are from gabime/spdlog and are

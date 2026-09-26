@@ -80,6 +80,7 @@ namespace camera
         float primaryWeight{std::numeric_limits<float>::quiet_NaN()};
         float secondaryWeight{std::numeric_limits<float>::quiet_NaN()};
         ZoomSourceToken source{};
+        bool active{};
     };
 
     struct DialogueSnapshot
@@ -113,6 +114,9 @@ namespace camera
         EvidenceProvenance aspectProvenance{EvidenceProvenance::Unavailable};
         EvidenceProvenance transformedFovProvenance{EvidenceProvenance::Unavailable};
         bool configuredGameplayFovKnown{};
+        float retainedGameplayFov{std::numeric_limits<float>::quiet_NaN()};
+        bool retainedGameplayFovValid{};
+        EvidenceProvenance retainedGameplayFovProvenance{EvidenceProvenance::Unavailable};
     };
 
     struct SourceProvenance

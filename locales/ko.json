@@ -1,0 +1,166 @@
+{
+  "app": { "title": "STALKER 2 Camera Tweaks" },
+  "common": {
+    "enabled": "사용", "disabled": "사용 안 함", "unavailable": "사용할 수 없음",
+    "unavailable_value": "사용할 수 없음", "cannot_assess": "평가할 수 없음",
+    "active": "활성", "ready": "준비됨", "applying": "적용 중",
+    "starting": "시작 중", "ending": "종료 중", "waiting": "대기 중",
+    "applied": "적용됨", "pending": "대기 상태", "error": "오류",
+    "yes": "예", "no": "아니요", "examples": "Examples"
+  },
+  "section": {
+    "runtime_settings": "게임 내 설정", "camera_transition": "카메라 전환",
+    "gameplay": "게임플레이", "cinematics": "시네마틱", "dialogue": "대화",
+    "overlay": "오버레이", "hotkeys": "단축키", "runtime": "실행 상태",
+    "camera_integration": "카메라 통합", "camera_state": "카메라 상태",
+    "presentation": "표시", "zoom": "줌", "fov": "FOV",
+    "sources": "출처", "generation": "세대"
+  },
+  "setting": {
+    "gameplay_mode": "게임플레이 모드", "cinematic_aspect": "시네마틱 화면비",
+    "cinematic_fov": "시네마틱 FOV", "dialogue_zoom": "대화 줌",
+    "overlay_toggle": "오버레이 전환", "language": "언어", "font_size": "텍스트 크기", "mode": "모드",
+    "aspect_ratio": "화면비", "fov_mode": "FOV 모드", "zoom": "줌"
+  },
+  "notice": { "mouse_capture": "이 창이 열려 있는 동안 마우스 입력을 가로챕니다. {key} 키를 눌러 마우스 제어를 게임으로 돌려보내거나 Esc 키를 눌러 오버레이를 닫으세요." },
+  "rebind": { "press_key": "키를 누르세요" },
+  "ui": { "viewport_aspect": "게임 뷰포트 화면비" },
+  "transition": {
+    "waiting": "대기 중",
+    "aligned": "일치", "not_aligned": "불일치",
+    "detail": {
+      "waiting": "카메라 설정은 경로가 일치하도록 구성되었습니다. 상태를 확인할 게임플레이 카메라 데이터를 기다리는 중입니다.",
+      "aligned": "시네마틱과 게임플레이 카메라 경로가 일치합니다.",
+      "not_aligned": "시네마틱과 게임플레이 카메라 경로의 화면비 또는 FOV 동작이 다릅니다.",
+      "cannot_assess": "카메라 경로를 비교할 실행 데이터가 충분하지 않습니다."
+    },
+    "active_value": "활성 — {value}"
+  },
+  "status": { "detail": {
+    "gameplay_incomplete": "게임플레이 상태를 아직 사용할 수 없습니다.",
+    "gameplay_hook_unavailable": "게임플레이 카메라 통합을 사용할 수 없습니다.",
+    "camera_update_waiting": "필요한 카메라 업데이트를 기다리는 중입니다.",
+    "native_recalculation_persists": "게임을 다시 시작하거나 저장 파일을 다시 불러올 때까지 기본 카메라 재계산 결과가 유지될 수 있습니다.",
+    "gameplay_disabled": "게임플레이 보정이 꺼져 있습니다.",
+    "gameplay_context_unavailable": "게임플레이 카메라 정보를 사용할 수 없습니다.",
+    "horplus_waiting": "HorPlus를 활성화할 게임플레이 카메라 데이터를 기다리는 중입니다.",
+    "horplus_active": "HorPlus가 게임플레이 FOV를 실시간으로 조정합니다.",
+    "native_recalculation_enabled": "게임의 기본 카메라 조정이 활성화되어 있습니다.",
+    "cinematic_incomplete": "시네마틱 상태를 아직 사용할 수 없습니다.",
+    "cinematic_unavailable": "시네마틱 카메라 통합을 사용할 수 없습니다.",
+    "cinematic_native_ready": "다음 시네마틱은 원래 구도를 사용합니다.",
+    "next_cinematic_ready": "변경 사항은 다음 시네마틱부터 적용됩니다.",
+    "cinematic_active": "현재 시네마틱에 선택한 FOV 모드가 적용되어 있습니다.",
+    "cinematic_selection_incomplete": "현재 시네마틱 정보가 완전하지 않습니다.",
+    "dialogue_incomplete": "대화 상태를 아직 사용할 수 없습니다.",
+    "dialogue_hook_unavailable": "대화 카메라 통합을 사용할 수 없습니다.",
+    "dialogue_capability_unavailable": "대화 줌 상태를 사용할 수 없습니다.",
+    "dialogue_mode_unavailable": "선택한 대화 줌 모드를 사용할 수 없습니다.",
+    "dialogue_native_ready": "다음 대화는 게임의 기본 줌을 사용합니다.",
+    "dialogue_adaptive_ready": "다음 대화에 적응형 줌이 설정되었습니다.",
+    "dialogue_reduced_ready": "다음 대화에 축소 줌이 설정되었습니다.",
+    "dialogue_disabled_ready": "대화에 추가 줌을 적용하지 않습니다.",
+    "dialogue_ready": "변경 사항은 다음 대화부터 적용됩니다.",
+    "dialogue_active": "현재 대화에 표시된 줌 모드가 적용되어 있습니다.",
+    "dialogue_starting": "대화 전환 확인을 기다리는 중입니다.",
+    "active_dialogue_policy_unavailable": "현재 대화의 줌 설정을 사용할 수 없습니다.",
+    "dialogue_ending": "대화 카메라가 게임플레이로 돌아가는 중입니다.",
+    "dialogue_recovery_waiting": "카메라가 복구되면 대화 처리를 다시 사용할 수 있습니다.",
+    "dialogue_state_unknown": "대화 카메라 상태를 알 수 없습니다.",
+    "runtime_unavailable": "실행 상태를 사용할 수 없습니다."
+  } },
+  "tooltip": {
+    "gameplay": {
+      "enabled": "선택한 게임플레이 보정을 활성화합니다.",
+      "disabled": "이후 게임플레이 보정을 중지합니다. 기본 카메라 재계산 결과는 게임을 다시 시작하거나 저장 파일을 다시 불러올 때까지 유지될 수 있습니다.",
+      "horplus": "Recommended. 게임의 기본 FOV 변경을 유지하고 줌 중에도 현재 게임 뷰포트에 실시간으로 맞춥니다.",
+      "horplus_examples_context": "게임플레이 FOV · 줌 없음",
+      "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
+      "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
+      "aspect_recalculation": "선택한 게임플레이 FOV를 유지하면서 게임의 기본 화면비 전환을 사용합니다. 사용자 지정 창 화면비에서 Auto로 돌아가면 창이 기본 화면비와 크기로 복원될 수 있습니다."
+    },
+    "cinematics": { "aspect": {
+      "auto": "현재 게임 뷰포트 화면비를 시네마틱 구도에 사용합니다. 유효한 모든 화면비를 지원합니다.",
+      "native": "게임의 기본 시네마틱 구도를 변경하지 않습니다. 선택한 FOV 모드는 계속 적용됩니다.",
+      "16_9": "디스플레이 화면비와 관계없이 시네마틱에 16:9 구도를 사용합니다.",
+      "21_9": "디스플레이 화면비와 관계없이 시네마틱에 21:9 구도를 사용합니다.",
+      "32_9": "디스플레이 화면비와 관계없이 시네마틱에 32:9 구도를 사용합니다.",
+      "forced_example": "Example: 32:9 on a 16:9 display uses a wider frame with black bars above and below."
+    }, "fov": {
+      "gameplay": "시네마틱 고유의 FOV 변화를 유지하면서 현재 게임플레이 FOV를 따릅니다. 필요한 맥락을 사용할 수 없으면 NativeHorPlus로 전환합니다.",
+      "gameplay_examples_context": "시네마틱 FOV 90° · 게임플레이 FOV 입력",
+      "gameplay_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "gameplay_example_112_6": "112.6° → 16:9: 112.6°; 21:9: 118.51°; 32:9: ~143.13°.",
+      "native": "플레이어의 게임플레이 FOV 설정과 별개로 시네마틱에 설정된 FOV에 HorPlus를 적용합니다.",
+      "native_examples_context": "시네마틱 FOV 90° · 화면비별 결과",
+      "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
+    } },
+    "dialogue": { "zoom": {
+      "native": "게임의 원래 대화 줌 동작을 사용합니다.",
+      "adaptive": "현재 게임플레이 FOV에 대한 게임 원래 광학 줌 강도를 유지합니다.",
+      "reduced": "적응형 광학 줌 강도의 절반을 사용합니다.",
+      "disabled": "대화 줌을 끄고 현재 게임플레이 FOV를 유지합니다.",
+      "examples_context": "게임플레이 FOV → 대화 FOV",
+      "native_example_90": "90° → 70°.",
+      "native_example_110": "110° → 70°.",
+      "adaptive_example_90": "90° → 70°.",
+      "adaptive_example_110": "110° → ~90°.",
+      "reduced_example_90": "90° → ~80°.",
+      "reduced_example_110": "110° → ~100°.",
+      "disabled_example_90": "90° → 90°.",
+      "disabled_example_110": "110° → 110°."    } },
+    "hotkeys": {
+      "enabled": "게임플레이, 시네마틱, 대화 단축키 동작을 활성화합니다.",
+      "disabled": "해당 동작을 비활성화합니다. 별도의 오버레이 전환 키는 계속 활성화됩니다.",
+      "change": "Click the current key control to start rebinding.",
+      "change_overlay": "Click the current overlay key control to start rebinding.",
+      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+      "rebind": "Press a key to assign it. Press Esc to cancel.",
+      "gameplay_cycle": "Cycles Gameplay correction immediately: AspectRecalculation -> HorPlus -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Sets aspect ratio for the next cinematic: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Does not affect a cinematic already playing.",
+      "cinematic_fov_cycle": "Sets FOV mode for the next cinematic: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Does not affect a cinematic already playing.",
+      "dialogue_cycle": "Sets zoom mode for the next dialogue: Native -> Adaptive -> Reduced -> Disabled -> Native. Does not affect a dialogue already in progress."
+    },
+    "overlay": { "always_active": "이 키로 오버레이를 열거나 닫습니다." },
+    "runtime": {
+      "viewport": "현재 게임 뷰포트 화면비입니다. 게임 해상도나 창 크기에 따라 달라질 수 있습니다.",
+      "viewport_auto": "시네마틱 Auto 화면비 정책은 이 뷰포트 화면비를 목표로 사용합니다.",
+      "viewport_unavailable": "현재 게임 뷰포트 크기를 사용할 수 없습니다.",
+      "aspect_matched": "시네마틱과 게임플레이 뷰포트 화면비가 비교 허용 오차 안에서 일치합니다.",
+      "aspect_mismatch": "시네마틱과 게임플레이 뷰포트 화면비가 다릅니다.",
+      "aspect_cannot_assess": "화면비를 비교할 유효한 실행 정보가 충분하지 않습니다.",
+      "cinematic_aspect": "첫 번째 값은 시네마틱 설정에서 계산한 화면비이고, 두 번째 값은 현재 게임플레이 뷰포트 화면비입니다.",
+      "cinematic_aspect_unavailable": "유효한 시네마틱 목표 화면비 또는 현재 뷰포트 화면비를 사용할 수 없습니다.",
+      "gameplay_fov": "유지되는 중립 게임플레이 FOV입니다. ADS, 쌍안경, 대화, 시네마틱과 같은 임시 줌 상태와는 별개입니다.",
+      "gameplay_fov_unavailable": "유효한 중립 게임플레이 FOV가 아직 관측되지 않았습니다.",
+      "native_fov": "HorPlus 변환 전의 현재 FOV 입력입니다. ADS, 쌍안경 줌, 대화 또는 카메라 전환 중에 달라질 수 있습니다.",
+      "native_fov_unavailable": "유효한 현재 기본 FOV를 사용할 수 없습니다.",
+      "horplus_fov": "현재 뷰포트에 맞게 변환된 기본 FOV입니다. 줌 및 카메라 전환 중에 달라질 수 있습니다.",
+      "horplus_fov_unavailable": "유효한 변환 FOV를 사용할 수 없습니다."
+    }
+  },
+  "camera_state": {
+    "waiting": "첫 번째 완전한 카메라 업데이트를 기다리는 중입니다.",
+    "field": {
+      "state": "상태", "gameplay_fov": "게임플레이 FOV", "provenance": "출처", "epoch": "에포크", "mode": "모드",
+      "valid": "유효", "direction": "방향", "active": "활성",
+      "evidence_valid": "증거 유효", "sequence": "순서", "primary": "기본",
+      "secondary": "보조", "source": "출처", "confidence": "신뢰도",
+      "policy_valid": "정책 유효", "recovery_excluded": "복구에서 제외",
+      "target": "대상", "setting_known": "설정 확인됨", "game_source": "게임 출처",
+      "native": "기본 FOV", "native_source": "기본 출처", "horplus": "HorPlus FOV",
+      "horplus_source": "HorPlus 출처", "aspect": "화면비", "aspect_source": "화면비 출처",
+      "flags": "플래그", "gameplay_writer": "게임 기록 주체",
+      "presentation_epoch": "표시 에포크", "event_sequence": "이벤트 순서"
+    },
+    "value": { "unavailable_counter": "사용할 수 없음 / {value}" }
+  },
+  "notification": {
+    "hotkey_conflict": "단축키 충돌", "hotkey_title": "{setting} 단축키",
+    "binding_value": "{oldKey} → {newKey}",
+    "conflict_value": "{key} 키는 이미 {setting}에 지정되어 있습니다",
+    "setting_changed": "{oldValue} → {newValue}",
+    "open_overlay_hint": "{key} 키를 눌러 오버레이 열기"
+  }
+}

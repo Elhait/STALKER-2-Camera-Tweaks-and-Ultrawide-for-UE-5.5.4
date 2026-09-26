@@ -7,6 +7,10 @@
 
 namespace cinematics
 {
+    // Established PC 21:9 framing policy. It intentionally uses the validated
+    // 3440x1440 value, not the mathematical 21/9 ratio.
+    inline constexpr float Forced21x9Aspect = 3440.0f / 1440.0f;
+
     using AutoAspectResolver = float (*)();
     using WritablePredicate = bool (*)(std::uintptr_t address, std::size_t size);
     using AspectValidator = bool (*)(float aspect);

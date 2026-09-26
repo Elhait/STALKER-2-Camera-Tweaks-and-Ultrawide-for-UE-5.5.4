@@ -1,4 +1,5 @@
 #include "gameplay_baseline.hpp"
+#include "../diagnostics/performance_telemetry.hpp"
 
 #include <cmath>
 
@@ -52,7 +53,7 @@ namespace camera
     GameplayBaselineProjectionResult GameplayBaselineStore::Project(
         const CameraFovObservation& observation, bool gameplayEligible)
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::GameplayBaseline);
         GameplayBaselineProjectionResult result{};
         result.baseline = baseline_;
         result.eligible = IsEligibleObservation(observation, gameplayEligible);
@@ -72,7 +73,7 @@ namespace camera
 
     GameplayBaselineProjectionResult GameplayBaselineStore::Invalidate()
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::GameplayBaseline);
         baseline_ = {};
         GameplayBaselineProjectionResult result{};
         result.disposition = GameplayBaselineProjectionDisposition::Invalidated;
@@ -82,7 +83,7 @@ namespace camera
 
     GameplayBaseline GameplayBaselineStore::Read() const
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::GameplayBaseline);
         return baseline_;
     }
 }

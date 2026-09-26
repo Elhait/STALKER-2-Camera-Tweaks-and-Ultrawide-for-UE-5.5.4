@@ -1,0 +1,10 @@
+Copyright 2014-2024 Adobe (https://www.adobe.com/).
+
+The bundled Noto Sans CJK JP/KR/SC/TC catalog subsets are distributed under
+the SIL Open Font License 1.1. The complete OFL 1.1 text is embedded in this
+ASI as IDR_NOTO_ARABIC_OFL and is also retained in
+assets/fonts/CatalogSubsets/OFL-Arabic.txt. The same OFL terms apply to the
+Noto Sans CJK source; this separate notice preserves its upstream attribution.
+
+Upstream: https://github.com/notofonts/noto-cjk
+Release: Sans2.004 (Noto Sans CJK v2.004)

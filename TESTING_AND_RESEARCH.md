@@ -1,13 +1,13 @@
 # Testing And Research Summary
 
-## Current unified mod — v1.0.0
+## Current unified mod — v2.0 development candidate
 
-The current artifact is `STALKER2CameraTweaks.asi`, intended to replace the
-older `STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi`. Do not
-load old and new files together; remove
-the older ASI before installing the unified one.
+The unified production mod is `STALKER2CameraTweaks.asi`, intended to replace
+the older `STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi`. Do not
+load old and new files together. The repository currently represents a v2.0
+development candidate, not a tagged or released v2.0 artifact.
 
-The production configuration has four independent areas:
+The current default configuration is:
 
 ```ini
 [Gameplay]
@@ -21,6 +21,14 @@ FovMode=GameplayHorPlus
 [Dialogue]
 Zoom=Adaptive
 
+[Diagnostics]
+Enabled=false
+
+[Overlay]
+ToggleKey=VK_2E
+Language=Auto
+FontSize=13
+
 [Hotkeys]
 Enabled=false
 GameplayCycle=F9
@@ -29,26 +37,46 @@ CinematicFovCycle=F11
 DialogueCycle=F12
 ```
 
-`Gameplay.Enabled` controls gameplay aspect correction. `Cinematics.AspectRatio`
-selects automatic, native or forced cinematic framing. `Dialogue.Zoom` supports
-`Native`, `Adaptive`, `Reduced` and `Disabled`; the default `Adaptive` mode
-preserves the native optical zoom strength relative to the actual gameplay FOV.
-`Gameplay.Mode` supports `AspectRecalculation` and `HorPlus`; `HorPlus`
-preserves the game's original gameplay FOV changes and adapts them to the
-current aspect ratio. `Cinematics.FovMode` supports `GameplayHorPlus` and
-`NativeHorPlus`. Hotkeys are optional testing controls, disabled by default,
-and support `F1-F12`, `0-9` and `A-Z`. F9 switches gameplay mode immediately;
-F10 selects cinematic aspect, F11 selects cinematic FOV mode and F12 selects
-dialogue zoom mode for the next corresponding lifecycle. They do not rebuild
-an already active cinematic or dialogue.
+`Gameplay.Mode` selects `HorPlus` or `AspectRecalculation`; HorPlus uses the
+Gameplay FOV selected in the game's settings and adapts it to the current
+aspect ratio. Cinematics offer automatic/native/forced framing and
+`GameplayHorPlus` or `NativeHorPlus` FOV policies. Dialogue zoom supports
+`Native`, `Adaptive`, `Reduced` and `Disabled`. Optional cycling hotkeys are
+disabled by default and take effect at the next applicable lifecycle.
 
-The INI is created automatically beside the ASI when missing. `Auto` uses the
-runtime camera aspect and updates when the game resolution changes during the
-same session. `Native` bypasses both cinematic hooks; forced 16:9, 21:9 and
-32:9 modes provide custom cinematic framing with matching FOV. The obsolete
-`FovCorrection` option is not part of the unified v1.0.0 configuration. Settings
-from previous INI files are not migrated; managed descriptions and categories
-are still synchronized when the new INI already exists.
+The INI is created automatically beside the ASI when missing. `Auto` follows
+the runtime camera aspect and responds to resolution changes during the same
+session. Settings can also be changed through the in-game overlay: `Delete`
+(default) toggles it, while `Esc` is consumed while the overlay is active and
+dismisses it after child interactions have had priority. Overlay Toggle works
+independently of `Hotkeys.Enabled`. The overlay includes runtime status,
+localized selector documentation/examples, hotkey rebinding and a read-only
+Camera State view. Its 18 embedded language catalogs and offline glyph/resource
+coverage are audited; offline checks do not establish runtime rendering for
+every glyph, Arabic shaping, bidirectional text or RTL layout.
+
+## Current validation snapshot — 2026-09-27
+
+- The current test inventory contains 45 harness sources and reports matching
+  source/compile/runner inventories. The full `test.cmd` invocation on this
+  date did **not** pass: `config_persistence_harness` reported
+  `canonical_initial_documentation=FAIL`; its other printed checks passed.
+  The failing assertion still expects the old INI title
+  `STALKER 2 Ultrawide and Camera Tweaks`, while the current INI writer uses
+  `STALKER 2 Camera Tweaks and Ultrawide`. This is a stale test expectation
+  established by source inspection; it has not been repaired or rerun here.
+- The offline localization/resource audit passed for 18 catalogs and 182
+  canonical keys. This validates catalog/resource contracts, not in-game
+  visual rendering for every language/font combination.
+- Historical runtime records cover specific production sessions on Steam
+  2.0.5 and 2.0.6. The build evidence matrix does not establish that the exact
+  current local v2.0 candidate binary is identical to the ASI used in those
+  sessions. The owner has separately reported that the current mod works in
+  game and that nearly all behavior has been checked; that report is not tied
+  to a recorded binary hash and scenario matrix.
+- The repository root keeps `build.cmd` as the production build entry point
+  and `test.cmd` for offline validation. Supporting build/research scripts are
+  organized under `tools/build/`.
 
 ## Research progression
 
@@ -82,10 +110,13 @@ Gameplay camera-state discovery
 → physical FOV setter and native bypass investigation
 → native bypass deferred after bounded static/runtime research
 → production combined atomic integration
-→ cross-patch production resolver audit 2.0.2–2.0.5
+→ historical 0.4.0 production resolver-contract audit on Steam 2.0.2–2.0.4
 → production runtime validation on Steam 2.0.5
 → production runtime validation on Steam 2.0.6
 → v1.0.0 release preparation
+→ v2.0 overlay integration and 18-locale support
+→ bounded v2.0 architecture and performance repairs
+→ current v2.0 candidate validation
 ```
 
 The detailed historical plans are preserved in the
@@ -95,10 +126,11 @@ the [`backlog`](backlog/).
 ## Historical Steam 2.0.4 evidence
 
 The following sections preserve evidence collected from the Steam 2.0.4
-executable. They are historical research evidence, not the current v1.0.0
-runtime-validation basis. Current production runtime validation is on Steam
-2.0.6; older-build runtime support is not claimed without separate runtime
-validation.
+executable. They are historical research evidence, not a current runtime
+validation basis. Steam 2.0.5 and 2.0.6 have separate production runtime
+records; older-build runtime support is not claimed without separate runtime
+validation. See the [authoritative build support and evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md)
+for per-build scope and executable/artifact identities.
 
 ### Gameplay
 
@@ -230,18 +262,22 @@ validation.
 ## Compatibility boundary
 
 Gameplay, cinematic and dialogue boundaries use guarded signature resolution.
-The current v1.0.0 production implementation was runtime-validated on Steam
-2.0.6. The production resolver set was statically validated across Steam
-2.0.2–2.0.5 despite relocated RVAs. This is static cross-patch portability
-evidence only; runtime support for Steam 2.0.2–2.0.5 is not claimed without
-separate runtime validation. A future executable identity still requires
-fresh resolver and runtime validation.
+Steam 2.0.5 and 2.0.6 each have recorded production runtime sessions; the
+Steam 2.0.2–2.0.4 static result covers historical v0.4.0 resolver contracts,
+not the complete current resolver set, and does not claim runtime support.
+Per-session game and mod identities and the validated feature scope are maintained in the
+[authoritative build support and evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md).
+A future executable identity still requires fresh resolver and runtime
+validation.
 
-The current v1.0.0 production artifact is runtime-validated on Steam 2.0.6.
-Its current release-candidate ASI SHA-256 is
+The v1.0.0 release-candidate ASI hash documented for that release is
 `D04A43E28DB5DFFD10D88B6F30BEF8FEC2A560E1CD9949FEA31FAF485DA0E7BC`.
-The production and release-assets ASI files have the same hash. The diagnostic
-artifact is built separately and is not part of the production release.
+However, the combined Steam 2.0.6 runtime record identifies its loaded mod as
+`19F2F31C20BB5D47CD12D2D3D773774985A5D771E6F7F8730A6363983161DA72`.
+The repository does not establish binary identity between those hashes, so the
+runtime result is not attributed to the exact `D04A…` release-candidate file.
+The diagnostic artifact is built separately and is not part of the production
+release.
 
 ## Closed and deferred research
 
@@ -439,32 +475,42 @@ game; none were added to the production ASI.
 
 - Build success proves compilation and linking only.
 - A signature match is not hook proof without decode and runtime evidence.
-- The current production gameplay/cinematic handoff is runtime-validated on
-  Steam 2.0.6. Older-build evidence remains static portability evidence only.
-- Dialogue runtime behavior is covered by the current 2.0.6 production test
-  scope; no runtime compatibility claim is made for older Steam builds.
+- Build support is scoped by the authoritative [build evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md); do not infer that the latest workspace/release-assets artifact was the binary used in an earlier runtime session.
+- A recorded production runtime session validates the gameplay/cinematic
+  handoff on Steam 2.0.6. This is session-specific evidence, not proof of the
+  exact current candidate binary's identity. Older-build evidence remains
+  static portability evidence only.
+- The recorded Steam 2.0.6 production test scope covers dialogue runtime
+  behavior; no runtime compatibility claim is made for older Steam builds.
 - Dialogue runtime validation covers Native, Adaptive, Reduced and Disabled,
   high-FOV baselines, smooth ENTER/EXIT recovery, sequential cycles,
   cinematic-to-dialogue isolation, ADS-only specificity and F9/F10 policy
   selection. Runtime hotkeys apply to the next lifecycle, not an active one.
-- `NativeHorPlus`, `GameplayHorPlus`, `Auto`, forced `16:9`, forced `21:9` and
-  forced `32:9` were all runtime-tested on the native 5120x1440 display or in
-  the Auto hot-switch sequence.
+- In the recorded runtime sessions, `NativeHorPlus`, `GameplayHorPlus`, `Auto`,
+  forced `16:9`, forced `21:9` and forced `32:9` were tested on the native
+  5120x1440 display or in the Auto hot-switch sequence. Consult the evidence
+  matrix for the exact session/artifact scope.
 - The game's native post-cinematic FOV recovery remains a visible native
   transition in some scenarios and is intentionally untouched.
 - Subtitle horizontal positioning is a separate vanilla UI issue. It was
   reproduced without the mod, and no production compatibility or fix claim is
   made for it.
 
-## Release checklist
+## v2.0 candidate validation and packaging boundary
 
-- Remove older `STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi` before installing the unified
-  ASI.
-- Include only `STALKER2CameraTweaks.asi`, its INI and the required release
-  documentation in the release package.
-- Keep research ASIs, historical binaries, logs and Ghidra projects out of the
-  release archive.
+- `build.cmd` is the production build entry point; `test.cmd` runs offline
+  validation. Supporting and diagnostic scripts live under `tools/build/`.
+- The latest full offline test attempt recorded above is currently blocked by
+  the stale canonical INI-title assertion. Do not describe the current suite
+  as fully passing until that assertion is reconciled and the complete suite is
+  rerun.
+- Before release, rerun the full offline suite, localization/resource audits
+  and production build. Runtime claims for the final release must be tied to
+  the exact ASI and game executable identities recorded in
+  [`docs/SUPPORTED_BUILD_MANIFEST.md`](docs/SUPPORTED_BUILD_MANIFEST.md).
+- Remove older `STALKER2UltrawideFix.asi` and
+  `STALKER2GameplayAspectFix.asi` before installing the unified ASI.
+- Keep the release archive limited to the production ASI, generated/default
+  INI, README, license and third-party notices. Diagnostic ASIs, historical
+  binaries, logs and research files remain outside it.
 - Preserve the runtime identity line in support reports.
-- The v1.0.0 release candidate contains only the production ASI, INI, README,
-  license and third-party notices. Diagnostic ASIs, historical binaries,
-  logs and research files remain outside the release archive.

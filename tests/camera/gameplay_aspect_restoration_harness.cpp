@@ -115,6 +115,26 @@ int main()
     pass &= Check(Decide(true, true, true, false, true, true, true, 3.0f).decision ==
         GameplayAspectRestorationDecision::Restore, "current_flags_are_consumer_local");
 
+    // Regression sequence for fullscreen/resolution recovery: an unavailable
+    // coherent target defers, the first newly established arbitrary aspect
+    // supplies the target, and a completed request has no further action.
+    pass &= Check(Decide(true, true, true, false, true, false, false, 3.0f).decision ==
+        GameplayAspectRestorationDecision::Defer,
+        "recovery_defers_without_established_target");
+    const auto established = store.Update(2.4f, { 0x6000, true });
+    pass &= Check(established.state.valid && established.state.aspect == 2.4f,
+        "recovery_establishes_arbitrary_target");
+    const auto retry = Decide(true, true, true, false, true, true, true, 2.4f);
+    pass &= Check(retry.decision == GameplayAspectRestorationDecision::Restore &&
+        retry.restorationAspect == 2.4f,
+        "recovery_retries_with_new_target");
+    pass &= Check(Decide(false, true, true, false, true, true, true, 2.4f).decision ==
+        GameplayAspectRestorationDecision::NoAction,
+        "completed_recovery_does_not_reapply");
+    pass &= Check(Decide(true, true, false, false, true, true, true, 2.4f).decision ==
+        GameplayAspectRestorationDecision::Defer,
+        "invalid_aspect_does_not_trigger_retry");
+
     std::cout << "Gameplay aspect restoration harness: " << (pass ? "PASS" : "FAIL") << "\n";
     return pass ? 0 : 1;
 }

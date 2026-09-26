@@ -1,5 +1,7 @@
 #include "config_template.hpp"
+#include "config_repository.hpp"
 
+#include "canonical_ini_documentation.hpp"
 #include "feature_config.hpp"
 
 #include <array>
@@ -21,124 +23,77 @@ namespace config
             std::size_t commentCount;
         };
 
-        constexpr std::string_view gameplayEnabledComments[] = {
-            "; Enables the gameplay aspect-ratio correction.", ";",
-            "; true  - enable the selected gameplay correction mode.",
-            "; false - leave the game's original gameplay camera/aspect behavior untouched.",
-        };
-        constexpr std::string_view gameplayModeComments[] = {
-            "; Gameplay correction mode: HorPlus or AspectRecalculation.",
-            ";",
-            "; HorPlus - default and recommended mode. Preserves the game's native Gameplay FOV changes",
-            ";          and adapts them in real time to the current runtime aspect ratio. Supports",
-            ";          arbitrary/custom aspect ratios and native FOV changes such as ADS and binocular zoom.",
-            ";",
-            "; AspectRecalculation - alternative mode that uses the game's native aspect/projection transition",
-            ";          to correct Gameplay framing while preserving the selected Gameplay FOV.",
-            ";",
-            "; On custom windowed aspect ratios not represented by a native game aspect mode,",
-            ";          AspectRecalculation may return the window to the display's native aspect/size",
-            ";          when the game restores Auto. This limitation does not apply to HorPlus.",
-            ";",
-            "; HorPlus examples when idle:",
-            "; Gameplay FOV 90°:  16:9 -> 90°; 21:9 -> approximately 106.69°; 32:9 -> approximately 126.87°.",
-            "; Gameplay FOV 100°: 16:9 -> 100°; 21:9 -> approximately 116.04°; 32:9 -> approximately 134.48°.",
-            "; Gameplay FOV 110°: 16:9 -> 110°; 21:9 -> approximately 124.95°; 32:9 -> approximately 141.41°.",
-        };
-        constexpr std::string_view cinematicComments[] = {
-            "; Controls how cinematics are framed independently from the physical display.", ";",
-            "; Auto   - use the current runtime viewport/display aspect ratio.",
-            ";          Supports arbitrary runtime aspects and is recommended for most users.", ";",
-            "; Native - leave the game's original cinematic aspect and FOV behavior untouched.",
-            ";          In the current game version, Native may look similar or identical to 16:9",
-            ";          on ultrawide displays because this is how the game currently presents",
-            ";          its cinematics without intervention from the mod.",
-            ";          Native is kept as a true vanilla option and may automatically benefit",
-            ";          from future improvements to native ultrawide cinematic support.", ";",
-            "; 16:9   - force 16:9 cinematic framing.", ";",
-            "; 21:9   - force 21:9 cinematic framing, regardless of the physical display.", ";",
-            "; 32:9   - force 32:9 cinematic framing, regardless of the physical display.", ";",
-            "; Forced modes can also be used on displays with a different aspect ratio.",
-            "; For example, 32:9 on a 16:9 display produces a wider cinematic presentation",
-            "; with black bars above and below.",
-        };
-        constexpr std::string_view cinematicFovComments[] = {
-            "; Cinematic FOV mode: GameplayHorPlus or NativeHorPlus.",
-            "; GameplayHorPlus - default with Gameplay.Mode=HorPlus; follows changes to",
-            ";                  the game's Gameplay FOV while preserving authored variation.",
-            ";                  Falls back safely when required context is unavailable.",
-            ";                  Examples with authored cinematic 90° and Gameplay FOV 90°:",
-            ";                  16:9 -> 90°; 21:9 -> 106.69°; 32:9 -> 126.87°.",
-            ";                  With Gameplay FOV 112.6°: 16:9 -> 112.6°; 21:9 -> 118.51°;",
-            ";                  32:9 -> approximately 143.13°.",
-            "; NativeHorPlus   - alternative native/authored cinematic FOV mode that does",
-            ";                  not follow the player's Gameplay FOV setting.",
-            ";                  Examples for authored cinematic 90°: 16:9 -> 90°;",
-            ";                  21:9 -> 106.69°; 32:9 -> approximately 126.87°.",
-        };
-        constexpr std::string_view dialogueComments[] = {
-            "; Controls the camera zoom applied during dialogue.", ";",
-            "; Native   - use the game's original dialogue zoom behavior.",
-            ";            Example: 90° gameplay FOV -> 70° during dialogue.",
-            ";            Example: 110° gameplay FOV -> 70° during dialogue.", ";",
-            "; Adaptive - preserve the game's original optical zoom strength relative",
-            ";            to the current gameplay FOV.",
-            ";            Example: 90° gameplay FOV -> 70° during dialogue.",
-            ";            Example: 110° gameplay FOV -> approximately 90° during dialogue.", ";",
-            "; Reduced  - apply half of the Adaptive optical zoom strength.",
-            ";            Example: 90° gameplay FOV -> approximately 80° during dialogue.",
-            ";            Example: 110° gameplay FOV -> approximately 100° during dialogue.", ";",
-            "; Disabled - disable dialogue zoom and keep the current gameplay FOV.",
-            ";            Example: 90° gameplay FOV -> 90° during dialogue.",
-            ";            Example: 110° gameplay FOV -> 110° during dialogue.",
-        };
+        using canonical_ini_documentation::GameplayEnabledComments;
+        using canonical_ini_documentation::GameplayModeComments;
+        using canonical_ini_documentation::CinematicAspectComments;
+        using canonical_ini_documentation::CinematicFovComments;
+        using canonical_ini_documentation::DialogueZoomComments;
+        using canonical_ini_documentation::HotkeysEnabledComments;
+        using canonical_ini_documentation::HotkeyGameplayCycleComments;
+        using canonical_ini_documentation::HotkeyCinematicAspectCycleComments;
+        using canonical_ini_documentation::HotkeyCinematicFovCycleComments;
+        using canonical_ini_documentation::HotkeyDialogueCycleComments;
+        using canonical_ini_documentation::OverlayToggleComments;
         constexpr std::string_view diagnosticsComments[] = {
             "; Enables the supported read-only runtime telemetry in the canonical ASI.",
             "; false - keep diagnostic hooks and telemetry disabled.",
             "; true  - enable CameraState, ZOOM and HorPlus FOV telemetry.",
         };
-        constexpr std::string_view hotkeyComments[] = {
-            "; Optional runtime controls for quickly comparing cinematic and dialogue modes",
-            "; without restarting the game.", ";",
-            "; true  - enable all runtime hotkeys listed below.",
-            "; false - disable all runtime hotkeys. Recommended for normal gameplay.",
-            "; Key used to cycle the gameplay correction mode immediately.",
-            "; AspectRecalculation -> HorPlus -> AspectRecalculation.",
-            "; Supported keys: F1-F12, 0-9 and A-Z.",
-            "; Key used to cycle the cinematic mode for the next cinematic.",
-            "; Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto.",
-            "; Does not affect a cinematic that is already playing.",
-            "; Supported keys: F1-F12, 0-9 and A-Z.",
-            "; Key used to cycle the cinematic FOV mode for the next cinematic.",
-            "; NativeHorPlus -> GameplayHorPlus -> NativeHorPlus.",
-            "; Does not affect a cinematic that is already playing.",
-            "; Supported keys: F1-F12, 0-9 and A-Z.",
-            "; Key used to cycle the dialogue zoom mode for the next dialogue.",
-            "; Native -> Adaptive -> Reduced -> Disabled -> Native.",
-            "; Does not affect a dialogue that is already in progress.",
-            "; Supported keys: F1-F12, 0-9 and A-Z.",
+        constexpr std::string_view overlayPositionComments[] = {
+            "; Last overlay position in screen coordinates. Updated automatically when dragged.",
+        };
+        constexpr std::string_view overlayMigrationComments[] = {
+            "; Internal one-time migration marker for the former separate overlay INI.",
+        };
+        constexpr std::string_view overlayLanguageComments[] = {
+            "; Auto follows the game's Interface Language when the overlay opens.",
+            "; Or select a locale code from the registry to override the game language.",
+            "; Missing or unknown values use English; Auto remains configured on read failure.",
+        };
+        constexpr std::string_view overlayFontSizeComments[] = {
+            "; Overlay font size in pixels. Supported range: 12-24; locale changes select that locale's initial size.",
+            "; Changes apply immediately and are saved to this configuration file.",
         };
 
         constexpr ManagedKey gameplayKeys[] = {
-            {"Enabled", "Enabled=true", gameplayEnabledComments, std::size(gameplayEnabledComments)},
-            {"Mode", "Mode=HorPlus", gameplayModeComments, std::size(gameplayModeComments)},
+            {"Enabled", "Enabled=true", GameplayEnabledComments, std::size(GameplayEnabledComments)},
+            {"Mode", "Mode=HorPlus", GameplayModeComments, std::size(GameplayModeComments)},
         };
         constexpr ManagedKey cinematicKeys[] = {
-            {"AspectRatio", "AspectRatio=Auto", cinematicComments, std::size(cinematicComments)},
-            {"FovMode", "FovMode=GameplayHorPlus", cinematicFovComments, std::size(cinematicFovComments)},
+            {"AspectRatio", "AspectRatio=Auto", CinematicAspectComments, std::size(CinematicAspectComments)},
+            {"FovMode", "FovMode=GameplayHorPlus", CinematicFovComments, std::size(CinematicFovComments)},
         };
         constexpr ManagedKey dialogueKeys[] = {
-            {"Zoom", "Zoom=Adaptive", dialogueComments, std::size(dialogueComments)},
+            {"Zoom", "Zoom=Adaptive", DialogueZoomComments, std::size(DialogueZoomComments)},
         };
         constexpr ManagedKey diagnosticsKeys[] = {
             {"Enabled", "Enabled=false", diagnosticsComments, std::size(diagnosticsComments)},
         };
         constexpr ManagedKey hotkeyKeys[] = {
-            {"Enabled", "Enabled=false", hotkeyComments, 5},
-            {"GameplayCycle", "GameplayCycle=F9", hotkeyComments + 5, 4},
-            {"CinematicCycle", "CinematicCycle=F10", hotkeyComments + 9, 4},
-            {"CinematicFovCycle", "CinematicFovCycle=F11", hotkeyComments + 13, 4},
-            {"DialogueCycle", "DialogueCycle=F12", hotkeyComments + 17, 4},
+            {"Enabled", "Enabled=false", HotkeysEnabledComments,
+                std::size(HotkeysEnabledComments)},
+            {"GameplayCycle", "GameplayCycle=F9", HotkeyGameplayCycleComments,
+                std::size(HotkeyGameplayCycleComments)},
+            {"CinematicCycle", "CinematicCycle=F10", HotkeyCinematicAspectCycleComments,
+                std::size(HotkeyCinematicAspectCycleComments)},
+            {"CinematicFovCycle", "CinematicFovCycle=F11", HotkeyCinematicFovCycleComments,
+                std::size(HotkeyCinematicFovCycleComments)},
+            {"DialogueCycle", "DialogueCycle=F12", HotkeyDialogueCycleComments,
+                std::size(HotkeyDialogueCycleComments)},
+        };
+        constexpr ManagedKey overlayKeys[] = {
+            {"ToggleKey", "ToggleKey=VK_2E", OverlayToggleComments,
+                std::size(OverlayToggleComments)},
+            {"Language", "Language=Auto", overlayLanguageComments,
+                std::size(overlayLanguageComments)},
+            {"FontSize", "FontSize=13", overlayFontSizeComments,
+                std::size(overlayFontSizeComments)},
+            {"PositionX", "PositionX=30", overlayPositionComments,
+                std::size(overlayPositionComments)},
+            {"PositionY", "PositionY=30", overlayPositionComments,
+                std::size(overlayPositionComments)},
+            {"PositionMigrationComplete", "PositionMigrationComplete=0",
+                overlayMigrationComments, std::size(overlayMigrationComments)},
         };
 
         const ManagedKey* KeysForSection(const std::string& section, std::size_t& count)
@@ -148,50 +103,253 @@ namespace config
             if (section == "Dialogue") { count = std::size(dialogueKeys); return dialogueKeys; }
             if (section == "Diagnostics") { count = std::size(diagnosticsKeys); return diagnosticsKeys; }
             if (section == "Hotkeys") { count = std::size(hotkeyKeys); return hotkeyKeys; }
+            if (section == "Overlay") { count = std::size(overlayKeys); return overlayKeys; }
             count = 0;
             return nullptr;
         }
 
-        bool IsManagedComment(const std::string& section, const std::string& line)
+        struct CommentBlock
         {
-            std::size_t keyCount = 0;
-            const auto* keys = KeysForSection(section, keyCount);
-            for (std::size_t keyIndex = 0; keyIndex < keyCount; ++keyIndex)
-                for (std::size_t commentIndex = 0; commentIndex < keys[keyIndex].commentCount; ++commentIndex)
-                    if (line == keys[keyIndex].comments[commentIndex]) return true;
+            std::string_view section;
+            std::string_view key;
+            const std::string_view* lines;
+            std::size_t lineCount;
+        };
 
-            if (section == "Gameplay")
-                return line == "; Correct gameplay aspect behavior on ultrawide displays." ||
-                    line == "; Enables ultrawide aspect-ratio correction during gameplay." ||
-                    line == "; Use true to enable the feature or false to disable it.";
-            if (section == "Cinematics")
-                return line == "; Controls cinematic framing on ultrawide displays." ||
-                    line == "; Auto   - use the detected display aspect ratio." ||
-                    line == "; Native - keep the game's original cinematic behavior." ||
-                    line == "; 16:9   - force the native 16:9 cinematic frame." ||
-                    line == "; 21:9   - force a 21:9 cinematic frame." ||
-                    line == "; 32:9   - force a 32:9 cinematic frame." ||
-                    line == "; Auto, Native, 16:9, 21:9, 32:9";
-            if (section == "Dialogue")
-                return line == "; Controls the native dialogue camera zoom." ||
-                    line == "; Native   - use the game's original dialogue zoom, currently targeting 70°." ||
-                    line == "; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV." ||
-                    line == "; Reduced  - apply half of the Adaptive optical zoom strength." ||
-                    line == ";            Example: 110° gameplay FOV -> Adaptive ≈90°, Reduced ≈100°." ||
-                    line == "; Disabled - keep the current gameplay FOV during dialogue." ||
-                    line == "; Native, Reduced, Disabled";
-            if (section == "Hotkeys")
-                return line == "; Enables or disables all runtime hotkeys." ||
-                    line == "; Use true to enable all runtime hotkeys or false to disable them." ||
-                    line == "; Optional runtime controls for quickly testing different settings without restarting the game." ||
-                    line == "; Intended mainly for comparing modes and finding a preferred configuration; disable for normal use." ||
-                    line == "; Key used to cycle the cinematic FOV mode for the next cinematic." ||
-                    line == "; NativeHorPlus -> GameplayHorPlus -> NativeHorPlus." ||
-                    line == "; Key used to cycle the gameplay correction mode immediately." ||
-                    line == "; AspectRecalculation -> HorPlus -> AspectRecalculation." ||
-                    line == "; It does not change a cinematic that is already playing." ||
-                    line == "; It does not change a dialogue that is already in progress.";
-            return false;
+        constexpr std::string_view legacyGameplayEnabled[] = {
+            "; Correct gameplay aspect behavior on ultrawide displays.",
+            "; Enables ultrawide aspect-ratio correction during gameplay.",
+            "; Use true to enable the feature or false to disable it.",
+        };
+        constexpr std::string_view legacyGameplayEnabledGenerated[] = {
+            "; Enables ultrawide aspect-ratio correction during gameplay.",
+        };
+        constexpr std::string_view legacyCinematicAspect[] = {
+            "; Controls cinematic framing on ultrawide displays.",
+            "; Auto   - use the detected display aspect ratio.",
+            "; Native - keep the game's original cinematic behavior.",
+            "; 16:9   - force the native 16:9 cinematic frame.",
+            "; 21:9   - force a 21:9 cinematic frame.",
+            "; 32:9   - force a 32:9 cinematic frame.",
+            "; Auto, Native, 16:9, 21:9, 32:9",
+        };
+        constexpr std::string_view legacyCinematicAspectGenerated[] = {
+            "; Controls cinematic framing on ultrawide displays.",
+            "; Auto   - use the automatic display-aspect policy.",
+            "; Native - keep the game's original cinematic behavior.",
+            "; 16:9   - force the native 16:9 cinematic frame.",
+            "; 21:9   - force a 21:9 cinematic frame.",
+            "; 32:9   - force a 32:9 cinematic frame.",
+        };
+        constexpr std::string_view legacyDialogueZoom[] = {
+            "; Controls the native dialogue camera zoom.",
+            "; Native   - use the game's original dialogue zoom, currently targeting 70°.",
+            "; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV.",
+            "; Reduced  - apply half of the Adaptive optical zoom strength.",
+            ";            Example: 110° gameplay FOV -> Adaptive ≈90°, Reduced ≈100°.",
+            "; Disabled - keep the current gameplay FOV during dialogue.",
+            "; Native, Reduced, Disabled",
+        };
+        constexpr std::string_view legacyDialogueZoomGenerated[] = {
+            "; Controls the native dialogue camera zoom.",
+            "; Native   - use the game's original dialogue zoom, currently targeting 70°.",
+            "; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV.",
+            "; Reduced  - apply half of the Adaptive optical zoom strength.",
+            ";            Example: 110° gameplay FOV -> Adaptive ≈90°, Reduced ≈100°.",
+            "; Disabled - keep the current gameplay FOV during dialogue.",
+        };
+        constexpr std::string_view legacyHotkeysEnabled[] = {
+            "; Enables or disables all runtime hotkeys.",
+        };
+        constexpr std::string_view legacyHotkeysEnabledOptions[] = {
+            "; Use true to enable all runtime hotkeys or false to disable them.",
+        };
+        constexpr std::string_view legacyHotkeysEditorial[] = {
+            "; Optional runtime controls for quickly testing different settings without restarting the game.",
+            "; Intended mainly for comparing modes and finding a preferred configuration; disable for normal use.",
+        };
+        constexpr std::string_view legacyHotkeysCurrentEnabled[] = {
+            "; Optional runtime controls for quickly comparing cinematic and dialogue modes",
+            "; without restarting the game.", ";",
+            "; true  - enable all runtime hotkeys listed below.",
+            "; false - disable all runtime hotkeys. Recommended for normal gameplay.",
+        };
+        constexpr std::string_view legacyHotkeysEnabledGenerated[] = {
+            "; Enables or disables all runtime hotkeys.",
+        };
+        constexpr std::string_view legacyHotkeySupportedKeys[] = {
+            "; Supported keys: F1-F12, 0-9 and A-Z.",
+            "; Key used to cycle the cinematic mode for the next cinematic.",
+            "; Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto.",
+            "; Does not affect a cinematic that is already playing.",
+        };
+        constexpr std::string_view legacyCinematicAspectCycle[] = {
+            "; Key used to cycle the cinematic mode for the next cinematic.",
+            "; Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto.",
+            "; Does not affect a cinematic that is already playing.",
+        };
+        constexpr std::string_view legacyDialogueCycle[] = {
+            "; Key used to cycle the dialogue zoom mode for the next dialogue.",
+            "; Native -> Adaptive -> Reduced -> Disabled -> Native.",
+            "; Does not affect a dialogue that is already in progress.",
+        };
+        constexpr std::string_view legacyGameplayCycle[] = {
+            "; Key used to cycle the gameplay correction mode immediately.",
+            "; AspectRecalculation -> HorPlus -> AspectRecalculation.",
+        };
+        constexpr std::string_view legacyGameplayCycleCurrent[] = {
+            "; Key used to cycle the gameplay correction mode immediately.",
+            "; AspectRecalculation -> HorPlus -> AspectRecalculation.",
+            "; Bind a single ordinary keyboard key; modifiers and mouse buttons are not supported.",
+        };
+        constexpr std::string_view legacyCinematicAspectCycleCurrent[] = {
+            "; Key used to cycle the cinematic mode for the next cinematic.",
+            "; Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto.",
+            "; Does not affect a cinematic that is already playing.",
+            "; Bind a single ordinary keyboard key; modifiers and mouse buttons are not supported.",
+        };
+        constexpr std::string_view legacyCinematicFovCycle[] = {
+            "; Key used to cycle the cinematic FOV mode for the next cinematic.",
+            "; NativeHorPlus -> GameplayHorPlus -> NativeHorPlus.",
+            "; It does not change a cinematic that is already playing.",
+        };
+        constexpr std::string_view legacyCinematicFovCycleCurrent[] = {
+            "; Key used to cycle the cinematic FOV mode for the next cinematic.",
+            "; NativeHorPlus -> GameplayHorPlus -> NativeHorPlus.",
+            "; Does not affect a cinematic that is already playing.",
+            "; Bind a single ordinary keyboard key; modifiers and mouse buttons are not supported.",
+        };
+        constexpr std::string_view legacyDialogueCycleCurrent[] = {
+            "; Key used to cycle the dialogue zoom mode for the next dialogue.",
+            "; Native -> Adaptive -> Reduced -> Disabled -> Native.",
+            "; Does not affect a dialogue that is already in progress.",
+            "; Bind a single ordinary keyboard key; modifiers and mouse buttons are not supported.",
+        };
+        constexpr std::string_view legacyOverlayToggleCurrent[] = {
+            "; Key that opens or closes the overlay, independent of Hotkeys.Enabled.",
+            "; Default: Delete. Escape cancels while choosing a key.",
+            "; Bindings are single keyboard keys; modifier combinations and mouse buttons are not supported.",
+        };
+        constexpr std::string_view legacyOverlayToggleInsert[] = {
+            "; Key that opens or closes the overlay, independent of Hotkeys.Enabled.",
+            "; Default: Insert. Escape cancels while choosing a key.",
+            "; Bindings are single ordinary keyboard keys; Escape cancels rebinding.",
+        };
+        constexpr std::string_view legacyOverlayToggleDelete[] = {
+            "; Key that opens or closes the overlay, independent of Hotkeys.Enabled.",
+            "; Default: Delete. Escape cancels while choosing a key.",
+            "; Bindings are single ordinary keyboard keys; Escape cancels rebinding.",
+        };
+        constexpr CommentBlock legacyManagedCommentBlocks[] = {
+            {"Gameplay", "Enabled", legacyGameplayEnabled, std::size(legacyGameplayEnabled)},
+            {"Gameplay", "Enabled", legacyGameplayEnabledGenerated, std::size(legacyGameplayEnabledGenerated)},
+            {"Cinematics", "AspectRatio", legacyCinematicAspect, std::size(legacyCinematicAspect)},
+            {"Cinematics", "AspectRatio", legacyCinematicAspectGenerated, std::size(legacyCinematicAspectGenerated)},
+            {"Dialogue", "Zoom", legacyDialogueZoom, std::size(legacyDialogueZoom)},
+            {"Dialogue", "Zoom", legacyDialogueZoomGenerated, std::size(legacyDialogueZoomGenerated)},
+            {"Hotkeys", "Enabled", legacyHotkeysEnabled, std::size(legacyHotkeysEnabled)},
+            {"Hotkeys", "Enabled", legacyHotkeysEnabledOptions, std::size(legacyHotkeysEnabledOptions)},
+            {"Hotkeys", "Enabled", legacyHotkeysEditorial, std::size(legacyHotkeysEditorial)},
+            {"Hotkeys", "Enabled", legacyHotkeysCurrentEnabled, std::size(legacyHotkeysCurrentEnabled)},
+            {"Hotkeys", "Enabled", legacyHotkeysEnabledGenerated, std::size(legacyHotkeysEnabledGenerated)},
+            {"Hotkeys", "GameplayCycle", legacyGameplayCycle, std::size(legacyGameplayCycle)},
+            {"Hotkeys", "GameplayCycle", legacyGameplayCycleCurrent, std::size(legacyGameplayCycleCurrent)},
+            {"Hotkeys", "CinematicCycle", legacyHotkeySupportedKeys, std::size(legacyHotkeySupportedKeys)},
+            {"Hotkeys", "CinematicCycle", legacyCinematicAspectCycle, std::size(legacyCinematicAspectCycle)},
+            {"Hotkeys", "CinematicCycle", legacyCinematicAspectCycleCurrent, std::size(legacyCinematicAspectCycleCurrent)},
+            {"Hotkeys", "CinematicFovCycle", legacyCinematicFovCycle, std::size(legacyCinematicFovCycle)},
+            {"Hotkeys", "CinematicFovCycle", legacyCinematicFovCycleCurrent, std::size(legacyCinematicFovCycleCurrent)},
+            {"Hotkeys", "DialogueCycle", legacyDialogueCycleCurrent, std::size(legacyDialogueCycleCurrent)},
+            {"Hotkeys", "DialogueCycle", legacyDialogueCycle, std::size(legacyDialogueCycle)},
+            {"Hotkeys", "OverlayToggle", legacyOverlayToggleCurrent, std::size(legacyOverlayToggleCurrent)},
+            {"Hotkeys", "OverlayToggle", legacyOverlayToggleInsert, std::size(legacyOverlayToggleInsert)},
+            {"Hotkeys", "OverlayToggle", legacyOverlayToggleDelete, std::size(legacyOverlayToggleDelete)},
+        };
+
+        bool IsCommentOrBlank(const std::string& line)
+        {
+            const auto trimmed = Trim(line);
+            return trimmed.empty() || trimmed.front() == ';';
+        }
+
+        std::vector<std::string> RemoveExactCommentBlocks(
+            const std::vector<std::string>& body, const std::string& section,
+            const CommentBlock* blocks, std::size_t blockCount)
+        {
+            std::vector<bool> remove(body.size(), false);
+            for (std::size_t keyLine = 0; keyLine < body.size(); ++keyLine) {
+                const auto trimmedKeyLine = Trim(body[keyLine]);
+                const auto separator = trimmedKeyLine.find('=');
+                if (separator == std::string::npos) continue;
+                const auto keyName = Trim(trimmedKeyLine.substr(0, separator));
+                std::size_t runStart = keyLine;
+                while (runStart > 0 && IsCommentOrBlank(body[runStart - 1])) --runStart;
+                for (std::size_t blockIndex = 0; blockIndex < blockCount; ++blockIndex) {
+                    const auto& block = blocks[blockIndex];
+                    if (block.section != section || block.key != keyName ||
+                        block.lineCount == 0 || block.lineCount > keyLine - runStart)
+                        continue;
+                    const auto lastStart = keyLine - block.lineCount;
+                    for (std::size_t start = runStart; start <= lastStart; ++start) {
+                        bool matches = true;
+                        for (std::size_t lineIndex = 0; lineIndex < block.lineCount; ++lineIndex) {
+                            if (Trim(body[start + lineIndex]) != block.lines[lineIndex]) {
+                                matches = false;
+                                break;
+                            }
+                        }
+                        if (!matches) continue;
+                        for (std::size_t lineIndex = 0; lineIndex < block.lineCount; ++lineIndex)
+                            remove[start + lineIndex] = true;
+                    }
+                }
+            }
+
+            std::vector<std::string> result;
+            result.reserve(body.size());
+            for (std::size_t index = 0; index < body.size(); ++index)
+                if (!remove[index]) result.emplace_back(body[index]);
+            return result;
+        }
+
+        std::vector<std::string> RemoveCurrentManagedCommentBlocks(
+            const std::vector<std::string>& body, const std::string& section,
+            const ManagedKey* keys, std::size_t keyCount)
+        {
+            std::vector<CommentBlock> blocks;
+            blocks.reserve(keyCount);
+            for (std::size_t index = 0; index < keyCount; ++index)
+                if (keys[index].commentCount != 0)
+                    blocks.push_back({section, keys[index].name, keys[index].comments,
+                        keys[index].commentCount});
+            return RemoveExactCommentBlocks(body, section, blocks.data(), blocks.size());
+        }
+
+        bool IsSectionHeader(const std::string& line, std::string& section);
+
+        std::vector<std::string> RemoveLegacyManagedCommentBlocks(
+            const std::vector<std::string>& source)
+        {
+            std::vector<std::string> result;
+            result.reserve(source.size());
+            std::size_t index = 0;
+            std::string section;
+            while (index < source.size()) {
+                std::string nextSection;
+                if (IsSectionHeader(Trim(source[index]), nextSection)) {
+                    section = std::move(nextSection);
+                    result.emplace_back(source[index++]);
+                    continue;
+                }
+                const auto start = index++;
+                while (index < source.size() && !IsSectionHeader(Trim(source[index]), nextSection))
+                    ++index;
+                const std::vector<std::string> body(source.begin() + start, source.begin() + index);
+                const auto cleaned = RemoveExactCommentBlocks(body, section,
+                    legacyManagedCommentBlocks, std::size(legacyManagedCommentBlocks));
+                result.insert(result.end(), cleaned.begin(), cleaned.end());
+            }
+            return result;
         }
 
         bool IsSectionHeader(const std::string& line, std::string& section)
@@ -202,7 +360,7 @@ namespace config
         }
     }
 
-    bool SynchronizeManagedConfigTemplate(const std::filesystem::path& path,
+    static bool SynchronizeManagedConfigTemplateBody(const std::filesystem::path& path,
         const TemplateLogFunction& log)
     {
         std::ifstream input(path);
@@ -212,6 +370,77 @@ namespace config
         std::string line;
         while (std::getline(input, line)) source.push_back(std::move(line));
         input.close();
+
+        const auto sourceWithoutLegacyDescriptions = RemoveLegacyManagedCommentBlocks(source);
+        const bool removedLegacyDescriptions = sourceWithoutLegacyDescriptions != source;
+        source = sourceWithoutLegacyDescriptions;
+
+        std::string legacyOverlayToggle;
+        bool hasOverlayToggle = false;
+        bool sourceMigrated = removedLegacyDescriptions;
+        std::string sourceSection;
+        for (const auto& current : source) {
+            const auto trimmed = Trim(current);
+            if (IsSectionHeader(trimmed, sourceSection)) continue;
+            const auto separator = trimmed.find('=');
+            if (separator == std::string::npos) continue;
+            const auto key = Trim(trimmed.substr(0, separator));
+            if (sourceSection == "Overlay" && key == "ToggleKey") hasOverlayToggle = true;
+            if (sourceSection == "Hotkeys" && key == "OverlayToggle")
+                legacyOverlayToggle = Trim(trimmed.substr(separator + 1));
+        }
+        if (!legacyOverlayToggle.empty() && !hasOverlayToggle) {
+            bool inserted = false;
+            std::string activeSection;
+            std::vector<std::string> migrated;
+            migrated.reserve(source.size() + 1);
+            for (const auto& current : source) {
+                std::string section;
+                if (IsSectionHeader(Trim(current), section)) {
+                    activeSection = section;
+                    migrated.push_back(current);
+                    if (activeSection == "Overlay" && !inserted) {
+                        migrated.emplace_back("ToggleKey=" + legacyOverlayToggle);
+                        inserted = true;
+                    }
+                    continue;
+                }
+                const auto trimmed = Trim(current);
+                const auto separator = trimmed.find('=');
+                if (activeSection == "Hotkeys" && separator != std::string::npos &&
+                    Trim(trimmed.substr(0, separator)) == "OverlayToggle") {
+                    continue;
+                }
+                migrated.push_back(current);
+            }
+            if (!inserted) {
+                migrated.emplace_back("");
+                migrated.emplace_back("[Overlay]");
+                migrated.emplace_back("ToggleKey=" + legacyOverlayToggle);
+            }
+            source = std::move(migrated);
+            sourceMigrated = true;
+        } else if (!legacyOverlayToggle.empty()) {
+            std::string activeSection;
+            std::vector<std::string> migrated;
+            migrated.reserve(source.size());
+            for (const auto& current : source) {
+                std::string section;
+                if (IsSectionHeader(Trim(current), section)) {
+                    activeSection = section;
+                    migrated.push_back(current);
+                    continue;
+                }
+                const auto trimmed = Trim(current);
+                const auto separator = trimmed.find('=');
+                if (activeSection == "Hotkeys" && separator != std::string::npos &&
+                    Trim(trimmed.substr(0, separator)) == "OverlayToggle")
+                    continue;
+                migrated.push_back(current);
+            }
+            source = std::move(migrated);
+            sourceMigrated = true;
+        }
 
         const auto appendSection = [](std::vector<std::string>& output,
             const char* sectionName, const ManagedKey* keys, std::size_t keyCount) {
@@ -228,9 +457,10 @@ namespace config
             const std::string& section, const ManagedKey* keys, std::size_t keyCount) {
                 std::vector<std::string> repaired;
                 std::vector<bool> found(keyCount, false);
-                for (const auto& original : body) {
+                const auto withoutCurrentComments = RemoveCurrentManagedCommentBlocks(
+                    body, section, keys, keyCount);
+                for (const auto& original : withoutCurrentComments) {
                     const auto trimmed = Trim(original);
-                    if (IsManagedComment(section, trimmed)) continue;
 
                     std::size_t matchingKey = keyCount;
                     const auto separator = trimmed.find('=');
@@ -259,8 +489,8 @@ namespace config
             };
 
         std::vector<std::string> output;
-        bool changed = false;
-        std::array<bool, 5> foundSections{};
+        bool changed = sourceMigrated;
+        std::array<bool, 6> foundSections{};
         std::size_t index = 0;
         while (index < source.size()) {
             std::string section;
@@ -296,12 +526,13 @@ namespace config
             if (section == "Cinematics") foundSections[1] = true;
             if (section == "Dialogue") foundSections[2] = true;
             if (section == "Diagnostics") foundSections[3] = true;
-            if (section == "Hotkeys") foundSections[4] = true;
+            if (section == "Overlay") foundSections[4] = true;
+            if (section == "Hotkeys") foundSections[5] = true;
             index = sectionEnd;
         }
 
         constexpr const char* sectionNames[] = {
-            "Gameplay", "Cinematics", "Dialogue", "Diagnostics", "Hotkeys"};
+            "Gameplay", "Cinematics", "Dialogue", "Diagnostics", "Overlay", "Hotkeys"};
         for (std::size_t sectionIndex = 0; sectionIndex < std::size(sectionNames); ++sectionIndex) {
             if (foundSections[sectionIndex]) continue;
             std::size_t keyCount = 0;
@@ -346,5 +577,13 @@ namespace config
         if (log) log("Config template replacement failed; existing config preserved. win32Error=" +
             std::to_string(replaceError) + ".");
         return false;
+    }
+
+    bool SynchronizeManagedConfigTemplate(const std::filesystem::path& path,
+        const TemplateLogFunction& log)
+    {
+        return RunSerializedConfigUpdate(path, [&] {
+            return SynchronizeManagedConfigTemplateBody(path, log);
+        });
     }
 }

@@ -1,12 +1,34 @@
 # Supported Build Manifest
 
-## Current runtime target
+## Build support and evidence matrix
 
-- Game: S.T.A.L.K.E.R. 2: Heart of Chornobyl
-- Engine: UE 5.5.4
-- Runtime-validated game build: Steam 2.0.5
-- Game image SHA-256 observed in the 2.0.5 evidence: `E7B481A97C02D80581FAB0BECE940214A88EBE30211088A00129845A039F9293`
-- SHA role: identity and support evidence, not a production allowlist gate.
+Game: S.T.A.L.K.E.R. 2: Heart of Chornobyl, UE 5.5.4. This matrix is the
+repository's authoritative summary of evidence scope; it distinguishes a
+tested game/runtime session from static resolver portability and from a
+feature-specific reader check. SHA-256 values are evidence identities, not a
+universal production allowlist.
+
+| Steam build | Evidence scope | Game executable SHA-256 | Runtime mod artifact identity | Record and boundary |
+| --- | --- | --- | --- | --- |
+| 2.0.2–2.0.4 | Historical 0.4.0 production resolver-contract portability only; unique matches and relevant instruction contracts were validated on identity-matched images. This does not establish the complete current resolver set or runtime support. | Per-image identities are recorded in the cross-patch resolver task evidence. | Not applicable | [`CROSS_PATCH_PRODUCTION_RESOLVER_VALIDATION_TASK_PLAN.md`](../research/completed/CROSS_PATCH_PRODUCTION_RESOLVER_VALIDATION_TASK_PLAN.md). |
+| 2.0.5 | Production runtime evidence for the tested scenarios. | `E7B481A97C02D80581FAB0BECE940214A88EBE30211088A00129845A039F9293` | `69021D8758069F7EFE098B3C562A41E326A6DB0BF4BA88B789FB38854217DFB2` in the recorded run; not an identity allowlist. | [`RELEASE_PREPARATION_v0.5.2.md`](../research/reports/RELEASE_PREPARATION_v0.5.2.md). This does not establish every scenario or later binary. |
+| 2.0.6 | Combined production runtime pass and tested feature scenarios; separately, the Auto Interface Language reader passed its bounded locale sequence. | `61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B` | Combined runtime log records `19F2F31C20BB5D47CD12D2D3D773774985A5D771E6F7F8730A6363983161DA72`. | [`GLOBAL_HORPLUS_RUNTIME_PASS.md`](../research/reports/GLOBAL_HORPLUS_RUNTIME_PASS.md) and the v1.0.0 compatibility summary in [`TESTING_AND_RESEARCH.md`](../TESTING_AND_RESEARCH.md). The report's scenarios are the scope of the claim, not blanket coverage of all gameplay. |
+
+The v1.0.0 release-candidate hash `D04A43E28DB5DFFD10D88B6F30BEF8FEC2A560E1CD9949FEA31FAF485DA0E7BC`
+is recorded in `TESTING_AND_RESEARCH.md`, but the combined 2.0.6 runtime
+record names a different mod hash (`19F2…`). The repository does not establish
+that those are the same binary; therefore the runtime pass must not be
+attributed to the exact `D04A…` release artifact without matching run evidence.
+
+The standalone Auto Interface Language reader has feature-specific validation
+on Steam 2.0.6 executable SHA-256
+`61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B`. It
+validates the executable's AMD64 `.text` layout and reader/free-function
+prologues before use; failure falls back to English. This does not broaden
+resolver or runtime evidence to another game build.
+
+The workspace's current release-assets ASI is a separately built file; its
+present SHA-256 is not represented as runtime-tested by the records above.
 
 An unknown executable hash is not accepted as proof of compatibility.
 Production compatibility gating requires a unique resolver match followed by

@@ -53,6 +53,22 @@ namespace
         if (!lifecycle.StopAndJoin()) return false;
         return lifecycle.Initialize() && lifecycle.StopAndJoin();
     }
+
+    bool TestHotkeyPlusDiagnosticWorkerCapacity()
+    {
+        plugin::WorkerLifecycle lifecycle;
+        std::atomic<bool> started[4]{};
+        WorkerContext contexts[4]{};
+        if (!lifecycle.Initialize()) return false;
+        for (int index = 0; index < 4; ++index) {
+            contexts[index] = { &lifecycle, &started[index] };
+            if (!lifecycle.Start(WaitingWorker, &contexts[index])) return false;
+        }
+        for (const auto& workerStarted : started)
+            if (!WaitUntilStarted(workerStarted)) return false;
+        return lifecycle.WorkerCount() == 4 && lifecycle.StopAndJoin() &&
+            lifecycle.WorkerCount() == 0;
+    }
 }
 
 int main()
@@ -60,8 +76,10 @@ int main()
     const bool normal = TestNormalStartupAndControlledStop();
     const bool partial = TestPartialStartupFailure();
     const bool beforeStartup = TestStopBeforeStartup();
-    std::printf("normal=%s partial=%s startup_stop_observation=%s stop_before_start=%s\n",
+    const bool workerCapacity = TestHotkeyPlusDiagnosticWorkerCapacity();
+    std::printf("normal=%s partial=%s startup_stop_observation=%s stop_before_start=%s worker_capacity=%s\n",
         normal ? "PASS" : "FAIL", partial ? "PASS" : "FAIL",
-        (normal && partial) ? "PASS" : "FAIL", beforeStartup ? "PASS" : "FAIL");
-    return normal && partial && beforeStartup ? 0 : 1;
+        (normal && partial) ? "PASS" : "FAIL", beforeStartup ? "PASS" : "FAIL",
+        workerCapacity ? "PASS" : "FAIL");
+    return normal && partial && beforeStartup && workerCapacity ? 0 : 1;
 }

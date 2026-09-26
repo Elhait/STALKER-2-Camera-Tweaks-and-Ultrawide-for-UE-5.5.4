@@ -2,6 +2,7 @@
 
 #include "window.hpp"
 
+#include <cmath>
 #include <limits>
 #include <windows.h>
 
@@ -15,7 +16,7 @@ namespace platform::win32
         return width >= 16 && height >= 16;
     }
 
-    float ReadClientViewportAspect()
+    float ReadCurrentProcessClientViewportAspect()
     {
         HWND window = GetForegroundWindow();
         DWORD processId = 0;
@@ -31,6 +32,13 @@ namespace platform::win32
             if (IsUsableClientViewport(width, height))
                 return static_cast<float>(width) / static_cast<float>(height);
         }
+        return std::numeric_limits<float>::quiet_NaN();
+    }
+
+    float ReadClientViewportAspect()
+    {
+        const auto clientAspect = ReadCurrentProcessClientViewportAspect();
+        if (std::isfinite(clientAspect) && clientAspect > 0.0f) return clientAspect;
 
         DEVMODE display{ .dmSize = sizeof(DEVMODE) };
         if (EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &display) && display.dmPelsHeight != 0)

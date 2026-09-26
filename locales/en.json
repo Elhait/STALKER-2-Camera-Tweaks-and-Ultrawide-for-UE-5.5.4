@@ -1,0 +1,167 @@
+{
+  "app": { "title": "STALKER 2 Camera Tweaks" },
+  "common": {
+    "enabled": "Enabled", "disabled": "Disabled", "unavailable": "Unavailable",
+    "unavailable_value": "unavailable", "cannot_assess": "Cannot assess",
+    "active": "Active", "ready": "Ready", "applying": "Applying",
+    "starting": "Starting", "ending": "Ending", "waiting": "Waiting",
+    "applied": "Applied", "pending": "Pending", "error": "Error",
+    "yes": "Yes", "no": "No", "examples": "Examples"
+  },
+  "section": {
+    "runtime_settings": "Runtime settings", "camera_transition": "Camera Transition",
+    "gameplay": "Gameplay", "cinematics": "Cinematics", "dialogue": "Dialogue",
+    "overlay": "Overlay", "hotkeys": "Hotkeys", "runtime": "Runtime",
+    "camera_integration": "Camera Integration", "camera_state": "Camera State",
+    "presentation": "Presentation", "zoom": "Zoom", "fov": "FOV",
+    "sources": "Sources", "generation": "Generation"
+  },
+  "setting": {
+    "gameplay_mode": "Gameplay Mode", "cinematic_aspect": "Cinematic Aspect",
+    "cinematic_fov": "Cinematic FOV", "dialogue_zoom": "Dialogue Zoom",
+    "overlay_toggle": "Overlay Toggle", "language": "Language", "font_size": "Text size", "mode": "Mode",
+    "aspect_ratio": "Aspect Ratio", "fov_mode": "FOV Mode", "zoom": "Zoom"
+  },
+  "notice": { "mouse_capture": "Mouse input is captured while this window is open. Press {key} to return mouse control to the game, or press Esc to close the overlay." },
+  "rebind": { "press_key": "Press key" },
+  "ui": { "viewport_aspect": "Viewport aspect" },
+  "transition": {
+    "waiting": "Waiting",
+    "aligned": "Aligned", "not_aligned": "Not aligned",
+    "detail": {
+      "waiting": "Camera settings are configured for an aligned transition. Waiting for Gameplay camera data to confirm the state.",
+      "aligned": "Cinematic and Gameplay camera paths are aligned.",
+      "not_aligned": "The cinematic and Gameplay camera paths differ in aspect or FOV behavior.",
+      "cannot_assess": "There is not enough runtime evidence to compare camera paths."
+    },
+    "active_value": "Active — {value}"
+  },
+  "status": { "detail": {
+    "gameplay_incomplete": "Gameplay status is not available yet.",
+    "gameplay_hook_unavailable": "The Gameplay camera integration is unavailable.",
+    "camera_update_waiting": "Waiting for the required camera update.",
+    "native_recalculation_persists": "The result of a native camera recalculation may persist until the game or save is reloaded.",
+    "gameplay_disabled": "Gameplay correction is disabled.",
+    "gameplay_context_unavailable": "Gameplay camera information is not available.",
+    "horplus_waiting": "Waiting for Gameplay camera data before HorPlus can become active.",
+    "horplus_active": "HorPlus adjusts Gameplay FOV in real time.",
+    "native_recalculation_enabled": "The game's native camera adjustment is enabled.",
+    "cinematic_incomplete": "Cinematic status is not available yet.",
+    "cinematic_unavailable": "Cinematic camera integration is unavailable.",
+    "cinematic_native_ready": "The next cinematic will use its original framing.",
+    "next_cinematic_ready": "Changes take effect from the next cinematic.",
+    "cinematic_active": "A cinematic is active with the selected aspect and FOV modes.",
+    "cinematic_selection_incomplete": "Active cinematic information is incomplete.",
+    "dialogue_incomplete": "Dialogue status is not available yet.",
+    "dialogue_hook_unavailable": "Dialogue camera integration is unavailable.",
+    "dialogue_capability_unavailable": "Dialogue zoom status is unavailable.",
+    "dialogue_mode_unavailable": "The selected Dialogue zoom mode is unavailable.",
+    "dialogue_native_ready": "The next dialogue will use the game's native zoom.",
+    "dialogue_adaptive_ready": "Adaptive zoom is configured for the next dialogue.",
+    "dialogue_reduced_ready": "Reduced zoom is configured for the next dialogue.",
+    "dialogue_disabled_ready": "No additional dialogue zoom will be applied.",
+    "dialogue_ready": "Changes take effect from the next dialogue.",
+    "dialogue_active": "The current dialogue is using the active zoom mode shown.",
+    "dialogue_starting": "Waiting for the Dialogue transition to be confirmed.",
+    "active_dialogue_policy_unavailable": "The active Dialogue zoom setting is unavailable.",
+    "dialogue_ending": "Dialogue camera is returning to Gameplay.",
+    "dialogue_recovery_waiting": "Dialogue handling will be available again after camera recovery.",
+    "dialogue_state_unknown": "Dialogue camera state is unknown.",
+    "runtime_unavailable": "Runtime status is not available."
+  } },
+  "tooltip": {
+    "gameplay": {
+      "enabled": "Enable the selected Gameplay correction.",
+      "disabled": "Stop further Gameplay correction and leave the game's original camera/aspect behavior in control. The result of a native camera recalculation may persist until the game or save is reloaded.",
+      "horplus": "Recommended. Preserves native Gameplay FOV changes and adapts them in real time to the current viewport, including during zoom.",
+      "horplus_examples_context": "Gameplay FOV · no zoom",
+      "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
+      "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
+      "aspect_recalculation": "Uses the game's native aspect transition while preserving the selected Gameplay FOV. On custom windowed aspects, restoring Auto may return the window to its native aspect and size."
+    },
+    "cinematics": { "aspect": {
+      "auto": "Uses the current runtime viewport aspect for cinematic framing. Supports arbitrary valid aspect ratios.",
+      "native": "Leaves the game's native cinematic framing unchanged. The selected FOV mode still applies.",
+      "16_9": "Uses 16:9 framing for cinematics, regardless of the display aspect.",
+      "21_9": "Uses 21:9 framing for cinematics, regardless of the display aspect.",
+      "32_9": "Uses 32:9 framing for cinematics, regardless of the display aspect.",
+      "forced_example": "Example: 32:9 on a 16:9 display produces wider framing with black bars above and below."
+    }, "fov": {
+      "gameplay": "Follows current Gameplay FOV while preserving cinematic variation. Falls back to NativeHorPlus if needed context is unavailable.",
+      "gameplay_examples_context": "Cinematic FOV 90° · Gameplay FOV inputs",
+      "gameplay_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "gameplay_example_112_6": "112.6° → 16:9: 112.6°; 21:9: 118.51°; 32:9: ~143.13°.",
+      "native": "Applies HorPlus to the authored cinematic FOV, independently of the player's Gameplay FOV setting.",
+      "native_examples_context": "Cinematic FOV 90° · results by aspect",
+      "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
+    } },
+    "dialogue": { "zoom": {
+      "native": "Use the game's original dialogue zoom behavior.",
+      "adaptive": "Preserve the game's original optical zoom strength relative to current Gameplay FOV.",
+      "examples_context": "Gameplay FOV → dialogue FOV",
+      "native_example_90": "90° → 70°.",
+      "native_example_110": "110° → 70°.",
+      "adaptive_example_90": "90° → 70°.",
+      "adaptive_example_110": "110° → approximately 90°.",
+      "reduced": "Use half of the Adaptive optical zoom strength.",
+      "reduced_example_90": "90° → approximately 80°.",
+      "reduced_example_110": "110° → approximately 100°.",
+      "disabled": "Disable dialogue zoom and keep current Gameplay FOV.",
+      "disabled_example_90": "90° → 90°.",
+      "disabled_example_110": "110° → 110°."
+    } },
+    "hotkeys": {
+      "enabled": "Enable Gameplay, Cinematic and Dialogue hotkey actions.",
+      "disabled": "Disable these actions. Overlay Toggle remains active independently.",
+      "change": "Click the current key control to start rebinding.",
+      "change_overlay": "Click the current overlay key control to start rebinding.",
+      "single_key": "Bind a single ordinary keyboard key. Modifier combinations and mouse buttons are not supported.",
+      "rebind": "Press a key to assign it. Press Esc to cancel.",
+      "gameplay_cycle": "Cycles the Gameplay correction immediately: AspectRecalculation -> HorPlus -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Sets the aspect ratio for the next cinematic: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Does not affect a cinematic already playing.",
+      "cinematic_fov_cycle": "Sets the FOV mode for the next cinematic: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Does not affect a cinematic already playing.",
+      "dialogue_cycle": "Sets the zoom mode for the next dialogue: Native -> Adaptive -> Reduced -> Disabled -> Native. Does not affect a dialogue already in progress."
+    },
+    "overlay": { "always_active": "Use this key to open or close the overlay." },
+    "runtime": {
+      "viewport": "The current aspect ratio of the game's client viewport. It can change with the game resolution or window size.",
+      "viewport_auto": "The cinematic Auto aspect policy uses this viewport aspect as its target.",
+      "viewport_unavailable": "Current client viewport dimensions are unavailable.",
+      "aspect_matched": "The cinematic and Gameplay viewport aspect ratios agree within the comparison tolerance.",
+      "aspect_mismatch": "The cinematic and Gameplay viewport aspect ratios differ.",
+      "aspect_cannot_assess": "There is not enough valid runtime information to compare the ratios.",
+      "cinematic_aspect": "The first value is the aspect resolved from the cinematic settings; the second is the current Gameplay viewport aspect.",
+      "cinematic_aspect_unavailable": "A valid cinematic target or current viewport aspect is unavailable.",
+      "gameplay_fov": "The retained neutral Gameplay FOV. It is separate from temporary zoom states such as ADS, binoculars, dialogue and cinematics.",
+      "gameplay_fov_unavailable": "A valid neutral Gameplay FOV has not been observed yet.",
+      "native_fov": "The current FOV input before HorPlus transformation. It may change during ADS, binocular zoom, dialogue or camera transitions.",
+      "native_fov_unavailable": "A valid current native FOV is unavailable.",
+      "horplus_fov": "The transformed counterpart of Native FOV for the current viewport. It may change during zoom and camera transitions.",
+      "horplus_fov_unavailable": "A valid transformed FOV is unavailable."
+    }
+  },
+  "camera_state": {
+    "waiting": "Waiting for the first complete camera update.",
+    "field": {
+      "state": "State", "gameplay_fov": "Gameplay FOV", "provenance": "Provenance", "epoch": "Epoch", "mode": "Mode",
+      "valid": "Valid", "direction": "Direction", "active": "Active",
+      "evidence_valid": "Evidence valid", "sequence": "Sequence", "primary": "Primary",
+      "secondary": "Secondary", "source": "Source", "confidence": "Confidence",
+      "policy_valid": "Policy valid", "recovery_excluded": "Recovery excluded",
+      "target": "Target", "setting_known": "Setting known", "game_source": "Game source",
+      "native": "Native FOV", "native_source": "Native source", "horplus": "HorPlus FOV",
+      "horplus_source": "HorPlus source", "aspect": "Aspect", "aspect_source": "Aspect source",
+      "flags": "Flags", "gameplay_writer": "Gameplay writer",
+      "presentation_epoch": "Presentation epoch", "event_sequence": "Event sequence"
+    },
+    "value": { "unavailable_counter": "unavailable / {value}" }
+  },
+  "notification": {
+    "hotkey_conflict": "Hotkey conflict", "hotkey_title": "{setting} Hotkey",
+    "binding_value": "{oldKey} → {newKey}",
+    "conflict_value": "{key} is already assigned to {setting}",
+    "setting_changed": "{oldValue} → {newValue}",
+    "open_overlay_hint": "Press {key} to open the overlay"
+  }
+}

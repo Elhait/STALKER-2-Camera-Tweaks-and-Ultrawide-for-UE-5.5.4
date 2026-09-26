@@ -68,6 +68,12 @@ namespace
 int main()
 {
     bool pass = true;
+    const float forced21Aspect = cinematics::ResolveAspect(
+        config::CinematicAspectPolicy::Forced21x9, 16.0f / 9.0f,
+        cinematics::Forced21x9Aspect, 32.0f / 9.0f, nullptr);
+    pass &= Check(std::fabs(forced21Aspect - (3440.0f / 1440.0f)) < 0.0001f,
+        "forced21_policy_preserves_production_3440x1440_value");
+
     std::uint8_t bytes[16]{};
     const auto target = reinterpret_cast<std::uintptr_t>(bytes);
     const auto applied = cinematics::ApplyAspectStore(target, 3.55556f, 1.77778f,

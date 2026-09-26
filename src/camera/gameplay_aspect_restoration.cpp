@@ -1,4 +1,5 @@
 #include "gameplay_aspect_restoration.hpp"
+#include "../diagnostics/performance_telemetry.hpp"
 
 namespace camera
 {
@@ -47,7 +48,7 @@ namespace camera
     GameplayAspectRestorationResult GameplayAspectRestorationStore::Update(
         float aspect, FovWriterSourceToken source)
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::AspectRestoration);
         const bool changed = !state_.valid || state_.aspect != aspect ||
             state_.source.value != source.value || state_.source.valid != source.valid;
         state_.aspect = aspect;
@@ -59,13 +60,13 @@ namespace camera
 
     GameplayAspectRestorationResult GameplayAspectRestorationStore::Retain()
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::AspectRestoration);
         return { GameplayAspectRestorationDisposition::Retained, state_, false };
     }
 
     GameplayAspectRestorationResult GameplayAspectRestorationStore::Invalidate()
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::AspectRestoration);
         const bool changed = state_.valid || state_.source.valid ||
             state_.observationSequence != 0;
         state_ = {};
@@ -74,7 +75,7 @@ namespace camera
 
     GameplayAspectRestorationState GameplayAspectRestorationStore::Read() const
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::AspectRestoration);
         return state_;
     }
 }

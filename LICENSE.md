@@ -1,4 +1,4 @@
-# STALKER 2 Ultrawide and Camera Tweaks — v1.0+ Source-Available License
+# STALKER 2 Camera Tweaks and Ultrawide — v1.0+ Source-Available License
 
 Copyright (c) 2026 Elhait
 
@@ -6,7 +6,12 @@ Copyright (c) 2026 Elhait
 
 This license applies to original copyrightable code and other material owned
 by Elhait and included in official v1.0.0 or later releases of STALKER 2
-Ultrawide and Camera Tweaks (the “Covered Work”).
+Ultrawide and Camera Tweaks, including corresponding source, documentation
+and research published in the Project repository under this license
+(the “Covered Work”).
+
+The original Project is
+[STALKER 2 Camera Tweaks and Ultrawide](https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4).
 
 It does not apply to third-party components, game assets, game-derived
 material, Unreal Engine or Epic material, GSC Game World intellectual property,
@@ -16,9 +21,18 @@ terms.
 Releases before v1.0.0 were published under the MIT License. Those MIT rights
 remain valid and are not changed by this license.
 
+The expanded reference and AI-assisted-use attribution requirement in section
+5 is an express change in licensing policy for the source-available series
+beginning with official v1.0.0. It is intended to apply to Covered Work from
+v1.0.0 onward, not only to v2.0 or later. This statement does not purport to
+revoke, narrow or retroactively alter rights already granted to a recipient
+under license terms published with v1.0.0 before this policy change. Any such
+prior grant remains governed by those earlier terms. The pre-v1.0.0 MIT rights
+stated above remain unchanged.
+
 ## 2. Research and collaboration
 
-Anyone may:
+Subject to the attribution requirements in section 5, anyone may:
 
 - read, study and use the Covered Work as a technical reference;
 - use it for education, research and reverse engineering;
@@ -70,11 +84,13 @@ permission, except where a separate special permission says otherwise.
 ## 4. Ideas, knowledge and independent work
 
 This license covers Elhait's code and other protected expression, not general
-ideas or knowledge. Using the Covered Work as a technical reference does not
-by itself place restrictions on work developed independently without copying
-or adapting the Covered Work.
+ideas or knowledge. Except for the attribution requirement in section 5,
+using the Covered Work as a technical reference does not by itself place
+restrictions on work developed independently without copying or adapting the
+Covered Work.
 
-This license also does not restrict:
+Subject to that attribution requirement where it applies, this license also
+does not restrict:
 
 - public research findings, signatures or algorithms;
 - compatibility tools and integrations that do not copy Covered Work;
@@ -88,6 +104,28 @@ Any distribution allowed by this license or by separate permission must credit
 Elhait, link to the original Project, retain applicable third-party notices,
 identify material modifications and not present copied or adapted Covered Work
 as entirely original work.
+
+Use of the Covered Work as a reference or research source under this license
+is also subject to the following attribution requirement. If the Covered
+Work, including its code, documentation, technical findings or documented
+reverse-engineering research or methodology, materially contributes as a
+reference or source of knowledge to the development of a publicly released
+mod, tool, product or other software, its publisher must clearly credit
+Elhait, identify the Project as a source and link to the original Project on
+that work's public page. If the work has no public page, the acknowledgement
+must appear in its accompanying publicly accessible documentation.
+
+This requirement applies to direct study and to use through an AI system or
+AI-assisted development process, including use as context, reference,
+training material, evaluation material or other input. It applies even when
+the resulting implementation is independently written and does not copy or
+adapt Covered Work. Such reference use alone does not make the resulting
+work a derivative release or require permission to publish it under section 3.
+
+Independent discovery or mere similarity to the Project does not establish
+use of the Covered Work and does not trigger this requirement. Attribution
+does not imply endorsement, affiliation, authorship or responsibility by
+Elhait for the resulting work.
 
 ## 6. Contributions
 

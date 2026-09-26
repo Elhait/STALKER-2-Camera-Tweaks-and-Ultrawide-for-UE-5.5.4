@@ -1,0 +1,166 @@
+{
+  "app": { "title": "STALKER 2 Camera Tweaks" },
+  "common": {
+    "enabled": "已启用", "disabled": "已禁用", "unavailable": "不可用",
+    "unavailable_value": "不可用", "cannot_assess": "无法评估",
+    "active": "活动", "ready": "就绪", "applying": "正在应用",
+    "starting": "正在启动", "ending": "正在结束", "waiting": "等待中",
+    "applied": "已应用", "pending": "待处理", "error": "错误",
+    "yes": "是", "no": "否", "examples": "Examples"
+  },
+  "section": {
+    "runtime_settings": "游戏中设置", "camera_transition": "镜头过渡",
+    "gameplay": "游戏", "cinematics": "过场动画", "dialogue": "对话",
+    "overlay": "覆盖层", "hotkeys": "快捷键", "runtime": "运行时",
+    "camera_integration": "镜头集成", "camera_state": "镜头状态",
+    "presentation": "显示", "zoom": "缩放", "fov": "FOV",
+    "sources": "来源", "generation": "代次"
+  },
+  "setting": {
+    "gameplay_mode": "游戏模式", "cinematic_aspect": "过场动画画面比例",
+    "cinematic_fov": "过场动画 FOV", "dialogue_zoom": "对话缩放",
+    "overlay_toggle": "切换覆盖层", "language": "语言", "font_size": "文字大小", "mode": "模式",
+    "aspect_ratio": "画面比例", "fov_mode": "FOV 模式", "zoom": "缩放"
+  },
+  "notice": { "mouse_capture": "此窗口打开时会捕获鼠标输入。按 {key} 将鼠标控制权交还给游戏，或按 Esc 关闭窗口。" },
+  "rebind": { "press_key": "请按一个键" },
+  "ui": { "viewport_aspect": "游戏视口比例" },
+  "transition": {
+    "waiting": "等待中",
+    "aligned": "一致", "not_aligned": "不一致",
+    "detail": {
+      "waiting": "镜头设置已就绪。等待游戏镜头数据确认状态。",
+      "aligned": "过场动画与游戏镜头路径一致。",
+      "not_aligned": "过场动画与游戏镜头路径的画面比例或 FOV 行为不同。",
+      "cannot_assess": "运行时证据不足，无法比较镜头路径。"
+    },
+    "active_value": "活动 — {value}"
+  },
+  "status": { "detail": {
+    "gameplay_incomplete": "游戏状态尚不可用。",
+    "gameplay_hook_unavailable": "游戏镜头集成不可用。",
+    "camera_update_waiting": "正在等待所需的镜头更新。",
+    "native_recalculation_persists": "原生镜头重新计算的结果可能会持续到重启游戏或重新载入存档。",
+    "gameplay_disabled": "游戏校正已禁用。",
+    "gameplay_context_unavailable": "游戏镜头信息不可用。",
+    "horplus_waiting": "正在等待游戏镜头数据，以便启用 HorPlus。",
+    "horplus_active": "HorPlus 实时调整游戏 FOV。",
+    "native_recalculation_enabled": "游戏原生镜头调整已启用。",
+    "cinematic_incomplete": "过场动画状态尚不可用。",
+    "cinematic_unavailable": "过场动画镜头集成不可用。",
+    "cinematic_native_ready": "下一段过场动画将使用原始取景。",
+    "next_cinematic_ready": "更改将从下一段过场动画开始生效。",
+    "cinematic_active": "当前过场动画正在使用所选画面比例和 FOV 模式。",
+    "cinematic_selection_incomplete": "当前过场动画信息不完整。",
+    "dialogue_incomplete": "对话状态尚不可用。",
+    "dialogue_hook_unavailable": "对话镜头集成不可用。",
+    "dialogue_capability_unavailable": "对话缩放状态不可用。",
+    "dialogue_mode_unavailable": "所选对话缩放模式不可用。",
+    "dialogue_native_ready": "下一段对话将使用游戏原生缩放。",
+    "dialogue_adaptive_ready": "已为下一段对话配置自适应缩放。",
+    "dialogue_reduced_ready": "已为下一段对话配置降低缩放。",
+    "dialogue_disabled_ready": "对话不会应用额外缩放。",
+    "dialogue_ready": "更改将从下一段对话开始生效。",
+    "dialogue_active": "当前对话正在使用显示的缩放模式。",
+    "dialogue_starting": "正在等待确认进入对话状态。",
+    "active_dialogue_policy_unavailable": "当前对话缩放设置不可用。",
+    "dialogue_ending": "对话镜头正在返回游戏状态。",
+    "dialogue_recovery_waiting": "镜头恢复后将重新提供对话处理功能。",
+    "dialogue_state_unknown": "对话镜头状态未知。",
+    "runtime_unavailable": "运行时状态不可用。"
+  } },
+  "tooltip": {
+    "gameplay": {
+      "enabled": "启用所选的游戏校正。",
+      "disabled": "停止后续游戏校正。原生镜头重新计算的结果可能会持续到重启游戏或重新载入存档。",
+      "horplus": "Recommended. 保留游戏原生 FOV 变化，并实时适配当前游戏视口，包括缩放期间。",
+      "horplus_examples_context": "Gameplay FOV - no zoom",
+      "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
+      "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
+      "aspect_recalculation": "使用游戏原生画面比例过渡，同时保留所选游戏 FOV。在自定义窗口比例下恢复 Auto，可能会将窗口还原为原生比例和尺寸。"
+    },
+    "cinematics": { "aspect": {
+      "auto": "使用当前游戏视口比例为过场动画取景。支持任意有效比例。",
+      "native": "保持游戏原生过场取景不变。所选 FOV 模式仍会生效。",
+      "16_9": "过场动画使用 16:9 取景，不受显示器比例影响。",
+      "21_9": "过场动画使用 21:9 取景，不受显示器比例影响。",
+      "32_9": "过场动画使用 32:9 取景，不受显示器比例影响。",
+      "forced_example": "Example: 32:9 on a 16:9 display uses a wider frame with black bars above and below."
+    }, "fov": {
+      "gameplay": "跟随当前游戏 FOV，同时保留过场动画自身的 FOV 变化。缺少必要上下文时回退到 NativeHorPlus。",
+      "gameplay_examples_context": "Cinematic FOV 90 degrees - Gameplay FOV inputs",
+      "gameplay_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "gameplay_example_112_6": "112.6° → 16:9: 112.6°; 21:9: 118.51°; 32:9: ~143.13°.",
+      "native": "对过场动画设定的 FOV 应用 HorPlus，不受玩家游戏 FOV 设置影响。",
+      "native_examples_context": "Cinematic FOV 90 degrees - results by aspect",
+      "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
+    } },
+    "dialogue": { "zoom": {
+      "native": "使用游戏原生的对话缩放行为。",
+      "adaptive": "相对于当前游戏 FOV，保留游戏原生光学缩放强度。",
+      "reduced": "使用自适应光学缩放强度的一半。",
+      "disabled": "禁用对话缩放并保留当前游戏 FOV。",
+      "examples_context": "Gameplay FOV to dialogue FOV",
+      "native_example_90": "90° → 70°.",
+      "native_example_110": "110° → 70°.",
+      "adaptive_example_90": "90° → 70°.",
+      "adaptive_example_110": "110° → ~90°.",
+      "reduced_example_90": "90° → ~80°.",
+      "reduced_example_110": "110° → ~100°.",
+      "disabled_example_90": "90° → 90°.",
+      "disabled_example_110": "110° → 110°."    } },
+    "hotkeys": {
+      "enabled": "启用游戏、过场动画和对话快捷键操作。",
+      "disabled": "禁用这些操作。独立的覆盖层切换键仍保持可用。",
+      "change": "Click the current key control to start rebinding.",
+      "change_overlay": "Click the current overlay key control to start rebinding.",
+      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+      "rebind": "Press a key to assign it. Press Esc to cancel.",
+      "gameplay_cycle": "Cycles Gameplay correction immediately: AspectRecalculation -> HorPlus -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Sets aspect ratio for the next cinematic: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Does not affect a cinematic already playing.",
+      "cinematic_fov_cycle": "Sets FOV mode for the next cinematic: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Does not affect a cinematic already playing.",
+      "dialogue_cycle": "Sets zoom mode for the next dialogue: Native -> Adaptive -> Reduced -> Disabled -> Native. Does not affect a dialogue already in progress."
+    },
+    "overlay": { "always_active": "使用此按键打开或关闭覆盖层。" },
+    "runtime": {
+      "viewport": "游戏当前视口比例。它可能随分辨率或窗口大小变化。",
+      "viewport_auto": "过场动画的 Auto 比例策略以此视口比例为目标。",
+      "viewport_unavailable": "当前游戏视口尺寸不可用。",
+      "aspect_matched": "过场动画与游戏视口比例在比较容差范围内一致。",
+      "aspect_mismatch": "过场动画与游戏视口比例不同。",
+      "aspect_cannot_assess": "有效运行时信息不足，无法比较比例。",
+      "cinematic_aspect": "第一个值是根据过场动画设置解析出的比例;第二个值是当前游戏视口比例。",
+      "cinematic_aspect_unavailable": "有效的过场动画目标比例或当前游戏视口比例不可用。",
+      "gameplay_fov": "保留的中性游戏 FOV。它不同于 ADS、双筒望远镜、对话和过场动画等临时缩放状态。",
+      "gameplay_fov_unavailable": "尚未观测到有效的中性游戏 FOV。",
+      "native_fov": "HorPlus 转换前的当前 FOV 输入。它可能在 ADS、双筒望远镜缩放、对话或镜头过渡期间变化。",
+      "native_fov_unavailable": "当前有效的原生 FOV 不可用。",
+      "horplus_fov": "当前视口下原生 FOV 的转换值。它可能在缩放和镜头过渡期间变化。",
+      "horplus_fov_unavailable": "有效的转换后 FOV 不可用。"
+    }
+  },
+  "camera_state": {
+    "waiting": "正在等待首次完整的镜头更新。",
+    "field": {
+      "state": "状态", "gameplay_fov": "游戏 FOV", "provenance": "来源", "epoch": "时期", "mode": "模式",
+      "valid": "有效", "direction": "方向", "active": "活动",
+      "evidence_valid": "证据有效", "sequence": "序列", "primary": "主要",
+      "secondary": "次要", "source": "来源", "confidence": "置信度",
+      "policy_valid": "策略有效", "recovery_excluded": "已排除恢复",
+      "target": "目标", "setting_known": "设置已知", "game_source": "游戏来源",
+      "native": "原生 FOV", "native_source": "原生来源", "horplus": "HorPlus FOV",
+      "horplus_source": "HorPlus 来源", "aspect": "比例", "aspect_source": "比例来源",
+      "flags": "标志", "gameplay_writer": "游戏写入方",
+      "presentation_epoch": "显示时期", "event_sequence": "事件序列"
+    },
+    "value": { "unavailable_counter": "不可用 / {value}" }
+  },
+  "notification": {
+    "hotkey_conflict": "快捷键冲突", "hotkey_title": "{setting} 快捷键",
+    "binding_value": "{oldKey} → {newKey}",
+    "conflict_value": "{key} 已分配给 {setting}",
+    "setting_changed": "{oldValue} → {newValue}",
+    "open_overlay_hint": "按 {key} 打开覆盖层"
+  }
+}

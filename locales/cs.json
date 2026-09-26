@@ -1,0 +1,166 @@
+{
+  "app": { "title": "STALKER 2 Camera Tweaks" },
+  "common": {
+    "enabled": "Zapnuto", "disabled": "Vypnuto", "unavailable": "Nedostupné",
+    "unavailable_value": "nedostupné", "cannot_assess": "Nelze posoudit",
+    "active": "Aktivní", "ready": "Připraveno", "applying": "Používá se",
+    "starting": "Spouštění", "ending": "Ukončování", "waiting": "Čekání",
+    "applied": "Použito", "pending": "Čeká na použití", "error": "Chyba",
+    "yes": "Ano", "no": "Ne", "examples": "Příklady"
+  },
+  "section": {
+    "runtime_settings": "Nastavení za běhu", "camera_transition": "Přechod kamery",
+    "gameplay": "Hra", "cinematics": "Filmové sekvence", "dialogue": "Dialogy",
+    "overlay": "Překryvné rozhraní", "hotkeys": "Klávesové zkratky", "runtime": "Běhový stav",
+    "camera_integration": "Integrace kamery", "camera_state": "Stav kamery",
+    "presentation": "Zobrazení", "zoom": "Zoom", "fov": "FOV",
+    "sources": "Zdroje", "generation": "Generace"
+  },
+  "setting": {
+    "gameplay_mode": "Režim hry", "cinematic_aspect": "Poměr stran sekvencí",
+    "cinematic_fov": "FOV sekvencí", "dialogue_zoom": "Zoom dialogů",
+    "overlay_toggle": "Přepnout rozhraní", "language": "Jazyk", "font_size": "Velikost textu", "mode": "Režim",
+    "aspect_ratio": "Poměr stran", "fov_mode": "Režim FOV", "zoom": "Zoom"
+  },
+  "notice": { "mouse_capture": "Dokud je toto okno otevřené, zachytává vstup myši. Stisknutím {key} vrátíte ovládání myši hře, nebo stisknutím Esc překryv zavřete." },
+  "rebind": { "press_key": "Stiskněte klávesu" },
+  "ui": { "viewport_aspect": "Poměr stran herního okna" },
+  "transition": {
+    "waiting": "Čeká se",
+    "aligned": "Sladěno", "not_aligned": "Nesladěno",
+    "detail": {
+      "waiting": "Nastavení kamery je připravené na sladěný přechod. Čeká se na potvrzení podle dat herní kamery.",
+      "aligned": "Cesty kamery ve filmových sekvencích a hře jsou sladěné.",
+      "not_aligned": "Cesty kamery ve filmových sekvencích a hře se liší poměrem stran nebo chováním FOV.",
+      "cannot_assess": "Pro porovnání cest kamery není k dispozici dostatek provozních údajů."
+    },
+    "active_value": "Aktivní — {value}"
+  },
+  "status": { "detail": {
+    "gameplay_incomplete": "Stav hry zatím není dostupný.",
+    "gameplay_hook_unavailable": "Integrace herní kamery není dostupná.",
+    "camera_update_waiting": "Čekání na požadovanou aktualizaci kamery.",
+    "native_recalculation_persists": "Výsledek nativního přepočtu kamery může přetrvat do restartu hry nebo opětovného načtení uložené pozice.",
+    "gameplay_disabled": "Korekce hry je vypnutá.",
+    "gameplay_context_unavailable": "Informace o herní kameře nejsou dostupné.",
+    "horplus_waiting": "Čekání na údaje herní kamery, než se aktivuje HorPlus.",
+    "horplus_active": "HorPlus upravuje FOV hry v reálném čase.",
+    "native_recalculation_enabled": "Nativní úprava kamery hry je zapnutá.",
+    "cinematic_incomplete": "Stav filmové sekvence zatím není dostupný.",
+    "cinematic_unavailable": "Integrace kamery filmových sekvencí není dostupná.",
+    "cinematic_native_ready": "Další filmová sekvence použije původní kompozici.",
+    "next_cinematic_ready": "Změny se projeví od další filmové sekvence.",
+    "cinematic_active": "Právě probíhající sekvence používá zvolený poměr stran a režim FOV.",
+    "cinematic_selection_incomplete": "Informace o aktivní filmové sekvenci nejsou úplné.",
+    "dialogue_incomplete": "Stav dialogů zatím není dostupný.",
+    "dialogue_hook_unavailable": "Integrace dialogové kamery není dostupná.",
+    "dialogue_capability_unavailable": "Stav zoomu dialogů není dostupný.",
+    "dialogue_mode_unavailable": "Vybraný režim zoomu dialogů není dostupný.",
+    "dialogue_native_ready": "Další dialog použije nativní zoom hry.",
+    "dialogue_adaptive_ready": "Adaptivní zoom je nastaven pro další dialog.",
+    "dialogue_reduced_ready": "Omezený zoom je nastaven pro další dialog.",
+    "dialogue_disabled_ready": "U dialogů se nepoužije žádný další zoom.",
+    "dialogue_ready": "Změny se projeví od dalšího dialogu.",
+    "dialogue_active": "Probíhající dialog používá zobrazený režim přiblížení.",
+    "dialogue_starting": "Čekání na potvrzení přechodu do dialogu.",
+    "active_dialogue_policy_unavailable": "Nastavení zoomu aktivního dialogu není dostupné.",
+    "dialogue_ending": "Dialogová kamera se vrací do hry.",
+    "dialogue_recovery_waiting": "Ovládání dialogů bude znovu dostupné po obnovení kamery.",
+    "dialogue_state_unknown": "Stav dialogové kamery není známý.",
+    "runtime_unavailable": "Běhový stav není dostupný."
+  } },
+  "tooltip": {
+    "gameplay": {
+      "enabled": "Zapne vybranou korekci hry.",
+      "disabled": "Zastaví další korekce hry. Výsledek nativního přepočtu kamery může přetrvat do restartu hry nebo opětovného načtení uložené pozice.",
+      "horplus": "Doporučeno. Zachovává nativní změny FOV hry a v reálném čase je přizpůsobuje aktuálnímu hernímu oknu, i během zoomu.",
+      "horplus_examples_context": "FOV hry · bez zoomu",
+      "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
+      "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
+      "aspect_recalculation": "Použije nativní přechod poměru stran hry a zachová vybraný FOV. U okna s vlastním poměrem stran může návrat na Auto obnovit nativní poměr stran a velikost okna."
+    },
+    "cinematics": { "aspect": {
+      "auto": "Pro kompozici filmových sekvencí použije aktuální poměr stran herního okna. Podporuje libovolný platný poměr stran.",
+      "native": "Ponechá nativní kompozici filmových sekvencí beze změny. Vybraný režim FOV zůstává aktivní.",
+      "16_9": "Pro filmové sekvence použije kompozici 16:9 bez ohledu na poměr stran displeje.",
+      "21_9": "Pro filmové sekvence použije kompozici 21:9 bez ohledu na poměr stran displeje.",
+      "32_9": "Pro filmové sekvence použije kompozici 32:9 bez ohledu na poměr stran displeje.",
+      "forced_example": "Příklad: 32:9 na displeji 16:9 vytvoří širší záběr s černými pruhy nahoře a dole."
+    }, "fov": {
+      "gameplay": "Sleduje aktuální FOV hry a zachovává změny FOV určené pro filmovou sekvenci. Pokud potřebný kontext není dostupný, použije NativeHorPlus.",
+      "gameplay_examples_context": "FOV filmové sekvence 90° · vstupní FOV hry",
+      "gameplay_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "gameplay_example_112_6": "112.6° → 16:9: 112.6°; 21:9: 118.51°; 32:9: ~143.13°.",
+      "native": "Použije HorPlus na FOV určený pro filmovou sekvenci, nezávisle na nastavení FOV hráče ve hře.",
+      "native_examples_context": "FOV filmové sekvence 90° · výsledky podle poměru stran",
+      "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
+    } },
+    "dialogue": { "zoom": {
+      "native": "Použije původní chování zoomu dialogů ve hře.",
+      "adaptive": "Zachová sílu původního optického zoomu hry vzhledem k aktuálnímu FOV.",
+      "reduced": "Použije poloviční sílu adaptivního optického zoomu.",
+      "disabled": "Vypne zoom dialogů a zachová aktuální FOV hry.",
+      "examples_context": "FOV hry → FOV dialogů",
+      "native_example_90": "90° → 70°.",
+      "native_example_110": "110° → 70°.",
+      "adaptive_example_90": "90° → 70°.",
+      "adaptive_example_110": "110° → ~90°.",
+      "reduced_example_90": "90° → ~80°.",
+      "reduced_example_110": "110° → ~100°.",
+      "disabled_example_90": "90° → 90°.",
+      "disabled_example_110": "110° → 110°."    } },
+    "hotkeys": {
+      "enabled": "Zapne klávesové zkratky pro hru, filmové sekvence a dialogy.",
+      "disabled": "Vypne tyto akce. Samostatná klávesa pro přepnutí rozhraní zůstává aktivní.",
+      "change": "Kliknutím na aktuální klávesu zahájíte nové přiřazení.",
+      "change_overlay": "Kliknutím na aktuální klávesu overlaye zahájíte nové přiřazení.",
+      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+      "rebind": "Stisknutím klávesy ji přiřadíte. Esc akci zruší.",
+      "gameplay_cycle": "Okamžitě cykluje korekci hry: AspectRecalculation -> HorPlus -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Nastaví poměr stran pro příští filmovou sekvenci: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Nemění právě probíhající sekvenci.",
+      "cinematic_fov_cycle": "Nastaví režim FOV pro příští filmovou sekvenci: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Nemění právě probíhající sekvenci.",
+      "dialogue_cycle": "Nastaví přiblížení pro příští dialog: Native -> Adaptive -> Reduced -> Disabled -> Native. Nemění právě probíhající dialog."
+    },
+    "overlay": { "always_active": "Touto klávesou otevřete nebo zavřete overlay." },
+    "runtime": {
+      "viewport": "Aktuální poměr stran herního okna. Mění se s rozlišením hry nebo velikostí okna.",
+      "viewport_auto": "Pravidlo Auto pro filmové sekvence používá tento poměr stran jako cíl.",
+      "viewport_unavailable": "Aktuální rozměry herního okna nejsou dostupné.",
+      "aspect_matched": "Poměry stran herního okna pro filmové sekvence a hru odpovídají v rámci tolerance porovnání.",
+      "aspect_mismatch": "Poměry stran herního okna pro filmové sekvence a hru se liší.",
+      "aspect_cannot_assess": "Pro porovnání poměrů stran není k dispozici dostatek platných provozních informací.",
+      "cinematic_aspect": "První hodnota je poměr stran odvozený z nastavení filmové sekvence; druhá je aktuální poměr herního okna.",
+      "cinematic_aspect_unavailable": "Není dostupný platný cílový poměr filmové sekvence nebo aktuální poměr herního okna.",
+      "gameplay_fov": "Zachovaný neutrální FOV hry. Liší se od dočasných stavů zoomu, jako jsou ADS, dalekohled, dialogy a filmové sekvence.",
+      "gameplay_fov_unavailable": "Platný neutrální FOV hry zatím nebyl zjištěn.",
+      "native_fov": "Aktuální vstup FOV před transformací HorPlus. Může se měnit při ADS, zoomu dalekohledu, dialozích nebo přechodech kamery.",
+      "native_fov_unavailable": "Platný aktuální nativní FOV není dostupný.",
+      "horplus_fov": "Transformovaný protějšek nativního FOV pro aktuální herní okno. Může se měnit při zoomu a přechodech kamery.",
+      "horplus_fov_unavailable": "Platný transformovaný FOV není dostupný."
+    }
+  },
+  "camera_state": {
+    "waiting": "Čekání na první úplnou aktualizaci kamery.",
+    "field": {
+      "state": "Stav", "gameplay_fov": "FOV hry", "provenance": "Původ", "epoch": "Epocha", "mode": "Režim",
+      "valid": "Platné", "direction": "Směr", "active": "Aktivní",
+      "evidence_valid": "Důkaz je platný", "sequence": "Sekvence", "primary": "Primární",
+      "secondary": "Sekundární", "source": "Zdroj", "confidence": "Jistota",
+      "policy_valid": "Zásada je platná", "recovery_excluded": "Vyloučeno z obnovení",
+      "target": "Cíl", "setting_known": "Nastavení je známé", "game_source": "Zdroj hry",
+      "native": "Nativní FOV", "native_source": "Nativní zdroj", "horplus": "FOV HorPlus",
+      "horplus_source": "Zdroj HorPlus", "aspect": "Poměr stran", "aspect_source": "Zdroj poměru stran",
+      "flags": "Příznaky", "gameplay_writer": "Zápis hry",
+      "presentation_epoch": "Epocha zobrazení", "event_sequence": "Sekvence událostí"
+    },
+    "value": { "unavailable_counter": "nedostupné / {value}" }
+  },
+  "notification": {
+    "hotkey_conflict": "Konflikt klávesových zkratek", "hotkey_title": "Zkratka: {setting}",
+    "binding_value": "{oldKey} → {newKey}",
+    "conflict_value": "Klávesa {key} je již přiřazena k akci {setting}",
+    "setting_changed": "{oldValue} → {newValue}",
+    "open_overlay_hint": "Stisknutím {key} otevřete překryvné okno"
+  }
+}

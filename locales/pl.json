@@ -1,0 +1,166 @@
+{
+  "app": { "title": "STALKER 2 Camera Tweaks" },
+  "common": {
+    "enabled": "Włączone", "disabled": "Wyłączone", "unavailable": "Niedostępne",
+    "unavailable_value": "niedostępne", "cannot_assess": "Nie można ocenić",
+    "active": "Aktywne", "ready": "Gotowe", "applying": "Stosowanie",
+    "starting": "Uruchamianie", "ending": "Kończenie", "waiting": "Oczekiwanie",
+    "applied": "Zastosowano", "pending": "Oczekuje", "error": "Błąd",
+    "yes": "Tak", "no": "Nie", "examples": "Przykłady"
+  },
+  "section": {
+    "runtime_settings": "Ustawienia w grze", "camera_transition": "Przejście kamery",
+    "gameplay": "Rozgrywka", "cinematics": "Przerywniki filmowe", "dialogue": "Dialogi",
+    "overlay": "Nakładka", "hotkeys": "Skróty klawiszowe", "runtime": "Stan bieżący",
+    "camera_integration": "Integracja kamery", "camera_state": "Stan kamery",
+    "presentation": "Wyświetlanie", "zoom": "Zoom", "fov": "FOV",
+    "sources": "Źródła", "generation": "Generacja"
+  },
+  "setting": {
+    "gameplay_mode": "Tryb rozgrywki", "cinematic_aspect": "Format przerywników",
+    "cinematic_fov": "FOV przerywników", "dialogue_zoom": "Zoom dialogów",
+    "overlay_toggle": "Przełącz nakładkę", "language": "Język", "font_size": "Rozmiar tekstu", "mode": "Tryb",
+    "aspect_ratio": "Proporcje obrazu", "fov_mode": "Tryb FOV", "zoom": "Zoom"
+  },
+  "notice": { "mouse_capture": "Gdy to okno jest otwarte, przechwytuje wejście myszy. Naciśnij {key}, aby przywrócić sterowanie myszą w grze, lub Esc, aby zamknąć nakładkę." },
+  "rebind": { "press_key": "Naciśnij klawisz" },
+  "ui": { "viewport_aspect": "Proporcje obszaru gry" },
+  "transition": {
+    "waiting": "Oczekiwanie",
+    "aligned": "Zgodne", "not_aligned": "Niezgodne",
+    "detail": {
+      "waiting": "Kamera jest skonfigurowana do zgodnego przejścia. Oczekiwanie na dane kamery rozgrywki, aby potwierdzić stan.",
+      "aligned": "Ścieżki kamery przerywników filmowych i rozgrywki są zgodne.",
+      "not_aligned": "Ścieżki kamery przerywników i rozgrywki różnią się proporcjami lub zachowaniem FOV.",
+      "cannot_assess": "Brakuje danych z działania, aby porównać ścieżki kamery."
+    },
+    "active_value": "Aktywne — {value}"
+  },
+  "status": { "detail": {
+    "gameplay_incomplete": "Stan rozgrywki nie jest jeszcze dostępny.",
+    "gameplay_hook_unavailable": "Integracja kamery rozgrywki jest niedostępna.",
+    "camera_update_waiting": "Oczekiwanie na wymaganą aktualizację kamery.",
+    "native_recalculation_persists": "Wynik natywnego przeliczenia kamery może pozostać do czasu ponownego uruchomienia gry lub wczytania zapisu.",
+    "gameplay_disabled": "Korekta rozgrywki jest wyłączona.",
+    "gameplay_context_unavailable": "Informacje o kamerze rozgrywki są niedostępne.",
+    "horplus_waiting": "Oczekiwanie na dane kamery rozgrywki, aby aktywować HorPlus.",
+    "horplus_active": "HorPlus dostosowuje FOV rozgrywki w czasie rzeczywistym.",
+    "native_recalculation_enabled": "Natywne dostosowanie kamery gry jest włączone.",
+    "cinematic_incomplete": "Stan przerywnika nie jest jeszcze dostępny.",
+    "cinematic_unavailable": "Integracja kamery przerywników jest niedostępna.",
+    "cinematic_native_ready": "Następny przerywnik użyje oryginalnego kadrowania.",
+    "next_cinematic_ready": "Zmiany zaczną obowiązywać od następnego przerywnika.",
+    "cinematic_active": "Trwający przerywnik używa wybranego formatu obrazu i trybu FOV.",
+    "cinematic_selection_incomplete": "Informacje o aktywnym przerywniku są niepełne.",
+    "dialogue_incomplete": "Stan dialogów nie jest jeszcze dostępny.",
+    "dialogue_hook_unavailable": "Integracja kamery dialogów jest niedostępna.",
+    "dialogue_capability_unavailable": "Stan zoomu dialogów jest niedostępny.",
+    "dialogue_mode_unavailable": "Wybrany tryb zoomu dialogów jest niedostępny.",
+    "dialogue_native_ready": "Następny dialog użyje natywnego zoomu gry.",
+    "dialogue_adaptive_ready": "Zoom adaptacyjny ustawiono dla następnego dialogu.",
+    "dialogue_reduced_ready": "Ograniczony zoom ustawiono dla następnego dialogu.",
+    "dialogue_disabled_ready": "Dodatkowy zoom dialogów nie będzie stosowany.",
+    "dialogue_ready": "Zmiany zaczną obowiązywać od następnego dialogu.",
+    "dialogue_active": "Bieżący dialog używa wyświetlonego trybu zbliżenia.",
+    "dialogue_starting": "Oczekiwanie na potwierdzenie przejścia do dialogu.",
+    "active_dialogue_policy_unavailable": "Ustawienie zoomu aktywnego dialogu jest niedostępne.",
+    "dialogue_ending": "Kamera dialogu wraca do rozgrywki.",
+    "dialogue_recovery_waiting": "Obsługa dialogów będzie ponownie dostępna po przywróceniu kamery.",
+    "dialogue_state_unknown": "Stan kamery dialogu jest nieznany.",
+    "runtime_unavailable": "Stan bieżący jest niedostępny."
+  } },
+  "tooltip": {
+    "gameplay": {
+      "enabled": "Włącza wybraną korektę rozgrywki.",
+      "disabled": "Zatrzymuje dalszą korektę rozgrywki. Wynik natywnego przeliczenia kamery może pozostać do czasu ponownego uruchomienia gry lub wczytania zapisu.",
+      "horplus": "Zalecane. Zachowuje natywne zmiany FOV rozgrywki i dostosowuje je w czasie rzeczywistym do bieżącego obszaru gry, także podczas zoomu.",
+      "horplus_examples_context": "FOV rozgrywki · bez zoomu",
+      "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
+      "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
+      "aspect_recalculation": "Używa natywnego przejścia proporcji gry, zachowując wybrany FOV rozgrywki. Przy niestandardowych proporcjach okna przywrócenie Auto może zmienić okno na natywne proporcje i rozmiar."
+    },
+    "cinematics": { "aspect": {
+      "auto": "Używa bieżących proporcji obszaru gry do kadrowania przerywników. Obsługuje dowolne prawidłowe proporcje.",
+      "native": "Pozostawia natywne kadrowanie przerywników bez zmian. Wybrany tryb FOV nadal obowiązuje.",
+      "16_9": "Używa kadrowania 16:9 w przerywnikach, niezależnie od proporcji ekranu.",
+      "21_9": "Używa kadrowania 21:9 w przerywnikach, niezależnie od proporcji ekranu.",
+      "32_9": "Używa kadrowania 32:9 w przerywnikach, niezależnie od proporcji ekranu.",
+      "forced_example": "Przykład: 32:9 na ekranie 16:9 daje szerszy kadr z czarnymi pasami u góry i dołu."
+    }, "fov": {
+      "gameplay": "Podąża za bieżącym FOV rozgrywki, zachowując zmiany FOV właściwe dla przerywnika. Jeśli brakuje wymaganego kontekstu, używa NativeHorPlus.",
+      "gameplay_examples_context": "FOV przerywnika 90° · wartości FOV rozgrywki",
+      "gameplay_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+      "gameplay_example_112_6": "112.6° → 16:9: 112.6°; 21:9: 118.51°; 32:9: ~143.13°.",
+      "native": "Stosuje HorPlus do FOV ustawionego dla przerywnika, niezależnie od ustawienia FOV gracza w rozgrywce.",
+      "native_examples_context": "FOV przerywnika 90° · wyniki dla proporcji",
+      "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
+    } },
+    "dialogue": { "zoom": {
+      "native": "Używa oryginalnego zachowania zoomu dialogów.",
+      "adaptive": "Zachowuje siłę natywnego zoomu optycznego względem bieżącego FOV rozgrywki.",
+      "reduced": "Używa połowy siły adaptacyjnego zoomu optycznego.",
+      "disabled": "Wyłącza zoom dialogów i zachowuje bieżący FOV rozgrywki.",
+      "examples_context": "FOV rozgrywki → FOV dialogów",
+      "native_example_90": "90° → 70°.",
+      "native_example_110": "110° → 70°.",
+      "adaptive_example_90": "90° → 70°.",
+      "adaptive_example_110": "110° → ~90°.",
+      "reduced_example_90": "90° → ~80°.",
+      "reduced_example_110": "110° → ~100°.",
+      "disabled_example_90": "90° → 90°.",
+      "disabled_example_110": "110° → 110°."    } },
+    "hotkeys": {
+      "enabled": "Włącza skróty klawiszowe dla rozgrywki, przerywników i dialogów.",
+      "disabled": "Wyłącza te działania. Osobny klawisz nakładki pozostaje aktywny.",
+      "change": "Kliknij bieżący klawisz, aby rozpocząć przypisywanie.",
+      "change_overlay": "Kliknij bieżący klawisz nakładki, aby rozpocząć przypisywanie.",
+      "single_key": "Przypisz jeden zwykły klawisz; kombinacje modyfikatorów i przyciski myszy nie są obsługiwane.",
+      "rebind": "Naciśnij klawisz, aby go przypisać. Esc anuluje.",
+      "gameplay_cycle": "Natychmiast przełącza korektę rozgrywki: AspectRecalculation -> HorPlus -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Ustawia proporcje następnego przerywnika: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Nie wpływa na trwający przerywnik.",
+      "cinematic_fov_cycle": "Ustawia tryb FOV następnego przerywnika: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Nie wpływa na trwający przerywnik.",
+      "dialogue_cycle": "Ustawia skalowanie następnego dialogu: Native -> Adaptive -> Reduced -> Disabled -> Native. Nie wpływa na trwający dialog."
+    },
+    "overlay": { "always_active": "Ten klawisz otwiera lub zamyka nakładkę." },
+    "runtime": {
+      "viewport": "Bieżące proporcje obszaru renderowania gry. Mogą zmieniać się wraz z rozdzielczością lub rozmiarem okna.",
+      "viewport_auto": "Zasada Auto dla przerywników używa tych proporcji jako celu.",
+      "viewport_unavailable": "Bieżące wymiary obszaru renderowania gry są niedostępne.",
+      "aspect_matched": "Proporcje obszarów gry dla przerywników i rozgrywki są zgodne w granicach tolerancji porównania.",
+      "aspect_mismatch": "Proporcje obszarów gry dla przerywników i rozgrywki różnią się.",
+      "aspect_cannot_assess": "Brakuje prawidłowych danych z działania, aby porównać proporcje.",
+      "cinematic_aspect": "Pierwsza wartość to proporcje wyznaczone z ustawień przerywnika; druga to bieżące proporcje obszaru gry.",
+      "cinematic_aspect_unavailable": "Brak prawidłowych docelowych proporcji przerywnika lub bieżących proporcji obszaru gry.",
+      "gameplay_fov": "Zachowany neutralny FOV rozgrywki. Jest odrębny od tymczasowych stanów zoomu, takich jak ADS, lornetka, dialogi i przerywniki.",
+      "gameplay_fov_unavailable": "Nie zaobserwowano jeszcze prawidłowego neutralnego FOV rozgrywki.",
+      "native_fov": "Bieżące wejściowe FOV przed transformacją HorPlus. Może zmieniać się podczas ADS, zoomu lornetki, dialogów lub przejść kamery.",
+      "native_fov_unavailable": "Bieżący prawidłowy natywny FOV jest niedostępny.",
+      "horplus_fov": "Przekształcony odpowiednik natywnego FOV dla bieżącego obszaru gry. Może zmieniać się podczas zoomu i przejść kamery.",
+      "horplus_fov_unavailable": "Brak prawidłowego przekształconego FOV."
+    }
+  },
+  "camera_state": {
+    "waiting": "Oczekiwanie na pierwszą pełną aktualizację kamery.",
+    "field": {
+      "state": "Stan", "gameplay_fov": "FOV rozgrywki", "provenance": "Pochodzenie", "epoch": "Epoka", "mode": "Tryb",
+      "valid": "Prawidłowe", "direction": "Kierunek", "active": "Aktywne",
+      "evidence_valid": "Dowód prawidłowy", "sequence": "Sekwencja", "primary": "Główne",
+      "secondary": "Dodatkowe", "source": "Źródło", "confidence": "Pewność",
+      "policy_valid": "Zasada prawidłowa", "recovery_excluded": "Wykluczone z przywracania",
+      "target": "Cel", "setting_known": "Ustawienie znane", "game_source": "Źródło gry",
+      "native": "Natywny FOV", "native_source": "Źródło natywne", "horplus": "FOV HorPlus",
+      "horplus_source": "Źródło HorPlus", "aspect": "Proporcje", "aspect_source": "Źródło proporcji",
+      "flags": "Flagi", "gameplay_writer": "Zapis gry",
+      "presentation_epoch": "Epoka prezentacji", "event_sequence": "Sekwencja zdarzeń"
+    },
+    "value": { "unavailable_counter": "niedostępne / {value}" }
+  },
+  "notification": {
+    "hotkey_conflict": "Konflikt skrótów", "hotkey_title": "Skrót: {setting}",
+    "binding_value": "{oldKey} → {newKey}",
+    "conflict_value": "{key} jest już przypisany do {setting}",
+    "setting_changed": "{oldValue} → {newValue}",
+    "open_overlay_hint": "Naciśnij {key}, aby otworzyć nakładkę"
+  }
+}

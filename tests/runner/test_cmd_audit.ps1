@@ -4,6 +4,7 @@ param(
 )
 
 $lines = Get-Content -LiteralPath $RunnerPath
+$projectRoot = Split-Path -Parent (Resolve-Path -LiteralPath $RunnerPath).Path
 $sourceNames = @($lines | Select-String -Pattern 'tests\\[^ ]+_harness\.cpp' -AllMatches |
     ForEach-Object { $_.Matches | ForEach-Object { $_.Value } } | Sort-Object -Unique)
 $compileNames = @($lines | Select-String -Pattern 'cl .*?/OUT:build-artifacts\\tests\\([^ ]+_harness)\.exe' -AllMatches |
@@ -33,6 +34,10 @@ $sourceBasenames = @($sourceNames | ForEach-Object {
     [System.IO.Path]::GetFileNameWithoutExtension($_)
 })
 $sourceBasenames = @($sourceBasenames | Sort-Object -Unique)
+$repositoryHarnesses = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'tests') -Recurse -File -Filter '*_harness.cpp' |
+    ForEach-Object { $_.BaseName } | Sort-Object -Unique)
+$unregisteredHarnesses = @($repositoryHarnesses | Where-Object { $_ -notin $sourceBasenames })
+$unknownRunnerSources = @($sourceBasenames | Where-Object { $_ -notin $repositoryHarnesses })
 $sameSet = (@($sourceBasenames | Where-Object { $_ -notin $compileNames }).Count -eq 0) -and
     (@($compileNames | Where-Object { $_ -notin $sourceBasenames }).Count -eq 0) -and
     (@($compileNames | Where-Object { $_ -notin $runNames }).Count -eq 0) -and
@@ -41,13 +46,17 @@ $sameSet = (@($sourceBasenames | Where-Object { $_ -notin $compileNames }).Count
 $compileChecksPass = $compileMissingChecks.Count -eq 0
 $runChecksPass = $runMissingChecks.Count -eq 0
 Write-Output (("runner_sources={0} runner_compiled={1} runner_executed={2} " +
-    "compile_checks={3} run_checks={4} sets_equal={5}") -f
+    "compile_checks={3} run_checks={4} sets_equal={5} repository_inventory={6}") -f
     $sourceBasenames.Count, $compileNames.Count, $runNames.Count,
-    $compileChecksPass, $runChecksPass, $sameSet)
+    $compileChecksPass, $runChecksPass, $sameSet,
+    ($unregisteredHarnesses.Count -eq 0 -and $unknownRunnerSources.Count -eq 0))
 
-if (-not $sameSet -or $compileMissingChecks.Count -ne 0 -or $runMissingChecks.Count -ne 0) {
+if (-not $sameSet -or $compileMissingChecks.Count -ne 0 -or $runMissingChecks.Count -ne 0 -or
+    $unregisteredHarnesses.Count -ne 0 -or $unknownRunnerSources.Count -ne 0) {
     if ($compileMissingChecks.Count -ne 0) { Write-Output 'missing_compile_checks:'; $compileMissingChecks }
     if ($runMissingChecks.Count -ne 0) { Write-Output 'missing_run_checks:'; $runMissingChecks }
+    if ($unregisteredHarnesses.Count -ne 0) { Write-Output 'unregistered_repository_harnesses:'; $unregisteredHarnesses }
+    if ($unknownRunnerSources.Count -ne 0) { Write-Output 'runner_sources_without_repository_harness:'; $unknownRunnerSources }
     exit 1
 }
 exit 0

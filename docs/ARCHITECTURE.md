@@ -25,13 +25,45 @@ non-Native Dialogue lifecycle is available only when its cinematic lifecycle
 observation and Gameplay recovery observation capabilities are available;
 otherwise it fails closed while unrelated feature status remains independent.
 
+The production ASI includes the combined D3D12/ImGui settings overlay and its
+embedded localization catalogs/font profiles. Locale configuration is either
+Auto or an explicit registry identity. Auto reads the game's current
+Interface Language when selected and at the overlay closed-to-open transition, normalizes
+it through the locale registry, and updates the effective catalog and font
+profile; unknown/unavailable values use English without changing Auto mode.
+Manual locale selection remains authoritative until the user selects Auto.
+There is no per-frame language polling or separate localization state owner.
+The overlay toggle and window position are stored in the main
+`STALKER2CameraTweaks.ini` under `[Overlay]`. Existing `Hotkeys.OverlayToggle`
+and the former `STALKER2CameraTweaksOverlay.ini` position are migrated once;
+the old placement file is then ignored and is not deleted.
+
+The production overlay lifecycle log is
+`STALKER2CameraTweaksOverlay.log`. Repeated DXGI factory/PRESENT observations
+and detailed association telemetry are emitted only while `Diagnostics.Enabled`
+is true; normal logging focuses on initialization, swapchain selection,
+visibility, actual resize/rebuild events, font changes and failures.
+
 ## Build and test policy
 
 `build.cmd` is the supported production build entry point. It discovers the
 documented Visual Studio toolchain, uses C++23-era MSVC facilities and applies
 `/W4` to the production compilation. Warnings are reviewed but `/WX` is not
 currently required because vendor sources are part of the same bounded build
-and do not have the project's warning policy.
+and do not have the project's warning policy. The production output
+`STALKER2CameraTweaks.asi` includes the settings overlay, embedded locale
+resources, and bounded Auto language reader. `tools/build/build-overlay-settings.cmd`
+is retained as a compatibility alias to the same production build.
+
+The production build selects overlay integration with `OVERLAY_PRODUCTION`;
+`OVERLAY_SETTINGS_FRONTEND` enables the settings UI, and `OVERLAY_COMBINED`
+connects discovery with the plugin runtime. The old standalone
+`tools/build/build-overlay-poc.cmd` entry point retains `OVERLAY_RENDERING_POC` as a
+legacy source gate; production does not define that POC-named macro.
+`tools/build/build-diagnostic.cmd` creates a separate supported diagnostic ASI. The
+standalone POC/discovery and research watcher scripts are retired research
+entry points, not supported ASI profiles or contents of the production
+package.
 
 `test.cmd` is the single repository test entry point. It builds and runs all
 current Windows harnesses with the same compiler family and returns failure if

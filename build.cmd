@@ -1,5 +1,7 @@
 @echo off
 setlocal
+pushd "%~dp0"
+if errorlevel 1 exit /b 1
 set "VSDEVCMD="
 if defined VSINSTALLDIR if exist "%VSINSTALLDIR%Common7\Tools\VsDevCmd.bat" set "VSDEVCMD=%VSINSTALLDIR%Common7\Tools\VsDevCmd.bat"
 if not defined VSDEVCMD if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
@@ -9,12 +11,15 @@ if not defined VSDEVCMD if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\In
 )
 if not defined VSDEVCMD (
     echo Visual Studio 2022 C++ toolchain not found.>&2
+    popd
     exit /b 1
 )
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64
-if errorlevel 1 exit /b %errorlevel%
+if errorlevel 1 goto :build_failed
 rem MSVC 17.14 exposes the required C++23 feature set through /std:c++latest.
-if not exist "build-artifacts\obj" mkdir "build-artifacts\obj"
+set "OBJECT_DIR=build-artifacts\obj"
+if defined CAMERA_TWEAKS_OBJECT_DIR set "OBJECT_DIR=%CAMERA_TWEAKS_OBJECT_DIR%"
+if not exist "%OBJECT_DIR%" mkdir "%OBJECT_DIR%"
 set "DIALOGUE_DIAGNOSTIC_DEFINE="
 set "DIALOGUE_DISCOVERY_DEFINE="
 set "ZOOM_TRANSITION_DEFINE="
@@ -33,5 +38,22 @@ if /I "%CAMERA_TWEAKS_BUILD_PROFILE%"=="diagnostic" (
     if /I "%CAMERA_STATE_SNAPSHOT_DIAGNOSTIC%"=="1" set "CAMERA_STATE_SNAPSHOT_DEFINE=/DCAMERA_STATE_SNAPSHOT_DIAGNOSTIC"
     set "DIALOGUE_OUTPUT=STALKER2CameraTweaksDiagnostic.asi"
 )
-cl /nologo /LD /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /DNDEBUG %SUPPORTED_DIAGNOSTICS_DEFINE% %DIALOGUE_DIAGNOSTIC_DEFINE% %DIALOGUE_DISCOVERY_DEFINE% %ZOOM_TRANSITION_DEFINE% %HORPLUS_FOV_STATE_DEFINE% %DIALOGUE_RECOVERY_ENDPOINT_DEFINE% %CAMERA_STATE_SNAPSHOT_DEFINE% /Fobuild-artifacts\obj\ /Iexternal\safetyhook /Iexternal\spdlog\include src\plugin\runtime.cpp src\plugin\worker_lifecycle.cpp src\plugin\feature_status.cpp src\plugin\dll_entry.cpp src\config\feature_config.cpp src\config\config_repository.cpp src\config\config_template.cpp src\diagnostics\diagnostic_runtime.cpp src\hooks\signature_scanner.cpp src\hooks\instruction_validator.cpp src\hooks\hook_set.cpp src\gameplay\gameplay_state.cpp src\gameplay\gameplay_camera.cpp src\gameplay\aspect_policy.cpp src\gameplay\horplus_gameplay.cpp src\cinematics\cinematic_fov.cpp src\cinematics\cinematic_selection.cpp src\cinematics\cinematic_aspect.cpp src\cinematics\cinematic_initialization.cpp src\dialogue\dialogue_fov.cpp src\dialogue\dialogue_state.cpp src\camera\camera_state_snapshot.cpp src\camera\fov_observation.cpp src\camera\gameplay_baseline.cpp src\camera\gameplay_aspect_restoration.cpp src\camera\presentation_state.cpp src\camera\horplus.cpp src\platform\win32\memory.cpp src\platform\win32\sha256.cpp src\platform\win32\window.cpp src\platform\win32\viewport.cpp external\safetyhook\safetyhook.cpp external\safetyhook\Zydis.c /link user32.lib bcrypt.lib /OUT:%DIALOGUE_OUTPUT%
-exit /b %errorlevel%
+if defined CAMERA_TWEAKS_OUTPUT_NAME set "DIALOGUE_OUTPUT=%CAMERA_TWEAKS_OUTPUT_NAME%"
+if not exist "build-artifacts\overlay" mkdir "build-artifacts\overlay"
+PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\localization_catalog_audit.ps1
+if errorlevel 1 goto :build_failed
+PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\generate_ini_documentation.ps1
+if errorlevel 1 goto :build_failed
+set "INCLUDE=%CD%\build-artifacts\generated;%INCLUDE%"
+rc /nologo /fo build-artifacts\overlay\localization_resources.res src\overlay\localization_resources.rc
+if errorlevel 1 goto :build_failed
+set "OVERLAY_DEFINE=/DOVERLAY_PRODUCTION /DOVERLAY_SETTINGS_FRONTEND /DOVERLAY_COMBINED"
+cl /nologo /LD /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /DNDEBUG %OVERLAY_DEFINE% %SUPPORTED_DIAGNOSTICS_DEFINE% %DIALOGUE_DIAGNOSTIC_DEFINE% %DIALOGUE_DISCOVERY_DEFINE% %ZOOM_TRANSITION_DEFINE% %HORPLUS_FOV_STATE_DEFINE% %DIALOGUE_RECOVERY_ENDPOINT_DEFINE% %CAMERA_STATE_SNAPSHOT_DEFINE% /Fo%OBJECT_DIR%\ /Iexternal\safetyhook /Iexternal\spdlog\include /Iexternal\imgui /Iexternal\imgui\backends src\plugin\runtime.cpp src\plugin\worker_lifecycle.cpp src\plugin\feature_status.cpp src\plugin\dll_entry.cpp src\config\feature_config.cpp src\config\config_repository.cpp src\config\config_template.cpp src\diagnostics\diagnostic_runtime.cpp src\diagnostics\performance_telemetry.cpp src\hooks\signature_scanner.cpp src\hooks\instruction_validator.cpp src\hooks\hook_set.cpp src\gameplay\gameplay_state.cpp src\gameplay\gameplay_camera.cpp src\gameplay\aspect_policy.cpp src\gameplay\horplus_gameplay.cpp src\cinematics\cinematic_fov.cpp src\cinematics\cinematic_selection.cpp src\cinematics\cinematic_aspect.cpp src\cinematics\cinematic_initialization.cpp src\dialogue\dialogue_fov.cpp src\dialogue\dialogue_state.cpp src\camera\camera_state_snapshot.cpp src\camera\fov_observation.cpp src\camera\gameplay_baseline.cpp src\camera\gameplay_aspect_restoration.cpp src\camera\presentation_state.cpp src\camera\horplus.cpp src\platform\win32\memory.cpp src\platform\win32\sha256.cpp src\platform\win32\window.cpp src\platform\win32\viewport.cpp src\overlay\camera_integration.cpp src\overlay\feature_presentation.cpp src\overlay\camera_state_view.cpp src\overlay\selector_documentation_view.cpp src\overlay\overlay_layout_metrics.cpp src\overlay\placement_config.cpp src\overlay\localization_catalog.cpp src\overlay\localization_formatter.cpp src\overlay\localization_validator.cpp src\overlay\localization_manager.cpp src\overlay\localization_font.cpp src\overlay\localization_keys.cpp src\overlay\game_language_reader.cpp src\overlay\discovery_runtime.cpp src\overlay\input_state.cpp src\overlay\overlay_lifecycle.cpp src\overlay\discovery_evidence.cpp src\overlay\renderer_state.cpp src\overlay\renderer_runtime.cpp external\safetyhook\safetyhook.cpp external\safetyhook\Zydis.c external\imgui\imgui.cpp external\imgui\imgui_draw.cpp external\imgui\imgui_tables.cpp external\imgui\imgui_widgets.cpp external\imgui\backends\imgui_impl_dx12.cpp external\imgui\backends\imgui_impl_win32.cpp /link user32.lib psapi.lib bcrypt.lib dxgi.lib d3d12.lib d3dcompiler.lib build-artifacts\overlay\localization_resources.res /OUT:"%DIALOGUE_OUTPUT%"
+set "BUILD_RESULT=%errorlevel%"
+popd
+exit /b %BUILD_RESULT%
+
+:build_failed
+set "BUILD_RESULT=%errorlevel%"
+popd
+exit /b %BUILD_RESULT%

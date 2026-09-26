@@ -24,6 +24,20 @@
   replacement of the managed INI.
 - Auto viewport aspect uses only usable client geometry; transient degenerate
   dimensions fall back to the existing display/native path.
+- Auto overlay language is read on explicit selection and at the closed-to-open transition. Explicit selection requests synchronization through the game window procedure; the UI/render callback does not call the native reader directly. The
+  native reader validates the expected game image layout and both code
+  prologues before calling either address; returned FString data is bounded
+  and copied before releasing its game-allocated buffer. Unknown or unavailable
+  identifiers select English without changing persisted Auto mode. No polling,
+  OS locale, storefront state, or game-setting writes are used.
+- Overlay position migration is one-shot and non-destructive: legacy coordinates
+  are copied into `[Overlay]` in the main INI, and the old file is left untouched
+  but no longer read after the migration marker is committed.
+- The startup overlay hint is queued once on the first valid Present after
+  renderer/resource readiness and runtime settings availability; it does not
+  depend on settings-panel visibility. Its displayed key comes from the
+  effective hotkey snapshot. Its ten-second visible lifetime starts when the
+  renderer drains it for display, not while it waits in the notification queue.
 - Controlled shutdown signals and joins workers before resetting hooks or
   restoring patched state. Loader-lock detach does not perform that teardown.
 - Runtime callbacks that mutate ordinary telemetry fields are expected to run

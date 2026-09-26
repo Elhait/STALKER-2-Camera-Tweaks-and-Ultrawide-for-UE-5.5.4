@@ -1,4 +1,5 @@
 #include "fov_observation.hpp"
+#include "../diagnostics/performance_telemetry.hpp"
 
 namespace camera
 {
@@ -42,7 +43,7 @@ namespace camera
 
     CameraFovObservation CameraFovObservationStore::Publish(CameraFovObservation observation)
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::FovObservation);
         observation.publicationSequence = ++nextSequence_;
         const auto index = Index(observation.boundary);
         latest_[index] = observation;
@@ -53,7 +54,7 @@ namespace camera
     std::optional<CameraFovObservation> CameraFovObservationStore::ReadLatest(
         FovObservationBoundary boundary) const
     {
-        std::lock_guard lock(mutex_);
+        diagnostics::ScopedRuntimeMutex lock(mutex_, diagnostics::RuntimeLockPath::FovObservation);
         const auto index = Index(boundary);
         if (!valid_[index]) return std::nullopt;
         return latest_[index];

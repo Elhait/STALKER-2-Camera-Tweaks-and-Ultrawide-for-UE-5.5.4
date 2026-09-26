@@ -1,5 +1,7 @@
 #include "gameplay_state.hpp"
 
+#include <cmath>
+
 namespace gameplay
 {
     const char* ReplayStateName(ReplayState state)
@@ -38,5 +40,55 @@ namespace gameplay
             true,
             coordinator != camera::CoordinatorState::Gameplay
         };
+    }
+
+    GameplayEnabledAction ResolveGameplayEnabledTransition(
+        const GameplayEnabledTransitionInput& input) noexcept
+    {
+        constexpr float nativeAspect = 16.0f / 9.0f;
+        const auto isUltrawide = [nativeAspect](float aspect) noexcept {
+            return std::isfinite(aspect) && aspect > nativeAspect + 0.001f;
+        };
+        const bool currentAspectValid = input.cameraReadable &&
+            std::isfinite(input.currentAspect) && input.currentAspect > 0.0f;
+        const bool currentAspectUltrawide = currentAspectValid &&
+            isUltrawide(input.currentAspect);
+        const bool restorationAspectValid = std::isfinite(input.restorationAspect) &&
+            input.restorationAspect > 0.0f && input.restorationSourceMatches;
+        const bool restorationAspectUltrawide = restorationAspectValid &&
+            isUltrawide(input.restorationAspect);
+
+        if (input.coordinator != camera::CoordinatorState::Gameplay)
+            return GameplayEnabledAction::Defer;
+
+        if (!input.enabled) {
+            if (input.replayState == ReplayState::WaitingForAutomaticUpdate ||
+                (input.replayState == ReplayState::Complete && currentAspectUltrawide))
+                return GameplayEnabledAction::NoAction;
+            if (!currentAspectValid || !restorationAspectValid ||
+                !restorationAspectUltrawide)
+                return GameplayEnabledAction::Defer;
+            return GameplayEnabledAction::RestoreNativeAspect;
+        }
+
+        if (!currentAspectValid)
+            return GameplayEnabledAction::Defer;
+
+        if (input.selectedMode == config::GameplayMode::HorPlus) {
+            if (input.replayState != ReplayState::WaitingForAutomaticUpdate &&
+                !currentAspectUltrawide) {
+                if (!restorationAspectValid || !restorationAspectUltrawide)
+                    return GameplayEnabledAction::Defer;
+                return GameplayEnabledAction::RestoreNativeAspect;
+            }
+            return GameplayEnabledAction::ApplyHorPlus;
+        }
+
+        if (input.replayState == ReplayState::Complete)
+            return GameplayEnabledAction::AlreadyApplied;
+        if (input.replayState == ReplayState::AppliedConstrainPass ||
+            input.nativeTransitionReady)
+            return GameplayEnabledAction::ApplyAspectRecalculation;
+        return GameplayEnabledAction::Defer;
     }
 }
