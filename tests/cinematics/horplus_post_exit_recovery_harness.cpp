@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 namespace
 {
@@ -53,7 +54,9 @@ namespace
         camera::CoordinatorState& coordinator,
         camera::GameplayBaselineStore& baseline, std::uint64_t sequence,
         float aspect = kAspect, std::uintptr_t source = kCameraSource,
-        std::uint8_t flags = 0x4, bool cameraReadable = true)
+        std::uint8_t flags = 0x4, bool cameraReadable = true,
+        float cachedCinematicFov = std::numeric_limits<float>::quiet_NaN(),
+        bool gameplayEnabled = true)
     {
         auto observation = recovery.ObserveValidated(
             source, inputFov, kRecoveryEpsilon);
@@ -67,11 +70,14 @@ namespace
                 ? retainedBaseline.source.value : 0;
         sample.inputFov = inputFov;
         sample.exitNativeTarget = exitTarget;
+        sample.cachedCinematicFov = cachedCinematicFov;
         sample.aspect = aspect;
         sample.flags = flags;
         sample.cameraReadable = cameraReadable;
+        sample.gameplayEnabled = gameplayEnabled;
         auto action = gameplay::ResolveHorPlusRecoveryAction(coordinator,
-            gameplay::IsNativeHorPlusRecoverySample(sample, kRecoveryEpsilon));
+            sample, gameplay::IsNativeHorPlusRecoverySample(sample, kRecoveryEpsilon),
+            kRecoveryEpsilon);
         if (action == gameplay::HorPlusRecoveryAction::HoldNativePassThrough) {
             if (observation == dialogue::PostCinematicRecoveryExclusion::Observation::Inactive ||
                 observation == dialogue::PostCinematicRecoveryExclusion::Observation::Cancelled) {
@@ -79,6 +85,11 @@ namespace
                 recovery.ObserveValidated(source, inputFov, kRecoveryEpsilon);
             }
             return inputFov;
+        }
+        if (action == gameplay::HorPlusRecoveryAction::TransformRecoveryInterpolation) {
+            const float mapped = gameplay::ResolveHorPlusRecoveryInterpolationFov(
+                sample, kNativeAspect);
+            return std::isfinite(mapped) ? mapped : inputFov;
         }
         if (action == gameplay::HorPlusRecoveryAction::ResumeGameplay)
             coordinator = camera::CoordinatorState::Gameplay;
@@ -154,8 +165,14 @@ namespace
     bool CheckRecoveryEvidenceGates()
     {
         bool pass = true;
-        const gameplay::HorPlusRecoverySample native{
-            kCameraSource, kCameraSource, 90.6557f, 90.6557f, 3.0f, 0x4, true };
+        gameplay::HorPlusRecoverySample native{};
+        native.source = kCameraSource;
+        native.validatedSource = kCameraSource;
+        native.inputFov = 90.6557f;
+        native.exitNativeTarget = 90.6557f;
+        native.aspect = 3.0f;
+        native.flags = 0x4;
+        native.cameraReadable = true;
         pass &= Check(gameplay::IsNativeHorPlusRecoverySample(native, kRecoveryEpsilon),
             "recorded_native_recovery_evidence_accepted");
         const auto reject = [&pass](const gameplay::HorPlusRecoverySample& sample,
@@ -222,6 +239,100 @@ namespace
     }
 }
 
+bool TestRecordedRecoveryInterpolationRemainsInHorPlusSpace()
+{
+    bool pass = true;
+    constexpr float nativeFov = 90.0f;
+    constexpr float cachedCinematicFov = 106.688f;
+    constexpr float exitTarget = nativeFov;
+    constexpr float horPlusTarget = 106.688f;
+    const float transitionSamples[]{
+        106.688f, 105.512f, 104.237f, 102.448f, 101.175f,
+        99.7347f, 98.682f, 97.3072f, 95.8426f, 94.5296f,
+        93.216f, 91.983f, 90.8222f
+    };
+
+    camera::GameplayBaselineStore baseline;
+    baseline.Project(MakeObservation(nativeFov, horPlusTarget, true, 1), true);
+    auto coordinator = camera::CoordinatorState::CinematicExiting;
+    dialogue::PostCinematicRecoveryExclusion recovery;
+    recovery.Arm(exitTarget);
+    float previousOutput = cachedCinematicFov;
+    std::uint64_t sequence = 2;
+    for (const float sample : transitionSamples) {
+        const float output = ProcessWriterSample(sample, exitTarget, recovery,
+            coordinator, baseline, sequence++, kAspect, kCameraSource, 0x4,
+            true, cachedCinematicFov);
+        pass &= Check(coordinator == camera::CoordinatorState::CinematicExiting,
+            "same_source_interpolation_remains_in_explicit_recovery_state");
+        pass &= Check(Near(output, horPlusTarget),
+            "native_recovery_interpolation_is_mapped_continuously_in_horplus_space");
+        pass &= Check(std::fabs(output - previousOutput) < 0.02f,
+            "horplus_space_output_has_no_exit_or_recovery_snap");
+        pass &= Check(baseline.Read().observationSequence == 1 &&
+                Near(baseline.Read().nativeFov.value, nativeFov),
+            "transitional_recovery_samples_do_not_contaminate_gameplay_baseline");
+        previousOutput = output;
+    }
+
+    gameplay::HorPlusRecoverySample evidence{};
+    evidence.source = kCameraSource;
+    evidence.validatedSource = kCameraSource;
+    evidence.inputFov = 105.512f;
+    evidence.exitNativeTarget = exitTarget;
+    evidence.cachedCinematicFov = cachedCinematicFov;
+    evidence.aspect = kAspect;
+    evidence.flags = 0x4;
+    evidence.cameraReadable = true;
+    const auto rejectInterpolation = [&pass](
+        gameplay::HorPlusRecoverySample candidate, const char* name) {
+        pass &= Check(gameplay::ResolveHorPlusRecoveryAction(
+                camera::CoordinatorState::CinematicExiting, candidate, false,
+                kRecoveryEpsilon) == gameplay::HorPlusRecoveryAction::HoldNativePassThrough,
+            name);
+    };
+    auto ambiguous = evidence;
+    ambiguous.source += 1;
+    rejectInterpolation(ambiguous, "replacement_source_requires_its_own_recovery_evidence");
+    ambiguous = evidence;
+    ambiguous.flags = 0x5;
+    rejectInterpolation(ambiguous, "cinematic_writer_flags_remain_pass_through");
+    ambiguous = evidence;
+    ambiguous.gameplayEnabled = false;
+    rejectInterpolation(ambiguous, "disabled_gameplay_does_not_transform_interpolation");
+    ambiguous = evidence;
+    ambiguous.aspect = std::numeric_limits<float>::quiet_NaN();
+    rejectInterpolation(ambiguous, "invalid_aspect_remains_pass_through");
+    ambiguous = evidence;
+    ambiguous.validatedSource = 0;
+    rejectInterpolation(ambiguous, "missing_validated_owner_remains_pass_through");
+    ambiguous = evidence;
+    ambiguous.cachedCinematicFov = std::numeric_limits<float>::quiet_NaN();
+    rejectInterpolation(ambiguous, "missing_cinematic_endpoint_remains_pass_through");
+
+    const float recoveredOutput = ProcessWriterSample(90.008f, exitTarget,
+        recovery, coordinator, baseline, sequence++, kAspect, kCameraSource,
+        0x4, true, cachedCinematicFov);
+    pass &= Check(coordinator == camera::CoordinatorState::Gameplay &&
+            Near(recoveredOutput, gameplay::EvaluateHorPlus(90.008f,
+                kAspect, 0x4, kNativeAspect).outputFov),
+        "native_target_convergence_completes_recovery_and_resumes_gameplay");
+    pass &= Check(Near(baseline.Read().nativeFov.value, 90.008f) &&
+            baseline.Read().observationSequence == sequence - 1,
+        "only_converged_native_sample_updates_gameplay_baseline");
+
+    const float adsNative = 80.0f;
+    const auto adsExpected = gameplay::EvaluateHorPlus(
+        adsNative, kAspect, 0x4, kNativeAspect);
+    const float adsOutput = ProcessWriterSample(adsNative, exitTarget, recovery,
+        coordinator, baseline, sequence++, kAspect, kCameraSource);
+    pass &= Check(coordinator == camera::CoordinatorState::Gameplay &&
+            Near(adsOutput, adsExpected.outputFov) &&
+            Near(baseline.Read().nativeFov.value, adsNative),
+        "post_recovery_ads_and_native_fov_changes_remain_eligible");
+    return pass;
+}
+
 int main()
 {
     bool pass = true;
@@ -247,7 +358,8 @@ int main()
         !exit.armGameplayHandoff, "horplus_exit_waits_without_aspect_handoff");
 
     const float transitionalOutput = ProcessWriterSample(
-        cinematicFov, 90.0f, recovery, coordinator, baseline, 2);
+        cinematicFov, 90.0f, recovery, coordinator, baseline, 2,
+        kAspect, kCameraSource, 0x4, true, cinematicFov);
     const float wouldDoubleTransform = camera::HorPlus(cinematicFov, kAspect, kNativeAspect);
     pass &= Check(coordinator == camera::CoordinatorState::CinematicExiting &&
         Near(transitionalOutput, 106.688f) && !Near(transitionalOutput, 122.044f),
@@ -279,6 +391,7 @@ int main()
     pass &= CheckAlreadyNativeRecovery(110.0f, 48.0f / 9.0f);
     pass &= CheckAlreadyNativeRecovery(70.0f, kNativeAspect);
     pass &= CheckRecoveryEvidenceGates();
+    pass &= TestRecordedRecoveryInterpolationRemainsInHorPlusSpace();
 
     std::cout << "horplus_post_exit_recovery=" << (pass ? "PASS" : "FAIL") << "\n";
     return pass ? 0 : 1;

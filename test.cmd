@@ -27,8 +27,6 @@ set "INCLUDE=%CD%\build-artifacts\generated;%INCLUDE%"
 rc /nologo /fo build-artifacts\tests\localization_resources.res src\overlay\localization_resources.rc
 if errorlevel 1 goto :fail
 set "COMMON=/nologo /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /Fobuild-artifacts\tests\ /Iexternal\safetyhook /Iexternal\spdlog\include /Iexternal\imgui"
-cl %COMMON% tests\overlay\dx12_backend_safety_harness.cpp external\imgui\imgui.cpp external\imgui\imgui_draw.cpp external\imgui\imgui_tables.cpp external\imgui\imgui_widgets.cpp /link user32.lib d3d12.lib d3dcompiler.lib /OUT:build-artifacts\tests\dx12_backend_safety_harness.exe
-if errorlevel 1 goto :fail
 
 cl %COMMON% tests\lifecycle\worker_lifecycle_harness.cpp src\plugin\worker_lifecycle.cpp /link user32.lib /OUT:build-artifacts\tests\worker_lifecycle_harness.exe
 if errorlevel 1 goto :fail
@@ -106,19 +104,7 @@ cl %COMMON% tests\regression\runtime_evidence_replay_harness.cpp src\gameplay\ho
 if errorlevel 1 goto :fail
 cl %COMMON% tests\gameplay\gameplay_camera_resolver_harness.cpp src\gameplay\gameplay_camera.cpp src\hooks\instruction_validator.cpp external\safetyhook\Zydis.c /link /OUT:build-artifacts\tests\gameplay_camera_resolver_harness.exe
 if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\overlay_lifecycle_harness.cpp src\overlay\overlay_lifecycle.cpp /link /OUT:build-artifacts\tests\overlay_lifecycle_harness.exe
-if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\discovery_evidence_harness.cpp src\overlay\discovery_evidence.cpp /link /OUT:build-artifacts\tests\discovery_evidence_harness.exe
-if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\dxgi_sdk_extent_harness.cpp /link /OUT:build-artifacts\tests\dxgi_sdk_extent_harness.exe
-if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\renderer_wait_policy_harness.cpp /link /OUT:build-artifacts\tests\renderer_wait_policy_harness.exe
-if errorlevel 1 goto :fail
-cl %COMMON% /DOVERLAY_SETTINGS_FRONTEND /DOVERLAY_RENDERER_LIFETIME_TEST tests\overlay\renderer_lifetime_harness.cpp src\overlay\overlay_lifecycle.cpp src\overlay\discovery_evidence.cpp external\safetyhook\safetyhook.cpp external\safetyhook\Zydis.c src\overlay\renderer_runtime.cpp src\overlay\renderer_state.cpp src\overlay\input_state.cpp src\overlay\placement_config.cpp src\overlay\overlay_layout_metrics.cpp src\overlay\camera_integration.cpp src\overlay\feature_presentation.cpp src\overlay\camera_state_view.cpp src\overlay\selector_documentation_view.cpp src\overlay\localization_catalog.cpp src\overlay\localization_formatter.cpp src\overlay\localization_validator.cpp src\overlay\localization_manager.cpp src\overlay\localization_keys.cpp src\overlay\localization_font.cpp src\overlay\game_language_reader.cpp src\config\feature_config.cpp src\config\config_repository.cpp src\config\config_template.cpp src\diagnostics\diagnostic_runtime.cpp src\diagnostics\performance_telemetry.cpp external\imgui\imgui.cpp external\imgui\imgui_draw.cpp external\imgui\imgui_tables.cpp external\imgui\imgui_widgets.cpp external\imgui\backends\imgui_impl_dx12.cpp external\imgui\backends\imgui_impl_win32.cpp src\camera\camera_state_snapshot.cpp /link user32.lib psapi.lib dxgi.lib d3d12.lib d3dcompiler.lib build-artifacts\tests\localization_resources.res /OUT:build-artifacts\tests\renderer_lifetime_harness.exe
-if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\dxgi_callback_harness.cpp src\overlay\overlay_lifecycle.cpp src\overlay\discovery_evidence.cpp src\diagnostics\diagnostic_runtime.cpp external\safetyhook\safetyhook.cpp external\safetyhook\Zydis.c /link user32.lib dxgi.lib d3d12.lib /OUT:build-artifacts\tests\dxgi_callback_harness.exe
-if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\renderer_state_harness.cpp src\overlay\renderer_state.cpp src\overlay\discovery_evidence.cpp /link /OUT:build-artifacts\tests\renderer_state_harness.exe
+cl %COMMON% tests\overlay\composition_presenter_state_harness.cpp src\overlay\composition_presenter_state.cpp src\overlay\renderer_state.cpp src\overlay\input_state.cpp src\config\feature_config.cpp /link user32.lib /OUT:build-artifacts\tests\composition_presenter_state_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\overlay_layout_metrics_harness.cpp src\overlay\overlay_layout_metrics.cpp /link /OUT:build-artifacts\tests\overlay_layout_metrics_harness.exe
 if errorlevel 1 goto :fail
@@ -213,21 +199,7 @@ build-artifacts\tests\runtime_evidence_replay_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\gameplay_camera_resolver_harness.exe
 if errorlevel 1 goto :fail
-build-artifacts\tests\overlay_lifecycle_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\discovery_evidence_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\dxgi_sdk_extent_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\renderer_wait_policy_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\dx12_backend_safety_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\renderer_lifetime_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\dxgi_callback_harness.exe
-if errorlevel 1 goto :fail
-build-artifacts\tests\renderer_state_harness.exe
+build-artifacts\tests\composition_presenter_state_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\overlay_layout_metrics_harness.exe
 if errorlevel 1 goto :fail

@@ -1,15 +1,11 @@
 #include "renderer_runtime.hpp"
-#include "renderer_wait_policy.hpp"
-
 #include "optional_overlay_boundary.hpp"
 #include "../diagnostics/diagnostic_runtime.hpp"
 #include "../diagnostics/startup_journal.hpp"
 
 #include <imgui.h>
-#include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_win32.h>
 #include <imgui_internal.h>
-#include <wrl/client.h>
 #include "input_state.hpp"
 #include "game_language_reader.hpp"
 #include "localization_font.hpp"
@@ -29,6 +25,10 @@
 #ifdef OVERLAY_FONT_RASTERIZATION_EXPERIMENT
 #include "localization_font_rasterization_experiment.hpp"
 #endif
+
+extern "C" void PublishOverlayPopupState(bool open) noexcept;
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
+    HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
 #include <algorithm>
 #include <cfloat>
@@ -77,22 +77,21 @@ namespace overlay
                 ImGui::TextWrapped("%s", beforeKey.c_str());
                 ImGui::SameLine(0.0f, 4.0f);
             }
-            const std::string keyText(keyLabel);
+            const auto punctuationBytes = inline_hotkey_layout::
+                LeadingPunctuationBytes(afterKey);
+            const std::string keyText = std::string(keyLabel) +
+                afterKey.substr(0, punctuationBytes);
+            const auto tail = inline_hotkey_layout::TrimLeadingWhitespace(
+                std::string_view(afterKey).substr(punctuationBytes));
+            const float keyGroupWidth = ImGui::CalcTextSize(keyText.c_str()).x;
+            if (!beforeKey.empty() &&
+                keyGroupWidth > ImGui::GetContentRegionAvail().x)
+                ImGui::NewLine();
             ImGui::TextColored(ImVec4(0.18f, 0.78f, 1.0f, 1.0f), "%s",
                 keyText.c_str());
-            if (!afterKey.empty()) {
+            if (!tail.empty()) {
                 ImGui::SameLine(0.0f, 4.0f);
-                const float afterWidth = ImGui::CalcTextSize(afterKey.c_str()).x;
-                if (afterWidth > ImGui::GetContentRegionAvail().x) {
-                    ImGui::NewLine();
-                    const auto firstNonSpace = afterKey.find_first_not_of(" \t\r\n");
-                    const std::string_view tail = firstNonSpace == std::string::npos
-                        ? std::string_view{} : std::string_view(afterKey).substr(firstNonSpace);
-                    if (!tail.empty())
-                        ImGui::TextWrapped("%.*s", static_cast<int>(tail.size()), tail.data());
-                } else {
-                    ImGui::TextUnformatted(afterKey.c_str());
-                }
+                ImGui::TextWrapped("%.*s", static_cast<int>(tail.size()), tail.data());
             }
         }
 
@@ -146,13 +145,14 @@ namespace overlay
         }
 
         ImVec2 ClampOverlayWindowPosition(const ImVec2& position,
-            const ImVec2& windowSize, const ImGuiViewport* viewport) noexcept
+            const ImVec2& windowSize, const ImGuiViewport* viewport,
+            float dpiScale) noexcept
         {
             if (!viewport) return position;
             const auto clamped = layout_metrics::ClampPosition(
                 {position.x, position.y}, {viewport->Pos.x, viewport->Pos.y},
                 {viewport->Size.x, viewport->Size.y},
-                {windowSize.x, windowSize.y});
+                {windowSize.x, windowSize.y}, dpiScale);
             return ImVec2(clamped.x, clamped.y);
         }
 
@@ -534,133 +534,242 @@ namespace overlay
         }
     }
 
-    void Renderer::AllocateSrv(ImGui_ImplDX12_InitInfo* info,
-        D3D12_CPU_DESCRIPTOR_HANDLE* cpu, D3D12_GPU_DESCRIPTOR_HANDLE* gpu)
-    {
-        auto* renderer = static_cast<Renderer*>(info->UserData);
-        *cpu = renderer->srvHeap_->GetCPUDescriptorHandleForHeapStart();
-        *gpu = renderer->srvHeap_->GetGPUDescriptorHandleForHeapStart();
-    }
-
-    void Renderer::FreeSrv(ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE,
-        D3D12_GPU_DESCRIPTOR_HANDLE)
-    {
-    }
-
-    bool Renderer::Initialize(IDXGISwapChain* swapchain, ID3D12Device* device,
-        ID3D12CommandQueue* queue, HWND window, UINT bufferCount,
-        DXGI_FORMAT format) noexcept
+    bool Renderer::Initialize(HWND window, UINT width, UINT height, UINT dpi) noexcept
     {
         bool initialized = false;
         const auto outcome = RunOptionalOverlayWork([&]() {
-            initialized = InitializeImpl(swapchain, device, queue, window,
-                bufferCount, format);
+            initialized = InitializeImpl(window, width, height, dpi);
         }, [this]() noexcept { FailAfterException(); });
         return outcome == OptionalOverlayWorkResult::Completed && initialized;
     }
 
-    bool Renderer::InitializeImpl(IDXGISwapChain* swapchain, ID3D12Device* device,
-        ID3D12CommandQueue* queue, HWND window, UINT bufferCount,
-        DXGI_FORMAT format)
+    bool Renderer::RebindWindow(HWND window, UINT width, UINT height,
+        UINT dpi) noexcept
     {
-        if (!swapchain || !device || !queue || !bufferCount || bufferCount > 16)
-            return false;
-        if (OwnsSwapchain(swapchain) && device_ == device && queue_ == queue &&
-            lifecycle_.state() == RendererState::Ready)
-            return true;
-        if (swapchain_ || device_ || queue_) {
-            Shutdown();
-            if (disabled()) return false;
-            lifecycle_ = RendererLifecycle{};
-        }
-        if (!lifecycle_.BeginInitialization()) return false;
-
-        gpuWaitFailed_ = false;
-        gpuWorkSubmitted_ = false;
-
-        Log("OVERLAY_RENDER_INIT_BEGIN");
-        swapchain_ = swapchain;
-        device_ = device;
-        queue_ = queue;
-        window_ = window;
-        bufferCount_ = bufferCount;
-        format_ = format;
-        swapchain_->AddRef();
-        device_->AddRef();
-        queue_->AddRef();
-        Microsoft::WRL::ComPtr<IUnknown> identity;
-        if (FAILED(swapchain_->QueryInterface(IID_PPV_ARGS(&identity))) || !identity) {
-            Disable("swapchain_identity_unavailable");
-            return false;
-        }
-        swapchainIdentity_ = reinterpret_cast<std::uintptr_t>(identity.Get());
-
-        auto fail = [this]() noexcept {
-            Disable("initialization_failed");
-            return false;
-        };
-        D3D12_DESCRIPTOR_HEAP_DESC rtvDesc{};
-        rtvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvDesc.NumDescriptors = bufferCount_;
-        if (FAILED(device_->CreateDescriptorHeap(&rtvDesc, IID_PPV_ARGS(&rtvHeap_))))
-            return fail();
-        rtvStride_ = device_->GetDescriptorHandleIncrementSize(
-            D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-        D3D12_DESCRIPTOR_HEAP_DESC srvDesc{};
-        srvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        srvDesc.NumDescriptors = 1;
-        srvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        if (FAILED(device_->CreateDescriptorHeap(&srvDesc, IID_PPV_ARGS(&srvHeap_))))
-            return fail();
-        if (FAILED(device_->CreateFence(0, D3D12_FENCE_FLAG_NONE,
-            IID_PPV_ARGS(&fence_))))
-            return fail();
-        fenceEvent_ = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-        if (!fenceEvent_) return fail();
-        frames_.resize(bufferCount_);
-        for (auto& frame : frames_) {
-            if (FAILED(device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                IID_PPV_ARGS(&frame.allocator))))
-                return fail();
-        }
-        if (FAILED(device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-            frames_.front().allocator, nullptr, IID_PPV_ARGS(&commandList_))))
-            return fail();
-        if (FAILED(commandList_->Close())) return fail();
-        if (!BuildResources(swapchain_) || !BuildImGui()) return fail();
-        lifecycle_.MarkReady();
-        Log("OVERLAY_RENDER_INIT_OK");
-        return true;
-
+        bool rebound = false;
+        const auto outcome = RunOptionalOverlayWork([&]() {
+            if (!window || !IsWindow(window) || !width || !height ||
+                disabled() || !state_.cameraCoreReady())
+                return;
+            SurfaceUpdateToken token{};
+            if (!state_.BeginSurfaceUpdate({width, height}, token)) return;
+            if (startupNotification_.pending())
+                startupAutoLanguageSyncRequested_ = false;
+            DetachImGui();
+            ResetComposition();
+            window_ = window;
+            if (!ApplyWindowDpi(dpi)) {
+                Disable("window_rebind_dpi_setup_failed");
+                return;
+            }
+            if (!CreateGraphicsDevice() || !CreateCompositionTarget(window_) ||
+                !BuildImGui() || !CreateSurface(width, height, surface_) ||
+                FAILED(visual_->SetContent(surface_.Get())) ||
+                FAILED(compositionTarget_->SetRoot(visual_.Get())) ||
+                !DrawImGuiSurface(surface_.Get(), width, height, nullptr,
+                    {0, 0, static_cast<int>(width), static_cast<int>(height)}) ||
+                !state_.PublishSurfaceUpdate(token, true, true)) {
+                Disable("window_rebind_failed");
+                return;
+            }
+            surfaceWidth_ = width;
+            surfaceHeight_ = height;
+            surfaceGeneration_ = state_.generation();
+            compositionReady_ = true;
+            surfaceDirty_ = true;
+            forceFullDamage_ = true;
+            damageTracker_.Invalidate();
+            firstFrameLogged_ = false;
+            Log("OVERLAY_DCOMP_WINDOW_REBOUND generation=" +
+                std::to_string(surfaceGeneration_));
+            rebound = RenderImpl(surface_.Get(), width, height);
+            if (rebound) StartPendingNotificationLifetimes();
+        }, [this]() noexcept { FailAfterException(); });
+        return outcome == OptionalOverlayWorkResult::Completed && rebound;
     }
 
-    bool Renderer::BuildResources(IDXGISwapChain* swapchain)
+    bool Renderer::InitializeImpl(HWND window, UINT width, UINT height, UINT dpi)
     {
-        if (!device_ || !rtvHeap_ || !swapchain) return false;
-        DXGI_SWAP_CHAIN_DESC desc{};
-        if (FAILED(swapchain->GetDesc(&desc)) || desc.BufferCount != bufferCount_)
+        state_.MarkCameraCoreReady();
+        if (!window || !IsWindow(window) || !width || !height ||
+            !state_.MarkWindowAvailable({width, height}))
             return false;
-        ReleaseBackbuffers();
-        backbuffers_.resize(bufferCount_);
-        auto handle = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
-        for (UINT i = 0; i < bufferCount_; ++i) {
-            if (FAILED(swapchain->GetBuffer(i, IID_PPV_ARGS(&backbuffers_[i])))) {
-                ReleaseBackbuffers();
-                return false;
-            }
-            D3D12_CPU_DESCRIPTOR_HANDLE target = handle;
-            target.ptr += static_cast<SIZE_T>(i) * rtvStride_;
-            device_->CreateRenderTargetView(backbuffers_[i], nullptr, target);
+        window_ = window;
+        if (!ApplyWindowDpi(dpi)) {
+            Disable("window_dpi_setup_failed");
+            return false;
         }
-        resourcesReady_ = true;
-        Log("OVERLAY_RESOURCES_CREATED bufferCount=" + std::to_string(bufferCount_));
+        Log("OVERLAY_DCOMP_INIT_BEGIN");
+        if (!CreateGraphicsDevice() || !CreateCompositionTarget(window_) ||
+            !BuildImGui()) {
+            Disable("composition_initialization_failed");
+            return false;
+        }
+        if (!CreateSurface(width, height, surface_) ||
+            FAILED(visual_->SetContent(surface_.Get())) ||
+            FAILED(compositionTarget_->SetRoot(visual_.Get()))) {
+            Disable("composition_surface_create_failed");
+            return false;
+        }
+        if (!DrawImGuiSurface(surface_.Get(), width, height, nullptr,
+                {0, 0, static_cast<int>(width), static_cast<int>(height)})) {
+            Disable("composition_initial_commit_failed");
+            return false;
+        }
+        SurfaceUpdateToken token{};
+        if (!state_.BeginSurfaceUpdate({width, height}, token) ||
+            !state_.PublishSurfaceUpdate(token, true, true)) {
+            Disable("composition_initial_generation_failed");
+            return false;
+        }
+        surfaceWidth_ = width;
+        surfaceHeight_ = height;
+        surfaceGeneration_ = state_.generation();
+        compositionReady_ = true;
+        surfaceDirty_ = true;
+        forceFullDamage_ = true;
+        damageTracker_.Invalidate();
+        PrepareStartupNotification();
+        Log("OVERLAY_DCOMP_SURFACE_READY generation=" +
+            std::to_string(surfaceGeneration_) + " width=" +
+            std::to_string(width) + " height=" + std::to_string(height));
+#if defined(OVERLAY_STARTUP_JOURNAL)
+        diagnostics::startup_journal::MarkOnce(6, "COMPOSITION_SURFACE_READY",
+            "full_draw_commit", surfaceGeneration_);
+        diagnostics::startup_journal::MarkOnce(7, "RENDERER_ACTIVATED",
+            "directcomposition_surface_committed", surfaceGeneration_);
+        diagnostics::startup_journal::Flush();
+#endif
+        const bool rendered = RenderImpl(surface_.Get(), width, height);
+        if (rendered) StartPendingNotificationLifetimes();
+        return rendered;
+    }
+
+    bool Renderer::CreateGraphicsDevice()
+    {
+        UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+        D3D_FEATURE_LEVEL selected{};
+        constexpr D3D_FEATURE_LEVEL levels[]{D3D_FEATURE_LEVEL_11_1,
+            D3D_FEATURE_LEVEL_11_0};
+        HRESULT result = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE,
+            nullptr, flags, levels, static_cast<UINT>(std::size(levels)),
+            D3D11_SDK_VERSION, device_.GetAddressOf(), &selected, nullptr);
+        if (result == E_INVALIDARG) {
+            result = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE,
+                nullptr, flags, &levels[1], 1, D3D11_SDK_VERSION,
+                device_.GetAddressOf(), &selected, nullptr);
+        }
+        if (FAILED(result) || FAILED(device_.As(&dxgiDevice_))) return false;
+        result = DCompositionCreateDevice2(dxgiDevice_.Get(),
+            __uuidof(IDCompositionDesktopDevice),
+            reinterpret_cast<void**>(compositionDevice_.GetAddressOf()));
+        if (FAILED(result)) return false;
+        Log("OVERLAY_DCOMP_DEVICE_READY featureLevel=" +
+            std::to_string(static_cast<unsigned>(selected)));
+#if defined(OVERLAY_STARTUP_JOURNAL)
+        diagnostics::startup_journal::MarkOnce(5, "COMPOSITION_DEVICE_READY",
+            "private_d3d11_device");
+        diagnostics::startup_journal::Flush();
+#endif
         return true;
+    }
+
+    bool Renderer::CreateCompositionTarget(HWND window)
+    {
+        if (!compositionDevice_ || !window || !IsWindow(window)) return false;
+        HRESULT result = compositionDevice_->CreateTargetForHwnd(window, TRUE,
+            compositionTarget_.GetAddressOf());
+        if (FAILED(result)) {
+            Log("OVERLAY_DCOMP_TOPMOST_TARGET_UNAVAILABLE; using non-topmost target");
+            result = compositionDevice_->CreateTargetForHwnd(window, FALSE,
+                compositionTarget_.GetAddressOf());
+        }
+        return SUCCEEDED(result) && SUCCEEDED(compositionDevice_->CreateVisual(
+            visual_.GetAddressOf()));
+    }
+
+    bool Renderer::CreateSurface(UINT width, UINT height,
+        Microsoft::WRL::ComPtr<IDCompositionSurface>& surface) noexcept
+    {
+        if (!compositionDevice_ || !width || !height ||
+            width > 16384 || height > 16384)
+            return false;
+        return SUCCEEDED(compositionDevice_->CreateSurface(width, height,
+            DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_ALPHA_MODE_PREMULTIPLIED,
+            surface.GetAddressOf()));
+    }
+
+    bool Renderer::ApplyWindowDpi(UINT dpi) noexcept
+    {
+        const UINT normalizedDpi = dpi ? dpi : 96u;
+        if (normalizedDpi == windowDpi_) return true;
+        windowDpi_ = normalizedDpi;
+        dpiScale_ = static_cast<float>(windowDpi_) / 96.0f;
+        if (ImGui::GetCurrentContext() && baseStyleCaptured_) {
+            ImGui::GetStyle() = baseStyle_;
+            ImGui::GetStyle().ScaleAllSizes(dpiScale_);
+        }
+        forceFullDamage_ = true;
+        surfaceDirty_ = true;
+        if (imguiReady_) {
+            plugin::RuntimeSettingsSnapshot settings{};
+            if (!plugin::GetRuntimeSettingsApi().Snapshot(settings)) return false;
+            const auto* descriptor = localization::FindLocaleDescriptor(
+                settings.overlayLocaleCode);
+            const std::string_view profile = descriptor
+                ? descriptor->fontProfileCode : std::string_view{"base"};
+            if (!RebuildFontAtlas(settings.overlayFontSize, profile)) return false;
+        }
+        Log("OVERLAY_DPI_CHANGED dpi=" + std::to_string(windowDpi_) +
+            " scale=" + std::to_string(dpiScale_) +
+            " coordinate_contract=physical_client_pixels");
+        return true;
+    }
+
+    bool Renderer::RecoverGraphicsDevice(UINT width, UINT height) noexcept
+    {
+        try {
+            if (!window_ || !IsWindow(window_) || !width || !height ||
+                !ImGui::GetCurrentContext())
+                return false;
+            auto& input = GetInputState();
+            auto& inputBridge = GetInputEventBridge();
+            const auto inputOwnershipBefore = CaptureInputOwnership(input,
+                inputBridge);
+            if (!inputOwnershipBefore.Coherent()) return false;
+            imguiRenderer_.Shutdown(ImGui::GetIO().Fonts);
+            ResetComposition();
+            if (!CreateGraphicsDevice() || !CreateCompositionTarget(window_) ||
+                !imguiRenderer_.Initialize(device_.Get(), ImGui::GetIO().Fonts) ||
+                !CreateSurface(width, height, surface_) ||
+                FAILED(visual_->SetContent(surface_.Get())) ||
+                FAILED(compositionTarget_->SetRoot(visual_.Get())) ||
+                !DrawImGuiSurface(surface_.Get(), width, height, nullptr,
+                    {0, 0, static_cast<int>(width), static_cast<int>(height)}))
+                return false;
+            if (!InputOwnershipUnchanged(inputOwnershipBefore, input,
+                    inputBridge) ||
+                !state_.CompleteDeviceRecovery(true, {width, height}))
+                return false;
+            surfaceWidth_ = width;
+            surfaceHeight_ = height;
+            surfaceGeneration_ = state_.generation();
+            compositionReady_ = true;
+            surfaceDirty_ = true;
+            forceFullDamage_ = true;
+            damageTracker_.Invalidate();
+            Log("OVERLAY_DCOMP_DEVICE_RECOVERED generation=" +
+                std::to_string(surfaceGeneration_));
+            return true;
+        } catch (...) {
+            state_.CompleteDeviceRecovery(false, {});
+            return false;
+        }
     }
 
     bool Renderer::BuildImGui()
     {
-        if (!device_ || !queue_ || !srvHeap_ || !window_) return false;
+        if (!device_ || !window_) return false;
         const auto resourceModule = OverlayResourceModule();
 #ifdef OVERLAY_SETTINGS_FRONTEND
         std::string localeError;
@@ -674,12 +783,14 @@ namespace overlay
             ImGui::CreateContext();
             imguiContextCreated_ = true;
             ImGuiIO& io = ImGui::GetIO();
-            int fontSizePixels = config::OverlayFontSizeDefault;
+            int fontSizeSetting = config::OverlayFontSizeDefault;
 #ifdef OVERLAY_SETTINGS_FRONTEND
             plugin::RuntimeSettingsSnapshot settings{};
             if (plugin::GetRuntimeSettingsApi().Snapshot(settings))
-                fontSizePixels = settings.overlayFontSize;
+                fontSizeSetting = settings.overlayFontSize;
 #endif
+            const int fontSizePixels = presentation::EffectiveFontPixels(
+                fontSizeSetting, windowDpi_);
 #ifdef OVERLAY_FONT_PLAYGROUND_EXPERIMENT
             io.FontDefault = font_playground_experiment::AddSelectedFont(fontSizePixels);
 #elif defined(OVERLAY_FONT_RASTERIZATION_EXPERIMENT)
@@ -692,6 +803,7 @@ namespace overlay
                         settings.overlayLocaleCode))
                     profileCode = descriptor->fontProfileCode;
                 localization_.SetLocale(settings.overlayLocaleCode);
+                activeLocaleCode_ = settings.overlayLocaleCode;
             }
 #endif
             io.FontDefault = AddLocalizationFont(fontSizePixels, profileCode);
@@ -705,6 +817,7 @@ namespace overlay
             }
             if (!io.Fonts->Build()) return false;
             activeFontSizePixels_ = fontSizePixels;
+            activeFontSetting_ = fontSizeSetting;
 #ifdef OVERLAY_FONT_RASTERIZATION_EXPERIMENT
             activeFontRasterizationMode_ = font_rasterization_experiment::CurrentMode();
 #endif
@@ -732,77 +845,29 @@ namespace overlay
             }
         }
         ImGui::StyleColorsDark();
-        bool win32Initialized = false;
+        baseStyle_ = ImGui::GetStyle();
+        baseStyleCaptured_ = true;
+        ImGui::GetStyle().ScaleAllSizes(dpiScale_);
         if (!imguiReady_) {
             if (!ImGui_ImplWin32_Init(window_)) return false;
-            win32Initialized = true;
-        }
-        ImGui_ImplDX12_InitInfo info{};
-        info.Device = device_;
-        info.CommandQueue = queue_;
-        info.NumFramesInFlight = static_cast<int>(bufferCount_);
-        info.RTVFormat = format_;
-        info.DSVFormat = DXGI_FORMAT_UNKNOWN;
-        info.UserData = this;
-        info.SrvDescriptorHeap = srvHeap_;
-        info.SrvDescriptorAllocFn = &AllocateSrv;
-        info.SrvDescriptorFreeFn = &FreeSrv;
-        if (!imguiReady_ && !ImGui_ImplDX12_Init(&info)) {
-            if (win32Initialized) ImGui_ImplWin32_Shutdown();
-            return false;
-        }
-        imguiReady_ = true;
-        if (!ImGui_ImplDX12_CreateDeviceObjects()) {
-            ImGui_ImplDX12_Shutdown();
-            ImGui_ImplWin32_Shutdown();
-            imguiReady_ = false;
-            return false;
+            if (!imguiRenderer_.Initialize(device_.Get(), ImGui::GetIO().Fonts)) {
+                ImGui_ImplWin32_Shutdown();
+                return false;
+            }
+            imguiReady_ = true;
         }
         return true;
     }
 
-    bool Renderer::WaitForGpu() noexcept
-    {
-        if (gpuWaitFailed_) return false;
-        if (!gpuWorkSubmitted_) return true;
-        if (!queue_ || !fence_ || !fenceEvent_) {
-            gpuWaitFailed_ = true;
-            return false;
-        }
-        const auto value = ++nextFenceValue_;
-        if (FAILED(queue_->Signal(fence_, value))) {
-            gpuWaitFailed_ = true;
-            return false;
-        }
-        const auto completed = fence_->GetCompletedValue();
-        if (completed == UINT64_MAX) {
-            gpuWaitFailed_ = true;
-            return false;
-        }
-        if (completed < value) {
-            if (FAILED(fence_->SetEventOnCompletion(value, fenceEvent_)) ||
-                !GpuFenceWaitCompleted(WaitForSingleObject(
-                    fenceEvent_, GpuFenceWaitTimeoutMs))) {
-                gpuWaitFailed_ = true;
-                return false;
-            }
-            const auto afterWait = fence_->GetCompletedValue();
-            if (afterWait == UINT64_MAX || afterWait < value) {
-                gpuWaitFailed_ = true;
-                return false;
-            }
-        }
-        gpuWorkSubmitted_ = false;
-        return true;
-    }
-
-    bool Renderer::RebuildFontAtlas(int fontSizePixels,
+    bool Renderer::RebuildFontAtlas(int fontSizeSetting,
         std::string_view fontProfileCode)
     {
         if (!imguiReady_ || !ImGui::GetCurrentContext() ||
-            fontSizePixels < config::OverlayFontSizeMin ||
-            fontSizePixels > config::OverlayFontSizeMax)
+            fontSizeSetting < config::OverlayFontSizeMin ||
+            fontSizeSetting > config::OverlayFontSizeMax)
             return false;
+        const int fontSizePixels = presentation::EffectiveFontPixels(
+            fontSizeSetting, windowDpi_);
 #ifdef OVERLAY_FONT_RASTERIZATION_EXPERIMENT
         const int requestedRasterizationMode =
             font_rasterization_experiment::CurrentMode();
@@ -821,13 +886,11 @@ namespace overlay
         const bool fontProfileChanged = fontProfileCode != activeFontProfileCode_;
         if (fontSizePixels == activeFontSizePixels_ &&
             fontProfileCode == activeFontProfileCode_ && !rasterizationChanged &&
-            !fontChoiceChanged) return true;
-        if (!WaitForGpu()) {
-            Log("OVERLAY_FONT_REBUILD_GPU_WAIT_FAILED");
-            return false;
+            !fontChoiceChanged) {
+            activeFontSetting_ = fontSizeSetting;
+            return true;
         }
-
-        ImGui_ImplDX12_InvalidateDeviceObjects();
+        imguiRenderer_.InvalidateFontTexture(ImGui::GetIO().Fonts);
         ImFontAtlas* atlas = ImGui::GetIO().Fonts;
         atlas->Clear();
 #ifdef OVERLAY_FONT_PLAYGROUND_EXPERIMENT
@@ -843,10 +906,12 @@ namespace overlay
             ImGui::GetIO().FontDefault = nullptr;
 #endif
         bool rebuilt = ImGui::GetIO().FontDefault && atlas->Build() &&
-            ImGui_ImplDX12_CreateDeviceObjects();
+            imguiRenderer_.CreateFontTexture(atlas);
         if (rebuilt) {
             activeFontSizePixels_ = fontSizePixels;
+            activeFontSetting_ = fontSizeSetting;
             activeFontProfileCode_ = fontProfileCode;
+            forceFullDamage_ = true;
 #ifdef OVERLAY_FONT_RASTERIZATION_EXPERIMENT
             activeFontRasterizationMode_ = requestedRasterizationMode;
 #endif
@@ -859,7 +924,7 @@ namespace overlay
         }
 
         Log("OVERLAY_FONT_ATLAS_REBUILD_FAILED size=" + std::to_string(fontSizePixels));
-        ImGui_ImplDX12_InvalidateDeviceObjects();
+        imguiRenderer_.InvalidateFontTexture(atlas);
         atlas->Clear();
 #ifdef OVERLAY_FONT_PLAYGROUND_EXPERIMENT
         font_playground_experiment::SetCurrentFontChoice(activeFontChoice_);
@@ -876,7 +941,7 @@ namespace overlay
             ImGui::GetIO().FontDefault = nullptr;
 #endif
         const bool restored = ImGui::GetIO().FontDefault && atlas->Build() &&
-            ImGui_ImplDX12_CreateDeviceObjects();
+            imguiRenderer_.CreateFontTexture(atlas);
         if (!restored) {
             Log("OVERLAY_FONT_ATLAS_RESTORE_FAILED");
             return false;
@@ -889,155 +954,178 @@ namespace overlay
         }
 
 #ifdef OVERLAY_SETTINGS_FRONTEND
-        ApplySetting(plugin::RuntimeSettingMutation::FontSize(activeFontSizePixels_), logger_);
+        ApplySetting(plugin::RuntimeSettingMutation::FontSize(activeFontSetting_), logger_);
 #endif
         Log("OVERLAY_FONT_ATLAS_RESTORED size=" + std::to_string(activeFontSizePixels_));
         return true;
     }
 
-    bool Renderer::WaitForFrame(FrameContext& frame) noexcept
+    bool Renderer::DrawImGuiSurface(IDCompositionSurface* targetSurface,
+        UINT width, UINT height, const ImDrawData* drawData,
+        presentation::Rect damage) noexcept
     {
-        if (!fence_) {
-            gpuWaitFailed_ = true;
+        if (!targetSurface || !device_ || !compositionDevice_ || !width || !height)
             return false;
-        }
-        if (!frame.fenceValue) return true;
-        const auto completed = fence_->GetCompletedValue();
-        if (completed == UINT64_MAX) {
-            gpuWaitFailed_ = true;
-            return false;
-        }
-        if (completed >= frame.fenceValue)
-            return true;
-        if (!fenceEvent_ || FAILED(fence_->SetEventOnCompletion(
-                frame.fenceValue, fenceEvent_)) ||
-            !GpuFenceWaitCompleted(WaitForSingleObject(
-                fenceEvent_, GpuFenceWaitTimeoutMs))) {
-            gpuWaitFailed_ = true;
-            return false;
-        }
-        const auto afterWait = fence_->GetCompletedValue();
-        if (afterWait == UINT64_MAX || afterWait < frame.fenceValue) {
-            gpuWaitFailed_ = true;
-            return false;
-        }
-        return true;
-    }
+        const RECT fullRect{0, 0, static_cast<LONG>(width),
+            static_cast<LONG>(height)};
+        const RECT requested{damage.left, damage.top, damage.right, damage.bottom};
+        const bool fullUpdate = requested.left == 0 && requested.top == 0 &&
+            requested.right == fullRect.right && requested.bottom == fullRect.bottom;
+        const auto drawUpdate = [&](const RECT& updateRect, bool updateWholeSurface) {
+            Microsoft::WRL::ComPtr<IDXGISurface> updateSurface;
+            POINT offset{};
+            const RECT* updatePointer = updateWholeSurface ? nullptr : &updateRect;
+            const HRESULT beginResult = targetSurface->BeginDraw(updatePointer,
+                __uuidof(IDXGISurface),
+                reinterpret_cast<void**>(updateSurface.GetAddressOf()), &offset);
+            if (FAILED(beginResult)) return false;
 
-    void Renderer::ReleaseBackbuffers() noexcept
-    {
-        for (auto*& resource : backbuffers_) {
-            if (resource) resource->Release();
-            resource = nullptr;
-        }
-        backbuffers_.clear();
-        resourcesReady_ = false;
-    }
-
-    bool Renderer::OwnsSwapchain(IDXGISwapChain* swapchain) const noexcept
-    {
-        if (!swapchain || !swapchainIdentity_) return false;
-        Microsoft::WRL::ComPtr<IUnknown> identity;
-        return SUCCEEDED(swapchain->QueryInterface(IID_PPV_ARGS(&identity))) &&
-            reinterpret_cast<std::uintptr_t>(identity.Get()) == swapchainIdentity_;
-    }
-
-    void Renderer::BeforeSwapchainReplacement(HWND window)
-    {
-        if (!window || window != window_ || !swapchain_) return;
-        const bool terminal = disabled();
-        Log("OVERLAY_SWAPCHAIN_REPLACEMENT_RELEASE");
-        if (!terminal && !WaitForGpu()) {
-            Disable("swapchain_replacement_gpu_wait_failed");
-            return;
-        }
-        Shutdown();
-        if (!terminal) lifecycle_ = RendererLifecycle{};
-    }
-
-    void Renderer::BeforeResize(IDXGISwapChain* swapchain)
-    {
-        if (!OwnsSwapchain(swapchain)) return;
-        if (lifecycle_.state() == RendererState::Resizing) {
-            ++resizeDepth_;
-            return;
-        }
-        if (lifecycle_.state() != RendererState::Ready) return;
-        ++resizeDepth_;
-        lifecycle_.BeginResize();
-        LogDiagnostic(logger_, "OVERLAY_RESIZE_RELEASE");
-        const auto waitStart = std::chrono::steady_clock::now();
-        if (!WaitForGpu()) {
-            Disable("resize_gpu_wait_failed");
-            return;
-        }
-        resizePreWaitMs_ = std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - waitStart).count();
-        const auto releaseStart = std::chrono::steady_clock::now();
-        if (imguiReady_) ImGui_ImplDX12_InvalidateDeviceObjects();
-        ReleaseBackbuffers();
-        resizeReleaseMs_ = std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - releaseStart).count();
-    }
-
-    void Renderer::OnSwapchainCreationFailure(HWND window)
-    {
-        if (window && window == window_ && !swapchain_ && !disabled())
-            Disable("swapchain_replacement_failed");
-    }
-
-    void Renderer::OnResizeResult(IDXGISwapChain* swapchain, bool success,
-        double originalResizeMs, double totalResizeHookMs,
-        UINT queueCount, IUnknown* const* presentQueues)
-    {
-        if (!OwnsSwapchain(swapchain)) return;
-        // A native ResizeBuffers1 implementation/wrapper may call ResizeBuffers.
-        // Only the outermost matching native call may rebuild resources or decide
-        // terminal failure; inner attempts can be recovered by that outer call.
-        if (resizeDepth_ && --resizeDepth_) return;
-        originalResizeMs_ = originalResizeMs;
-        totalResizeHookMs_ = totalResizeHookMs;
-        resizeResultTime_ = std::chrono::steady_clock::now();
-        if (!success) {
-            Disable("resize_failed");
-            return;
-        }
-        DXGI_SWAP_CHAIN_DESC desc{};
-        if (FAILED(swapchain->GetDesc(&desc))) {
-            Disable("resize_description_unavailable");
-            return;
-        }
-        // ResizeBuffers1 can reassign present queues. Never submit on stale queue
-        // evidence. Multi-queue presentation is unsupported by this renderer;
-        // leave native resize successful and fail only the optional Overlay.
-        if (presentQueues) {
-            if (!queueCount || queueCount != desc.BufferCount) {
-                Disable("resize_present_queue_extent_unsupported");
-                return;
-            }
-            Microsoft::WRL::ComPtr<IUnknown> expected;
-            if (FAILED(queue_->QueryInterface(IID_PPV_ARGS(&expected)))) {
-                Disable("resize_present_queue_identity_unavailable");
-                return;
-            }
-            for (UINT index = 0; index < queueCount; ++index) {
-                Microsoft::WRL::ComPtr<IUnknown> actual;
-                if (!presentQueues[index] ||
-                    FAILED(presentQueues[index]->QueryInterface(IID_PPV_ARGS(&actual))) ||
-                    actual.Get() != expected.Get()) {
-                    Disable("resize_present_queue_changed_or_multiple");
-                    return;
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+            Microsoft::WRL::ComPtr<ID3D11RenderTargetView> target;
+            bool drew = false;
+            if (SUCCEEDED(updateSurface.As(&texture)) &&
+                SUCCEEDED(device_->CreateRenderTargetView(texture.Get(), nullptr,
+                    target.GetAddressOf()))) {
+                if (drawData) {
+                    drew = imguiRenderer_.Render(drawData, target.Get(), width,
+                        height, updateRect, offset);
+                } else {
+                    Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
+                    Microsoft::WRL::ComPtr<ID3D11DeviceContext1> context1;
+                    device_->GetImmediateContext(context.GetAddressOf());
+                    if (context && SUCCEEDED(context.As(&context1))) {
+                        const float transparent[]{0, 0, 0, 0};
+                        const LONG updateWidth = updateRect.right - updateRect.left;
+                        const LONG updateHeight = updateRect.bottom - updateRect.top;
+                        const D3D11_RECT clearRect{offset.x, offset.y,
+                            offset.x + updateWidth, offset.y + updateHeight};
+                        context1->ClearView(target.Get(), transparent, &clearRect, 1);
+                        context->OMSetRenderTargets(0, nullptr, nullptr);
+                        drew = true;
+                    } else if (fullUpdate && context) {
+                        const float transparent[]{0, 0, 0, 0};
+                        context->ClearRenderTargetView(target.Get(), transparent);
+                        context->OMSetRenderTargets(0, nullptr, nullptr);
+                        drew = true;
+                    }
                 }
             }
+            target.Reset();
+            texture.Reset();
+            updateSurface.Reset();
+            const HRESULT endResult = targetSurface->EndDraw();
+            return drew && SUCCEEDED(endResult);
+        };
+
+        bool drew = drawUpdate(requested, fullUpdate);
+        if (!drew && !fullUpdate) {
+            Log("OVERLAY_DAMAGE_UPDATE_FALLBACK reason=partial_draw_unavailable");
+            drew = drawUpdate(fullRect, true);
         }
-        if (desc.BufferCount != bufferCount_ || desc.BufferDesc.Format != format_) {
-            Microsoft::WRL::ComPtr<ID3D12Device> device = device_;
-            Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue = queue_;
-            Microsoft::WRL::ComPtr<IDXGISwapChain> retained = swapchain;
-            InitializeImpl(retained.Get(), device.Get(), queue.Get(), window_,
-                desc.BufferCount, desc.BufferDesc.Format);
+        return drew && SUCCEEDED(compositionDevice_->Commit());
+    }
+
+    bool Renderer::OnWindowGeometry(HWND window, UINT width, UINT height,
+        bool minimized, UINT dpi) noexcept
+    {
+        bool updated = false;
+        const auto outcome = RunOptionalOverlayWork([&]() {
+            if (!OwnsWindow(window)) return;
+            const bool dpiChanged = dpi != windowDpi_;
+            if (dpiChanged && !ApplyWindowDpi(dpi)) {
+                Disable("window_dpi_update_failed");
+                return;
+            }
+            if (minimized) {
+                const bool wasMinimized = state_.phase() == PresenterPhase::Minimized;
+                state_.SetMinimized(true);
+                if (!wasMinimized) Log("OVERLAY_WINDOW_MINIMIZED");
+                updated = true;
+                return;
+            }
+            if (!width || !height) return;
+            state_.SetMinimized(false);
+            if (width == surfaceWidth_ && height == surfaceHeight_) {
+                if (dpiChanged) forceFullDamage_ = true;
+                surfaceDirty_ = true;
+                updated = RenderImpl(surface_.Get(), width, height);
+                if (updated) StartPendingNotificationLifetimes();
+                return;
+            }
+            SurfaceUpdateToken token{};
+            if (!state_.BeginSurfaceUpdate({width, height}, token)) return;
+            surfaceDirty_ = true;
+            forceFullDamage_ = true;
+            Microsoft::WRL::ComPtr<IDCompositionSurface> replacement;
+            if (!CreateSurface(width, height, replacement) ||
+                !RenderImpl(replacement.Get(), width, height)) {
+                Log("OVERLAY_DCOMP_RESIZE_PREPARE_FAILED width=" +
+                    std::to_string(width) + " height=" + std::to_string(height));
+                Disable("composition_resize_prepare_failed");
+                return;
+            }
+            HRESULT result = visual_->SetContent(replacement.Get());
+            if (SUCCEEDED(result)) result = compositionDevice_->Commit();
+            if (FAILED(result)) {
+                visual_->SetContent(surface_.Get());
+                compositionDevice_->Commit();
+                Log("OVERLAY_DCOMP_RESIZE_COMMIT_FAILED hr=" +
+                    std::to_string(static_cast<long>(result)));
+                Disable("composition_resize_commit_failed");
+                return;
+            }
+            if (!PublishCommittedSurfaceResource(state_, token, surface_,
+                    std::move(replacement), true, true)) {
+                visual_->SetContent(surface_.Get());
+                compositionDevice_->Commit();
+                Log("OVERLAY_DCOMP_RESIZE_GENERATION_REJECTED");
+                Disable("composition_resize_generation_rejected");
+                return;
+            }
+            surfaceWidth_ = width;
+            surfaceHeight_ = height;
+            surfaceGeneration_ = state_.generation();
+            surfaceDirty_ = false;
+            damageTracker_.Invalidate();
+            forceFullDamage_ = true;
+            StartPendingNotificationLifetimes();
+            Log("OVERLAY_DCOMP_SURFACE_RESIZED generation=" +
+                std::to_string(surfaceGeneration_) + " width=" +
+                std::to_string(width) + " height=" + std::to_string(height));
+            updated = true;
+        }, [this]() noexcept { FailAfterException(); });
+        return outcome == OptionalOverlayWorkResult::Completed && updated;
+    }
+
+    void Renderer::ResetComposition() noexcept
+    {
+        if (compositionTarget_) {
+            compositionTarget_->SetRoot(nullptr);
+            if (compositionDevice_) compositionDevice_->Commit();
         }
-        LogDiagnostic(logger_, "OVERLAY_RESIZE_REVALIDATION_WAIT");
+        surface_.Reset();
+        visual_.Reset();
+        compositionTarget_.Reset();
+        compositionDevice_.Reset();
+        dxgiDevice_.Reset();
+        device_.Reset();
+        surfaceWidth_ = 0;
+        surfaceHeight_ = 0;
+        compositionReady_ = false;
+    }
+
+    void Renderer::DetachImGui() noexcept
+    {
+        if (ImGui::GetCurrentContext()) {
+            auto& io = ImGui::GetIO();
+            if (imguiReady_) imguiRenderer_.Shutdown(io.Fonts);
+            if (io.BackendPlatformUserData) ImGui_ImplWin32_Shutdown();
+            if (imguiContextCreated_) ImGui::DestroyContext();
+        } else {
+            imguiRenderer_.Shutdown(nullptr);
+        }
+        imguiReady_ = false;
+        imguiContextCreated_ = false;
     }
 
     void Renderer::UpdateNotifications() noexcept
@@ -1045,21 +1133,106 @@ namespace overlay
         try {
             std::vector<plugin::OverlayNotification> incoming;
             plugin::DrainOverlayNotifications(incoming);
-            const auto now = static_cast<std::uint64_t>(GetTickCount64());
             for (auto& notification : incoming) {
-                if (notification.kind == plugin::OverlayNotificationKind::StartupOverlayHint)
-                    notification.createdAtMs = now;
                 if (notifications_.size() >= 3)
                     notifications_.erase(notifications_.begin());
-                notifications_.push_back(std::move(notification));
+                notifications_.push_back({std::move(notification), {}});
             }
+            const auto now = static_cast<std::uint64_t>(GetTickCount64());
+            const auto oldSize = notifications_.size();
             notifications_.erase(std::remove_if(notifications_.begin(), notifications_.end(),
-                [now](const auto& notification) {
-                    return NotificationExpired(notification.createdAtMs, now,
-                        notification.durationMs);
+                [now](const auto& active) {
+                    return active.lifetime.IsExpired(now,
+                        active.notification.durationMs);
                 }), notifications_.end());
+            if (notifications_.size() != oldSize) surfaceDirty_ = true;
         } catch (...) {
             // Toasts are optional and must never affect rendering or settings.
+        }
+    }
+
+    void Renderer::EnsureStartupNotification(
+        const plugin::RuntimeSettingsSnapshot& settings) noexcept
+    {
+        if (!startupNotification_.pending()) return;
+        try {
+            plugin::OverlayNotification hint{};
+            hint.kind = plugin::OverlayNotificationKind::StartupOverlayHint;
+            hint.action = plugin::OverlayNotificationAction::OverlayToggle;
+            hint.primaryValue = config::HotkeyName(settings.overlayToggleKey);
+            hint.status = plugin::OverlayNotificationStatus::Ready;
+            hint.durationMs = StartupHintDurationMs;
+            hint.id = 0;
+            if (notifications_.size() >= 3)
+                notifications_.erase(notifications_.begin());
+            notifications_.push_back({std::move(hint), {}});
+            startupNotification_.MarkCreated(ready(), true);
+            surfaceDirty_ = true;
+            Log("OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1");
+        } catch (...) {
+            Log("OVERLAY_STARTUP_HINT_CREATE_FAILED");
+        }
+    }
+
+    void Renderer::PrepareStartupNotification() noexcept
+    {
+        if (!startupNotification_.ShouldWakePresenter(ready())) return;
+        try {
+            plugin::RuntimeSettingsSnapshot settings{};
+            if (!plugin::GetRuntimeSettingsApi().Snapshot(settings)) return;
+            if (settings.overlayLocaleAuto &&
+                !settings.overlayLocaleAutoSynchronized &&
+                !startupAutoLanguageSyncRequested_) {
+                startupAutoLanguageSyncRequested_ =
+                    RequestAutoLanguageSynchronization(window_);
+                if (!startupAutoLanguageSyncRequested_ &&
+                    !startupAutoLanguageSyncRequestFailureLogged_) {
+                    Log("OVERLAY_STARTUP_AUTO_LANGUAGE_SYNC_REQUEST_FAILED");
+                    startupAutoLanguageSyncRequestFailureLogged_ = true;
+                }
+                if (!startupAutoLanguageSyncRequested_) {
+                    const bool fallbackApplied =
+                        plugin::SetDetectedOverlayLocale("en");
+                    if (!fallbackApplied) return;
+                    if (!plugin::GetRuntimeSettingsApi().Snapshot(settings)) {
+                        settings.overlayLocaleCode = "en";
+                        settings.overlayLocaleAutoSynchronized = true;
+                    }
+                }
+            }
+            if (StartupHintMustWaitForAutoLocale(settings.overlayLocaleAuto,
+                    settings.overlayLocaleAutoSynchronized,
+                    startupAutoLanguageSyncRequested_)) {
+                Log("OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE");
+                return;
+            }
+            EnsureStartupNotification(settings);
+        } catch (...) {
+            Log("OVERLAY_STARTUP_PREPARATION_FAILED");
+        }
+    }
+
+    void Renderer::StartPendingNotificationLifetimes() noexcept
+    {
+        const auto committedAt = static_cast<std::uint64_t>(GetTickCount64());
+        for (auto& active : notifications_) {
+            if (StartNotificationLifetimeAfterCommit(active.lifetime,
+                    active.notification.id,
+                    std::span<const std::uint64_t>{submittedNotificationIds_.data(),
+                        submittedNotificationCount_}, true, committedAt)) {
+                try {
+                    Log("OVERLAY_NOTIFICATION_LIFETIME_STARTED id=" +
+                        std::to_string(active.notification.id));
+                    if (active.notification.kind ==
+                            plugin::OverlayNotificationKind::StartupOverlayHint &&
+                        !startupHintFrameLogged_) {
+                        startupHintFrameLogged_ = true;
+                        Log("OVERLAY_STARTUP_HINT_DRAWN_AND_COMMITTED");
+                    }
+                } catch (...) {
+                    // Notification diagnostics are optional.
+                }
+            }
         }
     }
 
@@ -1067,9 +1240,11 @@ namespace overlay
     {
         const auto now = static_cast<std::uint64_t>(GetTickCount64());
         float y = 30.0f;
-        for (const auto& notification : notifications_) {
-            if (now < notification.createdAtMs) continue;
-            const auto age = now - notification.createdAtMs;
+        for (auto& active : notifications_) {
+            active.frameDrawListToken = 0;
+            const auto& notification = active.notification;
+            if (!active.lifetime.IsDrawable(now, notification.durationMs)) continue;
+            const auto age = active.lifetime.AgeMs(now);
             const float fadeIn = static_cast<float>(age) / 220.0f < 1.0f
                 ? static_cast<float>(age) / 220.0f : 1.0f;
             const auto fadeStart = notification.durationMs > 400
@@ -1085,13 +1260,15 @@ namespace overlay
                 std::to_string(notification.id);
             ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, y),
                 ImGuiCond_Always, ImVec2(0.5f, 0.0f));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, 0.0f),
-                ImVec2(440.0f, FLT_MAX));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f * dpiScale_, 0.0f),
+                ImVec2(440.0f * dpiScale_, FLT_MAX));
             ImGui::SetNextWindowBgAlpha(0.92f * alpha);
             ImGui::Begin(windowId.c_str(), nullptr,
                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
                 ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings |
                 ImGuiWindowFlags_AlwaysAutoResize);
+            active.frameDrawListToken = reinterpret_cast<std::uintptr_t>(
+                ImGui::GetWindowDrawList());
             std::string localizedValue;
             std::string localizedTitle;
             if (notification.kind == plugin::OverlayNotificationKind::StartupOverlayHint) {
@@ -1142,85 +1319,131 @@ namespace overlay
         }
     }
 
-    bool Renderer::Render(IDXGISwapChain* swapchain,
-        AssociationState association) noexcept
+    bool Renderer::Render() noexcept
     {
-        bool commandListSubmitted = false;
+        bool rendered = false;
         const auto outcome = RunOptionalOverlayWork([&]() {
-            RenderImpl(swapchain, association, commandListSubmitted);
+            if (needsRenderWork() && surface_) {
+                rendered = RenderImpl(surface_.Get(), surfaceWidth_, surfaceHeight_);
+                if (rendered) StartPendingNotificationLifetimes();
+            }
         }, [this]() noexcept { FailAfterException(); });
-        (void)outcome;
-        return commandListSubmitted;
+        return outcome == OptionalOverlayWorkResult::Completed && rendered;
     }
 
-    void Renderer::RenderImpl(IDXGISwapChain* swapchain,
-        AssociationState association, bool& commandListSubmitted)
+    void Renderer::ApplyInputEvents(UINT width, UINT height)
     {
-        UpdateNotifications();
-        if (!swapchain || association != AssociationState::Supported) return;
-        if (!OwnsSwapchain(swapchain)) return;
-        if (lifecycle_.state() == RendererState::Resizing) {
-            const auto resourceRebuildStart = std::chrono::steady_clock::now();
-            if (!BuildResources(swapchain) || !BuildImGui() ||
-                !lifecycle_.CompleteResize(true)) {
-                Disable("resize_rebuild_failed");
-                return;
+        std::vector<InputEvent> events;
+        GetInputEventBridge().Drain(events);
+        if (!ImGui::GetCurrentContext()) return;
+        auto& io = ImGui::GetIO();
+        for (const auto& event : events) {
+            switch (event.kind) {
+            case InputEventKind::Reset:
+                io.AddFocusEvent(false);
+                for (int button = 0; button < 5; ++button)
+                    io.AddMouseButtonEvent(button, false);
+                virtualCursorPosition_.Reset();
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+                break;
+            case InputEventKind::AbsoluteMousePosition:
+                virtualCursorPosition_.SetAbsolute(event.x, event.y,
+                    static_cast<int>(width), static_cast<int>(height));
+                if (!firstAbsoluteMouseAppliedLogged_) {
+                    firstAbsoluteMouseAppliedLogged_ = true;
+                    Log("OVERLAY_INPUT_ABSOLUTE_MOUSE_APPLIED x=" +
+                        std::to_string(virtualCursorPosition_.point().x) + " y=" +
+                        std::to_string(virtualCursorPosition_.point().y));
+                }
+                break;
+            case InputEventKind::RelativeMouseMotion:
+                virtualCursorPosition_.ApplyRelative(event.x, event.y,
+                    static_cast<int>(width), static_cast<int>(height));
+                if (!firstRawMouseAppliedLogged_) {
+                    firstRawMouseAppliedLogged_ = true;
+                    Log("OVERLAY_INPUT_RAW_MOUSE_APPLIED dx=" +
+                        std::to_string(event.x) + " dy=" +
+                        std::to_string(event.y) + " x=" +
+                        std::to_string(virtualCursorPosition_.point().x) + " y=" +
+                        std::to_string(virtualCursorPosition_.point().y));
+                }
+                break;
+            case InputEventKind::MouseButton: {
+                int button = -1;
+                bool down = true;
+                switch (event.message) {
+                case WM_LBUTTONDOWN: case WM_LBUTTONUP: case WM_LBUTTONDBLCLK:
+                    button = 0; down = event.message != WM_LBUTTONUP; break;
+                case WM_RBUTTONDOWN: case WM_RBUTTONUP: case WM_RBUTTONDBLCLK:
+                    button = 1; down = event.message != WM_RBUTTONUP; break;
+                case WM_MBUTTONDOWN: case WM_MBUTTONUP: case WM_MBUTTONDBLCLK:
+                    button = 2; down = event.message != WM_MBUTTONUP; break;
+                case WM_XBUTTONDOWN: case WM_XBUTTONUP: case WM_XBUTTONDBLCLK:
+                    button = HIWORD(event.wParam) == XBUTTON1 ? 3 : 4;
+                    down = event.message != WM_XBUTTONUP;
+                    break;
+                default: break;
+                }
+                if (button >= 0) io.AddMouseButtonEvent(button, down);
+                break;
             }
-            const auto resourceRebuildMs = std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - resourceRebuildStart).count();
-            const auto deferredRebuildDelayMs = std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - resizeResultTime_).count();
-            Log("OVERLAY_RESIZE_REBUILD_OK resourceRebuildMs=" +
-                std::to_string(resourceRebuildMs) + " deferredAfterResizeMs=" +
-                std::to_string(deferredRebuildDelayMs));
-            LogDiagnostic(logger_, "OVERLAY_RESIZE_TIMING originalResizeBuffersMs=" +
-                std::to_string(originalResizeMs_) + " resizeHookMs=" +
-                std::to_string(totalResizeHookMs_) + " preResizeWaitMs=" +
-                std::to_string(resizePreWaitMs_) + " overlayReleaseMs=" +
-                std::to_string(resizeReleaseMs_));
+            case InputEventKind::MouseWheel:
+                if (event.message == WM_MOUSEWHEEL)
+                    io.AddMouseWheelEvent(0.0f,
+                        static_cast<float>(static_cast<short>(HIWORD(event.wParam))) /
+                            WHEEL_DELTA);
+                else
+                    io.AddMouseWheelEvent(
+                        static_cast<float>(static_cast<short>(HIWORD(event.wParam))) /
+                            WHEEL_DELTA, 0.0f);
+                break;
+            case InputEventKind::NativeKeyboardMessage:
+                ImGui_ImplWin32_WndProcHandler(window_, event.message,
+                    event.wParam, event.lParam);
+                break;
+            case InputEventKind::Focus:
+                io.AddFocusEvent(event.wParam != FALSE);
+                break;
+            }
         }
-        if (!resourcesReady_ || !lifecycle_.CanSubmit(association)) return;
-#ifdef OVERLAY_SETTINGS_FRONTEND
+        if (visible() && virtualCursorPosition_.known()) {
+            const POINT position = virtualCursorPosition_.point();
+            io.AddMousePosEvent(static_cast<float>(position.x),
+                static_cast<float>(position.y));
+        }
+    }
+
+    void Renderer::BeginImGuiFrame(UINT width, UINT height) noexcept
+    {
+        auto& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(static_cast<float>(width),
+            static_cast<float>(height));
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+        const auto now = std::chrono::steady_clock::now();
+        const auto elapsed = hasImGuiFrameTime_
+            ? std::chrono::duration<float>(now - lastImGuiFrameTime_).count()
+            : 1.0f / 60.0f;
+        io.DeltaTime = (std::max)(elapsed, 1.0e-4f);
+        lastImGuiFrameTime_ = now;
+        hasImGuiFrameTime_ = true;
+    }
+
+    bool Renderer::RenderImpl(IDCompositionSurface* targetSurface,
+        UINT width, UINT height)
+    {
+        if (!ready() || !targetSurface || !width || !height || !imguiReady_)
+            return false;
+        submittedNotificationCount_ = 0;
+        submittedDrawLists_.clear();
+        for (auto& notification : notifications_)
+            notification.frameDrawListToken = 0;
         plugin::RuntimeSettingsSnapshot frameSettings{};
         bool frameSettingsAvailable = false;
-        const bool rendererReady = lifecycle_.state() == RendererState::Ready &&
-            imguiReady_ && resourcesReady_;
-        if (startupHintGate_.ShouldReadSettings(rendererReady, true)) {
-            frameSettingsAvailable =
-                plugin::GetRuntimeSettingsApi().Snapshot(frameSettings);
-            if (frameSettingsAvailable && frameSettings.overlayLocaleAuto &&
-                !frameSettings.overlayLocaleAutoSynchronized &&
-                !startupAutoLanguageSyncRequested_) {
-                startupAutoLanguageSyncRequested_ =
-                    RequestAutoLanguageSynchronization(window_);
-                if (!startupAutoLanguageSyncRequested_ &&
-                    !startupAutoLanguageSyncRequestFailureLogged_) {
-                    Log("OVERLAY_STARTUP_AUTO_LANGUAGE_SYNC_REQUEST_FAILED");
-                    startupAutoLanguageSyncRequestFailureLogged_ = true;
-                }
-            }
-            const bool startupLocaleReady = frameSettingsAvailable &&
-                StartupLocaleReady(frameSettings.overlayLocaleAuto,
-                    frameSettings.overlayLocaleAutoSynchronized);
-            if (startupHintGate_.TryPublish(rendererReady, true,
-                    startupLocaleReady)) {
-                try {
-                    const std::string keyName = config::HotkeyName(
-                        frameSettings.overlayToggleKey);
-                    plugin::PublishOverlayNotification(
-                        plugin::OverlayNotificationKind::StartupOverlayHint,
-                        plugin::OverlayNotificationAction::OverlayToggle,
-                        keyName, {}, plugin::OverlayNotificationStatus::Ready,
-                        StartupHintDurationMs);
-                    Log("OVERLAY_STARTUP_HINT_QUEUED key=" + keyName);
-                } catch (...) {
-                    // Startup guidance is optional; it must not interrupt rendering.
-                }
-            }
-        }
-#endif
+        PrepareStartupNotification();
+        UpdateNotifications();
         const bool overlayVisible = visible_.load(std::memory_order_acquire);
-        if ((!overlayVisible && notifications_.empty())) return;
+        if (!overlayVisible && notifications_.empty() && !surfaceDirty_)
+            return false;
         if (ImGui::GetCurrentContext())
             ImGui::GetIO().MouseDrawCursor = overlayVisible;
 #ifdef OVERLAY_SETTINGS_FRONTEND
@@ -1233,7 +1456,7 @@ namespace overlay
             const std::string_view fontProfileCode = localeDescriptor
                 ? localeDescriptor->fontProfileCode : std::string_view{"base"};
             bool fontSettingsChanged =
-                frameSettings.overlayFontSize != activeFontSizePixels_ ||
+                frameSettings.overlayFontSize != activeFontSetting_ ||
                 fontProfileCode != activeFontProfileCode_;
 #ifdef OVERLAY_FONT_RASTERIZATION_EXPERIMENT
             fontSettingsChanged = fontSettingsChanged ||
@@ -1246,51 +1469,26 @@ namespace overlay
             if (fontSettingsChanged && !RebuildFontAtlas(
                     frameSettings.overlayFontSize, fontProfileCode)) {
                 Disable("font_atlas_rebuild_failed");
-                return;
+                return false;
             }
+            if (frameSettings.overlayLocaleCode != activeLocaleCode_)
+                forceFullDamage_ = true;
+            activeLocaleCode_ = frameSettings.overlayLocaleCode;
             localization_.SetLocale(frameSettings.overlayLocaleCode);
         }
 #endif
-        IDXGISwapChain3* swapchain3 = nullptr;
-        if (FAILED(swapchain->QueryInterface(IID_PPV_ARGS(&swapchain3))) || !swapchain3)
-            return;
-        const UINT index = swapchain3->GetCurrentBackBufferIndex();
-        swapchain3->Release();
-        if (index >= frames_.size() || index >= backbuffers_.size()) {
-            Disable("backbuffer_index_invalid");
-            return;
-        }
-        auto& frame = frames_[index];
-        if (!WaitForFrame(frame) || FAILED(frame.allocator->Reset()) ||
-            FAILED(commandList_->Reset(frame.allocator, nullptr))) {
-            Disable("command_reuse_failed");
-            return;
-        }
-        D3D12_RESOURCE_BARRIER toTarget{};
-        toTarget.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        toTarget.Transition.pResource = backbuffers_[index];
-        toTarget.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-        toTarget.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        toTarget.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        commandList_->ResourceBarrier(1, &toTarget);
-        auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
-        rtv.ptr += static_cast<SIZE_T>(index) * rtvStride_;
-        commandList_->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-        ID3D12DescriptorHeap* heaps[] = {srvHeap_};
-        commandList_->SetDescriptorHeaps(1, heaps);
-
-        ImGui_ImplDX12_NewFrame();
-        ImGui_ImplWin32_NewFrame();
+        BeginImGuiFrame(width, height);
+        ApplyInputEvents(width, height);
         ImGui::NewFrame();
         if (!ImGui::IsPopupOpen(static_cast<ImGuiID>(0), ImGuiPopupFlags_AnyPopup))
             GetInputState().ConsumeEscapePopupDismissRequest();
-        ImGui::GetStyle().CellPadding.x = 6.0f;
+        ImGui::GetStyle().CellPadding.x = 6.0f * dpiScale_;
 #ifdef OVERLAY_SETTINGS_FRONTEND
 #endif
         if (overlayVisible) {
             const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
             const float maxOverlayWidth = layout_metrics::AvailableWindowWidth(
-                mainViewport->Size.x);
+                mainViewport->Size.x, dpiScale_);
             ImGui::SetNextWindowPos(ImVec2(overlayPositionX_, overlayPositionY_),
                 ImGuiCond_Once);
             ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f),
@@ -1301,7 +1499,7 @@ namespace overlay
                 ImGuiWindowFlags_NoCollapse);
             const ImVec2 clampedPosition = ClampOverlayWindowPosition(
                 ImGui::GetWindowPos(), ImGui::GetWindowSize(),
-                ImGui::GetMainViewport());
+                ImGui::GetMainViewport(), dpiScale_);
             if (clampedPosition.x != ImGui::GetWindowPos().x ||
                 clampedPosition.y != ImGui::GetWindowPos().y)
                 ImGui::SetWindowPos(clampedPosition, ImGuiCond_Always);
@@ -1678,54 +1876,84 @@ namespace overlay
             }
         }
 #else
-        ImGui::TextUnformatted("Overlay Rendering POC");
-        ImGui::TextUnformatted("Presentation path: OK");
-        ImGui::Text("D3D12 queue: DIRECT");
-        ImGui::Text("Buffers: %u", bufferCount_);
 #endif
             ImGui::End();
         }
         DrawNotifications();
+        PublishOverlayPopupState(ImGui::IsPopupOpen(
+            static_cast<ImGuiID>(0), ImGuiPopupFlags_AnyPopup));
         ImGui::Render();
-        // Backend upload buffers share exactly the allocator's waited fence slot,
-        // not the number of draw calls (hidden/skipped frames can break that ring).
-        if (!ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_,
-                static_cast<int>(index))) {
-            Disable("imgui_draw_upload_failed");
-            return; // Never submit the partially recorded command list.
+        const ImDrawData* drawData = ImGui::GetDrawData();
+        if (drawData) {
+            submittedDrawLists_.reserve(static_cast<std::size_t>(
+                (std::max)(0, drawData->CmdListsCount)));
+            for (int index = 0; index < drawData->CmdListsCount; ++index) {
+                const ImDrawList* list = drawData->CmdLists[index];
+                if (list && list->VtxBuffer.Size > 0)
+                    submittedDrawLists_.push_back({
+                        reinterpret_cast<std::uintptr_t>(list),
+                        static_cast<std::size_t>(list->VtxBuffer.Size)});
+            }
+            for (const auto& notification : notifications_) {
+                if (!notification.frameDrawListToken ||
+                    submittedNotificationCount_ >=
+                        submittedNotificationIds_.size())
+                    continue;
+                if (NotificationDrawListWasSubmitted(
+                        notification.frameDrawListToken, submittedDrawLists_))
+                    submittedNotificationIds_[submittedNotificationCount_++] =
+                        notification.notification.id;
+            }
         }
-
-        D3D12_RESOURCE_BARRIER toPresent = toTarget;
-        toPresent.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        toPresent.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-        commandList_->ResourceBarrier(1, &toPresent);
-        if (FAILED(commandList_->Close())) {
-            Disable("command_list_close_failed");
-            return;
+        const presentation::Rect surfaceExtent{0, 0,
+            static_cast<int>(width), static_cast<int>(height)};
+        presentation::Rect currentBounds{};
+        if (!ComputeImGuiDrawBounds(drawData, width, height, currentBounds)) {
+            currentBounds = surfaceExtent;
+            forceFullDamage_ = true;
         }
-        ID3D12CommandList* lists[] = {commandList_};
-        queue_->ExecuteCommandLists(1, lists);
-        commandListSubmitted = true;
-        gpuWorkSubmitted_ = true;
-        const auto fenceValue = ++nextFenceValue_;
-        if (FAILED(queue_->Signal(fence_, fenceValue))) {
-            Disable("queue_signal_failed");
-            return;
+        if (!imguiRenderer_.SupportsPartialSurfaceUpdates())
+            currentBounds = surfaceExtent;
+        const presentation::Rect damage = damageTracker_.Plan(currentBounds,
+            surfaceExtent, forceFullDamage_);
+        if (!damage.empty() && !DrawImGuiSurface(targetSurface, width, height,
+                drawData, damage)) {
+            const HRESULT removedReason = device_ ? device_->GetDeviceRemovedReason() : E_FAIL;
+            Log("OVERLAY_DCOMP_DRAW_FAILED hr=" +
+                std::to_string(static_cast<long>(removedReason)));
+            if (FAILED(removedReason)) {
+                if (state_.BeginDeviceRecovery()) {
+                    Log("OVERLAY_DCOMP_DEVICE_LOST recovery=started");
+                    if (RecoverGraphicsDevice(width, height)) return false;
+                    state_.CompleteDeviceRecovery(false, {});
+                    Disable("dcomp_device_lost_recovery_failed");
+                } else {
+                    Disable("dcomp_device_lost");
+                }
+            } else {
+                Disable("dcomp_surface_draw_failed");
+            }
+            return false;
         }
-        frame.fenceValue = fenceValue;
-        if (fenceValue == 1) {
+        damageTracker_.Publish(currentBounds, surfaceExtent);
+        forceFullDamage_ = false;
+        surfaceDirty_ = false;
+        if (!firstFrameLogged_) {
+            firstFrameLogged_ = true;
             LogDiagnostic(logger_, "OVERLAY_FIRST_FRAME");
 #if defined(OVERLAY_STARTUP_JOURNAL)
             diagnostics::startup_journal::MarkOnce(9, "OVERLAY_FIRST_FRAME",
-                "first_renderer_submission", fenceValue);
+                "first_directcomposition_surface_commit", surfaceGeneration_);
             diagnostics::startup_journal::Flush();
 #endif
         }
+        return true;
     }
 
     void Renderer::Disable(const char* reason) noexcept
     {
         visible_.store(false, std::memory_order_release);
+        PublishOverlayPopupState(false);
         try {
             GetInputState().Close();
         } catch (...) {
@@ -1736,8 +1964,12 @@ namespace overlay
         } catch (...) {
             // Diagnostics are optional; terminal cleanup is not.
         }
+#if defined(OVERLAY_STARTUP_JOURNAL)
+        diagnostics::startup_journal::MarkOnce(10, "OVERLAY_DISABLED", reason);
+        diagnostics::startup_journal::Flush();
+#endif
         Shutdown();
-        lifecycle_.Disable();
+        state_.DisableOverlay();
     }
 
     void Renderer::FailAfterException() noexcept
@@ -1747,6 +1979,7 @@ namespace overlay
 
     void Renderer::Shutdown() noexcept
     {
+        PublishOverlayPopupState(false);
         try {
             GetInputState().CancelRebind();
         } catch (...) {
@@ -1754,59 +1987,11 @@ namespace overlay
         }
         plugin::SetHotkeyRebindCaptureActive(false);
         plugin::MarkHotkeyRebindKeyConsumed(0);
-        const bool retainGpuResources = gpuWorkSubmitted_ &&
-            (gpuWaitFailed_ || !WaitForGpu());
-        if (retainGpuResources) {
-            lifecycle_.Disable();
-            visible_.store(false, std::memory_order_release);
-            try { GetInputState().Close(); Log("OVERLAY_GPU_REFS_RETAINED completion=unknown"); }
-            catch (...) { /* Terminal ownership disposition cannot depend on logging. */ }
-        }
-        if (ImGui::GetCurrentContext()) {
-            auto& io = ImGui::GetIO();
-            // The backend init paths can allocate and fail partway through.
-            // Their owned ImGui IO slots, not the combined ready flag, tell
-            // teardown which individual backend reached its own boundary.
-            if (io.BackendRendererUserData)
-                ImGui_ImplDX12_Shutdown(retainGpuResources);
-            if (io.BackendPlatformUserData)
-                ImGui_ImplWin32_Shutdown();
-        }
-        imguiReady_ = false;
-        if (imguiContextCreated_ && ImGui::GetCurrentContext())
-            ImGui::DestroyContext();
-        imguiContextCreated_ = false;
-        // A timeout is not GPU completion. Deliberately retain one terminal set
-        // of COM refs/event until process exit instead of creating GPU use-after-free.
-        // This can prevent native resize/replacement from succeeding; freeing
-        // in-flight buffers to force it through would be unsafe.
-        if (!retainGpuResources) ReleaseBackbuffers();
-        else backbuffers_.clear();
-        for (auto& frame : frames_)
-            if (!retainGpuResources && frame.allocator) frame.allocator->Release();
-        frames_.clear();
-        if (!retainGpuResources) {
-            if (commandList_) commandList_->Release();
-            if (fence_) fence_->Release();
-            if (rtvHeap_) rtvHeap_->Release();
-            if (srvHeap_) srvHeap_->Release();
-            if (fenceEvent_) CloseHandle(fenceEvent_);
-            if (swapchain_) swapchain_->Release();
-            if (device_) device_->Release();
-            if (queue_) queue_->Release();
-        }
-        commandList_ = nullptr;
-        fence_ = nullptr;
-        rtvHeap_ = nullptr;
-        srvHeap_ = nullptr;
-        fenceEvent_ = nullptr;
-        swapchain_ = nullptr;
-        swapchainIdentity_ = 0;
-        device_ = nullptr;
-        queue_ = nullptr;
-        gpuWorkSubmitted_ = false;
-        resourcesReady_ = false;
-        nextFenceValue_ = 0;
-        resizeDepth_ = 0;
+        DetachImGui();
+        ResetComposition();
+        window_ = nullptr;
+        surfaceGeneration_ = 0;
+        firstFrameLogged_ = false;
+        surfaceDirty_ = true;
     }
 }

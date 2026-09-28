@@ -13,24 +13,27 @@ namespace overlay::layout_metrics
         }
     }
 
-    float SafeMargin(float viewportExtent) noexcept
+    float SafeMargin(float viewportExtent, float dpiScale) noexcept
     {
-        return std::min(30.0f, NonnegativeFinite(viewportExtent) * 0.05f);
+        const float scale = std::isfinite(dpiScale) && dpiScale > 0.0f
+            ? dpiScale : 1.0f;
+        return std::min(30.0f * scale,
+            NonnegativeFinite(viewportExtent) * 0.05f);
     }
 
-    float AvailableWindowWidth(float viewportWidth) noexcept
+    float AvailableWindowWidth(float viewportWidth, float dpiScale) noexcept
     {
         const float viewport = NonnegativeFinite(viewportWidth);
-        return std::max(0.0f, viewport - 2.0f * SafeMargin(viewport));
+        return std::max(0.0f, viewport - 2.0f * SafeMargin(viewport, dpiScale));
     }
 
     Position ClampPosition(Position position, Position viewportPosition,
-        Position viewportSize, Position windowSize) noexcept
+        Position viewportSize, Position windowSize, float dpiScale) noexcept
     {
         const float width = NonnegativeFinite(viewportSize.x);
         const float height = NonnegativeFinite(viewportSize.y);
-        const float marginX = SafeMargin(width);
-        const float marginY = SafeMargin(height);
+        const float marginX = SafeMargin(width, dpiScale);
+        const float marginY = SafeMargin(height, dpiScale);
         const float left = viewportPosition.x + marginX;
         const float top = viewportPosition.y + marginY;
         const float right = std::max(left,

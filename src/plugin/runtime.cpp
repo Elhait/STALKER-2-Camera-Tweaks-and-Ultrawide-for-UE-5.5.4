@@ -1,4 +1,5 @@
 #include "runtime.hpp"
+#include "../overlay/composition_runtime.hpp"
 #include "optional_overlay_startup.hpp"
 #include "runtime_settings.hpp"
 #include "../config/feature_config.hpp"
@@ -192,6 +193,7 @@ namespace
         std::uintptr_t neutralGameplayFovCandidateSource{};
         std::atomic<bool> cinematicFovApplied{false};
         std::atomic<float> cinematicTransformedFov{std::numeric_limits<float>::quiet_NaN()};
+        std::atomic<float> exitCinematicTransformedFov{std::numeric_limits<float>::quiet_NaN()};
         std::atomic<float> matchGameplayEnterNativeFov{std::numeric_limits<float>::quiet_NaN()};
         std::atomic<float> matchGameplayPreEnterNativeFov{std::numeric_limits<float>::quiet_NaN()};
         std::atomic<float> matchGameplayPreEnterHorPlusFov{std::numeric_limits<float>::quiet_NaN()};
@@ -357,6 +359,7 @@ namespace
     auto& g_neutralGameplayFovCandidateSource = g_runtime.neutralGameplayFovCandidateSource;
     auto& g_cinematicFovApplied = g_runtime.cinematicFovApplied;
     auto& g_cinematicTransformedFov = g_runtime.cinematicTransformedFov;
+    auto& g_exitCinematicTransformedFov = g_runtime.exitCinematicTransformedFov;
 #ifdef HORPLUS_CINEMATIC_WRITER_TRACE_DIAGNOSTIC
     auto& g_cinematicEnterAspect = g_runtime.cinematicEnterAspect;
 #endif
@@ -2154,6 +2157,8 @@ namespace
 #endif
         ResetAtomicExitHandoff("new-cinematic-enter");
         ResetPostCinematicDialogueExclusion("new-cinematic-enter");
+        g_exitCinematicTransformedFov.store(std::numeric_limits<float>::quiet_NaN(),
+            std::memory_order_release);
         g_cinematicTransformedFov.store(std::numeric_limits<float>::quiet_NaN(),
             std::memory_order_release);
         cinematics::CinematicSelectionSnapshot selection{};
@@ -2266,6 +2271,9 @@ namespace
 #endif
         ResetAtomicExitHandoff("new-cinematic-exit");
         g_exitTargetFov.store(context.xmm0.f32[0], std::memory_order_release);
+        g_exitCinematicTransformedFov.store(
+            g_cinematicTransformedFov.load(std::memory_order_acquire),
+            std::memory_order_release);
         ArmPostCinematicDialogueExclusion();
 #ifdef POST_EXIT_TRACE_STATE
         g_postExitTraceWriterCount.store(0, std::memory_order_release);
@@ -3050,13 +3058,16 @@ namespace
             result.aspect, result.flags, coordinator, gameplayEnabled, gameplayMode };
     }
 
-    void TraceHorPlusRecoveryHold(SafetyHookContext& context, const char* reason)
+    void TraceHorPlusRecoverySample(SafetyHookContext& context,
+        float inputFov, float outputFov, bool mapped, const char* reason)
     {
         if (!diagnostics::Enabled()) return;
         HorPlusGameplayApplyResult result{};
         result.source = static_cast<std::uintptr_t>(context.rsi);
-        result.inputFov = context.xmm0.f32[0];
-        result.outputFov = result.inputFov;
+        result.inputFov = inputFov;
+        result.outputFov = outputFov;
+        result.eligible = mapped;
+        result.applied = mapped;
         result.reason = reason;
         float selectedFovCandidate = std::numeric_limits<float>::quiet_NaN();
         bool selectedFovCandidateReadable = false;
@@ -3433,17 +3444,35 @@ namespace
                     ? baseline.source.value : 0;
             recoverySample.inputFov = context.xmm0.f32[0];
             recoverySample.exitNativeTarget = g_exitTargetFov.load(std::memory_order_acquire);
+            recoverySample.cachedCinematicFov =
+                g_exitCinematicTransformedFov.load(std::memory_order_acquire);
+            recoverySample.gameplayEnabled =
+                g_runtimeGameplayEnabled.load(std::memory_order_acquire);
             recoverySample.cameraReadable = recoverySample.source != 0 &&
                 SafeRead(recoverySample.source + kAspectOffset, recoverySample.aspect) &&
                 SafeRead(recoverySample.source + kFlagsOffset, recoverySample.flags);
             auto recoveryAction = gameplay::ResolveHorPlusRecoveryAction(
-                coordinator, gameplay::IsNativeHorPlusRecoverySample(
-                    recoverySample, kRecoveryEpsilon));
+                coordinator, recoverySample,
+                gameplay::IsNativeHorPlusRecoverySample(
+                    recoverySample, kRecoveryEpsilon), kRecoveryEpsilon);
+            if (recoveryAction ==
+                    gameplay::HorPlusRecoveryAction::TransformRecoveryInterpolation) {
+                const float nativeInterpolationFov = context.xmm0.f32[0];
+                const float mappedFov = gameplay::ResolveHorPlusRecoveryInterpolationFov(
+                    recoverySample, kNativeAspect);
+                if (IsValidFovValue(mappedFov)) {
+                    context.xmm0.f32[0] = mappedFov;
+                    TraceHorPlusRecoverySample(context, nativeInterpolationFov, mappedFov, true,
+                        "POST_CINEMATIC_RECOVERY_INTERPOLATION");
+                    return;
+                }
+                recoveryAction = gameplay::HorPlusRecoveryAction::HoldNativePassThrough;
+            }
             if (recoveryAction == gameplay::HorPlusRecoveryAction::HoldNativePassThrough) {
-                // A source change or invalid sample cancels the current evidence.
-                // Re-arm from the same EXIT target and let the current writer
-                // establish fresh source-owned recovery evidence. Until that
-                // converges, return before Gameplay/HorPlus can consume the FOV.
+                // Unowned, ambiguous, out-of-segment, or invalid samples stay
+                // native pass-through. Only validated source-owned recovery
+                // interpolation is mapped above; baseline projection remains
+                // disabled until native target convergence resumes Gameplay.
                 if (recoveryObservation ==
                         dialogue::PostCinematicRecoveryExclusion::Observation::Cancelled ||
                     recoveryObservation ==
@@ -3453,9 +3482,13 @@ namespace
                     recoveryObservation = g_postCinematicDialogueExclusion.ObserveValidated(
                         static_cast<std::uintptr_t>(context.rsi),
                         context.xmm0.f32[0], kRecoveryEpsilon);
-                    TraceHorPlusRecoveryHold(context, "POST_CINEMATIC_RECOVERY_REARM");
+                    TraceHorPlusRecoverySample(context, context.xmm0.f32[0],
+                        context.xmm0.f32[0], false,
+                        "POST_CINEMATIC_RECOVERY_REARM");
                 } else {
-                    TraceHorPlusRecoveryHold(context, "POST_CINEMATIC_RECOVERY_HOLD");
+                    TraceHorPlusRecoverySample(context, context.xmm0.f32[0],
+                        context.xmm0.f32[0], false,
+                        "POST_CINEMATIC_RECOVERY_HOLD");
                 }
                 return;
             }
@@ -5023,6 +5056,7 @@ namespace plugin
         } catch (...) {
             // Notifications are optional UX; never affect the setting mutation path.
         }
+        RequestOverlayRedraw();
     }
 
     void DrainOverlayNotifications(std::vector<OverlayNotification>& notifications) noexcept
@@ -5070,6 +5104,7 @@ namespace plugin
                 std::memory_order_release);
             Log("Overlay Auto locale synchronized: game=", descriptor->code,
                 " font_size=", descriptor->initialFontSize);
+            RequestOverlayRedraw();
         }
         return true;
     }
@@ -5109,19 +5144,11 @@ namespace plugin
         diagnostics::startup::SnapshotModules("worker_enter");
 #endif
 #ifdef OVERLAY_COMBINED
-#if defined(OVERLAY_NO_DXGI_HOOKS_DIAGNOSTIC)
-        const DWORD result = Initialize(parameter);
-        NotifyOverlayCameraCoreReady();
-        Log("Diagnostic profile: overlay=disabled dxgiHooks=disabled renderer=skipped input=skipped overlayGpuWork=none.");
-        try { if (g_logger) g_logger->flush(); } catch (...) {}
-        return result;
-#else
         return InitializeOptionalOverlayThenCore(
             []() { return StartOverlayDiscovery(g_module); },
             [parameter]() { return Initialize(parameter); },
             []() { NotifyOverlayCameraCoreReady(); },
             []() noexcept { Log("Overlay discovery startup failed; core runtime remains initialized."); });
-#endif
 #else
         return Initialize(parameter);
 #endif

@@ -25,7 +25,7 @@ non-Native Dialogue lifecycle is available only when its cinematic lifecycle
 observation and Gameplay recovery observation capabilities are available;
 otherwise it fails closed while unrelated feature status remains independent.
 
-The production ASI includes the combined D3D12/ImGui settings overlay and its
+The production ASI includes the combined DirectComposition/D3D11 ImGui settings overlay and its
 embedded localization catalogs/font profiles. Locale configuration is either
 Auto or an explicit registry identity. Auto reads the game's current
 Interface Language when selected and at the overlay closed-to-open transition, normalizes
@@ -39,56 +39,49 @@ and the former `STALKER2CameraTweaksOverlay.ini` position are migrated once;
 the old placement file is then ignored and is not deleted.
 
 The production overlay lifecycle log is
-`STALKER2CameraTweaksOverlay.log`. Repeated DXGI factory/PRESENT observations
-and detailed association telemetry are emitted only while `Diagnostics.Enabled`
-is true; normal logging focuses on initialization, swapchain selection,
-visibility, actual resize/rebuild events, font changes and failures.
-Caller-module and factory-table slot traces are compiled only into the
-diagnostic build profile; they are not present in the production artifact.
+`STALKER2CameraTweaksOverlay.log`. The Overlay has no DXGI factory, game
+swapchain, Present, Present1, ResizeBuffers or ResizeBuffers1 interception.
+It discovers the process's visible top-level game window using Win32 window
+enumeration and out-of-context window events, and waits for camera-core
+readiness before creating any presentation resources.
 
-DXGI export hooks are created disabled, assigned to their process-resident owner,
-then enabled. COM method hooks capture SDK-bounded original entries and publish
-their table registry record before atomically patching selected entries in the
-original table. They do not truncate foreign vtables or retain COM objects in
-the registry. Registry access is synchronized; callbacks keep shared record
-leases. Distinct queried interface tables are covered independently.
+A private D3D11 device owns the ImGui renderer and draws into
+`IDCompositionSurface` updates attached to an `IDCompositionTarget` for the
+game HWND. Overlay frames never acquire or retain game backbuffers, devices,
+queues or swapchains and do not execute on the game's native presentation
+path. The ImGui UI/context, D3D11 immediate context, and composition objects
+are serialized on one Overlay owner thread. The game window procedure is the
+input boundary: while the settings UI is open it copies keyboard, mouse and
+relative raw-mouse events into a bounded bridge; only the Overlay owner thread
+applies them to ImGui. The independent composition surface remains attached
+while hidden. A presenter-owned frame scheduler is event-driven while idle and
+uses the DirectComposition compositor clock for active notification animation
+and dirty interactive frames where the OS exposes that API. A clean static
+panel does not render continuously; input/settings changes coalesce into
+owner-thread frames. On systems without the compositor clock, interactive
+changes remain event-driven and only notification animation uses a bounded
+timer fallback. Startup guidance never depends on settings visibility, game
+frames, or presentation callbacks.
 
-The renderer releases its owning swapchain/backbuffer references before native
-replacement for the same HWND. Resource recreation is not terminal disable.
-Both `ResizeBuffers` and `ResizeBuffers1` release matching renderer resources
-before native resize, without holding registry/renderer locks across the native
-call. Nested native resize calls defer recovery until the outermost call returns.
-A changed/multiple present-queue assignment fails closed for Overlay only;
-the native HRESULT and arguments remain unchanged. Renderer/ImGui access is
-serialized independently of the log/evidence registry. Failed DXGI creation
-results are logged even when optional diagnostics are disabled.
-GPU fence waits, including the locally adapted ImGui font-upload backend, are
-bounded to one second and validate actual fence completion. A timeout or removed
-device disables Overlay and skips a second blocking teardown wait. If submitted
-work has no completion proof, one terminal set of GPU COM refs/event is deliberately
-retained until process exit, while CPU UI state is detached; forcing release to
-make native resize/replacement succeed would risk GPU use-after-free. Such native
-operations can still fail with retained buffers. Backend vertex/index uploads
-use the same fence-waited backbuffer slot as the renderer allocator, rather than
-an independent draw-call ring. TEST/nonblocking Present calls are native-only.
-The core camera runtime has no dependency on renderer readiness.
-Export hook owners are process-resident: CRT detach must not invoke SafetyHook
-thread suspension/unpatching under loader lock. Terminal-disabled input remains
-native pass-through; cursor restoration is posted to the window thread. WndProc
-chain snapshots/publication are serialized with renderer/input state.
-Combined startup synchronously arms optional DXGI factory observation before
-core camera initialization so it can see the game's initial presentation
-factory. A bounded seed `IDXGIFactory2` is created only to install observation
-on a widest-supported, image-backed shared factory table; its COM reference is
-released after setup and it is never a renderer target. Factory export hooks
-remain supplemental discovery, not readiness evidence. If the seed table or
-its method owners cannot be pinned safely, discovery stays unavailable rather
-than claiming coverage. Only real successful `CreateSwapChain*` callbacks
-provide the swapchain and queue/device association. Renderer and input
-activation remain gated on core readiness, validated target ownership and two
-successful Presents. Nested proxy/native creation of the same canonical COM
-identity is observed once per callback chain. A C++ failure arming discovery is
-contained and logged, and does not block camera initialization.
+Surface changes use a generation transaction: the replacement surface is
+created, fully drawn and committed before it is attached to the visual and
+published as the active generation. A failed draw/commit does not publish a
+partial generation; the optional Overlay disables itself on unrecoverable
+composition errors. Minimize suspends rendering without discarding the active
+generation; restore and size changes resume through the owner thread. Device
+loss permits one bounded recreation attempt, after which only the Overlay is
+disabled. No GPU fence wait or synchronous wait on game presentation is used.
+The camera runtime and its INI configuration remain independent of presenter
+readiness or failure.
+
+Input capture is activated independently from renderer generations after a
+committed composition surface and game HWND are ready. When closed, input
+passes to the game; when open, mouse ownership is transferred through the
+bounded event bridge and returned on close. Delete toggles the settings UI and
+Esc dismisses it. Terminal Overlay failure returns messages through the saved
+window-procedure continuation. If another window subclass is installed above
+Camera Tweaks, its continuation record is retained until that HWND is
+destroyed rather than overwriting the foreign subclass.
 
 ## Build and test policy
 
@@ -112,13 +105,11 @@ entry points, not supported ASI profiles or contents of the production
 package.
 
 Production builds emit a bounded `STALKER2CameraTweaksStartup.log` startup
-journal containing process/worker startup, factory-bootstrap and DXGI coverage
-status, camera-core readiness, first factory/swapchain observations, pending
-target acceptance, the two successful activation Presents, renderer/input
-activation, and first Overlay frame. It records no module/export archaeology,
-instruction/jump decoding, or per-Present telemetry. The heavyweight forensic
-trace-v2 is separate and opt-in with `CAMERA_TWEAKS_STARTUP_TIMELINE=1`; it
-replaces the production journal for that diagnostic build.
+journal containing process/worker startup, camera-core readiness, game-window
+discovery, composition device/surface commits, generation changes, input
+activation, and the first Overlay frame. It records no module/export archaeology,
+instruction/jump decoding, or per-Present telemetry. Camera/runtime forensic
+tracing remains separate and opt-in with `CAMERA_TWEAKS_STARTUP_TIMELINE=1`.
 
 `test.cmd` is the single repository test entry point. It builds and runs all
 current Windows harnesses with the same compiler family and returns failure if

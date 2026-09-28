@@ -50,13 +50,50 @@ namespace gameplay
             std::fabs(sample.inputFov - sample.exitNativeTarget) <= epsilon;
     }
 
+    namespace
+    {
+        bool HasValidatedGameplayRecoveryOwnership(
+            const HorPlusRecoverySample& sample) noexcept
+        {
+            return sample.gameplayEnabled && sample.cameraReadable &&
+                sample.source != 0 && sample.source == sample.validatedSource &&
+                sample.flags == 0x4 && std::isfinite(sample.aspect) &&
+                sample.aspect > 0.0f && std::isfinite(sample.inputFov) &&
+                sample.inputFov > 1.0f && sample.inputFov < 179.0f &&
+                std::isfinite(sample.exitNativeTarget) &&
+                sample.exitNativeTarget > 1.0f && sample.exitNativeTarget < 179.0f;
+        }
+
+        bool IsRecoveryInterpolationSample(const HorPlusRecoverySample& sample,
+            float epsilon) noexcept
+        {
+            if (!HasValidatedGameplayRecoveryOwnership(sample) ||
+                !std::isfinite(sample.cachedCinematicFov) ||
+                sample.cachedCinematicFov <= 1.0f ||
+                sample.cachedCinematicFov >= 179.0f ||
+                !std::isfinite(epsilon) || epsilon < 0.0f)
+                return false;
+
+            const float lower = (std::min)(sample.cachedCinematicFov,
+                sample.exitNativeTarget) - epsilon;
+            const float upper = (std::max)(sample.cachedCinematicFov,
+                sample.exitNativeTarget) + epsilon;
+            return std::fabs(sample.cachedCinematicFov -
+                    sample.exitNativeTarget) > epsilon &&
+                sample.inputFov >= lower && sample.inputFov <= upper;
+        }
+    }
+
     HorPlusRecoveryAction ResolveHorPlusRecoveryAction(
-        camera::CoordinatorState coordinator, bool nativeRecoveryValidated) noexcept
+        camera::CoordinatorState coordinator, const HorPlusRecoverySample& sample,
+        bool nativeRecoveryValidated, float epsilon) noexcept
     {
         if (coordinator != camera::CoordinatorState::CinematicExiting)
             return HorPlusRecoveryAction::NotWaiting;
-        return nativeRecoveryValidated
-            ? HorPlusRecoveryAction::ResumeGameplay
+        if (nativeRecoveryValidated && IsNativeHorPlusRecoverySample(sample, epsilon))
+            return HorPlusRecoveryAction::ResumeGameplay;
+        return IsRecoveryInterpolationSample(sample, 0.0f)
+            ? HorPlusRecoveryAction::TransformRecoveryInterpolation
             : HorPlusRecoveryAction::HoldNativePassThrough;
     }
 

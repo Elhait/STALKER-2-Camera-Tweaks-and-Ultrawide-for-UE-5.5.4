@@ -31,6 +31,7 @@ namespace gameplay
     {
         NotWaiting,
         HoldNativePassThrough,
+        TransformRecoveryInterpolation,
         ResumeGameplay,
     };
 
@@ -40,15 +41,20 @@ namespace gameplay
         std::uintptr_t validatedSource{};
         float inputFov{std::numeric_limits<float>::quiet_NaN()};
         float exitNativeTarget{std::numeric_limits<float>::quiet_NaN()};
+        float cachedCinematicFov{std::numeric_limits<float>::quiet_NaN()};
         float aspect{std::numeric_limits<float>::quiet_NaN()};
         std::uint8_t flags{};
         bool cameraReadable{};
+        bool gameplayEnabled{true};
     };
 
     bool IsNativeHorPlusRecoverySample(
         const HorPlusRecoverySample& sample, float epsilon) noexcept;
     HorPlusRecoveryAction ResolveHorPlusRecoveryAction(
-        camera::CoordinatorState coordinator, bool nativeRecoveryValidated) noexcept;
+        camera::CoordinatorState coordinator, const HorPlusRecoverySample& sample,
+        bool nativeRecoveryValidated, float epsilon) noexcept;
+    float ResolveHorPlusRecoveryInterpolationFov(
+        const HorPlusRecoverySample& sample, float nativeAspect) noexcept;
 
     struct GameplayModeTransitionPlan
     {

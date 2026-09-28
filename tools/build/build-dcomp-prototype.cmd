@@ -1,8 +1,8 @@
 @echo off
 setlocal
-set "ROOT=%~dp0..\.."
-pushd "%ROOT%"
+pushd "%~dp0..\.."
 if errorlevel 1 exit /b 1
+
 set "VSDEVCMD="
 if defined VSINSTALLDIR if exist "%VSINSTALLDIR%Common7\Tools\VsDevCmd.bat" set "VSDEVCMD=%VSINSTALLDIR%Common7\Tools\VsDevCmd.bat"
 if not defined VSDEVCMD if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
@@ -11,19 +11,20 @@ if not defined VSDEVCMD if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\In
     popd
 )
 if not defined VSDEVCMD (
-    echo Visual Studio 2022 C++ toolchain not found.&gt;&amp;2
+    echo Visual Studio 2022 C++ toolchain not found.>&2
     popd
     exit /b 1
 )
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64
-if errorlevel 1 goto :fail
-if not exist "build-artifacts\overlay" mkdir "build-artifacts\overlay"
-cl /nologo /LD /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /Fobuild-artifacts\overlay\ /Iexternal\safetyhook src\overlay\discovery_runtime.cpp src\overlay\overlay_lifecycle.cpp src\overlay\discovery_evidence.cpp external\safetyhook\safetyhook.cpp external\safetyhook\Zydis.c /link user32.lib dxgi.lib d3d12.lib /OUT:STALKER2CameraTweaksOverlayDiscovery.asi
+if errorlevel 1 goto :failed
+
+if not exist "build-artifacts\dcomp-prototype" mkdir "build-artifacts\dcomp-prototype"
+cl /nologo /LD /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /DNDEBUG /Fo:build-artifacts\dcomp-prototype\ research\prototypes\dcomp_presenter\dcomp_presenter_prototype.cpp /link user32.lib d3d11.lib dxgi.lib d2d1.lib dwrite.lib dcomp.lib /OUT:"build-artifacts\dcomp-prototype\STALKER2CameraTweaks.asi"
 set "BUILD_RESULT=%errorlevel%"
 popd
 exit /b %BUILD_RESULT%
 
-:fail
+:failed
 set "BUILD_RESULT=%errorlevel%"
 popd
 exit /b %BUILD_RESULT%

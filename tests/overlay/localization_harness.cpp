@@ -3,6 +3,7 @@
 #include "../../src/overlay/localization_manager.hpp"
 #include "../../src/overlay/localization_validator.hpp"
 #include "../../src/overlay/localization_font.hpp"
+#include "../../src/overlay/inline_hotkey_layout.hpp"
 #include "../../src/overlay/game_language_reader.hpp"
 #include "../../src/overlay/setting_tooltip_content.hpp"
 #include "../../src/overlay/selector_examples_geometry.hpp"
@@ -24,6 +25,19 @@
 
 int main()
 {
+    {
+        constexpr std::string_view suffix = ", щоб повернути керування грою";
+        constexpr auto punctuation = overlay::inline_hotkey_layout::
+            LeadingPunctuationBytes(suffix);
+        static_assert(punctuation == 1);
+        const auto tail = overlay::inline_hotkey_layout::TrimLeadingWhitespace(
+            suffix.substr(punctuation));
+        assert(tail == "щоб повернути керування грою");
+        assert(overlay::inline_hotkey_layout::LeadingPunctuationBytes(
+            " щоб закрити оверлей") == 0);
+        assert(overlay::inline_hotkey_layout::TrimLeadingWhitespace(
+            "  text") == "text");
+    }
     using overlay::loc::Key;
     using overlay::setting_tooltip_content::Option;
     for (const float fontSize : std::array{14.0f, 21.0f}) {

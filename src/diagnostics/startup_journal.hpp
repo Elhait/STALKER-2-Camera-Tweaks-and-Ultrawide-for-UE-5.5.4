@@ -1,7 +1,7 @@
 #pragma once
 
 // Bounded production startup milestones. This deliberately does not inspect
-// modules, decode instructions, or run on every Present after activation.
+// modules or decode instructions, and records no per-frame graphics events.
 #if defined(OVERLAY_STARTUP_JOURNAL)
 #include <Windows.h>
 #include <intrin.h>
@@ -30,8 +30,6 @@ namespace diagnostics::startup_journal
     inline Event events[Capacity];
     inline std::atomic<unsigned> next{};
     inline std::atomic<unsigned> onceBits{};
-    inline std::atomic<std::uintptr_t> pendingTarget{};
-    inline std::atomic<unsigned> pendingPresents{};
     inline HMODULE module{};
     inline SRWLOCK fileLock = SRWLOCK_INIT;
     inline HANDLE file = INVALID_HANDLE_VALUE;
@@ -86,31 +84,6 @@ namespace diagnostics::startup_journal
         if (onceBits.fetch_or(bit, std::memory_order_relaxed) & bit) return false;
         Mark(name, detail, value);
         return true;
-    }
-
-    inline void TrackPendingTarget(std::uintptr_t identity) noexcept
-    {
-        pendingPresents.store(0, std::memory_order_relaxed);
-        pendingTarget.store(identity, std::memory_order_release);
-        MarkOnce(0, "PENDING_TARGET_ACCEPTED", "validated_swapchain_device_queue",
-            static_cast<std::uint64_t>(identity));
-    }
-
-    // Called only after the native Present returned S_OK, and becomes inert
-    // after the two activation-evidence frames have been recorded.
-    inline unsigned RecordSuccessfulPendingPresent(std::uintptr_t identity) noexcept
-    {
-        if (!identity || pendingTarget.load(std::memory_order_acquire) != identity)
-            return 0;
-        const unsigned previous = pendingPresents.fetch_add(1, std::memory_order_relaxed);
-        if (previous == 0) return 1;
-        if (previous == 1) {
-            auto expected = identity;
-            pendingTarget.compare_exchange_strong(expected, 0,
-                std::memory_order_release, std::memory_order_relaxed);
-            return 2;
-        }
-        return 0;
     }
 
     inline bool OpenFile() noexcept

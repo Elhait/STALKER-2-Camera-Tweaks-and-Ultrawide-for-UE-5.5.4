@@ -51,6 +51,90 @@ int main()
         "ui_and_config_binding_inventory_sizes_match");
     pass &= Check(!input.visible() && !input.ShouldCapture(WM_MOUSEMOVE),
         "hidden_by_default");
+    overlay::InputEventBridge bridge;
+    std::vector<overlay::InputEvent> inputEvents;
+    pass &= Check(!bridge.PushRelativeMouseMotion(1, 1),
+        "closed_input_owner_does_not_capture_events");
+    overlay::InputEventBridge zeroDeltaBridge;
+    zeroDeltaBridge.Activate(40, 50);
+    pass &= Check(!zeroDeltaBridge.PushRelativeMouseMotion(0, 0) &&
+        zeroDeltaBridge.PushAbsoluteMousePosition(60, 70),
+        "zero_delta_raw_packet_does_not_claim_pointer_motion_ownership");
+    pass &= Check(zeroDeltaBridge.PushRelativeMouseMotion(2, -1) &&
+        !zeroDeltaBridge.PushAbsoluteMousePosition(80, 90),
+        "real_relative_motion_selects_the_raw_pointer_stream");
+
+    bridge.Activate(100, 200);
+    pass &= Check(bridge.active() && bridge.PushAbsoluteMousePosition(150, 250) &&
+        bridge.PushRelativeMouseMotion(4, -3) &&
+        !bridge.PushAbsoluteMousePosition(300, 300),
+        "overlay_input_owner_switches_to_relative_raw_mouse_source");
+    pass &= Check(bridge.PushMouseButton(WM_LBUTTONDOWN, 0) &&
+        bridge.PushMouseWheel(WM_MOUSEWHEEL, MAKEWPARAM(0, WHEEL_DELTA), 0) &&
+        bridge.PushKeyboardMessage(WM_KEYDOWN, VK_F9, 0),
+        "host-window_events_are_copied_into_the_owner-thread_bridge");
+    bridge.Drain(inputEvents);
+    pass &= Check(inputEvents.size() == 8 &&
+        inputEvents[0].kind == overlay::InputEventKind::Reset &&
+        inputEvents[1].kind == overlay::InputEventKind::AbsoluteMousePosition &&
+        inputEvents[2].kind == overlay::InputEventKind::Focus &&
+        inputEvents[2].wParam == TRUE &&
+        inputEvents[3].kind == overlay::InputEventKind::AbsoluteMousePosition &&
+        inputEvents[3].x == 150 && inputEvents[3].y == 250 &&
+        inputEvents[4].kind == overlay::InputEventKind::RelativeMouseMotion &&
+        inputEvents[4].x == 4 && inputEvents[4].y == -3 &&
+        inputEvents[5].kind == overlay::InputEventKind::MouseButton &&
+        inputEvents[6].kind == overlay::InputEventKind::MouseWheel &&
+        inputEvents[7].kind == overlay::InputEventKind::NativeKeyboardMessage,
+        "presenter_owner_receives_ordered_absolute_relative_and_click_events");
+    bridge.Deactivate();
+    pass &= Check(!bridge.active() && !bridge.PushMouseButton(WM_LBUTTONUP, 0),
+        "closed_ui_returns_event_ownership_to_the_game");
+    bridge.Drain(inputEvents);
+    pass &= Check(inputEvents.size() == 2 &&
+        inputEvents[0].kind == overlay::InputEventKind::Reset &&
+        inputEvents[1].kind == overlay::InputEventKind::Focus &&
+        inputEvents[1].wParam == FALSE,
+        "ownership_transition_resets_pointer_and_keyboard_focus_on_presenter_thread");
+
+    overlay::InputState focusInput;
+    overlay::InputEventBridge focusBridge;
+    focusInput.Toggle();
+    focusInput.SetFocused(true);
+    focusBridge.Activate(15, 25);
+    pass &= Check(overlay::CaptureInputOwnership(focusInput, focusBridge).Coherent(),
+        "focused_open_panel_owns_the_input_bridge");
+    focusBridge.PushKeyboardMessage(WM_KEYDOWN, VK_SHIFT, 0);
+    focusInput.SetFocused(false);
+    focusBridge.Deactivate();
+    focusBridge.Drain(inputEvents);
+    pass &= Check(overlay::CaptureInputOwnership(focusInput, focusBridge).Coherent() &&
+        inputEvents.size() == 2 &&
+        inputEvents[0].kind == overlay::InputEventKind::Reset &&
+        inputEvents[1].kind == overlay::InputEventKind::Focus &&
+        inputEvents[1].wParam == FALSE,
+        "focus_loss_clears_queued_keydown_and_releases_imgui_keyboard_state");
+    focusInput.SetFocused(true);
+    focusBridge.Activate(15, 25);
+    focusBridge.Drain(inputEvents);
+    pass &= Check(overlay::CaptureInputOwnership(focusInput, focusBridge).Coherent() &&
+        inputEvents.back().kind == overlay::InputEventKind::Focus &&
+        inputEvents.back().wParam == TRUE,
+        "focus_regain_reestablishes_owner_thread_keyboard_input");
+    overlay::VirtualCursorPosition cursor;
+    cursor.SetAbsolute(150, -5, 100, 50);
+    pass &= Check(cursor.known() && cursor.point().x == 99 && cursor.point().y == 0,
+        "absolute_seed_is_clamped_to_the_game_client_extent");
+    cursor.ApplyRelative(-8, 10, 100, 50);
+    pass &= Check(cursor.point().x == 91 && cursor.point().y == 10,
+        "raw_relative_delta_moves_the_presenter_owned_cursor");
+    cursor.ApplyRelative(1000, -100, 100, 50);
+    pass &= Check(cursor.point().x == 99 && cursor.point().y == 0,
+        "raw_relative_motion_is_clamped_without_os_cursor_warping");
+    cursor.Reset();
+    cursor.ApplyRelative(3, -2, 100, 50);
+    pass &= Check(cursor.point().x == 53 && cursor.point().y == 23,
+        "relative_input_after_focus_reset_reseeds_from_client_center");
     pass &= Check(overlay::InputState::IsRebindMessage(WM_KEYDOWN) &&
         overlay::InputState::IsRebindMessage(WM_KEYUP) &&
         overlay::InputState::IsRebindMessage(WM_SYSKEYDOWN) &&
@@ -100,18 +184,19 @@ int main()
     pass &= Check(input.HandleToggleMessage(WM_KEYUP, VK_DELETE) && !input.visible() &&
         input.HandleToggleMessage(WM_KEYUP, VK_DELETE) && input.visible(),
         "configured_toggle_still_closes_and_opens_after_escape_cases");
+    input.SetFocused(true);
+    pass &= Check(input.ShouldOwnInput(),
+        "panel and host focus jointly establish Overlay input ownership");
     pass &= Check(input.ShouldCapture(WM_MOUSEMOVE) &&
         input.ShouldCapture(WM_LBUTTONDOWN) && input.ShouldCapture(WM_MOUSEWHEEL) &&
-        !input.ShouldCapture(WM_INPUT) && input.ShouldCaptureRawInput(true) &&
-        !input.ShouldCaptureRawInput(false), "visible_captures_mouse_only");
+        !input.ShouldCapture(WM_INPUT), "visible_captures_mouse_only");
     pass &= Check(!input.ShouldCapture(WM_KEYDOWN) &&
         !input.ShouldCapture(WM_KEYUP) && !input.ShouldCapture(WM_CHAR) &&
         !input.ShouldCapture(WM_SYSKEYDOWN), "visible_forwards_keyboard");
     pass &= Check(input.HandleToggleMessage(WM_KEYUP, VK_DELETE), "toggle_message");
     pass &= Check(!input.visible() &&
         !input.ShouldCapture(WM_KEYDOWN) &&
-        !input.ShouldCapture(WM_MOUSEMOVE) && !input.ShouldCapture(WM_INPUT) &&
-        !input.ShouldCaptureRawInput(true) && !input.ShouldCaptureRawInput(false),
+        !input.ShouldCapture(WM_MOUSEMOVE) && !input.ShouldCapture(WM_INPUT),
         "hidden_preserves_game_input");
     pass &= Check(!input.HandleToggleMessage(WM_KEYDOWN, VK_DELETE),
         "keydown_does_not_toggle");

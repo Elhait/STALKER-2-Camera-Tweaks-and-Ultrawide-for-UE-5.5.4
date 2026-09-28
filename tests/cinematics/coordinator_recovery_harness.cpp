@@ -53,16 +53,35 @@ namespace
 
     bool CheckHorPlusRecoveryActions()
     {
+        gameplay::HorPlusRecoverySample sample{};
+        sample.source = 1;
+        sample.validatedSource = 1;
+        sample.inputFov = 105.0f;
+        sample.exitNativeTarget = 90.0f;
+        sample.cachedCinematicFov = 106.688f;
+        sample.aspect = 3440.0f / 1440.0f;
+        sample.flags = 0x4;
+        sample.cameraReadable = true;
+        auto converged = sample;
+        converged.inputFov = 90.0f;
         return Check(gameplay::ResolveHorPlusRecoveryAction(
-                camera::CoordinatorState::CinematicExiting, false) ==
-                gameplay::HorPlusRecoveryAction::HoldNativePassThrough,
-                "horplus_transition_sample_is_native_passthrough") &&
+                camera::CoordinatorState::CinematicExiting, sample, false, 0.01f) ==
+                gameplay::HorPlusRecoveryAction::TransformRecoveryInterpolation,
+                "validated_gameplay_interpolation_is_transformed_without_resuming") &&
             Check(gameplay::ResolveHorPlusRecoveryAction(
-                camera::CoordinatorState::CinematicExiting, true) ==
+                camera::CoordinatorState::CinematicExiting, sample, true, 0.01f) ==
+                gameplay::HorPlusRecoveryAction::TransformRecoveryInterpolation,
+                "unconverged_sample_cannot_resume_even_with_external_recovery_flag") &&
+            Check(gameplay::ResolveHorPlusRecoveryAction(
+                camera::CoordinatorState::CinematicExiting, gameplay::HorPlusRecoverySample{}, false, 0.01f) ==
+                gameplay::HorPlusRecoveryAction::HoldNativePassThrough,
+                "ambiguous_transition_sample_remains_native_passthrough") &&
+            Check(gameplay::ResolveHorPlusRecoveryAction(
+                camera::CoordinatorState::CinematicExiting, converged, true, 0.01f) ==
                 gameplay::HorPlusRecoveryAction::ResumeGameplay,
                 "horplus_validated_recovery_resumes") &&
             Check(gameplay::ResolveHorPlusRecoveryAction(
-                camera::CoordinatorState::Gameplay, false) ==
+                camera::CoordinatorState::Gameplay, sample, false, 0.01f) ==
                 gameplay::HorPlusRecoveryAction::NotWaiting,
                 "horplus_normal_gameplay_unchanged");
     }

@@ -44,34 +44,13 @@ function Test-LocalizedPresentationPolicy([string[]] $Sources) {
     return $directUserCopy.Count -eq 0
 }
 
-function Test-NativePassThroughBoundary([string] $Source) {
-    $present = [regex]::Match($Source,
-        'HRESULT STDMETHODCALLTYPE HookPresent\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookPresent1)').Value
-    $resize = [regex]::Match($Source,
-        'HRESULT STDMETHODCALLTYPE HookResizeBuffers\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookResizeBuffers1)').Value
-    $resize1 = [regex]::Match($Source,
-        'HRESULT STDMETHODCALLTYPE HookResizeBuffers1\([\s\S]*?(?=\n\s*#if defined\(OVERLAY_PRODUCTION\))').Value
-    $window = [regex]::Match($Source,
-        'LRESULT CALLBACK OverlayWindowProc\([\s\S]*?(?=\n\s*void InstallInputHook)').Value
-    # Original resolution may precede optional work (e.g. native-only probes).
-    # Protect the native-call boundary, not the declaration's former spelling/order.
-    $optionalBodies = [regex]::Matches($Source,
-        'RunOptionalOverlayWork\(\[&\]\(\)\s*\{([\s\S]*?)\},\s*&DisableAfterOverlayException\)')
-    $nativeInsideOptional = @($optionalBodies | Where-Object {
-        $_.Groups[1].Value -match '\boriginal\s*\(|CallWindowProcW\s*\('
-    }).Count -ne 0
-    $presentNativeResultPreserved =
-        $present -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?const HRESULT result = original\(self, syncInterval, flags\);[\s\S]*?return result;' -or
-        $present -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?return original\(self, syncInterval, flags\);'
-    $resizeNativeResultsPreserved = @($resize, $resize1 | Where-Object {
-        $_ -match 'if\s*\(!original\)\s*return E_FAIL;[\s\S]*?RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?const HRESULT result = original\(self,' -and
-        $_ -match 'const HRESULT result = original\(self,[\s\S]*?RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?return result;'
-    }).Count -eq 2
-    return -not $nativeInsideOptional -and
-        $present -match 'PresentFn original[\s\S]*?RunOptionalOverlayWork\(' -and
-        $presentNativeResultPreserved -and
-        $resizeNativeResultsPreserved -and
-        $window -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?CallWindowProcW\('
+function Test-CompositionIsolationBoundary([string] $Source) {
+    return $Source -match 'DCompositionCreateDevice2' -and
+        $Source -match 'CreateTargetForHwnd' -and
+        $Source -match 'SetWinEventHook' -and
+        $Source -match 'CreateThread\(' -and
+        $Source -match 'CallWindowProcW\(' -and
+        $Source -notmatch 'HookPresent1?|HookResizeBuffers1?|HookCreateFactory|InstallExportHook|IDXGISwapChain'
 }
 
 function Test-HotkeyStableIdentity([string] $Body) {
@@ -262,12 +241,19 @@ $embeddedFontLoading = $fontLoader -match 'AddFontDefault\s*\(' -and
     $fontLoader -match '0xAC00,\s*0xD7AF' -and
     $fontLoader -notmatch '0x0020,\s*0x00FF'
 $renderer = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_runtime.cpp') -Raw
+$rendererRuntimeHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_runtime.hpp') -Raw
+$rendererState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_state.hpp') -Raw
+$rendererStateSource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_state.cpp') -Raw
+$inlineHotkeyLayout = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\inline_hotkey_layout.hpp') -Raw
 $hotkeyBindingBody = [regex]::Match($renderer,
     'void DrawHotkeyBinding\([\s\S]*?(?=\n\s*FeatureStatusTone CameraTransitionTone)').Value
 $cameraStateView = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\camera_state_view.cpp') -Raw
 $cameraStateViewHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\camera_state_view.hpp') -Raw
 $inputStateHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\input_state.hpp') -Raw
 $inputStateSource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\input_state.cpp') -Raw
+$compositionPolicy = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter_runtime_policy.hpp') -Raw
+$compositionHarness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests\overlay\composition_presenter_state_harness.cpp') -Raw
+$inputHarness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests\overlay\input_state_harness.cpp') -Raw
 $selectorDocumentationView = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_documentation_view.cpp') -Raw
 $selectorDocumentationViewHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_documentation_view.hpp') -Raw
 $tooltipRowLayout = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\tooltip_row_layout.hpp') -Raw
@@ -275,26 +261,13 @@ $placementSaveState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\over
 $selectorTooltipState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_tooltip_state.hpp') -Raw
 $imguiWidgets = Get-Content -LiteralPath (Join-Path $projectRoot 'external\imgui\imgui_widgets.cpp') -Raw
 $settingTooltipContent = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\setting_tooltip_content.hpp') -Raw
-$discoveryRuntime = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\discovery_runtime.cpp') -Raw
-$nativePassThroughBoundary = Test-NativePassThroughBoundary $discoveryRuntime
-$nativeBoundaryNegativeFixture = -not (Test-NativePassThroughBoundary @'
-HRESULT STDMETHODCALLTYPE HookPresent() { return original(); RunOptionalOverlayWork(work, fail); }
-HRESULT STDMETHODCALLTYPE HookResizeBuffers() { return original(); RunOptionalOverlayWork(work, fail); }
-LRESULT CALLBACK OverlayWindowProc() { return CallWindowProcW(proc); }
-void InstallInputHook
+$compositionRuntime = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\composition_runtime.cpp') -Raw
+$compositionRenderer = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_runtime.cpp') -Raw
+$compositionIsolationBoundary = Test-CompositionIsolationBoundary ($compositionRuntime + $compositionRenderer)
+$compositionIsolationNegativeFixture = -not (Test-CompositionIsolationBoundary @'
+HRESULT STDMETHODCALLTYPE HookPresent() { return original(); }
+HRESULT STDMETHODCALLTYPE HookResizeBuffers() { return original(); }
 '@)
-$nativeBoundaryNegativeFixture = $nativeBoundaryNegativeFixture -and -not (
-    Test-NativePassThroughBoundary ($discoveryRuntime.Replace(
-        'overlayCommandListSubmitted = g_renderer.Render(self, stateAfter);',
-        'overlayCommandListSubmitted = original(self, syncInterval, flags);')))
-$presentBody = [regex]::Match($discoveryRuntime,
-    'HRESULT STDMETHODCALLTYPE HookPresent\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookPresent1)').Value
-$wrongPresentBody = [regex]::Replace($presentBody,
-    '(const HRESULT result = original\(self, syncInterval, flags\);[\s\S]*)return result;',
-    '${1}return S_OK;')
-$wrongPresentResultSource = $discoveryRuntime.Replace($presentBody, $wrongPresentBody)
-$nativeBoundaryNegativeFixture = $nativeBoundaryNegativeFixture -and -not (
-    Test-NativePassThroughBoundary $wrongPresentResultSource)
 $mutexExceptionBoundary = $inputStateHeader -match 'void Close\(\);' -and
     $inputStateHeader -match 'HandleRebindMessage\([\s\S]*?\);' -and
     $inputStateHeader -notmatch 'HandleRebindMessage\([^;]*\)\s*noexcept' -and
@@ -324,30 +297,105 @@ $cameraStateViewBoundary = (Test-CameraStateReadOnlyBoundary $cameraStateViewHea
     $renderer -match 'DrawCameraStateView\(localization_, semantic\)' -and
     $renderer -notmatch 'void DrawCameraState\('
 $buildImGuiBody = [regex]::Match($renderer,
-    'bool Renderer::BuildImGui\(\)[\s\S]*?(?=\n\s*bool Renderer::WaitForGpu)').Value
+    'bool Renderer::BuildImGui\(\)[\s\S]*?(?=\n\s*bool Renderer::RebuildFontAtlas)').Value
 $rendererInitializeBody = [regex]::Match($renderer,
-    'bool Renderer::InitializeImpl\([\s\S]*?(?=\n\s*bool Renderer::BuildResources)').Value
+    'bool Renderer::InitializeImpl\([\s\S]*?(?=\n\s*bool Renderer::CreateGraphicsDevice)').Value
 $localizationFailClosed = $buildImGuiBody -match 'if\s*\(!localization_\.Initialize\([\s\S]*?return false;' -and
-    $rendererInitializeBody -match 'BuildImGui\(\)\)\s*return fail\(\)' -and
-    $discoveryRuntime -match 'g_renderer\.Initialize\(target\.swapchain\.Get\(\),[\s\S]{0,240}?target\.format\)' -and
-    $discoveryRuntime -match 'InstallInputHook\(target\.window\)'
+    $rendererInitializeBody -match 'BuildImGui\(\)' -and
+    $rendererInitializeBody -match 'Disable\("composition_initialization_failed"\)' -and
+    $compositionRuntime -match 'g_renderer\.Initialize\(candidate, width, height, dpi\)' -and
+    $compositionRuntime -match 'InstallInputHook\(candidate\)'
 $registryDrivenSelector = $renderer -match 'for\s*\(const auto& locale : localization_\.locales\(\)\)' -and
     $renderer -match 'ImGui::Selectable\(locale\.displayName\.data\(\)' -and
     $renderer -match 'LocalizationSelectorFont\(locale\.fontProfileCode\)' -and
     $renderer -match 'AddLocalizationSelectorFonts\(fontSizePixels\)'
 $autoSelectionSync = $renderer -match 'RuntimeSettingMutation::AutoLocale\(true\)' -and
     $renderer -match 'RequestAutoLanguageSynchronization\(window_\)' -and
-    $discoveryRuntime -match 'message == overlay::AutoLanguageSyncMessage' -and
-    $discoveryRuntime -match 'SynchronizeAutoLanguageIfConfigured\(\)' -and
+    $compositionRuntime -match 'message == overlay::AutoLanguageSyncMessage' -and
+    $compositionRuntime -match 'SynchronizeAutoLanguageIfConfigured\(\)' -and
     $languageReader -match 'PostMessageW\(window, AutoLanguageSyncMessage' -and
-    $languageReader -match 'ShouldSynchronizeAutoLanguage\(overlayVisible,' -and
-    $renderer -match 'StartupLocaleReady\(frameSettings\.overlayLocaleAuto,' -and
-    $renderer -match 'overlayLocaleAutoSynchronized'
+    $languageReader -match 'ShouldSynchronizeAutoLanguage\(overlayVisible,'
+$startupHintQueueIndex = $renderer.IndexOf('notifications_.push_back({std::move(hint), {}});')
+$startupHintDrainIndex = if ($startupHintQueueIndex -ge 0) {
+    $renderer.IndexOf('UpdateNotifications();', $startupHintQueueIndex)
+} else { -1 }
+$startupNotificationLifecycle = $startupHintQueueIndex -ge 0 -and
+    $startupHintDrainIndex -gt $startupHintQueueIndex -and
+    $renderer -match 'startupNotification_\.ShouldWakePresenter' -and
+    $renderer -match 'startupNotification_\.MarkCreated\(ready\(\), true\)' -and
+    $renderer -match 'StartupHintMustWaitForAutoLocale\(' -and
+    $rendererRuntimeHeader -match '!startupAutoLanguageSyncRequested_' -and
+    $renderer -match 'PrepareStartupNotification\(\);[\s\S]*?return rendered;' -and
+    $renderer -match 'StartPendingNotificationLifetimes\(\)' -and
+    $renderer -match 'StartNotificationLifetimeAfterCommit\(active\.lifetime' -and
+    $renderer -match 'NotificationDrawListWasSubmitted\(' -and
+    $renderer -match 'frameDrawListToken' -and
+    $renderer -match 'submittedNotificationIds_' -and
+    $rendererState -match 'class NotificationLifetime' -and
+    $rendererStateSource -match 'awaitingFirstCommit\(\) \|\|' -and
+    $rendererStateSource -match 'compositionCommitted &&' -and
+    $compositionHarness -match 'TestToastLifetimeRequiresSubmittedVisibleGeneration'
+$presenterTimerOwnership = $compositionRuntime -match 'SetTimer\(nullptr, RenderTimerSeed, interval, nullptr\)' -and
+    $compositionRuntime -match 'g_renderTimer\.Arm\(returnedId, interval\)' -and
+    $compositionRuntime -match 'g_renderTimer\.Matches\(message\.wParam\)' -and
+    $compositionRuntime -match 'g_renderTimer\.TakeForCancellation\(\)' -and
+    $compositionPolicy -match 'class PresenterTimerIdentity' -and
+    $compositionPolicy -match 'return active\(\) && id_ == messageId;' -and
+    $compositionHarness -match 'TestTimerIdentityDrivesAutonomousProgression'
+$presenterFramePacing = $compositionRuntime -match 'DCompositionWaitForCompositorClock' -and
+    $compositionRuntime -match 'FrameClockMessage' -and
+    $compositionRuntime -match 'FrameClockUnavailableMessage' -and
+    $compositionRuntime -match 'SelectPresenterFrameState\(' -and
+    $compositionRuntime -match 'FallbackAnimationIntervalMs = 16' -and
+    $compositionRuntime -notmatch 'VisibleRenderIntervalMs\s*=\s*33' -and
+    $compositionRuntime -notmatch 'g_renderer\.visible\(\)\s*\?\s*VisibleRenderIntervalMs' -and
+    $compositionPolicy -match 'enum class PresenterFrameState' -and
+    $compositionPolicy -match 'NeedsCompositorClock' -and
+    $compositionPolicy -match 'NeedsFallbackAnimationTimer' -and
+    $compositionHarness -match 'TestSemanticPresenterPacingStates' -and
+    $rendererRuntimeHeader -notmatch 'surfaceDirty_\s*\|\|\s*visible\(\)'
+$inputRedrawScheduling = $compositionRuntime -match 'bridge\.PushRelativeMouseMotion[\s\S]*?RequestOverlayRedraw\(\)' -and
+    $compositionRuntime -match 'PushMouseButton\(message, wParam\)\) RequestOverlayRedraw\(\)' -and
+    $compositionRuntime -match 'PushKeyboardMessage\([\s\S]*?RequestOverlayRedraw\(\)' -and
+    $compositionRuntime -match 'class PresenterWakeGate|g_redrawWakePending\.TrySchedule\(\)' -and
+    $compositionHarness -match 'TestInputEventsScheduleOneOwnerWake'
+$minimizeRestoreRouting = $compositionRuntime -match 'SelectPresenterRoute\(' -and
+    $compositionRuntime -match 'g_renderer\.hasSurfaceGeneration\(\)' -and
+    $compositionRuntime -match 'PresenterRoute::UpdateGeometry' -and
+    $compositionPolicy -match 'if \(!hasSurfaceGeneration\)' -and
+    $renderer -match 'state_\.SetMinimized\(false\)' -and
+    $compositionHarness -match 'TestProductionPresenterRoutingAcrossRestore' -and
+    $compositionHarness -match 'restore can stage, commit and publish a new valid surface generation'
+$deviceRecoveryInputOwnership = $renderer -match 'CaptureInputOwnership\(input,' -and
+    $renderer -match 'InputOwnershipUnchanged\(inputOwnershipBefore, input,' -and
+    ([regex]::Match($renderer,
+        'bool Renderer::RecoverGraphicsDevice\([\s\S]*?(?=\n\s*bool Renderer::BuildImGui)').Value -notmatch
+        'GetInputState\(\)\.Close\(\)') -and
+    $inputStateSource -match 'CaptureInputOwnership\(' -and
+    $compositionHarness -match 'TestDeviceRecoveryPreservesVisibleAndHiddenInputOwnership'
+$keyboardFocusLifecycle = $inputStateHeader -match 'NativeKeyboardMessage,\s*Focus,' -and
+    $inputStateSource -match 'events_\[1\] = \{InputEventKind::Focus, 0, FALSE\}' -and
+    $renderer -match 'io\.AddFocusEvent\(false\)' -and
+    $renderer -match 'case InputEventKind::Focus:' -and
+    $compositionRuntime -match 'input\.SetFocused\(false\)' -and
+    $inputHarness -match 'ownership_transition_resets_pointer_and_keyboard_focus_on_presenter_thread'
+$inputOwnerBoundary = $compositionRuntime -match 'bridge\.PushRelativeMouseMotion' -and
+    $compositionRuntime -match 'GetInputEventBridge\(\)\.PushKeyboardMessage' -and
+    $compositionRuntime -notmatch 'ImGui_ImplWin32_WndProcHandler' -and
+    $renderer -match 'ImGui_ImplWin32_WndProcHandler\(window_' -and
+    $renderer -match 'ApplyInputEvents\(width, height\)' -and
+    $renderer -match 'BeginImGuiFrame\(width, height\)' -and
+    $renderer -notmatch 'ImGui_ImplWin32_NewFrame\(' -and
+    $renderer -notmatch 'GetCursorPos\(' -and
+    $inputStateSource -match 'if \(!active\(\) \|\| \(x == 0 && y == 0\)\) return false;' -and
+    $compositionRuntime -notmatch 'ClipCursor\('
 $inlineHotkeyRenderBody = [regex]::Match($renderer,
     'void DrawInlineHotkeyMessage\([\s\S]*?(?=\n\s*void DrawNotificationHeader)').Value
-$notificationInlineWrap = $inlineHotkeyRenderBody -match 'afterWidth > ImGui::GetContentRegionAvail\(\)\.x' -and
-    $inlineHotkeyRenderBody -match 'ImGui::NewLine\(\)' -and
-    $inlineHotkeyRenderBody -match 'ImGui::TextWrapped\("%\.\*s",'
+$notificationInlineWrap = $inlineHotkeyRenderBody -match 'LeadingPunctuationBytes\s*\(afterKey\)' -and
+    $inlineHotkeyRenderBody -match 'TrimLeadingWhitespace\(' -and
+    $inlineHotkeyRenderBody -match 'ImGui::TextWrapped\("%\.\*s",' -and
+    $inlineHotkeyRenderBody -notmatch 'afterWidth > ImGui::GetContentRegionAvail\(\)\.x' -and
+    $inlineHotkeyLayout -match 'constexpr std::size_t LeadingPunctuationBytes'
 $canonicalSettingOptionNames = $settingTooltipContent -match 'AspectRecalculation' -and
     $settingTooltipContent -match 'HorPlus' -and $settingTooltipContent -match 'Forced16x9' -and
     $settingTooltipContent -match 'GameplayHorPlus' -and $settingTooltipContent -match 'Adaptive' -and
@@ -495,13 +543,18 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
     $legacyReferences.Count -or $filesystemLocaleReferences.Count -or -not $resourcePresent -or
     -not $embeddedFontLoading -or -not $integerFontSizing -or -not $cameraStateViewBoundary -or -not $genericManager -or
     -not $registryDrivenSelector -or $rawRendererKeys.Count -or $obsolete.Count -or
-    -not $autoSelectionSync -or -not $dialogueModeIdentifiers -or
+    -not $autoSelectionSync -or -not $startupNotificationLifecycle -or
+    -not $presenterTimerOwnership -or -not $presenterFramePacing -or -not $inputRedrawScheduling -or
+    -not $minimizeRestoreRouting -or -not $deviceRecoveryInputOwnership -or
+    -not $keyboardFocusLifecycle -or
+    -not $inputOwnerBoundary -or
+    -not $dialogueModeIdentifiers -or
     -not $canonicalSettingOptionNames -or -not $selectorTooltipColumns -or
     -not $examplesGeometryContract -or -not $selectorTooltipSpacingScope -or
     -not $selectorTooltipInteraction -or -not $selectorCaptureNegativeFixture -or
     -not $cameraStateNegativeFixture -or -not $localizedPresentationPolicy -or
-    -not $presentationOwnership -or -not $nativePassThroughBoundary -or
-    -not $nativeBoundaryNegativeFixture -or
+    -not $presentationOwnership -or -not $compositionIsolationBoundary -or
+    -not $compositionIsolationNegativeFixture -or
     -not $mutexExceptionBoundary -or
     -not $localizationFailClosed -or
     -not $namedVisualContracts -or
@@ -513,7 +566,7 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
     -not $inlineHotkeyPresentation -or -not $notificationInlineWrap -or
     -not $notificationHeader -or
     -not $localizedHotkeyCopy -or -not $overlayTooltipCopy -or
-    $unexpectedDirectUiText.Count -or $pocText.Count -ne 4) {
+    $unexpectedDirectUiText.Count -or $pocText.Count -ne 0) {
     Write-Output ('registry_valid=' + $registryValid + ' locale_count=' + $descriptors.Count +
         ' canonical=' + $canonicalCode + ' catalog_errors=' + ($catalogReadErrors -join '|'))
     Write-Output ('canonical_missing=' + ($missing -join ',') + ' canonical_extra=' + ($extra -join ',') +
@@ -523,12 +576,21 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
     Write-Output ('legacy_references=' + $legacyReferences.Count + ' filesystem_locale_refs=' +
         $filesystemLocaleReferences.Count + ' embedded_resources=' + $resourcePresent +
         ' generic_manager=' + $genericManager + ' registry_selector=' + $registryDrivenSelector +
-        ' auto_selection_sync=' + $autoSelectionSync + ' dialogue_ids=' + $dialogueModeIdentifiers +
+        ' auto_selection_sync=' + $autoSelectionSync +
+        ' startup_notification_lifecycle=' + $startupNotificationLifecycle +
+        ' presenter_timer_ownership=' + $presenterTimerOwnership +
+        ' presenter_frame_pacing=' + $presenterFramePacing +
+        ' input_redraw_scheduling=' + $inputRedrawScheduling +
+        ' minimize_restore_routing=' + $minimizeRestoreRouting +
+        ' device_recovery_input_ownership=' + $deviceRecoveryInputOwnership +
+        ' keyboard_focus_lifecycle=' + $keyboardFocusLifecycle +
+        ' input_owner_boundary=' + $inputOwnerBoundary +
+        ' dialogue_ids=' + $dialogueModeIdentifiers +
         ' canonical_setting_option_names=' + $canonicalSettingOptionNames +
         ' selector_tooltip_columns=' + $selectorTooltipColumns +
         ' examples_geometry_contract=' + $examplesGeometryContract +
-        ' native_pass_through_boundary=' + $nativePassThroughBoundary +
-        ' native_boundary_negative_fixture=' + $nativeBoundaryNegativeFixture +
+        ' composition_isolation_boundary=' + $compositionIsolationBoundary +
+        ' composition_isolation_negative_fixture=' + $compositionIsolationNegativeFixture +
         ' mutex_exception_boundary=' + $mutexExceptionBoundary +
         ' localization_fail_closed=' + $localizationFailClosed +
         ' named_visual_contracts=' + $namedVisualContracts +

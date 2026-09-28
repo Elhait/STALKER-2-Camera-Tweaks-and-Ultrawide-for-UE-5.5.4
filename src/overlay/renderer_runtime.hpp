@@ -1,23 +1,31 @@
 #pragma once
 
-#include "discovery_evidence.hpp"
-#include "renderer_state.hpp"
+#include "composition_presenter_state.hpp"
 #include "placement_save_state.hpp"
+#include "renderer_state.hpp"
+#include "presentation_contracts.hpp"
+#include "inline_hotkey_layout.hpp"
+#include "input_state.hpp"
 #include "localization_manager.hpp"
+#include "imgui_d3d11_renderer.hpp"
 #include "../plugin/runtime_settings.hpp"
 
+#include <imgui.h>
+
 #include <Windows.h>
-#include <d3d12.h>
-#include <dxgi1_4.h>
+#include <d3d11.h>
+#include <dcomp.h>
+#include <dxgi1_2.h>
+#include <wrl/client.h>
 
 #include <atomic>
-#include <cstdint>
+#include <array>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
-
-struct ImGui_ImplDX12_InitInfo;
 
 namespace overlay
 {
@@ -27,101 +35,117 @@ namespace overlay
         using LogFunction = void(*)(const std::string&);
 
         void SetLogger(LogFunction logger) noexcept { logger_ = logger; }
-        bool Initialize(IDXGISwapChain* swapchain, ID3D12Device* device,
-            ID3D12CommandQueue* queue, HWND window, UINT bufferCount,
-            DXGI_FORMAT format) noexcept;
-        void BeforeSwapchainReplacement(HWND window);
-        void OnSwapchainCreationFailure(HWND window);
-        bool OwnsSwapchain(IDXGISwapChain* swapchain) const noexcept;
-        bool OwnsWindow(HWND window) const noexcept { return window_ == window && window != nullptr; }
+        bool Initialize(HWND window, UINT width, UINT height, UINT dpi = 96) noexcept;
+        bool OnWindowGeometry(HWND window, UINT width, UINT height,
+            bool minimized, UINT dpi = 96) noexcept;
+        bool Render() noexcept;
+        bool OwnsWindow(HWND window) const noexcept
+        {
+            return window_ == window && window != nullptr;
+        }
         bool ready() const noexcept
         {
-            return lifecycle_.state() == RendererState::Ready;
+            return state_.phase() == PresenterPhase::Ready;
         }
-        bool needsRenderWork() const noexcept
+        bool hasSurfaceGeneration() const noexcept
         {
-            const auto state = lifecycle_.state();
-            return state == RendererState::Ready || state == RendererState::Resizing;
+            return state_.generation() != 0 &&
+                state_.phase() != PresenterPhase::Disabled;
         }
-        void BeforeResize(IDXGISwapChain* swapchain);
-        void OnResizeResult(IDXGISwapChain* swapchain, bool success,
-            double originalResizeMs, double totalResizeHookMs,
-            UINT queueCount = 0, IUnknown* const* presentQueues = nullptr);
-        bool Render(IDXGISwapChain* swapchain, AssociationState association) noexcept;
+        bool disabled() const noexcept
+        {
+            return state_.phase() == PresenterPhase::Disabled;
+        }
         void SetVisible(bool visible) noexcept
         {
             visible_.store(visible, std::memory_order_release);
+            surfaceDirty_ = true;
         }
         bool visible() const noexcept
         {
             return visible_.load(std::memory_order_acquire);
         }
-        bool disabled() const noexcept
+        bool needsRenderWork() const noexcept
         {
-            return lifecycle_.state() == RendererState::Disabled;
+            return state_.phase() == PresenterPhase::Ready &&
+                (surfaceDirty_ ||
+                    startupNotification_.ShouldWakePresenter(
+                        state_.phase() == PresenterPhase::Ready) &&
+                        !startupAutoLanguageSyncRequested_ ||
+                    !notifications_.empty());
         }
+        bool notificationAnimationActive() const noexcept
+        {
+            return state_.phase() == PresenterPhase::Ready &&
+                !notifications_.empty();
+        }
+        void RequestRedraw() noexcept { surfaceDirty_ = true; }
+        bool RebindWindow(HWND window, UINT width, UINT height,
+            UINT dpi = 96) noexcept;
         void Disable(const char* reason) noexcept;
         void Shutdown() noexcept;
 
     private:
-#ifdef OVERLAY_RENDERER_LIFETIME_TEST
-        friend struct RendererLifetimeFixture;
-#endif
-        struct FrameContext
-        {
-            ID3D12CommandAllocator* allocator{};
-            std::uint64_t fenceValue{};
-        };
-
-        bool InitializeImpl(IDXGISwapChain* swapchain, ID3D12Device* device,
-            ID3D12CommandQueue* queue, HWND window, UINT bufferCount,
-            DXGI_FORMAT format);
-        void RenderImpl(IDXGISwapChain* swapchain, AssociationState association,
-            bool& commandListSubmitted);
-        void FailAfterException() noexcept;
-        bool BuildResources(IDXGISwapChain* swapchain);
+        bool InitializeImpl(HWND window, UINT width, UINT height, UINT dpi);
+        bool CreateGraphicsDevice();
+        bool CreateCompositionTarget(HWND window);
+        bool CreateSurface(UINT width, UINT height,
+            Microsoft::WRL::ComPtr<IDCompositionSurface>& surface) noexcept;
+        bool RecoverGraphicsDevice(UINT width, UINT height) noexcept;
         bool BuildImGui();
+        void BeginImGuiFrame(UINT width, UINT height) noexcept;
         bool RebuildFontAtlas(int fontSizePixels,
             std::string_view fontProfileCode);
-        bool WaitForGpu() noexcept;
-        bool WaitForFrame(FrameContext& frame) noexcept;
-        void ReleaseBackbuffers() noexcept;
+        bool RenderImpl(IDCompositionSurface* targetSurface,
+            UINT width, UINT height);
+        bool DrawImGuiSurface(IDCompositionSurface* targetSurface,
+            UINT width, UINT height, const ImDrawData* drawData,
+            presentation::Rect updateRect) noexcept;
+        bool ApplyWindowDpi(UINT dpi) noexcept;
+        void FailAfterException() noexcept;
         void Log(const std::string& message) const;
         void UpdateNotifications() noexcept;
+        void PrepareStartupNotification() noexcept;
+        void EnsureStartupNotification(
+            const plugin::RuntimeSettingsSnapshot& settings) noexcept;
         void DrawNotifications();
-        static void AllocateSrv(ImGui_ImplDX12_InitInfo* info,
-            D3D12_CPU_DESCRIPTOR_HANDLE* cpu,
-            D3D12_GPU_DESCRIPTOR_HANDLE* gpu);
-        static void FreeSrv(ImGui_ImplDX12_InitInfo* info,
-            D3D12_CPU_DESCRIPTOR_HANDLE cpu,
-            D3D12_GPU_DESCRIPTOR_HANDLE gpu);
+        void StartPendingNotificationLifetimes() noexcept;
+        void ResetComposition() noexcept;
+        void DetachImGui() noexcept;
+        void ApplyInputEvents(UINT width, UINT height);
 
-        RendererLifecycle lifecycle_;
+        struct ActiveNotification
+        {
+            plugin::OverlayNotification notification;
+            NotificationLifetime lifetime;
+            std::uintptr_t frameDrawListToken{};
+        };
+
+        CompositionPresenterState state_;
         LocalizationManager localization_;
         LogFunction logger_{};
-        IDXGISwapChain* swapchain_{};
-        std::uintptr_t swapchainIdentity_{};
-        ID3D12Device* device_{};
-        ID3D12CommandQueue* queue_{};
+        Microsoft::WRL::ComPtr<ID3D11Device> device_;
+        Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice_;
+        Microsoft::WRL::ComPtr<IDCompositionDesktopDevice> compositionDevice_;
+        Microsoft::WRL::ComPtr<IDCompositionTarget> compositionTarget_;
+        Microsoft::WRL::ComPtr<IDCompositionVisual2> visual_;
+        Microsoft::WRL::ComPtr<IDCompositionSurface> surface_;
+        ImGuiD3D11Renderer imguiRenderer_;
         HWND window_{};
-        DXGI_FORMAT format_{DXGI_FORMAT_R8G8B8A8_UNORM};
-        UINT bufferCount_{};
-        UINT rtvStride_{};
-        ID3D12DescriptorHeap* rtvHeap_{};
-        ID3D12DescriptorHeap* srvHeap_{};
-        ID3D12GraphicsCommandList* commandList_{};
-        ID3D12Fence* fence_{};
-        HANDLE fenceEvent_{};
-        std::uint64_t nextFenceValue_{};
-        bool gpuWaitFailed_{};
-        bool gpuWorkSubmitted_{};
-        std::vector<ID3D12Resource*> backbuffers_;
-        std::vector<FrameContext> frames_;
+        UINT surfaceWidth_{};
+        UINT surfaceHeight_{};
+        UINT windowDpi_{96};
+        float dpiScale_{1.0f};
+        std::uint64_t surfaceGeneration_{};
+        bool compositionReady_{};
         bool imguiReady_{};
         bool imguiContextCreated_{};
         int activeFontSizePixels_{};
-        int pendingFontSizePixels_{};
+        int activeFontSetting_{};
         std::string_view activeFontProfileCode_{"base"};
+        std::string activeLocaleCode_{"en"};
+        ImGuiStyle baseStyle_{};
+        bool baseStyleCaptured_{};
 #ifdef OVERLAY_FONT_RASTERIZATION_EXPERIMENT
         int activeFontRasterizationMode_{};
 #endif
@@ -136,17 +160,24 @@ namespace overlay
         bool overlayPlacementLoaded_{};
         bool overlayPositionObserved_{};
         PlacementSaveState placementSaveState_;
-        StartupHintGate startupHintGate_;
+        StartupNotificationState startupNotification_;
         bool startupAutoLanguageSyncRequested_{};
         bool startupAutoLanguageSyncRequestFailureLogged_{};
-        bool resourcesReady_{};
-        UINT resizeDepth_{};
+        bool startupHintFrameLogged_{};
+        bool firstRawMouseAppliedLogged_{};
+        bool firstAbsoluteMouseAppliedLogged_{};
+        bool firstFrameLogged_{};
+        VirtualCursorPosition virtualCursorPosition_;
+        std::chrono::steady_clock::time_point lastImGuiFrameTime_{};
+        bool hasImGuiFrameTime_{};
+        bool surfaceDirty_{true};
+        bool forceFullDamage_{true};
+        presentation::DamageTracker damageTracker_;
+        int pendingFontSizePixels_{};
         std::atomic<bool> visible_{};
-        double resizePreWaitMs_{};
-        double resizeReleaseMs_{};
-        double originalResizeMs_{};
-        double totalResizeHookMs_{};
-        std::chrono::steady_clock::time_point resizeResultTime_{};
-        std::vector<plugin::OverlayNotification> notifications_;
+        std::vector<ActiveNotification> notifications_;
+        std::vector<NotificationDrawListEvidence> submittedDrawLists_;
+        std::array<std::uint64_t, 3> submittedNotificationIds_{};
+        std::size_t submittedNotificationCount_{};
     };
 }
