@@ -30,10 +30,24 @@ namespace overlay
         bool Initialize(IDXGISwapChain* swapchain, ID3D12Device* device,
             ID3D12CommandQueue* queue, HWND window, UINT bufferCount,
             DXGI_FORMAT format) noexcept;
-        void BeforeResize();
-        void OnResizeResult(bool success, double originalResizeMs,
-            double totalResizeHookMs);
-        void Render(IDXGISwapChain* swapchain, AssociationState association) noexcept;
+        void BeforeSwapchainReplacement(HWND window);
+        void OnSwapchainCreationFailure(HWND window);
+        bool OwnsSwapchain(IDXGISwapChain* swapchain) const noexcept;
+        bool OwnsWindow(HWND window) const noexcept { return window_ == window && window != nullptr; }
+        bool ready() const noexcept
+        {
+            return lifecycle_.state() == RendererState::Ready;
+        }
+        bool needsRenderWork() const noexcept
+        {
+            const auto state = lifecycle_.state();
+            return state == RendererState::Ready || state == RendererState::Resizing;
+        }
+        void BeforeResize(IDXGISwapChain* swapchain);
+        void OnResizeResult(IDXGISwapChain* swapchain, bool success,
+            double originalResizeMs, double totalResizeHookMs,
+            UINT queueCount = 0, IUnknown* const* presentQueues = nullptr);
+        bool Render(IDXGISwapChain* swapchain, AssociationState association) noexcept;
         void SetVisible(bool visible) noexcept
         {
             visible_.store(visible, std::memory_order_release);
@@ -50,6 +64,9 @@ namespace overlay
         void Shutdown() noexcept;
 
     private:
+#ifdef OVERLAY_RENDERER_LIFETIME_TEST
+        friend struct RendererLifetimeFixture;
+#endif
         struct FrameContext
         {
             ID3D12CommandAllocator* allocator{};
@@ -59,7 +76,8 @@ namespace overlay
         bool InitializeImpl(IDXGISwapChain* swapchain, ID3D12Device* device,
             ID3D12CommandQueue* queue, HWND window, UINT bufferCount,
             DXGI_FORMAT format);
-        void RenderImpl(IDXGISwapChain* swapchain, AssociationState association);
+        void RenderImpl(IDXGISwapChain* swapchain, AssociationState association,
+            bool& commandListSubmitted);
         void FailAfterException() noexcept;
         bool BuildResources(IDXGISwapChain* swapchain);
         bool BuildImGui();
@@ -82,6 +100,7 @@ namespace overlay
         LocalizationManager localization_;
         LogFunction logger_{};
         IDXGISwapChain* swapchain_{};
+        std::uintptr_t swapchainIdentity_{};
         ID3D12Device* device_{};
         ID3D12CommandQueue* queue_{};
         HWND window_{};
@@ -94,6 +113,8 @@ namespace overlay
         ID3D12Fence* fence_{};
         HANDLE fenceEvent_{};
         std::uint64_t nextFenceValue_{};
+        bool gpuWaitFailed_{};
+        bool gpuWorkSubmitted_{};
         std::vector<ID3D12Resource*> backbuffers_;
         std::vector<FrameContext> frames_;
         bool imguiReady_{};
@@ -119,6 +140,7 @@ namespace overlay
         bool startupAutoLanguageSyncRequested_{};
         bool startupAutoLanguageSyncRequestFailureLogged_{};
         bool resourcesReady_{};
+        UINT resizeDepth_{};
         std::atomic<bool> visible_{};
         double resizePreWaitMs_{};
         double resizeReleaseMs_{};

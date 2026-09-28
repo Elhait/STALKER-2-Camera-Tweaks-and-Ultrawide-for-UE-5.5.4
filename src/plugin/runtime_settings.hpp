@@ -301,26 +301,35 @@ namespace plugin
                     std::holds_alternative<int>(mutation.value));
             const auto* callbacks = PublishedCallbacks();
             if (!compatible || !callbacks || !callbacks->handler) return {};
-            return callbacks->handler(mutation, callbacks->userData);
+            // Callbacks are not noexcept (locking/persistence may throw). Keep
+            // the API's native-safe contract without bypassing caller boundaries.
+            try { return callbacks->handler(mutation, callbacks->userData); }
+            catch (...) { return {}; }
         }
         bool Snapshot(RuntimeSettingsSnapshot& snapshot) const noexcept
         {
             const auto* callbacks = PublishedCallbacks();
-            return callbacks && callbacks->snapshotHandler &&
-                callbacks->snapshotHandler(snapshot, callbacks->snapshotUserData);
+            try {
+                return callbacks && callbacks->snapshotHandler &&
+                    callbacks->snapshotHandler(snapshot, callbacks->snapshotUserData);
+            } catch (...) { return false; }
         }
         bool SemanticSnapshot(OverlaySemanticSnapshot& snapshot) const noexcept
         {
             const auto* callbacks = PublishedCallbacks();
-            return callbacks && callbacks->semanticSnapshotHandler &&
-                callbacks->semanticSnapshotHandler(snapshot,
-                    callbacks->semanticSnapshotUserData);
+            try {
+                return callbacks && callbacks->semanticSnapshotHandler &&
+                    callbacks->semanticSnapshotHandler(snapshot,
+                        callbacks->semanticSnapshotUserData);
+            } catch (...) { return false; }
         }
         bool Persist(const RuntimeSettingMutation& mutation) const noexcept
         {
             const auto* callbacks = PublishedCallbacks();
-            return callbacks && callbacks->persistHandler &&
-                callbacks->persistHandler(mutation, callbacks->persistUserData);
+            try {
+                return callbacks && callbacks->persistHandler &&
+                    callbacks->persistHandler(mutation, callbacks->persistUserData);
+            } catch (...) { return false; }
         }
 
     private:

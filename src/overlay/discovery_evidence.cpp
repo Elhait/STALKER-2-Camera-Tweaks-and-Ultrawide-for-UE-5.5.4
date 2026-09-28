@@ -4,7 +4,12 @@
 
 namespace overlay
 {
-    bool FactoryEvidenceStore::ObserveFactory(std::uintptr_t object) noexcept
+    bool IsSuccessfulPresentResult(std::int32_t result) noexcept
+    {
+        return result == 0; // S_OK
+    }
+
+    bool FactoryEvidenceStore::ObserveFactory(std::uintptr_t object)
     {
         if (!object) return false;
         const auto found = std::find_if(records_.begin(), records_.end(),
@@ -60,7 +65,7 @@ namespace overlay
     }
 
     bool QueueEvidenceStore::ObserveCandidate(std::uintptr_t swapchain,
-        std::uintptr_t device, std::uintptr_t queue, std::uint32_t type) noexcept
+        std::uintptr_t device, std::uintptr_t queue, std::uint32_t type)
     {
         if (!swapchain || !device || !queue) return false;
         const auto duplicate = std::find_if(candidates_.begin(), candidates_.end(),
@@ -85,7 +90,10 @@ namespace overlay
     void QueueEvidenceStore::BeginResize(std::uintptr_t swapchain) noexcept
     {
         for (auto& value : candidates_)
-            if (value.swapchain == swapchain) value.resizePending = true;
+            if (value.swapchain == swapchain) {
+                value.resizePending = true;
+                value.presents = 0;
+            }
     }
 
     void QueueEvidenceStore::CompleteResize(std::uintptr_t swapchain,
@@ -136,5 +144,24 @@ namespace overlay
     bool QueueEvidenceStore::HasSufficientAssociation(std::uintptr_t swapchain) const noexcept
     {
         return State(swapchain) == AssociationState::Supported;
+    }
+
+    std::uint32_t QueueEvidenceStore::SuccessfulPresentCount(
+        std::uintptr_t swapchain) const noexcept
+    {
+        if (CandidateCount(swapchain) != 1) return 0;
+        const auto found = std::find_if(candidates_.begin(), candidates_.end(),
+            [swapchain](const QueueEvidence& value) {
+                return value.swapchain == swapchain;
+            });
+        return found == candidates_.end() || found->resizePending ? 0 : found->presents;
+    }
+
+    bool QueueEvidenceStore::HasStableAssociation(std::uintptr_t swapchain,
+        std::uint32_t requiredSuccessfulPresents) const noexcept
+    {
+        return requiredSuccessfulPresents != 0 &&
+            State(swapchain) == AssociationState::Supported &&
+            SuccessfulPresentCount(swapchain) >= requiredSuccessfulPresents;
     }
 }

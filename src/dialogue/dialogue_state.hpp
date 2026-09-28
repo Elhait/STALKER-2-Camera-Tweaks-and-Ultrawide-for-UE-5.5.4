@@ -97,9 +97,19 @@ namespace dialogue
     class PostCinematicRecoveryExclusion
     {
     public:
+        enum class Observation : std::uint8_t
+        {
+            Inactive,
+            Suppressed,
+            Recovered,
+            Cancelled,
+        };
+
         void Arm(float targetFov) noexcept;
         bool Reset() noexcept;
         bool IsActive() const noexcept;
+        Observation ObserveValidated(std::uintptr_t source, float currentFov,
+            float epsilon) noexcept;
         bool Observe(std::uintptr_t source, float currentFov, float epsilon) noexcept;
 
     private:

@@ -49,6 +49,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_dx12.h"
+#include "imgui_impl_dx12_safety.h"
 
 // DirectX
 #include <d3d12.h>
@@ -88,6 +89,7 @@ struct ImGui_ImplDX12_Data
 
     ImGui_ImplDX12_Texture      FontTexture;
     bool                        LegacySingleDescriptorUsed;
+    bool                        UploadCompletionUnknown; // Terminal upload; never retry.
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
 };
@@ -177,15 +179,18 @@ static inline void SafeRelease(T*& res)
 }
 
 // Render function
-void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list)
+bool ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list, int frame_slot)
 {
     // Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
-        return;
+        return true;
 
     // FIXME: We are assuming that this only gets called once per frame!
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    bd->frameIndex = bd->frameIndex + 1;
+    if (!bd || !bd->pFrameResources || !bd->pPipelineState || !bd->pRootSignature ||
+        !bd->FontTexture.pTextureResource || !bd->numFramesInFlight ||
+        frame_slot < -1 || frame_slot >= (int)bd->numFramesInFlight) return false;
+    bd->frameIndex = frame_slot >= 0 ? (UINT)frame_slot : bd->frameIndex + 1;
     ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[bd->frameIndex % bd->numFramesInFlight];
 
     // Create and grow vertex/index buffers if needed
@@ -208,7 +213,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
         if (bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&fr->VertexBuffer)) < 0)
-            return;
+            return false;
     }
     if (fr->IndexBuffer == nullptr || fr->IndexBufferSize < draw_data->TotalIdxCount)
     {
@@ -229,7 +234,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
         if (bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&fr->IndexBuffer)) < 0)
-            return;
+            return false;
     }
 
     // Upload vertex/index data into a single contiguous GPU buffer
@@ -237,9 +242,11 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     void* vtx_resource, *idx_resource;
     D3D12_RANGE range = { 0, 0 };
     if (fr->VertexBuffer->Map(0, &range, &vtx_resource) != S_OK)
-        return;
-    if (fr->IndexBuffer->Map(0, &range, &idx_resource) != S_OK)
-        return;
+        return false;
+    if (fr->IndexBuffer->Map(0, &range, &idx_resource) != S_OK) {
+        fr->VertexBuffer->Unmap(0, &range);
+        return false;
+    }
     ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
     ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -312,9 +319,10 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         global_vtx_offset += draw_list->VtxBuffer.Size;
     }
     platform_io.Renderer_RenderState = nullptr;
+    return true;
 }
 
-static void ImGui_ImplDX12_CreateFontsTexture()
+static bool ImGui_ImplDX12_CreateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
@@ -322,6 +330,8 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    if (!pixels || width <= 0 || height <= 0) return false;
+    ImGui_ImplDX12_FontUpload upload;
 
     // Upload texture to graphics system
     ImGui_ImplDX12_Texture* font_tex = &bd->FontTexture;
@@ -345,9 +355,9 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        ID3D12Resource* pTexture = nullptr;
-        bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
-            D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pTexture));
+        auto& pTexture = upload.texture;
+        if (FAILED(bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
+            D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pTexture)))) return false;
 
         UINT upload_pitch = (width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
         UINT upload_size = height * upload_pitch;
@@ -367,15 +377,15 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-        ID3D12Resource* uploadBuffer = nullptr;
+        auto& uploadBuffer = upload.buffer;
         HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
             D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
-        IM_ASSERT(SUCCEEDED(hr));
+        if (FAILED(hr)) return false;
 
         void* mapped = nullptr;
         D3D12_RANGE range = { 0, upload_size };
         hr = uploadBuffer->Map(0, &range, &mapped);
-        IM_ASSERT(SUCCEEDED(hr));
+        if (FAILED(hr) || !mapped) return false;
         for (int y = 0; y < height; y++)
             memcpy((void*) ((uintptr_t) mapped + y * upload_pitch), pixels + y * width * 4, width * 4);
         uploadBuffer->Unmap(0, &range);
@@ -404,40 +414,31 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-        ID3D12Fence* fence = nullptr;
+        auto& fence = upload.fence;
         hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-        IM_ASSERT(SUCCEEDED(hr));
+        if (FAILED(hr)) return false;
 
-        HANDLE event = ::CreateEvent(0, 0, 0, 0);
-        IM_ASSERT(event != nullptr);
+        upload.event = ::CreateEvent(0, 0, 0, 0);
+        if (!upload.event) return false;
 
-        ID3D12CommandAllocator* cmdAlloc = nullptr;
+        auto& cmdAlloc = upload.allocator;
         hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
-        IM_ASSERT(SUCCEEDED(hr));
+        if (FAILED(hr)) return false;
 
-        ID3D12GraphicsCommandList* cmdList = nullptr;
+        auto& cmdList = upload.list;
         hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc, nullptr, IID_PPV_ARGS(&cmdList));
-        IM_ASSERT(SUCCEEDED(hr));
+        if (FAILED(hr)) return false;
 
         cmdList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, nullptr);
         cmdList->ResourceBarrier(1, &barrier);
 
         hr = cmdList->Close();
-        IM_ASSERT(SUCCEEDED(hr));
+        if (FAILED(hr)) return false;
 
-        ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
-        cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
-        hr = cmdQueue->Signal(fence, 1);
-        IM_ASSERT(SUCCEEDED(hr));
-
-        fence->SetEventOnCompletion(1, event);
-        ::WaitForSingleObject(event, INFINITE);
-
-        cmdList->Release();
-        cmdAlloc->Release();
-        ::CloseHandle(event);
-        fence->Release();
-        uploadBuffer->Release();
+        if (!upload.Submit(bd->pCommandQueue)) {
+            bd->UploadCompletionUnknown = upload.submitted && !upload.completed;
+            return false;
+        }
 
         // Create texture view
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -450,16 +451,18 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         bd->pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, font_tex->hFontSrvCpuDescHandle);
         SafeRelease(font_tex->pTextureResource);
         font_tex->pTextureResource = pTexture;
+        pTexture = nullptr; // Transfer the completed texture to backend ownership.
     }
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)font_tex->hFontSrvGpuDescHandle.ptr);
+    return true;
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    if (!bd || !bd->pd3dDevice)
+    if (!bd || !bd->pd3dDevice || bd->UploadCompletionUnknown)
         return false;
     if (bd->pPipelineState)
         ImGui_ImplDX12_InvalidateDeviceObjects();
@@ -543,8 +546,9 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, nullptr) != S_OK)
             return false;
 
-        bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
+        const HRESULT root_result = bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
         blob->Release();
+        if (FAILED(root_result)) return false;
     }
 
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
@@ -685,9 +689,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (result_pipeline_state != S_OK)
         return false;
 
-    ImGui_ImplDX12_CreateFontsTexture();
-
-    return true;
+    return ImGui_ImplDX12_CreateFontsTexture();
 }
 
 void    ImGui_ImplDX12_InvalidateDeviceObjects()
@@ -709,7 +711,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     SafeRelease(font_tex->pTextureResource);
     io.Fonts->SetTexID(0); // We copied bd->hFontSrvGpuDescHandle to io.Fonts->TexID so let's clear that as well.
 
-    for (UINT i = 0; i < bd->numFramesInFlight; i++)
+    for (UINT i = 0; bd->pFrameResources && i < bd->numFramesInFlight; i++)
     {
         ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[i];
         SafeRelease(fr->IndexBuffer);
@@ -768,7 +770,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 
     // Create buffers with a default size (they will later be grown as needed)
     bd->frameIndex = UINT_MAX;
-    bd->pFrameResources = new ImGui_ImplDX12_RenderBuffers[bd->numFramesInFlight];
+    bd->pFrameResources = new ImGui_ImplDX12_RenderBuffers[bd->numFramesInFlight]{};
     for (int i = 0; i < (int)bd->numFramesInFlight; i++)
     {
         ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[i];
@@ -808,14 +810,19 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
 }
 #endif
 
-void ImGui_ImplDX12_Shutdown()
+void ImGui_ImplDX12_Shutdown(bool retain_gpu_resources)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
     // Clean up windows and device objects
-    ImGui_ImplDX12_InvalidateDeviceObjects();
+    // Project terminal failure: free CPU state, but do not drop the last COM
+    // references to GPU-visible objects whose completion was not established.
+    if (!retain_gpu_resources)
+        ImGui_ImplDX12_InvalidateDeviceObjects();
+    else
+        io.Fonts->SetTexID(0);
     delete[] bd->pFrameResources;
 
     io.BackendRendererName = nullptr;

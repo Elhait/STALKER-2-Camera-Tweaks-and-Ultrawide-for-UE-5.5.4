@@ -43,6 +43,52 @@ The production overlay lifecycle log is
 and detailed association telemetry are emitted only while `Diagnostics.Enabled`
 is true; normal logging focuses on initialization, swapchain selection,
 visibility, actual resize/rebuild events, font changes and failures.
+Caller-module and factory-table slot traces are compiled only into the
+diagnostic build profile; they are not present in the production artifact.
+
+DXGI export hooks are created disabled, assigned to their process-resident owner,
+then enabled. COM method hooks capture SDK-bounded original entries and publish
+their table registry record before atomically patching selected entries in the
+original table. They do not truncate foreign vtables or retain COM objects in
+the registry. Registry access is synchronized; callbacks keep shared record
+leases. Distinct queried interface tables are covered independently.
+
+The renderer releases its owning swapchain/backbuffer references before native
+replacement for the same HWND. Resource recreation is not terminal disable.
+Both `ResizeBuffers` and `ResizeBuffers1` release matching renderer resources
+before native resize, without holding registry/renderer locks across the native
+call. Nested native resize calls defer recovery until the outermost call returns.
+A changed/multiple present-queue assignment fails closed for Overlay only;
+the native HRESULT and arguments remain unchanged. Renderer/ImGui access is
+serialized independently of the log/evidence registry. Failed DXGI creation
+results are logged even when optional diagnostics are disabled.
+GPU fence waits, including the locally adapted ImGui font-upload backend, are
+bounded to one second and validate actual fence completion. A timeout or removed
+device disables Overlay and skips a second blocking teardown wait. If submitted
+work has no completion proof, one terminal set of GPU COM refs/event is deliberately
+retained until process exit, while CPU UI state is detached; forcing release to
+make native resize/replacement succeed would risk GPU use-after-free. Such native
+operations can still fail with retained buffers. Backend vertex/index uploads
+use the same fence-waited backbuffer slot as the renderer allocator, rather than
+an independent draw-call ring. TEST/nonblocking Present calls are native-only.
+The core camera runtime has no dependency on renderer readiness.
+Export hook owners are process-resident: CRT detach must not invoke SafetyHook
+thread suspension/unpatching under loader lock. Terminal-disabled input remains
+native pass-through; cursor restoration is posted to the window thread. WndProc
+chain snapshots/publication are serialized with renderer/input state.
+Combined startup synchronously arms optional DXGI factory observation before
+core camera initialization so it can see the game's initial presentation
+factory. A bounded seed `IDXGIFactory2` is created only to install observation
+on a widest-supported, image-backed shared factory table; its COM reference is
+released after setup and it is never a renderer target. Factory export hooks
+remain supplemental discovery, not readiness evidence. If the seed table or
+its method owners cannot be pinned safely, discovery stays unavailable rather
+than claiming coverage. Only real successful `CreateSwapChain*` callbacks
+provide the swapchain and queue/device association. Renderer and input
+activation remain gated on core readiness, validated target ownership and two
+successful Presents. Nested proxy/native creation of the same canonical COM
+identity is observed once per callback chain. A C++ failure arming discovery is
+contained and logged, and does not block camera initialization.
 
 ## Build and test policy
 
@@ -64,6 +110,15 @@ legacy source gate; production does not define that POC-named macro.
 standalone POC/discovery and research watcher scripts are retired research
 entry points, not supported ASI profiles or contents of the production
 package.
+
+Production builds emit a bounded `STALKER2CameraTweaksStartup.log` startup
+journal containing process/worker startup, factory-bootstrap and DXGI coverage
+status, camera-core readiness, first factory/swapchain observations, pending
+target acceptance, the two successful activation Presents, renderer/input
+activation, and first Overlay frame. It records no module/export archaeology,
+instruction/jump decoding, or per-Present telemetry. The heavyweight forensic
+trace-v2 is separate and opt-in with `CAMERA_TWEAKS_STARTUP_TIMELINE=1`; it
+replaces the production journal for that diagnostic build.
 
 `test.cmd` is the single repository test entry point. It builds and runs all
 current Windows harnesses with the same compiler family and returns failure if

@@ -22,11 +22,42 @@ namespace gameplay
     }
 
     CinematicExitTransition ResolveCinematicExitTransition(
-        bool gameplayAvailable, config::GameplayMode gameplayMode)
+        bool recoveryObserverAvailable, bool gameplayEnabled,
+        config::GameplayMode gameplayMode)
     {
-        if (gameplayMode == config::GameplayMode::HorPlus)
-            return { camera::CoordinatorState::Gameplay, false };
-        return ResolveCinematicExitTransition(gameplayAvailable);
+        if (gameplayMode == config::GameplayMode::HorPlus) {
+            return { recoveryObserverAvailable
+                    ? camera::CoordinatorState::CinematicExiting
+                    : camera::CoordinatorState::Gameplay,
+                false };
+        }
+        return ResolveCinematicExitTransition(recoveryObserverAvailable && gameplayEnabled);
+    }
+
+    bool IsNativeHorPlusRecoverySample(
+        const HorPlusRecoverySample& sample, float epsilon) noexcept
+    {
+        // Gameplay may already be native on the first post-EXIT writer call.
+        // Dialogue's depart-then-return sequence is not a Gameplay prerequisite.
+        return sample.cameraReadable && sample.source != 0 &&
+            sample.source == sample.validatedSource && sample.flags == 0x4 &&
+            std::isfinite(sample.aspect) && sample.aspect > 0.0f &&
+            std::isfinite(sample.inputFov) && sample.inputFov > 1.0f &&
+            sample.inputFov < 179.0f &&
+            std::isfinite(sample.exitNativeTarget) && sample.exitNativeTarget > 1.0f &&
+            sample.exitNativeTarget < 179.0f &&
+            std::isfinite(epsilon) && epsilon >= 0.0f &&
+            std::fabs(sample.inputFov - sample.exitNativeTarget) <= epsilon;
+    }
+
+    HorPlusRecoveryAction ResolveHorPlusRecoveryAction(
+        camera::CoordinatorState coordinator, bool nativeRecoveryValidated) noexcept
+    {
+        if (coordinator != camera::CoordinatorState::CinematicExiting)
+            return HorPlusRecoveryAction::NotWaiting;
+        return nativeRecoveryValidated
+            ? HorPlusRecoveryAction::ResumeGameplay
+            : HorPlusRecoveryAction::HoldNativePassThrough;
     }
 
     GameplayModeTransitionPlan ResolveGameplayModeTransition(

@@ -260,6 +260,16 @@ int main()
         !missingCallbacksApi.Persist(plugin::RuntimeSettingMutation::GameplayEnabled(false)),
         "missing_callbacks_remain_fail_closed");
 
+    plugin::RuntimeSettingsApi throwingApi;
+    throwingApi.Publish({
+        [](const plugin::RuntimeSettingMutation&, void*) -> plugin::RuntimeMutationResult { throw 1; }, nullptr,
+        [](plugin::RuntimeSettingsSnapshot&, void*) -> bool { throw 2; }, nullptr,
+        [](plugin::OverlaySemanticSnapshot&, void*) -> bool { throw 3; }, nullptr,
+        [](const plugin::RuntimeSettingMutation&, void*) -> bool { throw 4; }, nullptr});
+    pass &= Check(!throwingApi.Apply(plugin::RuntimeSettingMutation::GameplayEnabled(true)).accepted &&
+        !throwingApi.Snapshot(snapshot) && !throwingApi.SemanticSnapshot(semanticSnapshot) &&
+        !throwingApi.Persist(plugin::RuntimeSettingMutation::GameplayEnabled(true)),
+        "noexcept_api_contains_throwing_callbacks_without_terminate");
     std::cout << "Runtime settings API harness: " << (pass ? "PASS" : "FAIL") << "\n";
     return pass ? 0 : 1;
 }

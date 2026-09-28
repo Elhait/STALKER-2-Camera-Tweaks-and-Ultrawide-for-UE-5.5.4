@@ -1,6 +1,10 @@
 #include "../../src/overlay/discovery_evidence.hpp"
+#include "../../src/overlay/dxgi_resize_nesting.hpp"
 
 #include <iostream>
+#include <algorithm>
+#include <array>
+#include <memory>
 
 namespace
 {
@@ -14,6 +18,12 @@ namespace
 int main()
 {
     bool pass = true;
+    pass &= Check(overlay::IsSuccessfulPresentResult(0),
+        "S_OK_counts_as_presented_frame");
+    pass &= Check(!overlay::IsSuccessfulPresentResult(0x087A0001),
+        "DXGI_STATUS_OCCLUDED_does_not_count_as_presented_frame");
+    pass &= Check(!overlay::IsSuccessfulPresentResult(static_cast<std::int32_t>(0x80004004u)),
+        "failed_present_does_not_count_as_presented_frame");
     overlay::FactoryEvidenceStore factories;
     pass &= Check(!factories.ObserveFactory(0), "null_factory_fails_closed");
     pass &= Check(factories.ObserveFactory(0x5000), "factory_added");
@@ -40,6 +50,11 @@ int main()
     lifecycleEvidence.ObservePresent(0x1000);
     pass &= Check(lifecycleEvidence.State(0x1000) ==
         overlay::AssociationState::Supported, "resize_initial_supported");
+    pass &= Check(!lifecycleEvidence.HasStableAssociation(0x1000, 2),
+        "one_successful_present_does_not_activate_renderer");
+    lifecycleEvidence.ObservePresent(0x1000);
+    pass &= Check(lifecycleEvidence.HasStableAssociation(0x1000, 2),
+        "two_successful_presents_validate_stable_target");
     lifecycleEvidence.BeginResize(0x1000);
     pass &= Check(lifecycleEvidence.State(0x1000) ==
         overlay::AssociationState::ResizeRevalidationRequired,
@@ -48,6 +63,11 @@ int main()
     pass &= Check(lifecycleEvidence.State(0x1000) ==
         overlay::AssociationState::ResizeRevalidationRequired,
         "resize_retains_structural_association");
+    pass &= Check(!lifecycleEvidence.HasStableAssociation(0x1000, 2),
+        "resize_invalidates_prior_presentation_stability");
+    lifecycleEvidence.ObservePresent(0x1000);
+    pass &= Check(!lifecycleEvidence.HasStableAssociation(0x1000, 2),
+        "resize_needs_repeated_successful_present");
     lifecycleEvidence.ObservePresent(0x1000);
     pass &= Check(lifecycleEvidence.HasSufficientAssociation(0x1000),
         "resize_revalidated_on_present");
@@ -123,6 +143,33 @@ int main()
         "recreation_invalidates_evidence");
     pass &= Check(!evidence.ObserveCandidate(0, 0x2000, 0x3000, 0),
         "null_candidate_fails_closed");
+
+    overlay::DxgiResizeNesting outerResize;
+    overlay::DxgiResizeNesting innerResize;
+    pass &= Check(outerResize.Begin(0xA000) && outerResize.outermost(),
+        "resize_outermost_claimed_by_first_callback");
+    pass &= Check(innerResize.Begin(0xA000) && !innerResize.outermost() &&
+        !innerResize.End(), "nested_resize_defers_completion_to_outer_callback");
+    pass &= Check(outerResize.End(), "outer_resize_owns_final_native_result");
+    overlay::DxgiResizeNesting otherChain;
+    pass &= Check(outerResize.Begin(0xA100) && otherChain.Begin(0xA200) &&
+        otherChain.outermost() && otherChain.End() && outerResize.End(),
+        "interleaved_chain_callbacks_keep_independent_resize_ownership");
+
+    std::array<std::unique_ptr<overlay::DxgiResizeNesting>,
+        overlay::DxgiResizeNesting::Capacity + 1> resizeCapacity;
+    bool allResizeScopesEntered = true;
+    for (std::size_t index = 0; index < resizeCapacity.size(); ++index) {
+        resizeCapacity[index] = std::make_unique<overlay::DxgiResizeNesting>();
+        allResizeScopesEntered &= resizeCapacity[index]->Begin(0xB000 + index);
+    }
+    pass &= Check(std::all_of(resizeCapacity.begin(), resizeCapacity.begin() +
+        overlay::DxgiResizeNesting::Capacity, [](const auto& scope) {
+            return scope && scope->outermost();
+        }) && !allResizeScopesEntered && !resizeCapacity.back()->outermost(),
+        "resize_nesting_capacity_fails_closed");
+    for (std::size_t index = 0; index < overlay::DxgiResizeNesting::Capacity; ++index)
+        resizeCapacity[index]->End();
 
     std::cout << "Overlay discovery evidence harness: "
         << (pass ? "PASS" : "FAIL") << "\n";

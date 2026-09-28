@@ -232,16 +232,17 @@ namespace dialogue
         return active_.load(std::memory_order_acquire);
     }
 
-    bool PostCinematicRecoveryExclusion::Observe(
+    PostCinematicRecoveryExclusion::Observation
+    PostCinematicRecoveryExclusion::ObserveValidated(
         std::uintptr_t source, float currentFov, float epsilon) noexcept
     {
-        if (!IsActive()) return false;
+        if (!IsActive()) return Observation::Inactive;
 
         const float targetFov = targetFov_.load(std::memory_order_acquire);
         if (!source || !std::isfinite(currentFov) || !std::isfinite(targetFov) ||
             !std::isfinite(epsilon) || epsilon < 0.0f) {
             Reset();
-            return false;
+            return Observation::Cancelled;
         }
 
         auto expectedSource = source_.load(std::memory_order_acquire);
@@ -252,19 +253,25 @@ namespace dialogue
         }
         if (expectedSource != source) {
             Reset();
-            return false;
+            return Observation::Cancelled;
         }
 
         const float distanceFromTarget = std::fabs(currentFov - targetFov);
         if (!recoveryStarted_.load(std::memory_order_acquire)) {
             if (distanceFromTarget > epsilon)
                 recoveryStarted_.store(true, std::memory_order_release);
-            return true;
+            return Observation::Suppressed;
         }
         if (distanceFromTarget <= epsilon) {
             Reset();
-            return false;
+            return Observation::Recovered;
         }
-        return true;
+        return Observation::Suppressed;
+    }
+
+    bool PostCinematicRecoveryExclusion::Observe(
+        std::uintptr_t source, float currentFov, float epsilon) noexcept
+    {
+        return ObserveValidated(source, currentFov, epsilon) == Observation::Suppressed;
     }
 }

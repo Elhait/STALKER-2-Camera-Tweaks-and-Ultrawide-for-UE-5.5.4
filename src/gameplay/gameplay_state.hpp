@@ -24,7 +24,31 @@ namespace gameplay
     const char* ReplayStateName(ReplayState state);
     CinematicExitTransition ResolveCinematicExitTransition(bool gameplayAvailable);
     CinematicExitTransition ResolveCinematicExitTransition(
-        bool gameplayAvailable, config::GameplayMode gameplayMode);
+        bool recoveryObserverAvailable, bool gameplayEnabled,
+        config::GameplayMode gameplayMode);
+
+    enum class HorPlusRecoveryAction : std::uint8_t
+    {
+        NotWaiting,
+        HoldNativePassThrough,
+        ResumeGameplay,
+    };
+
+    struct HorPlusRecoverySample
+    {
+        std::uintptr_t source{};
+        std::uintptr_t validatedSource{};
+        float inputFov{std::numeric_limits<float>::quiet_NaN()};
+        float exitNativeTarget{std::numeric_limits<float>::quiet_NaN()};
+        float aspect{std::numeric_limits<float>::quiet_NaN()};
+        std::uint8_t flags{};
+        bool cameraReadable{};
+    };
+
+    bool IsNativeHorPlusRecoverySample(
+        const HorPlusRecoverySample& sample, float epsilon) noexcept;
+    HorPlusRecoveryAction ResolveHorPlusRecoveryAction(
+        camera::CoordinatorState coordinator, bool nativeRecoveryValidated) noexcept;
 
     struct GameplayModeTransitionPlan
     {

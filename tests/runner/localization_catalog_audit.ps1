@@ -46,14 +46,31 @@ function Test-LocalizedPresentationPolicy([string[]] $Sources) {
 
 function Test-NativePassThroughBoundary([string] $Source) {
     $present = [regex]::Match($Source,
-        'HRESULT STDMETHODCALLTYPE HookPresent\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookResizeBuffers)').Value
+        'HRESULT STDMETHODCALLTYPE HookPresent\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookPresent1)').Value
     $resize = [regex]::Match($Source,
-        'HRESULT STDMETHODCALLTYPE HookResizeBuffers\([\s\S]*?(?=\n\s*void InstallSwapchainHooks)').Value
+        'HRESULT STDMETHODCALLTYPE HookResizeBuffers\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookResizeBuffers1)').Value
+    $resize1 = [regex]::Match($Source,
+        'HRESULT STDMETHODCALLTYPE HookResizeBuffers1\([\s\S]*?(?=\n\s*#if defined\(OVERLAY_PRODUCTION\))').Value
     $window = [regex]::Match($Source,
         'LRESULT CALLBACK OverlayWindowProc\([\s\S]*?(?=\n\s*void InstallInputHook)').Value
-    return $present -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]{0,400}PresentFn original[\s\S]*?return original\(self' -and
-        $resize -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]{0,400}if \(!original\)[\s\S]*?const HRESULT result = original\(' -and
-        $resize -match 'const HRESULT result = original\([\s\S]*?RunOptionalOverlayWork\([\s\S]*?return result;' -and
+    # Original resolution may precede optional work (e.g. native-only probes).
+    # Protect the native-call boundary, not the declaration's former spelling/order.
+    $optionalBodies = [regex]::Matches($Source,
+        'RunOptionalOverlayWork\(\[&\]\(\)\s*\{([\s\S]*?)\},\s*&DisableAfterOverlayException\)')
+    $nativeInsideOptional = @($optionalBodies | Where-Object {
+        $_.Groups[1].Value -match '\boriginal\s*\(|CallWindowProcW\s*\('
+    }).Count -ne 0
+    $presentNativeResultPreserved =
+        $present -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?const HRESULT result = original\(self, syncInterval, flags\);[\s\S]*?return result;' -or
+        $present -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?return original\(self, syncInterval, flags\);'
+    $resizeNativeResultsPreserved = @($resize, $resize1 | Where-Object {
+        $_ -match 'if\s*\(!original\)\s*return E_FAIL;[\s\S]*?RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?const HRESULT result = original\(self,' -and
+        $_ -match 'const HRESULT result = original\(self,[\s\S]*?RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?return result;'
+    }).Count -eq 2
+    return -not $nativeInsideOptional -and
+        $present -match 'PresentFn original[\s\S]*?RunOptionalOverlayWork\(' -and
+        $presentNativeResultPreserved -and
+        $resizeNativeResultsPreserved -and
         $window -match 'RunOptionalOverlayWork\([\s\S]*?\},\s*&DisableAfterOverlayException\);[\s\S]*?CallWindowProcW\('
 }
 
@@ -266,6 +283,18 @@ HRESULT STDMETHODCALLTYPE HookResizeBuffers() { return original(); RunOptionalOv
 LRESULT CALLBACK OverlayWindowProc() { return CallWindowProcW(proc); }
 void InstallInputHook
 '@)
+$nativeBoundaryNegativeFixture = $nativeBoundaryNegativeFixture -and -not (
+    Test-NativePassThroughBoundary ($discoveryRuntime.Replace(
+        'overlayCommandListSubmitted = g_renderer.Render(self, stateAfter);',
+        'overlayCommandListSubmitted = original(self, syncInterval, flags);')))
+$presentBody = [regex]::Match($discoveryRuntime,
+    'HRESULT STDMETHODCALLTYPE HookPresent\([\s\S]*?(?=\n\s*HRESULT STDMETHODCALLTYPE HookPresent1)').Value
+$wrongPresentBody = [regex]::Replace($presentBody,
+    '(const HRESULT result = original\(self, syncInterval, flags\);[\s\S]*)return result;',
+    '${1}return S_OK;')
+$wrongPresentResultSource = $discoveryRuntime.Replace($presentBody, $wrongPresentBody)
+$nativeBoundaryNegativeFixture = $nativeBoundaryNegativeFixture -and -not (
+    Test-NativePassThroughBoundary $wrongPresentResultSource)
 $mutexExceptionBoundary = $inputStateHeader -match 'void Close\(\);' -and
     $inputStateHeader -match 'HandleRebindMessage\([\s\S]*?\);' -and
     $inputStateHeader -notmatch 'HandleRebindMessage\([^;]*\)\s*noexcept' -and
@@ -300,7 +329,8 @@ $rendererInitializeBody = [regex]::Match($renderer,
     'bool Renderer::InitializeImpl\([\s\S]*?(?=\n\s*bool Renderer::BuildResources)').Value
 $localizationFailClosed = $buildImGuiBody -match 'if\s*\(!localization_\.Initialize\([\s\S]*?return false;' -and
     $rendererInitializeBody -match 'BuildImGui\(\)\)\s*return fail\(\)' -and
-    $discoveryRuntime -match 'if\s*\(g_renderer\.Initialize\([\s\S]*?InstallInputHook\(window\)'
+    $discoveryRuntime -match 'g_renderer\.Initialize\(target\.swapchain\.Get\(\),[\s\S]{0,240}?target\.format\)' -and
+    $discoveryRuntime -match 'InstallInputHook\(target\.window\)'
 $registryDrivenSelector = $renderer -match 'for\s*\(const auto& locale : localization_\.locales\(\)\)' -and
     $renderer -match 'ImGui::Selectable\(locale\.displayName\.data\(\)' -and
     $renderer -match 'LocalizationSelectorFont\(locale\.fontProfileCode\)' -and

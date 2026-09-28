@@ -1,12 +1,15 @@
 #include "renderer_runtime.hpp"
+#include "renderer_wait_policy.hpp"
 
 #include "optional_overlay_boundary.hpp"
 #include "../diagnostics/diagnostic_runtime.hpp"
+#include "../diagnostics/startup_journal.hpp"
 
 #include <imgui.h>
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_win32.h>
 #include <imgui_internal.h>
+#include <wrl/client.h>
 #include "input_state.hpp"
 #include "game_language_reader.hpp"
 #include "localization_font.hpp"
@@ -562,14 +565,18 @@ namespace overlay
     {
         if (!swapchain || !device || !queue || !bufferCount || bufferCount > 16)
             return false;
-        if (swapchain_ == swapchain && device_ == device && queue_ == queue &&
+        if (OwnsSwapchain(swapchain) && device_ == device && queue_ == queue &&
             lifecycle_.state() == RendererState::Ready)
             return true;
         if (swapchain_ || device_ || queue_) {
             Shutdown();
+            if (disabled()) return false;
             lifecycle_ = RendererLifecycle{};
         }
         if (!lifecycle_.BeginInitialization()) return false;
+
+        gpuWaitFailed_ = false;
+        gpuWorkSubmitted_ = false;
 
         Log("OVERLAY_RENDER_INIT_BEGIN");
         swapchain_ = swapchain;
@@ -581,6 +588,12 @@ namespace overlay
         swapchain_->AddRef();
         device_->AddRef();
         queue_->AddRef();
+        Microsoft::WRL::ComPtr<IUnknown> identity;
+        if (FAILED(swapchain_->QueryInterface(IID_PPV_ARGS(&identity))) || !identity) {
+            Disable("swapchain_identity_unavailable");
+            return false;
+        }
+        swapchainIdentity_ = reinterpret_cast<std::uintptr_t>(identity.Get());
 
         auto fail = [this]() noexcept {
             Disable("initialization_failed");
@@ -614,7 +627,7 @@ namespace overlay
         if (FAILED(device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
             frames_.front().allocator, nullptr, IID_PPV_ARGS(&commandList_))))
             return fail();
-        commandList_->Close();
+        if (FAILED(commandList_->Close())) return fail();
         if (!BuildResources(swapchain_) || !BuildImGui()) return fail();
         lifecycle_.MarkReady();
         Log("OVERLAY_RENDER_INIT_OK");
@@ -750,13 +763,36 @@ namespace overlay
 
     bool Renderer::WaitForGpu() noexcept
     {
-        if (!queue_ || !fence_ || !fenceEvent_) return false;
-        const auto value = ++nextFenceValue_;
-        if (FAILED(queue_->Signal(fence_, value))) return false;
-        if (fence_->GetCompletedValue() < value) {
-            if (FAILED(fence_->SetEventOnCompletion(value, fenceEvent_))) return false;
-            WaitForSingleObject(fenceEvent_, INFINITE);
+        if (gpuWaitFailed_) return false;
+        if (!gpuWorkSubmitted_) return true;
+        if (!queue_ || !fence_ || !fenceEvent_) {
+            gpuWaitFailed_ = true;
+            return false;
         }
+        const auto value = ++nextFenceValue_;
+        if (FAILED(queue_->Signal(fence_, value))) {
+            gpuWaitFailed_ = true;
+            return false;
+        }
+        const auto completed = fence_->GetCompletedValue();
+        if (completed == UINT64_MAX) {
+            gpuWaitFailed_ = true;
+            return false;
+        }
+        if (completed < value) {
+            if (FAILED(fence_->SetEventOnCompletion(value, fenceEvent_)) ||
+                !GpuFenceWaitCompleted(WaitForSingleObject(
+                    fenceEvent_, GpuFenceWaitTimeoutMs))) {
+                gpuWaitFailed_ = true;
+                return false;
+            }
+            const auto afterWait = fence_->GetCompletedValue();
+            if (afterWait == UINT64_MAX || afterWait < value) {
+                gpuWaitFailed_ = true;
+                return false;
+            }
+        }
+        gpuWorkSubmitted_ = false;
         return true;
     }
 
@@ -861,11 +897,30 @@ namespace overlay
 
     bool Renderer::WaitForFrame(FrameContext& frame) noexcept
     {
-        if (!frame.fenceValue || fence_->GetCompletedValue() >= frame.fenceValue)
-            return true;
-        if (FAILED(fence_->SetEventOnCompletion(frame.fenceValue, fenceEvent_)))
+        if (!fence_) {
+            gpuWaitFailed_ = true;
             return false;
-        WaitForSingleObject(fenceEvent_, INFINITE);
+        }
+        if (!frame.fenceValue) return true;
+        const auto completed = fence_->GetCompletedValue();
+        if (completed == UINT64_MAX) {
+            gpuWaitFailed_ = true;
+            return false;
+        }
+        if (completed >= frame.fenceValue)
+            return true;
+        if (!fenceEvent_ || FAILED(fence_->SetEventOnCompletion(
+                frame.fenceValue, fenceEvent_)) ||
+            !GpuFenceWaitCompleted(WaitForSingleObject(
+                fenceEvent_, GpuFenceWaitTimeoutMs))) {
+            gpuWaitFailed_ = true;
+            return false;
+        }
+        const auto afterWait = fence_->GetCompletedValue();
+        if (afterWait == UINT64_MAX || afterWait < frame.fenceValue) {
+            gpuWaitFailed_ = true;
+            return false;
+        }
         return true;
     }
 
@@ -879,9 +934,36 @@ namespace overlay
         resourcesReady_ = false;
     }
 
-    void Renderer::BeforeResize()
+    bool Renderer::OwnsSwapchain(IDXGISwapChain* swapchain) const noexcept
     {
+        if (!swapchain || !swapchainIdentity_) return false;
+        Microsoft::WRL::ComPtr<IUnknown> identity;
+        return SUCCEEDED(swapchain->QueryInterface(IID_PPV_ARGS(&identity))) &&
+            reinterpret_cast<std::uintptr_t>(identity.Get()) == swapchainIdentity_;
+    }
+
+    void Renderer::BeforeSwapchainReplacement(HWND window)
+    {
+        if (!window || window != window_ || !swapchain_) return;
+        const bool terminal = disabled();
+        Log("OVERLAY_SWAPCHAIN_REPLACEMENT_RELEASE");
+        if (!terminal && !WaitForGpu()) {
+            Disable("swapchain_replacement_gpu_wait_failed");
+            return;
+        }
+        Shutdown();
+        if (!terminal) lifecycle_ = RendererLifecycle{};
+    }
+
+    void Renderer::BeforeResize(IDXGISwapChain* swapchain)
+    {
+        if (!OwnsSwapchain(swapchain)) return;
+        if (lifecycle_.state() == RendererState::Resizing) {
+            ++resizeDepth_;
+            return;
+        }
         if (lifecycle_.state() != RendererState::Ready) return;
+        ++resizeDepth_;
         lifecycle_.BeginResize();
         LogDiagnostic(logger_, "OVERLAY_RESIZE_RELEASE");
         const auto waitStart = std::chrono::steady_clock::now();
@@ -898,15 +980,62 @@ namespace overlay
             std::chrono::steady_clock::now() - releaseStart).count();
     }
 
-    void Renderer::OnResizeResult(bool success, double originalResizeMs,
-        double totalResizeHookMs)
+    void Renderer::OnSwapchainCreationFailure(HWND window)
     {
+        if (window && window == window_ && !swapchain_ && !disabled())
+            Disable("swapchain_replacement_failed");
+    }
+
+    void Renderer::OnResizeResult(IDXGISwapChain* swapchain, bool success,
+        double originalResizeMs, double totalResizeHookMs,
+        UINT queueCount, IUnknown* const* presentQueues)
+    {
+        if (!OwnsSwapchain(swapchain)) return;
+        // A native ResizeBuffers1 implementation/wrapper may call ResizeBuffers.
+        // Only the outermost matching native call may rebuild resources or decide
+        // terminal failure; inner attempts can be recovered by that outer call.
+        if (resizeDepth_ && --resizeDepth_) return;
         originalResizeMs_ = originalResizeMs;
         totalResizeHookMs_ = totalResizeHookMs;
         resizeResultTime_ = std::chrono::steady_clock::now();
         if (!success) {
             Disable("resize_failed");
             return;
+        }
+        DXGI_SWAP_CHAIN_DESC desc{};
+        if (FAILED(swapchain->GetDesc(&desc))) {
+            Disable("resize_description_unavailable");
+            return;
+        }
+        // ResizeBuffers1 can reassign present queues. Never submit on stale queue
+        // evidence. Multi-queue presentation is unsupported by this renderer;
+        // leave native resize successful and fail only the optional Overlay.
+        if (presentQueues) {
+            if (!queueCount || queueCount != desc.BufferCount) {
+                Disable("resize_present_queue_extent_unsupported");
+                return;
+            }
+            Microsoft::WRL::ComPtr<IUnknown> expected;
+            if (FAILED(queue_->QueryInterface(IID_PPV_ARGS(&expected)))) {
+                Disable("resize_present_queue_identity_unavailable");
+                return;
+            }
+            for (UINT index = 0; index < queueCount; ++index) {
+                Microsoft::WRL::ComPtr<IUnknown> actual;
+                if (!presentQueues[index] ||
+                    FAILED(presentQueues[index]->QueryInterface(IID_PPV_ARGS(&actual))) ||
+                    actual.Get() != expected.Get()) {
+                    Disable("resize_present_queue_changed_or_multiple");
+                    return;
+                }
+            }
+        }
+        if (desc.BufferCount != bufferCount_ || desc.BufferDesc.Format != format_) {
+            Microsoft::WRL::ComPtr<ID3D12Device> device = device_;
+            Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue = queue_;
+            Microsoft::WRL::ComPtr<IDXGISwapChain> retained = swapchain;
+            InitializeImpl(retained.Get(), device.Get(), queue.Get(), window_,
+                desc.BufferCount, desc.BufferDesc.Format);
         }
         LogDiagnostic(logger_, "OVERLAY_RESIZE_REVALIDATION_WAIT");
     }
@@ -1013,24 +1142,23 @@ namespace overlay
         }
     }
 
-    void Renderer::Render(IDXGISwapChain* swapchain,
+    bool Renderer::Render(IDXGISwapChain* swapchain,
         AssociationState association) noexcept
     {
+        bool commandListSubmitted = false;
         const auto outcome = RunOptionalOverlayWork([&]() {
-            RenderImpl(swapchain, association);
+            RenderImpl(swapchain, association, commandListSubmitted);
         }, [this]() noexcept { FailAfterException(); });
         (void)outcome;
+        return commandListSubmitted;
     }
 
     void Renderer::RenderImpl(IDXGISwapChain* swapchain,
-        AssociationState association)
+        AssociationState association, bool& commandListSubmitted)
     {
         UpdateNotifications();
         if (!swapchain || association != AssociationState::Supported) return;
-        if (swapchain != swapchain_) {
-            Disable("swapchain_identity_changed");
-            return;
-        }
+        if (!OwnsSwapchain(swapchain)) return;
         if (lifecycle_.state() == RendererState::Resizing) {
             const auto resourceRebuildStart = std::chrono::steady_clock::now();
             if (!BuildResources(swapchain) || !BuildImGui() ||
@@ -1559,7 +1687,13 @@ namespace overlay
         }
         DrawNotifications();
         ImGui::Render();
-        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_);
+        // Backend upload buffers share exactly the allocator's waited fence slot,
+        // not the number of draw calls (hidden/skipped frames can break that ring).
+        if (!ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_,
+                static_cast<int>(index))) {
+            Disable("imgui_draw_upload_failed");
+            return; // Never submit the partially recorded command list.
+        }
 
         D3D12_RESOURCE_BARRIER toPresent = toTarget;
         toPresent.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -1571,13 +1705,22 @@ namespace overlay
         }
         ID3D12CommandList* lists[] = {commandList_};
         queue_->ExecuteCommandLists(1, lists);
+        commandListSubmitted = true;
+        gpuWorkSubmitted_ = true;
         const auto fenceValue = ++nextFenceValue_;
         if (FAILED(queue_->Signal(fence_, fenceValue))) {
             Disable("queue_signal_failed");
             return;
         }
         frame.fenceValue = fenceValue;
-        if (fenceValue == 1) LogDiagnostic(logger_, "OVERLAY_FIRST_FRAME");
+        if (fenceValue == 1) {
+            LogDiagnostic(logger_, "OVERLAY_FIRST_FRAME");
+#if defined(OVERLAY_STARTUP_JOURNAL)
+            diagnostics::startup_journal::MarkOnce(9, "OVERLAY_FIRST_FRAME",
+                "first_renderer_submission", fenceValue);
+            diagnostics::startup_journal::Flush();
+#endif
+        }
     }
 
     void Renderer::Disable(const char* reason) noexcept
@@ -1611,14 +1754,21 @@ namespace overlay
         }
         plugin::SetHotkeyRebindCaptureActive(false);
         plugin::MarkHotkeyRebindKeyConsumed(0);
-        if (queue_ && fence_) WaitForGpu();
+        const bool retainGpuResources = gpuWorkSubmitted_ &&
+            (gpuWaitFailed_ || !WaitForGpu());
+        if (retainGpuResources) {
+            lifecycle_.Disable();
+            visible_.store(false, std::memory_order_release);
+            try { GetInputState().Close(); Log("OVERLAY_GPU_REFS_RETAINED completion=unknown"); }
+            catch (...) { /* Terminal ownership disposition cannot depend on logging. */ }
+        }
         if (ImGui::GetCurrentContext()) {
             auto& io = ImGui::GetIO();
             // The backend init paths can allocate and fail partway through.
             // Their owned ImGui IO slots, not the combined ready flag, tell
             // teardown which individual backend reached its own boundary.
             if (io.BackendRendererUserData)
-                ImGui_ImplDX12_Shutdown();
+                ImGui_ImplDX12_Shutdown(retainGpuResources);
             if (io.BackendPlatformUserData)
                 ImGui_ImplWin32_Shutdown();
         }
@@ -1626,27 +1776,37 @@ namespace overlay
         if (imguiContextCreated_ && ImGui::GetCurrentContext())
             ImGui::DestroyContext();
         imguiContextCreated_ = false;
-        ReleaseBackbuffers();
+        // A timeout is not GPU completion. Deliberately retain one terminal set
+        // of COM refs/event until process exit instead of creating GPU use-after-free.
+        // This can prevent native resize/replacement from succeeding; freeing
+        // in-flight buffers to force it through would be unsafe.
+        if (!retainGpuResources) ReleaseBackbuffers();
+        else backbuffers_.clear();
         for (auto& frame : frames_)
-            if (frame.allocator) frame.allocator->Release();
+            if (!retainGpuResources && frame.allocator) frame.allocator->Release();
         frames_.clear();
-        if (commandList_) commandList_->Release();
-        if (fence_) fence_->Release();
-        if (rtvHeap_) rtvHeap_->Release();
-        if (srvHeap_) srvHeap_->Release();
-        if (fenceEvent_) CloseHandle(fenceEvent_);
-        if (swapchain_) swapchain_->Release();
-        if (device_) device_->Release();
-        if (queue_) queue_->Release();
+        if (!retainGpuResources) {
+            if (commandList_) commandList_->Release();
+            if (fence_) fence_->Release();
+            if (rtvHeap_) rtvHeap_->Release();
+            if (srvHeap_) srvHeap_->Release();
+            if (fenceEvent_) CloseHandle(fenceEvent_);
+            if (swapchain_) swapchain_->Release();
+            if (device_) device_->Release();
+            if (queue_) queue_->Release();
+        }
         commandList_ = nullptr;
         fence_ = nullptr;
         rtvHeap_ = nullptr;
         srvHeap_ = nullptr;
         fenceEvent_ = nullptr;
         swapchain_ = nullptr;
+        swapchainIdentity_ = 0;
         device_ = nullptr;
         queue_ = nullptr;
+        gpuWorkSubmitted_ = false;
         resourcesReady_ = false;
         nextFenceValue_ = 0;
+        resizeDepth_ = 0;
     }
 }

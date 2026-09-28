@@ -1,11 +1,14 @@
 # Testing And Research Summary
 
-## Current unified mod — v2.0 development candidate
+## Current unified mod — v2.0.1 working-tree candidate (not released)
 
 The unified production mod is `STALKER2CameraTweaks.asi`, intended to replace
 the older `STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi`. Do not
-load old and new files together. The repository currently represents a v2.0
-development candidate, not a tagged or released v2.0 artifact.
+load old and new files together. The repository's `v2.0.0` tag is the previous
+release baseline. The current working tree contains bounded post-v2.0.0
+Overlay/DXGI safety, startup-diagnostics and post-cinematic Gameplay recovery changes for a prospective v2.0.1;
+these changes are not tagged or released. The complete categorized comparison
+is in [`research/reports/V2_0_0_TO_V2_0_1_DIFF_REPORT_2026-09-28.md`](research/reports/V2_0_0_TO_V2_0_1_DIFF_REPORT_2026-09-28.md).
 
 The current default configuration is:
 
@@ -55,28 +58,44 @@ Camera State view. Its 18 embedded language catalogs and offline glyph/resource
 coverage are audited; offline checks do not establish runtime rendering for
 every glyph, Arabic shaping, bidirectional text or RTL layout.
 
-## Current validation snapshot — 2026-09-27
+## Current validation snapshot — 2026-09-28
 
-- The current test inventory contains 45 harness sources and reports matching
-  source/compile/runner inventories. The full `test.cmd` invocation on this
-  date did **not** pass: `config_persistence_harness` reported
-  `canonical_initial_documentation=FAIL`; its other printed checks passed.
-  The failing assertion still expects the old INI title
-  `STALKER 2 Ultrawide and Camera Tweaks`, while the current INI writer uses
-  `STALKER 2 Camera Tweaks and Ultrawide`. This is a stale test expectation
-  established by source inspection; it has not been repaired or rerun here.
-- The offline localization/resource audit passed for 18 catalogs and 182
-  canonical keys. This validates catalog/resource contracts, not in-game
-  visual rendering for every language/font combination.
-- Historical runtime records cover specific production sessions on Steam
-  2.0.5 and 2.0.6. The build evidence matrix does not establish that the exact
-  current local v2.0 candidate binary is identical to the ASI used in those
-  sessions. The owner has separately reported that the current mod works in
-  game and that nearly all behavior has been checked; that report is not tied
-  to a recorded binary hash and scenario matrix.
-- The repository root keeps `build.cmd` as the production build entry point
-  and `test.cmd` for offline validation. Supporting build/research scripts are
-  organized under `tools/build/`.
+- Full `test.cmd`: PASS. The runner compiled and executed all 54/54 inventoried
+  harness sources, including the added DXGI callback/table, renderer lifetime,
+  optional Overlay startup, startup-journal and post-cinematic HorPlus recovery
+  contracts. The recovery fixture covers both transitional-to-native and
+  already-native first post-EXIT samples, followed by ADS and later FOV changes.
+- Localization/resource/font/glyph audits: PASS for all 18 embedded catalogs
+  and 182 canonical keys. These offline checks do not prove runtime visual
+  rendering for every glyph, Arabic shaping, bidirectional text or RTL layout.
+- Production `build.cmd`: PASS. The canonical root output
+  `STALKER2CameraTweaks.asi` was rebuilt; SHA-256
+  `6C76FF71D530A362B2B14F3FC1BE5EBD9D30D899495206FF885DC7258452347F`, size
+  2,766,848 bytes. This ignored build artifact is not part of the Git diff.
+- User-reported runtime evidence: the bootstrap-enabled production build with
+  the full graphics stack ran successfully five consecutive times and the
+  Overlay worked. This evidence predates the later startup-journal addition;
+  it is not attributed to the exact hash above. The current corrected artifact
+  has not yet been launched in-game. The earlier camera repair artifact
+  `8BFA8524C80B2D736D1F7ADF0DBFD48874D76DCC16DA1E5DDA9070940591E445`
+  exposed the recovery-gate regression described below; that runtime result
+  does not validate the corrected artifact above. Runtime confirmation remains
+  pending for post-cinematic recovery and the current Overlay/journal behavior;
+  ten repeated launches are not required.
+- `git diff --check`: PASS for the reviewed changes; Git emitted line-ending
+  normalization advisories, not whitespace errors.
+- The latest supplied runtime logs exposed a resize recovery regression:
+  input activation and visibility toggles occurred, but no first Overlay frame
+  was recorded. The Present gate excluded the renderer while its lifecycle was
+  `Resizing`, preventing the next-Present resource rebuild. The gate now admits
+  both `Ready` and `Resizing`, while still excluding terminally disabled state;
+  regression assertions cover those states. This rebuilt hash has not yet
+  received runtime confirmation.
+- No game launch was performed for this snapshot. See the
+  [v2.0.0 → v2.0.1 diff report](research/reports/V2_0_0_TO_V2_0_1_DIFF_REPORT_2026-09-28.md)
+  for the full inventory, and the
+  [factory-table bootstrap report](research/reports/DXGI_FACTORY_TABLE_BOOTSTRAP_IMPLEMENTATION_2026-09-28.md)
+  for coverage assumptions and runtime evidence boundaries.
 
 ## Research progression
 
@@ -116,7 +135,11 @@ Gameplay camera-state discovery
 → v1.0.0 release preparation
 → v2.0 overlay integration and 18-locale support
 → bounded v2.0 architecture and performance repairs
-→ current v2.0 candidate validation
+→ v2.0.0 tagged baseline
+→ Overlay/DXGI startup-crash A/B investigation
+→ bounded Overlay/DXGI/D3D12 safety repairs and FS-01–FS-05 regression contracts
+→ independent shared factory-table bootstrap with supplemental export hooks
+→ production-safe startup journal; v2.0.1 working-tree candidate
 ```
 
 The detailed historical plans are preserved in the
@@ -496,21 +519,44 @@ game; none were added to the production ASI.
   reproduced without the mod, and no production compatibility or fix claim is
   made for it.
 
-## v2.0 candidate validation and packaging boundary
+## v2.0.1 working-tree candidate status (not released)
 
-- `build.cmd` is the production build entry point; `test.cmd` runs offline
-  validation. Supporting and diagnostic scripts live under `tools/build/`.
-- The latest full offline test attempt recorded above is currently blocked by
-  the stale canonical INI-title assertion. Do not describe the current suite
-  as fully passing until that assertion is reconciled and the complete suite is
-  rerun.
-- Before release, rerun the full offline suite, localization/resource audits
-  and production build. Runtime claims for the final release must be tied to
-  the exact ASI and game executable identities recorded in
-  [`docs/SUPPORTED_BUILD_MANIFEST.md`](docs/SUPPORTED_BUILD_MANIFEST.md).
-- Remove older `STALKER2UltrawideFix.asi` and
-  `STALKER2GameplayAspectFix.asi` before installing the unified ASI.
-- Keep the release archive limited to the production ASI, generated/default
-  INI, README, license and third-party notices. Diagnostic ASIs, historical
-  binaries, logs and research files remain outside it.
-- Preserve the runtime identity line in support reports.
+- The current offline suite, localization/resource coverage and production
+  build have passed as recorded in the 2026-09-28 validation snapshot above.
+- The reviewed runtime log confirmed a regression in the first Gameplay
+  recovery gate: EXIT target `90.6557` was followed 3 ms later by a native writer
+  sample already matching that target (`flags=0x4`, aspect `3`, same source),
+  but Gameplay stayed in `CinematicExiting` until ADS supplied a departure and
+  return. Requiring Dialogue's depart-then-return sequence for Gameplay was
+  incorrect.
+- Gameplay recovery now independently validates a readable sample, gameplay
+  flags, valid aspect, saved native EXIT target and camera source ownership.
+  Retained native `GameplayBaseline` ownership permits immediate recovery on
+  the first matching post-EXIT sample. A replaced source still requires the
+  existing source-bound recovery evidence. Dialogue exclusion keeps its
+  depart-then-return semantics and is not cleared by immediate Gameplay recovery.
+- Transitional/ambiguous samples still pass through without HorPlus or
+  `GameplayBaseline` updates. The focused regression covers both
+  `90 → 106.688 → EXIT → 106.688 → 90 → 106.688` (never `122.044`) and
+  an already-native first post-EXIT sample that resumes immediately without ADS.
+  It also covers the recorded `90.6557`/aspect `3` case, 16:9 and 48:9,
+  source/flags/invalid-input rejection, subsequent ADS and later native FOV
+  changes. The full suite passes with 54 harnesses and the production build
+  passes; runtime confirmation of this corrected camera gate remains pending.
+- Current built root `STALKER2CameraTweaks.asi` SHA-256:
+  `6C76FF71D530A362B2B14F3FC1BE5EBD9D30D899495206FF885DC7258452347F`.
+- The production startup journal is lightweight by default and writes
+  `STALKER2CameraTweaksStartup.log`; forensic startup tracing remains an
+  explicit diagnostic opt-in. The current canonical ASI includes the
+  resize-recovery gate fix and needs one user-controlled in-game launch to
+  confirm both Overlay frame rendering after startup resize and the fresh
+  journal milestones.
+- Prior user runtime evidence is bounded to the bootstrap-enabled build that
+  preceded the journal-only addition. Do not attribute those five successful
+  launches to the current ASI hash without a matching runtime identity record.
+- The v2.0.1 candidate is not tagged, released or packaged. This update did not
+  perform Git/release/package actions. Do not load the unified ASI together
+  with `STALKER2UltrawideFix.asi` or `STALKER2GameplayAspectFix.asi`.
+- Preserve exact ASI and game executable identity in any subsequent runtime
+  evidence; the [supported-build evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md)
+  remains authoritative for game-version claims.

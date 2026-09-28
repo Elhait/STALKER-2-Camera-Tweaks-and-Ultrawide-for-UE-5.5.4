@@ -48,9 +48,11 @@ struct ImGui_ImplDX12_InitInfo
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* info);
-IMGUI_IMPL_API void     ImGui_ImplDX12_Shutdown();
+// Project adaptation: retain GPU refs on terminal unproven completion.
+IMGUI_IMPL_API void     ImGui_ImplDX12_Shutdown(bool retain_gpu_resources = false);
 IMGUI_IMPL_API void     ImGui_ImplDX12_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* graphics_command_list);
+// Explicit slot must have been fence-waited by the caller; -1 retains legacy ring.
+IMGUI_IMPL_API bool     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* graphics_command_list, int frame_slot = -1);
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Legacy initialization API Obsoleted in 1.91.5

@@ -48,5 +48,32 @@
   stop event.
 - The player's selected FOV is preserved; aspect correction does not use a
   hard-coded FOV compensation multiplier.
+- In Gameplay HorPlus mode, cinematic EXIT keeps the camera coordinator in
+  `CinematicExiting` until a readable gameplay writer sample with valid aspect
+  and gameplay flags matches the saved native EXIT target for a validated source.
+  Retained native `GameplayBaseline` ownership permits recovery on the first
+  post-EXIT sample without a prior departure; a replaced source requires the
+  existing source-bound recovery evidence. Dialogue's depart-then-return
+  exclusion semantics remain independent and unchanged. Transitional and
+  ambiguous samples pass through unchanged and cannot update `GameplayBaseline`; HorPlus resumes on
+  the validated native target, and later native gameplay changes remain eligible.
+- Overlay is an optional rendering consumer. D3D12 fence waits are bounded to
+  one second, including font upload; completion is checked on the fence, not
+  inferred only from an event. Timeout/device loss disables Overlay without
+  repeated blocking waits. Submitted resources with unknown completion retain
+  their COM refs until process exit rather than being freed in flight. This
+  prevents a new GPU lifetime fault but cannot guarantee native resize succeeds
+  or recover a device already hung/removed. Terminal disable cannot reacquire
+  input capture. Core Gameplay, Cinematics and Dialogue
+  initialization and INI settings do not depend on Overlay readiness.
+- Combined runtime arms optional DXGI factory observation before camera-core
+  initialization to avoid missing the initial presentation factory. A captured
+  target cannot activate renderer/input until camera-core readiness and the
+  existing stable device/queue/Present evidence are established. Failure to arm
+  discovery remains isolated from camera initialization.
 - Build success is not runtime proof. Runtime compatibility claims require
   executable identity, log evidence and the named regression scenario.
+- Runtime settings API noexcept forwarding contains exceptions from its owned
+  callbacks and reports failure through existing result types. Optional cleanup
+  callbacks that acquire mutexes are not noexcept; their outer native-boundary
+  handler contains transition failures too. Neither is AV/driver isolation.
