@@ -22,10 +22,12 @@ namespace
         snapshot.runtimeViewportAspect = {0.0f, false,
             plugin::SemanticProvenance::RuntimeViewportResolver,
             plugin::SemanticFreshness::AtRead};
-        snapshot.cameraState.evidence.nativeWriterFov = 52.2812f;
-        snapshot.cameraState.evidence.nativeWriterFovValid = true;
-        snapshot.cameraState.evidence.transformedFov = 89.1234f;
-        snapshot.cameraState.evidence.transformedFovValid = true;
+        snapshot.cameraState.evidence.nativeFov = {52.2812f, true,
+            camera::EvidenceProvenance::NativeNumericObservation,
+            camera::SnapshotFreshness::Current, 0x1234, true, 1};
+        snapshot.cameraState.evidence.horPlusTargetFov = {89.1234f, true,
+            camera::EvidenceProvenance::ModDerivedState,
+            camera::SnapshotFreshness::Current, 0x1234, true, 1};
         snapshot.cameraStateValid = true;
         return true;
     }
@@ -51,10 +53,10 @@ int main()
             plugin::SemanticProvenance::RuntimeViewportResolver,
         "unavailable_observation_keeps_invalidity_and_source");
     pass &= Check(snapshot.cameraStateValid &&
-        snapshot.cameraState.evidence.nativeWriterFovValid &&
-        snapshot.cameraState.evidence.transformedFovValid &&
-        snapshot.cameraState.evidence.nativeWriterFov == 52.2812f &&
-        snapshot.cameraState.evidence.transformedFov == 89.1234f,
+        snapshot.cameraState.evidence.nativeFov.valid &&
+        snapshot.cameraState.evidence.horPlusTargetFov.valid &&
+        snapshot.cameraState.evidence.nativeFov.value == 52.2812f &&
+        snapshot.cameraState.evidence.horPlusTargetFov.value == 89.1234f,
         "camera_state_projection_preserves_shared_snapshot");
     std::cout << "Overlay semantic snapshot harness: " << (pass ? "PASS" : "FAIL") << "\n";
     return pass ? 0 : 1;

@@ -18,6 +18,7 @@ namespace config
     {
         AspectRecalculation,
         HorPlus,
+        RuntimeCombine,
     };
 
     enum class CinematicAspectPolicy : std::uint32_t
@@ -78,13 +79,16 @@ namespace config
     struct FeatureConfig
     {
         bool gameplayEnabled{true};
-        GameplayMode gameplayMode{GameplayMode::HorPlus};
+        GameplayMode gameplayMode{GameplayMode::RuntimeCombine};
+        bool cinematicsEnabled{true};
         CinematicAspectPolicy cinematicAspectPolicy{CinematicAspectPolicy::Auto};
         bool cinematicAspectPolicyExplicit{};
         CinematicFovMode cinematicFovMode{CinematicFovMode::GameplayHorPlus};
+    bool dialogueEnabled{true};
         DialogueZoomPolicy dialogueZoomPolicy{DialogueZoomPolicy::Adaptive};
         bool diagnosticsEnabled{};
         bool hotkeysEnabled{false};
+        bool overlayEnabled{true};
         std::string overlayLocaleCode{localization::CanonicalLocaleCode};
         bool overlayLocaleAuto{true};
         int overlayFontSize{OverlayFontSizeDefault};
@@ -117,6 +121,7 @@ namespace config
     bool ParseCinematicFovMode(std::string value, CinematicFovMode& result);
     const char* CinematicFovModeName(CinematicFovMode mode);
     bool ParseDialogueZoomPolicy(std::string value, DialogueZoomPolicy& result);
+    bool ParseDialogueMode(std::string value, DialogueZoomPolicy& result);
     const char* DialogueZoomPolicyName(DialogueZoomPolicy policy);
     bool ParseLocaleCode(std::string value, std::string& result);
     bool ParseOverlayFontSize(std::string value, int& result);

@@ -9,6 +9,8 @@ namespace
 {
     plugin::RuntimeSettingsSnapshot g_snapshot{};
     int g_persistCalls = 0;
+    config::GameplayMode g_lastPersistedGameplayMode =
+        config::GameplayMode::AspectRecalculation;
 
     bool Check(bool condition, const char* name)
     {
@@ -23,6 +25,10 @@ namespace
         ++*count;
         if (mutation.kind == plugin::RuntimeSettingKind::GameplayMode) {
             g_snapshot.gameplayMode = std::get<config::GameplayMode>(mutation.value);
+            return {true, true};
+        }
+        if (mutation.kind == plugin::RuntimeSettingKind::CinematicsEnabled) {
+            g_snapshot.cinematicsEnabled = std::get<bool>(mutation.value);
             return {true, true};
         }
         if (mutation.kind == plugin::RuntimeSettingKind::OverlayLocaleCode) {
@@ -46,8 +52,13 @@ namespace
     bool Snapshot(plugin::RuntimeSettingsSnapshot& snapshot, void*)
     { snapshot = g_snapshot; return true; }
 
-    bool Persist(const plugin::RuntimeSettingMutation&, void*)
-    { ++g_persistCalls; return true; }
+    bool Persist(const plugin::RuntimeSettingMutation& mutation, void*)
+    {
+        ++g_persistCalls;
+        if (mutation.kind == plugin::RuntimeSettingKind::GameplayMode)
+            g_lastPersistedGameplayMode = std::get<config::GameplayMode>(mutation.value);
+        return true;
+    }
 
     struct ConcurrentContext
     {
@@ -133,6 +144,11 @@ int main()
     pass &= Check(api.Snapshot(snapshot) &&
         snapshot.gameplayMode == config::GameplayMode::AspectRecalculation,
         "coherent_snapshot_reads_effective_value");
+    const auto cinematicsOff = api.Apply(
+        plugin::RuntimeSettingMutation::CinematicsEnabled(false));
+    pass &= Check(cinematicsOff.accepted && cinematicsOff.changed &&
+        api.Snapshot(snapshot) && !snapshot.cinematicsEnabled,
+        "cinematic_enable_mutation_is_typed_and_snapshotted");
     pass &= Check(!api.SemanticSnapshot(semanticSnapshot),
         "unavailable_semantic_reader_fails_closed_after_publication");
     pass &= Check(api.Persist(plugin::RuntimeSettingMutation::GameplayEnabled(false)) &&
@@ -163,8 +179,17 @@ int main()
     const plugin::RuntimeSettingMutation invalid{
         plugin::RuntimeSettingKind::GameplayMode,
         config::CinematicFovMode::NativeHorPlus};
-    pass &= Check(!api.Apply(invalid).accepted && calls == 8,
+    pass &= Check(!api.Apply(invalid).accepted && calls == 9,
         "mismatched_value_rejected");
+    const auto runtimeCombine = api.Apply(plugin::RuntimeSettingMutation::Gameplay(
+        config::GameplayMode::RuntimeCombine));
+    pass &= Check(runtimeCombine.accepted && runtimeCombine.changed &&
+        api.Snapshot(snapshot) &&
+        snapshot.gameplayMode == config::GameplayMode::RuntimeCombine &&
+        api.Persist(plugin::RuntimeSettingMutation::Gameplay(
+            config::GameplayMode::RuntimeCombine)) &&
+        g_lastPersistedGameplayMode == config::GameplayMode::RuntimeCombine,
+        "runtime_combine_setting_applies_snapshots_and_persists");
     pass &= Check(!plugin::ShouldDispatchHotkeyAction(false, false, true, false, false) &&
         !plugin::ShouldDispatchHotkeyAction(true, true, true, false, false) &&
         !plugin::ShouldDispatchHotkeyAction(true, false, true, true, false) &&

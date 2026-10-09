@@ -259,6 +259,8 @@ namespace config
             result = GameplayMode::AspectRecalculation;
         else if (value == "horplus" || value == "hor+")
             result = GameplayMode::HorPlus;
+        else if (value == "runtimecombine" || value == "runtime-combine")
+            result = GameplayMode::RuntimeCombine;
         else return false;
         return true;
     }
@@ -268,6 +270,7 @@ namespace config
         switch (mode) {
         case GameplayMode::AspectRecalculation: return "AspectRecalculation";
         case GameplayMode::HorPlus: return "HorPlus";
+        case GameplayMode::RuntimeCombine: return "RuntimeCombine";
         }
         return "AspectRecalculation";
     }
@@ -335,6 +338,14 @@ namespace config
         return true;
     }
 
+    bool ParseDialogueMode(std::string value, DialogueZoomPolicy& result)
+    {
+        if (!ParseDialogueZoomPolicy(std::move(value), result)) return false;
+        return result == DialogueZoomPolicy::Adaptive ||
+            result == DialogueZoomPolicy::Reduced ||
+            result == DialogueZoomPolicy::Disabled;
+    }
+
     const char* DialogueZoomPolicyName(DialogueZoomPolicy policy)
     {
         switch (policy) {
@@ -352,16 +363,16 @@ namespace config
         case DialogueZoomPolicy::Native: return DialogueZoomPolicy::Adaptive;
         case DialogueZoomPolicy::Adaptive: return DialogueZoomPolicy::Reduced;
         case DialogueZoomPolicy::Reduced: return DialogueZoomPolicy::Disabled;
-        case DialogueZoomPolicy::Disabled: return DialogueZoomPolicy::Native;
+        case DialogueZoomPolicy::Disabled: return DialogueZoomPolicy::Adaptive;
         }
-        return DialogueZoomPolicy::Native;
+        return DialogueZoomPolicy::Adaptive;
     }
 
     CinematicAspectPolicy NextCinematicAspectPolicy(CinematicAspectPolicy policy)
     {
         switch (policy) {
-        case CinematicAspectPolicy::Auto: return CinematicAspectPolicy::Native;
-        case CinematicAspectPolicy::Native: return CinematicAspectPolicy::Forced16x9;
+        case CinematicAspectPolicy::Auto: return CinematicAspectPolicy::Forced16x9;
+        case CinematicAspectPolicy::Native: return CinematicAspectPolicy::Auto;
         case CinematicAspectPolicy::Forced16x9: return CinematicAspectPolicy::Forced21x9;
         case CinematicAspectPolicy::Forced21x9: return CinematicAspectPolicy::Forced32x9;
         case CinematicAspectPolicy::Forced32x9: return CinematicAspectPolicy::Auto;
@@ -382,7 +393,8 @@ namespace config
     {
         switch (mode) {
         case GameplayMode::AspectRecalculation: return GameplayMode::HorPlus;
-        case GameplayMode::HorPlus: return GameplayMode::AspectRecalculation;
+        case GameplayMode::HorPlus: return GameplayMode::RuntimeCombine;
+        case GameplayMode::RuntimeCombine: return GameplayMode::AspectRecalculation;
         }
         return GameplayMode::AspectRecalculation;
     }

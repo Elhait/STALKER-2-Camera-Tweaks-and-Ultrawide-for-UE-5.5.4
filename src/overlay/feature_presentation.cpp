@@ -59,6 +59,17 @@ namespace overlay
             return Make(FeatureStatusKind::Active, FeatureStatusTone::Positive,
                 loc::common::Active, loc::status::HorPlusActive);
         }
+        if (snapshot.gameplayMode.value == config::GameplayMode::RuntimeCombine) {
+            const auto& evidence = snapshot.cameraState.evidence;
+            if (!snapshot.cameraStateValid || !evidence.runtimeCombineValid ||
+                !evidence.runtimeCombineConfirmed || !snapshot.coordinator.valid ||
+                snapshot.coordinator.value != plugin::OverlayCoordinatorState::Gameplay) {
+                return Make(FeatureStatusKind::Waiting, FeatureStatusTone::Warning,
+                    loc::common::Waiting, loc::status::HorPlusWaiting);
+            }
+            return Make(FeatureStatusKind::Active, FeatureStatusTone::Positive,
+                loc::common::Active, loc::status::HorPlusActive);
+        }
         return Make(FeatureStatusKind::EnabledStateful, FeatureStatusTone::Warning,
             loc::common::Applying, loc::status::NativeRecalculationEnabled);
     }
@@ -78,6 +89,14 @@ namespace overlay
             return Make(FeatureStatusKind::Unavailable, FeatureStatusTone::Error,
                 loc::common::Unavailable, loc::status::CinematicUnavailable);
         }
+        if (!snapshot.cinematicsEnabled.valid) {
+            return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
+                loc::common::CannotAssess, loc::status::CinematicIncomplete);
+        }
+        if (!snapshot.cinematicsEnabled.value) {
+            return Make(FeatureStatusKind::Disabled, FeatureStatusTone::Neutral,
+                loc::common::Disabled, loc::status::CinematicDisabled);
+        }
         if (!snapshot.cinematicSelectionActive.value) {
             if (snapshot.cinematicAspectPolicy.value == config::CinematicAspectPolicy::Native) {
                 return Make(FeatureStatusKind::Ready, FeatureStatusTone::Neutral,
@@ -86,10 +105,15 @@ namespace overlay
             return Make(FeatureStatusKind::Ready, FeatureStatusTone::Positive,
                 loc::common::Ready, loc::status::NextCinematicReady);
         }
-        if (!snapshot.activeCinematicAspectPolicy.valid ||
+        if (!snapshot.activeCinematicsEnabled.valid ||
+            !snapshot.activeCinematicAspectPolicy.valid ||
             !snapshot.activeCinematicFovMode.valid) {
             return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
                 loc::common::CannotAssess, loc::status::CinematicSelectionIncomplete);
+        }
+        if (!snapshot.activeCinematicsEnabled.value) {
+            return Make(FeatureStatusKind::Ready, FeatureStatusTone::Neutral,
+                loc::common::Ready, loc::status::NextCinematicReady);
         }
         return Make(FeatureStatusKind::Active, FeatureStatusTone::Positive,
             loc::common::Active, {});
@@ -98,7 +122,8 @@ namespace overlay
     FeaturePresentation ProjectDialoguePresentation(
         const plugin::OverlaySemanticSnapshot& snapshot) noexcept
     {
-        if (!snapshot.dialogueZoomPolicy.valid ||
+        if (!snapshot.dialogueEnabled.valid ||
+            !snapshot.dialogueZoomPolicy.valid ||
             !snapshot.dialogueBoundaryHookAvailable.valid ||
             !snapshot.dialoguePhase.valid) {
             return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
@@ -108,17 +133,18 @@ namespace overlay
             return Make(FeatureStatusKind::Unavailable, FeatureStatusTone::Error,
                 loc::common::Unavailable, loc::status::DialogueHookUnavailable);
         }
-        if (snapshot.dialogueZoomPolicy.value != config::DialogueZoomPolicy::Native) {
-            if (!snapshot.dialogueNonNativeCapabilityAvailable.valid) {
-                return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
-                    loc::common::CannotAssess, loc::status::DialogueCapabilityUnavailable);
-            }
-            if (!snapshot.dialogueNonNativeCapabilityAvailable.value) {
-                return Make(FeatureStatusKind::Unavailable, FeatureStatusTone::Error,
-                    loc::common::Unavailable, loc::status::DialogueModeUnavailable);
-            }
+        if (!snapshot.dialogueEnabled.value) {
+            return Make(FeatureStatusKind::Ready, FeatureStatusTone::Neutral,
+                loc::common::Ready, loc::status::DialogueNativeReady);
         }
-
+        if (!snapshot.dialogueNonNativeCapabilityAvailable.valid) {
+            return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
+                loc::common::CannotAssess, loc::status::DialogueCapabilityUnavailable);
+        }
+        if (!snapshot.dialogueNonNativeCapabilityAvailable.value) {
+            return Make(FeatureStatusKind::Unavailable, FeatureStatusTone::Error,
+                loc::common::Unavailable, loc::status::DialogueModeUnavailable);
+        }
         switch (snapshot.dialoguePhase.value) {
         case plugin::OverlayDialoguePhase::Inactive:
             switch (snapshot.dialogueZoomPolicy.value) {
@@ -141,6 +167,14 @@ namespace overlay
             return Make(FeatureStatusKind::Starting, FeatureStatusTone::Warning,
                 loc::common::Starting, loc::status::DialogueStarting);
         case plugin::OverlayDialoguePhase::Active:
+            if (!snapshot.activeDialogueCorrection.valid) {
+                return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
+                    loc::common::CannotAssess, loc::status::ActiveDialoguePolicyUnavailable);
+            }
+            if (!snapshot.activeDialogueCorrection.value) {
+                return Make(FeatureStatusKind::Ready, FeatureStatusTone::Neutral,
+                    loc::common::Ready, loc::status::DialogueReady);
+            }
             if (!snapshot.activeDialogueZoomPolicy.valid) {
                 return Make(FeatureStatusKind::CannotAssess, FeatureStatusTone::Neutral,
                 loc::common::CannotAssess, loc::status::ActiveDialoguePolicyUnavailable);

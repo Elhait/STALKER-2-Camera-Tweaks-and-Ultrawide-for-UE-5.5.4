@@ -4,4 +4,5 @@
 
 extern "C" bool StartOverlayDiscovery(HMODULE module);
 extern "C" void NotifyOverlayCameraCoreReady();
+extern "C" void NotifyOverlayCameraStatePublished() noexcept;
 extern "C" void RequestOverlayRedraw();

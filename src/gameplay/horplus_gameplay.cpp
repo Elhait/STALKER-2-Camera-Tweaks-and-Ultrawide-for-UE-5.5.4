@@ -41,6 +41,8 @@ namespace gameplay
             sample.cameraReadable && sample.source != 0 &&
             sample.source == sample.validatedSource && sample.flags == 0x4 &&
             std::isfinite(sample.aspect) && sample.aspect > 0.0f &&
+            sample.policyAspectValid && std::isfinite(sample.policyAspect) &&
+            sample.policyAspect > 0.0f &&
             std::isfinite(sample.inputFov) && sample.inputFov > 1.0f &&
             sample.inputFov < 179.0f && std::isfinite(sample.exitNativeTarget) &&
             sample.exitNativeTarget > 1.0f && sample.exitNativeTarget < 179.0f &&
@@ -62,7 +64,7 @@ namespace gameplay
         const float progress = std::clamp(
             (sample.cachedCinematicFov - sample.inputFov) / span, 0.0f, 1.0f);
         const auto gameplayTarget = EvaluateHorPlus(sample.exitNativeTarget,
-            sample.aspect, 0x4, nativeAspect);
+            sample.policyAspect, 0x4, nativeAspect);
         if (!gameplayTarget.applied)
             return std::numeric_limits<float>::quiet_NaN();
 

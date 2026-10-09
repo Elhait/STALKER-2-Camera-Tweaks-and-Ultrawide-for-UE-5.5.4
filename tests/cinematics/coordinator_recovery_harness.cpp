@@ -60,6 +60,8 @@ namespace
         sample.exitNativeTarget = 90.0f;
         sample.cachedCinematicFov = 106.688f;
         sample.aspect = 3440.0f / 1440.0f;
+        sample.policyAspect = sample.aspect;
+        sample.policyAspectValid = true;
         sample.flags = 0x4;
         sample.cameraReadable = true;
         auto converged = sample;

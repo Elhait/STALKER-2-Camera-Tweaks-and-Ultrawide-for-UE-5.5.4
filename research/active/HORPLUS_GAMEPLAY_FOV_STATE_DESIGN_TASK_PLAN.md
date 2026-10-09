@@ -146,3 +146,104 @@ Validation: supplied runtime log and visual result; separate from build evidence
 - Confirm this batch changed only research/design documentation.
 - Distinguish established source facts, hypotheses and missing seams.
 - Keep implementation and runtime validation explicitly pending.
+
+## Approved follow-up — shared lifecycle FOV publication (2026-10-07)
+
+This approved implementation follow-up supersedes the earlier static-design-only
+scope above for the bounded publication work below. It does not reopen or alter
+Gameplay/Cinematic/Dialogue camera-correction policy.
+
+### Objective and semantic contract
+
+Publish four distinct camera FOV roles in the shared Camera State:
+
+- `Gameplay FOV`: confirmed Gameplay baseline/reference; Current while freshly
+  established by eligible Gameplay observations, Retained across owner changes,
+  and Unavailable only when no valid baseline exists or an explicit invalidator
+  clears it.
+- `Native FOV`: actual input to the current production camera transaction.
+- `HorPlus Target`: target produced/carried by the production policy or lifecycle
+  state; never recomputed by the Overlay.
+- `Current Output FOV`: actual output returned by the current production camera
+  transaction, which can differ from both input and target.
+
+Transition boundary operands (Gameplay boundary and Cinematic ENTER) remain
+separate Transition Evidence and are not aliases for these four roles.
+Dialogue publication uses the existing XMM6 input and transaction output
+observation without acquiring camera ownership or changing correction semantics.
+
+### Scope and non-goals
+
+- Extend shared snapshot publication at the existing writer transaction seam
+  for Gameplay, Cinematic, continuation and recovery.
+- Publish Dialogue input/output from its existing transaction seam, tagged with
+  lifecycle/provenance and without changing ownership.
+- Expose the four roles and their validity/freshness sufficiently in the
+  existing Camera State/Integration presentation for one runtime validation.
+- The main Camera Integration summary must project all four shared roles
+  directly, including Retained/Last known freshness; expanded Camera State is
+  supplemental diagnostics, not a prerequisite for seeing the shared model.
+- Add deterministic publication/transaction regression coverage for Current,
+  Retained and Unavailable behavior and ensure observation does not alter output.
+- Do not change aspect/FOV correction, flags, RuntimeCombine, recovery,
+  coordinator ownership, transition assessment, or perform broad UI redesign.
+- Do not launch the game, install/deploy the ASI, or claim runtime validation.
+
+### Expected files and validation
+
+Expected source areas: `src/camera/camera_state_snapshot.hpp`,
+`src/camera/camera_state_publication.hpp`, `src/plugin/runtime.cpp`,
+`src/plugin/camera_writer_transaction.hpp`, the existing Camera State view and
+integration presentation/localization, and their focused harnesses. Preserve
+all existing staged and unstaged changes; do not stage or commit.
+
+Acceptance: each role carries an independently valid value, provenance and
+freshness; a valid Gameplay baseline remains Retained during Cinematic,
+Dialogue, continuation and recovery; current Native/Target/Output values track
+the actual transaction; Dialogue values are observed without changing its
+owner; ENTER operands remain separate; unavailable facts are not synthesized.
+Run focused harnesses, localization/catalog validation as applicable, `test.cmd`
+and the ordinary production build if the focused checks pass. The runtime
+sequence remains user-run and pending after producing a separate candidate
+artifact.
+
+### Status
+
+- Approved by the user in chat on 2026-10-07; the four-role shared Camera
+  State publication and diagnostic view are implemented in the working tree.
+- Focused camera-writer transaction coverage and the locale catalog audit pass.
+- Full `test.cmd` reached the localization font-rendering harness after the
+  camera/runtime/overlay harnesses passed, then failed on missing existing
+  Japanese, Chinese and Korean glyphs. This remains an independent catalog/font
+  coverage issue; it is not claimed as a full-suite pass.
+- Production-profile candidate build succeeded to the isolated ignored path
+  `build-artifacts/STALKER2CameraTweaksFovStateCandidate.asi`; the canonical
+  production ASI and game installation were not overwritten or changed.
+- Runtime and visual validation are explicitly pending user execution.
+
+### Follow-up — main summary projection regression (2026-10-07)
+
+- Runtime screenshots exposed that the expanded Camera State had the four
+  roles while the main Integration summary still projected legacy aggregate
+  fields and hid values unless coordinator/freshness aggregates were Current.
+- The follow-up changes only shared-fact projection and summary presentation;
+  camera correction, transaction, and ownership semantics remain out of scope.
+- Regression coverage spans Gameplay, CinematicActive, Dialogue within
+  CinematicActive, CinematicExiting recovery, and Gameplay after handoff,
+  asserting value, validity and Current/Retained freshness per role.
+- Owner metadata was investigated: FOV publication receives a coordinator-
+  derived transaction owner, while the `owner=` diagnostic currently prints
+  `snapshot.presentation.state`, the last full snapshot's presentation state.
+  That is snapshot metadata rather than transaction-owner truth; do not change
+  ownership behavior as part of this presentation fix.
+- Projection and writer-transaction harnesses pass for all four roles through
+  the requested lifecycle phases. The locale/catalog audit passes after its
+  dashboard contract was updated for the four-row summary. A production-profile
+  candidate was built at
+  `build-artifacts/STALKER2CameraTweaksFovSummaryCandidate.asi` (SHA-256
+  `E8BB21E414DB849D5D549FC1E761741B6FC1A0A2BC9BAFE77EA81851C9CAFD83`).
+- `test.cmd` remains not fully green because the localization font-rendering
+  harness reports existing missing Japanese, Chinese and Korean glyphs; all
+  camera/integration harnesses, including the new projection cases, passed.
+- Runtime/visual validation remains pending. The candidate was not installed
+  and the game was not launched.

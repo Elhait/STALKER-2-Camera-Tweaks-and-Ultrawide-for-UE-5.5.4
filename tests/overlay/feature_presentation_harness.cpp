@@ -25,14 +25,18 @@ namespace
         snapshot.cinematicFovLifecycleAvailable = {true, true};
         snapshot.cinematicAspectPolicy = {config::CinematicAspectPolicy::Auto, true};
         snapshot.cinematicFovMode = {config::CinematicFovMode::GameplayHorPlus, true};
+        snapshot.cinematicsEnabled = {true, true};
         snapshot.cinematicSelectionActive = {false, true};
         snapshot.activeCinematicAspectPolicy = {config::CinematicAspectPolicy::Auto, true};
         snapshot.activeCinematicFovMode = {config::CinematicFovMode::GameplayHorPlus, true};
+        snapshot.activeCinematicsEnabled = {false, true};
         snapshot.dialogueZoomPolicy = {config::DialogueZoomPolicy::Adaptive, true};
+        snapshot.dialogueEnabled = {true, true};
         snapshot.dialogueBoundaryHookAvailable = {true, true};
         snapshot.dialogueNonNativeCapabilityAvailable = {true, true};
         snapshot.dialoguePhase = {plugin::OverlayDialoguePhase::Inactive, true};
         snapshot.activeDialogueZoomPolicy = {config::DialogueZoomPolicy::Adaptive, true};
+        snapshot.activeDialogueCorrection = {true, true};
         return snapshot;
     }
 }
@@ -72,6 +76,19 @@ int main()
         status.tone == overlay::FeatureStatusTone::Warning, "gameplay_pending_is_warning");
 
     snapshot.gameplayModeTransitionPending.value = false;
+    snapshot.gameplayMode.value = config::GameplayMode::RuntimeCombine;
+    snapshot.cameraStateValid = true;
+    snapshot.cameraState.evidence.runtimeCombineValid = true;
+    snapshot.cameraState.evidence.runtimeCombineConfirmed = false;
+    status = overlay::ProjectGameplayPresentation(snapshot);
+    pass &= Check(status.kind == overlay::FeatureStatusKind::Waiting,
+        "runtime_combine_without_confirmed_aspect_is_waiting");
+    snapshot.cameraState.evidence.runtimeCombineConfirmed = true;
+    status = overlay::ProjectGameplayPresentation(snapshot);
+    pass &= Check(status.kind == overlay::FeatureStatusKind::Active,
+        "runtime_combine_active_requires_confirmed_aspect");
+    snapshot.gameplayMode.value = config::GameplayMode::HorPlus;
+    snapshot.cameraStateValid = false;
     snapshot.gameplayHookAvailable.value = false;
     status = overlay::ProjectGameplayPresentation(snapshot);
     pass &= Check(status.kind == overlay::FeatureStatusKind::Unavailable &&
@@ -87,9 +104,21 @@ int main()
         cinematic.tone == overlay::FeatureStatusTone::Neutral, "native_cinematic_is_ready_without_claiming_correction");
     snapshot.cinematicAspectPolicy.value = config::CinematicAspectPolicy::Auto;
     snapshot.cinematicSelectionActive.value = true;
+    snapshot.activeCinematicsEnabled.value = true;
     cinematic = overlay::ProjectCinematicPresentation(snapshot);
     pass &= Check(cinematic.kind == overlay::FeatureStatusKind::Active,
         "cinematic_active_requires_observed_selection");
+    snapshot.cinematicsEnabled.value = false;
+    cinematic = overlay::ProjectCinematicPresentation(snapshot);
+    pass &= Check(cinematic.kind == overlay::FeatureStatusKind::Disabled,
+        "disabled_cinematics_remain_disabled_during_observed_cinematic");
+    snapshot.cinematicsEnabled.value = true;
+    snapshot.activeCinematicsEnabled.value = false;
+    cinematic = overlay::ProjectCinematicPresentation(snapshot);
+    pass &= Check(cinematic.kind == overlay::FeatureStatusKind::Ready &&
+        cinematic.detail.path == overlay::loc::status::NextCinematicReady.path,
+        "reenabled_mid_cinematic_waits_for_next_accepted_enter");
+    snapshot.activeCinematicsEnabled.value = true;
     snapshot.activeCinematicFovMode.valid = false;
     cinematic = overlay::ProjectCinematicPresentation(snapshot);
     pass &= Check(cinematic.kind == overlay::FeatureStatusKind::CannotAssess,
@@ -119,11 +148,21 @@ int main()
     pass &= Check(dialogue.kind == overlay::FeatureStatusKind::CannotAssess,
         "dialogue_active_missing_policy_fails_closed");
     snapshot.activeDialogueZoomPolicy.valid = true;
+    snapshot.activeDialogueCorrection.value = false;
+    dialogue = overlay::ProjectDialoguePresentation(snapshot);
+    pass &= Check(dialogue.kind == overlay::FeatureStatusKind::Ready,
+        "dialogue_requested_on_does_not_claim_active_before_boundary_activation");
+    snapshot.activeDialogueCorrection.value = true;
     snapshot.dialoguePhase.value = plugin::OverlayDialoguePhase::RearmPending;
     dialogue = overlay::ProjectDialoguePresentation(snapshot);
     pass &= Check(dialogue.kind == overlay::FeatureStatusKind::Waiting &&
         dialogue.tone == overlay::FeatureStatusTone::Warning, "dialogue_rearm_is_waiting");
     snapshot.dialoguePhase.value = plugin::OverlayDialoguePhase::Inactive;
+    snapshot.dialogueEnabled.value = false;
+    dialogue = overlay::ProjectDialoguePresentation(snapshot);
+    pass &= Check(dialogue.kind == overlay::FeatureStatusKind::Ready,
+        "dialogue_master_off_reports_native_output");
+    snapshot.dialogueEnabled.value = true;
     snapshot.dialogueZoomPolicy.value = config::DialogueZoomPolicy::Reduced;
     snapshot.dialogueNonNativeCapabilityAvailable.value = false;
     dialogue = overlay::ProjectDialoguePresentation(snapshot);

@@ -1,7 +1,7 @@
 {
   "app": { "title": "STALKER 2 Camera Tweaks" },
   "common": {
-    "enabled": "Activé", "disabled": "Désactivé", "unavailable": "Indisponible",
+    "enabled": "Activé", "disabled": "Désactivé", "default": "Par défaut", "unavailable": "Indisponible",
     "unavailable_value": "indisponible", "cannot_assess": "Impossible à évaluer",
     "active": "Actif", "ready": "Prêt", "applying": "Application en cours",
     "starting": "Démarrage", "ending": "Fin", "waiting": "En attente",
@@ -20,21 +20,22 @@
     "gameplay_mode": "Mode de jeu", "cinematic_aspect": "Format des cinématiques",
     "cinematic_fov": "FOV des cinématiques", "dialogue_zoom": "Zoom des dialogues",
     "overlay_toggle": "Afficher/masquer l’interface", "language": "Langue", "font_size": "Taille du texte", "mode": "Mode",
-    "aspect_ratio": "Format d’image", "fov_mode": "Mode FOV", "zoom": "Zoom"
+    "cinematic_framing": "Cadrage", "fov_mode": "Mode FOV", "zoom": "Zoom"
   },
   "notice": { "mouse_capture": "La souris est capturée tant que cette fenêtre est ouverte. Appuyez sur {key} pour rendre le contrôle de la souris au jeu, ou sur Esc pour fermer l’overlay." },
   "rebind": { "press_key": "Appuyez sur une touche" },
-  "ui": { "viewport_aspect": "Format de la fenêtre de jeu" },
+  "ui": { "viewport_aspect": "Format de la zone cliente de la fenêtre du jeu" },
   "transition": {
     "waiting": "En attente",
-    "aligned": "Aligné", "not_aligned": "Non aligné",
+    "aligned": "Transition fluide", "not_aligned": "Écart",
     "detail": {
-      "waiting": "La caméra est configurée pour une transition alignée. En attente des données de caméra du jeu pour confirmer l’état.",
-      "aligned": "Les parcours de caméra des cinématiques et du jeu sont alignés.",
-      "not_aligned": "Les parcours de caméra des cinématiques et du jeu diffèrent par leur format ou leur comportement FOV.",
-      "cannot_assess": "Les données d’exécution sont insuffisantes pour comparer les parcours de caméra."
+      "aligned": "Les valeurs observées de format et de FOV des caméras de jeu et de cinématique concordent.",
+      "not_aligned": "Les valeurs observées de format ou de FOV des caméras de jeu et de cinématique diffèrent.",
+      "cannot_assess": "Les données d’exécution sont insuffisantes pour comparer les parcours de caméra.",
+      "waiting": "En attente d’une observation actuelle de la caméra cinématique à comparer à l’échantillon limite du jeu.",
+      "expected_seamless": "Les paramètres sélectionnés devraient assurer une transition de caméra fluide. La vérification à l’exécution attend une observation de la caméra cinématique."
     },
-    "active_value": "Actif — {value}"
+    "active_value": "Actif — {value}", "context_active_selection": "L’évaluation utilise la sélection de cinématique active.", "context_next_selection": "L’évaluation utilise les réglages de la prochaine sélection de cinématique."
   },
   "status": { "detail": {
     "gameplay_incomplete": "L’état du jeu n’est pas encore disponible.",
@@ -47,8 +48,8 @@
     "horplus_active": "HorPlus ajuste le FOV du jeu en temps réel.",
     "native_recalculation_enabled": "L’ajustement natif de la caméra du jeu est activé.",
     "cinematic_incomplete": "L’état des cinématiques n’est pas encore disponible.",
-    "cinematic_unavailable": "L’intégration de la caméra des cinématiques est indisponible.",
-    "cinematic_native_ready": "La prochaine cinématique utilisera son cadrage d’origine.",
+    "cinematic_unavailable": "L’intégration de la caméra des cinématiques est indisponible.", "cinematic_disabled": "Les corrections des cinématiques sont désactivées ; la sortie native de la caméra du jeu est utilisée.",
+    "cinematic_native_ready": "Les corrections des cinématiques sont désactivées ; la sortie native de la caméra du jeu est utilisée.",
     "next_cinematic_ready": "Les changements s’appliqueront à la prochaine cinématique.",
     "cinematic_active": "La cinématique en cours utilise le format et le mode FOV sélectionnés.",
     "cinematic_selection_incomplete": "Les informations sur la cinématique active sont incomplètes.",
@@ -56,7 +57,7 @@
     "dialogue_hook_unavailable": "L’intégration de la caméra des dialogues est indisponible.",
     "dialogue_capability_unavailable": "L’état du zoom des dialogues est indisponible.",
     "dialogue_mode_unavailable": "Le mode de zoom des dialogues sélectionné est indisponible.",
-    "dialogue_native_ready": "Le prochain dialogue utilisera le zoom natif du jeu.",
+    "dialogue_native_ready": "La correction des dialogues est désactivée ; le comportement de la caméra du jeu reste inchangé.",
     "dialogue_adaptive_ready": "Le zoom adaptatif est configuré pour le prochain dialogue.",
     "dialogue_reduced_ready": "Le zoom réduit est configuré pour le prochain dialogue.",
     "dialogue_disabled_ready": "Aucun zoom supplémentaire ne sera appliqué aux dialogues.",
@@ -73,16 +74,17 @@
     "gameplay": {
       "enabled": "Activer la correction du jeu sélectionnée.",
       "disabled": "Arrêter toute nouvelle correction du jeu. Le résultat d’un recalcul natif de la caméra peut persister jusqu’au redémarrage du jeu ou au rechargement de la sauvegarde.",
-      "horplus": "Recommandé. Préserve les changements natifs du FOV en jeu et les adapte en temps réel à la fenêtre actuelle, y compris pendant le zoom.",
+      "horplus": "Préserve les changements FOV du writer Gameplay et transforme chaque échantillon selon le format observé au writer, y compris pendant le zoom.",
       "horplus_examples_context": "FOV du jeu · sans zoom",
       "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
       "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
       "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
-      "aspect_recalculation": "Utilise la transition de format native du jeu tout en préservant le FOV sélectionné. Dans une fenêtre aux proportions personnalisées, le retour à Auto peut rétablir les proportions et la taille natives de la fenêtre."
+      "aspect_recalculation": "Utilise la transition de format native du jeu tout en préservant le FOV sélectionné. Dans une fenêtre aux proportions personnalisées, le retour à Auto peut rétablir les proportions et la taille natives de la fenêtre.",
+      "runtime_combine": "Combine les anciens modes Aspect Recalculation et HorPlus pour assurer des transitions fluides entre le Gameplay et les cinématiques. Synchronise le format de la caméra Gameplay avec celui de la fenêtre actuelle, sans dépendre de la valeur relevée au chargement de la caméra, et relance la synchronisation lorsque la résolution d’affichage change. La correction Hor+ du FOV n’est appliquée qu’après confirmation de la synchronisation. C’est le mode recommandé pour passer en douceur aux cinématiques et en revenir."
     },
-    "cinematics": { "aspect": {
+    "cinematics": { "enabled": "Activé, applique les corrections de cadrage et de FOV choisies aux cinématiques. Désactivé, Camera Tweaks laisse la caméra du jeu produire son image native.", "aspect": {
       "auto": "Utilise le format de la fenêtre de jeu actuelle pour cadrer les cinématiques. Prend en charge toute proportion valide.",
-      "native": "Conserve le cadrage natif des cinématiques. Le mode FOV sélectionné reste appliqué.",
+      "native": "Le comportement natif se règle avec le bouton Enabled ; les cadrages disponibles sont Auto, 16:9, 21:9 et 32:9.",
       "16_9": "Cadre les cinématiques en 16:9, quelle que soit la proportion de l’écran.",
       "21_9": "Cadre les cinématiques en 21:9, quelle que soit la proportion de l’écran.",
       "32_9": "Cadre les cinématiques en 32:9, quelle que soit la proportion de l’écran.",
@@ -96,14 +98,13 @@
       "native_examples_context": "FOV cinématique 90° · résultats par format",
       "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
     } },
-    "dialogue": { "zoom": {
-      "native": "Utiliser le comportement de zoom d’origine des dialogues.",
+    "dialogue": {
+      "enabled": "Lorsque la correction des dialogues est désactivée, le jeu utilise son zoom natif, avec un FOV par défaut de 70°.",
+      "zoom": {
       "adaptive": "Préserver la puissance du zoom optique d’origine du jeu par rapport au FOV actuel.",
       "reduced": "Utiliser la moitié de la puissance du zoom optique adaptatif.",
       "disabled": "Désactiver le zoom des dialogues et conserver le FOV actuel du jeu.",
       "examples_context": "FOV du jeu → FOV des dialogues",
-      "native_example_90": "90° → 70°.",
-      "native_example_110": "110° → 70°.",
       "adaptive_example_90": "90° → 70°.",
       "adaptive_example_110": "110° → ~90°.",
       "reduced_example_90": "90° → ~80°.",
@@ -115,46 +116,64 @@
       "disabled": "Désactiver ces actions. La touche distincte d’affichage de l’interface reste active.",
       "change": "Cliquez sur la touche actuelle pour commencer à la réattribuer.",
       "change_overlay": "Cliquez sur la touche actuelle de l’interface pour commencer à la réattribuer.",
-      "single_key": "Associez une seule touche standard ; les combinaisons et boutons de souris ne sont pas pris en charge.",
+      "single_key": "Associez une seule touche standard ; les combinaisons et boutons de souris ne sont pas pris en charge.",
+
       "rebind": "Appuyez sur une touche pour l’associer. Échap annule.",
-      "gameplay_cycle": "Fait défiler immédiatement la correction du jeu : AspectRecalculation -> HorPlus -> AspectRecalculation.",
-      "cinematic_aspect_cycle": "Définit le format de la prochaine cinématique : Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Sans effet sur une cinématique en cours.",
+      "gameplay_cycle": "Fait défiler immédiatement la correction du jeu : AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Change le cadrage de la prochaine cinématique : Auto → 16:9 → 21:9 → 32:9 → Auto.",
       "cinematic_fov_cycle": "Définit le mode FOV de la prochaine cinématique : NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Sans effet sur une cinématique en cours.",
-      "dialogue_cycle": "Définit le zoom du prochain dialogue : Native -> Adaptive -> Reduced -> Disabled -> Native. Sans effet sur un dialogue en cours."
+      "dialogue_cycle": "Change le mode de correction du prochain dialogue : Adaptive -> Reduced -> Disabled -> Adaptive. Sans effet sur un dialogue en cours."
     },
     "overlay": { "always_active": "Cette touche ouvre ou ferme l’interface." },
     "runtime": {
       "viewport": "Format actuel de la fenêtre de rendu du jeu. Il peut changer avec la résolution ou la taille de la fenêtre.",
+      "writer_aspect": "Le rapport actuellement observé sur le writer de caméra Gameplay. Il est distinct de celui de la zone d’affichage.",
+      "policy_aspect": "Le rapport utilisé par l’observation actuelle de la politique FOV Gameplay. Ce n’est pas une lecture finale de la projection.",
       "viewport_auto": "La règle Auto des cinématiques utilise ce format comme cible.",
       "viewport_unavailable": "Les dimensions actuelles de la fenêtre de rendu du jeu sont indisponibles.",
       "aspect_matched": "Les formats de fenêtre des cinématiques et du jeu concordent dans la tolérance de comparaison.",
       "aspect_mismatch": "Les formats de fenêtre des cinématiques et du jeu diffèrent.",
       "aspect_cannot_assess": "Les informations d’exécution valides sont insuffisantes pour comparer les formats.",
-      "cinematic_aspect": "La première valeur est le format résolu depuis les réglages des cinématiques ; la seconde est le format actuel de la fenêtre du jeu.",
+    "cinematic_aspect": "Il s’agit d’un aperçu de l’interface basé sur la sélection active ou suivante et le rapport actuel de la zone cliente. En production, le rapport de l’écran ou le rapport natif peut être utilisé si les dimensions de la zone cliente sont indisponibles. Cela ne confirme ni le rapport cinématique appliqué ni la projection finale.",
+      "cinematic_default": "Le comportement de caméra par défaut du jeu est utilisé ; Camera Tweaks ne modifie ni le format ni le FOV.",
       "cinematic_aspect_unavailable": "La cible valide des cinématiques ou le format actuel de la fenêtre est indisponible.",
-      "gameplay_fov": "FOV neutre du jeu conservé. Il est distinct des états de zoom temporaires comme l’ADS, les jumelles, les dialogues et les cinématiques.",
+    "gameplay_fov": "FOV neutre conservé du writer de jeu, observé dans des conditions stables ; ce n’est ni une valeur configurée ni le FOV visible final.",
       "gameplay_fov_unavailable": "Aucun FOV neutre valide du jeu n’a encore été observé.",
-      "native_fov": "Entrée FOV actuelle avant transformation HorPlus. Elle peut changer pendant l’ADS, le zoom des jumelles, les dialogues ou les transitions de caméra.",
+      "native_fov": "Entrée FOV actuelle du writer de jeu avant la transformation HorPlus de ce mod. Elle peut changer pendant l’ADS ; ce n’est pas une lecture finale du FOV visible.",
       "native_fov_unavailable": "Le FOV natif actuel valide est indisponible.",
-      "horplus_fov": "Équivalent transformé du FOV natif pour la fenêtre actuelle. Il peut changer pendant le zoom et les transitions de caméra.",
-      "horplus_fov_unavailable": "Aucun FOV transformé valide n’est disponible."
+      "horplus_fov": "Le résultat de la politique FOV Gameplay utilise le format validé de la zone cliente de la fenêtre du jeu relevé lors de cet appel writer ; ce n’est pas une lecture du FOV final visible.",
+      "horplus_fov_unavailable": "Aucun FOV transformé valide n’est disponible.",
+      "current_output_fov": "FOV renvoyé par la transaction caméra actuelle du mod après application de la politique de correction applicable.",
+      "transition_evidence": "Preuve enregistrée d’une limite Cinematic ENTER acceptée, distincte de l’état caméra en direct.",
+      "transition_generation": "Génération du cycle de vie cinématique associée à cette preuve ENTER acceptée.",
+      "gameplay_boundary_aspect": "Aspect côté Gameplay capturé à la limite ENTER acceptée.",
+      "cinematic_enter_aspect": "Aspect côté cinématique capturé à la limite ENTER acceptée.",
+      "aspect_delta": "Différence absolue entre Gameplay Boundary Aspect et Cinematic ENTER Aspect.",
+      "gameplay_boundary_fov": "FOV Gameplay capturé à ENTER ; preuve de transition, et non mesure en direct.",
+      "cinematic_enter_fov": "FOV cinématique capturé à ENTER ; preuve de transition, et non mesure en direct.",
+      "fov_delta": "Différence absolue entre Gameplay Boundary FOV et Cinematic ENTER FOV.",
+      "fov_match": "Comparaison des FOV de limite capturés avec une tolérance sémantique de ±1°.",
+      "camera_transition": "Évaluation globale de la limite Gameplay-to-Cinematic validée à partir des preuves aspect et FOV disponibles.",
+      "gameplay_status": "État de présentation actuel de l’intégration caméra Gameplay.",
+      "cinematic_status": "État de présentation actuel de l’intégration caméra cinématique."
     }
   },
   "camera_state": {
     "waiting": "En attente de la première mise à jour complète de la caméra.",
     "field": {
+      "last_publication": "Dernière publication complète", "coordinator": "Coordinateur actuel", "aspect_preview": "Aperçu du format cinématique",
       "state": "État", "gameplay_fov": "FOV du jeu", "provenance": "Provenance", "epoch": "Époque", "mode": "Mode",
       "valid": "Valide", "direction": "Direction", "active": "Actif",
       "evidence_valid": "Données valides", "sequence": "Séquence", "primary": "Principal",
       "secondary": "Secondaire", "source": "Source", "confidence": "Fiabilité",
       "policy_valid": "Règle valide", "recovery_excluded": "Exclu du rétablissement",
-      "target": "Cible", "setting_known": "Réglage connu", "game_source": "Source du jeu",
-      "native": "FOV natif", "native_source": "Source native", "horplus": "FOV HorPlus",
-      "horplus_source": "Source HorPlus", "aspect": "Format", "aspect_source": "Source du format",
+      "target": "Cible", "game_source": "Source du jeu",
+      "native": "FOV natif", "native_source": "Source native", "horplus": "HorPlus Target", "current_output": "Current Output FOV", "aspect_source": "Source du format", "writer_aspect": "Format natif du writer", "gameplay_policy_aspect": "Format de la politique Gameplay",
       "flags": "Indicateurs", "gameplay_writer": "Écriture du jeu",
-      "presentation_epoch": "Époque d’affichage", "event_sequence": "Séquence d’événements"
+      "runtime_combine": "Transaction Runtime Combine",
+      "presentation_epoch": "Époque d’affichage", "event_sequence": "Séquence d’événements", "freshness": "Fraîcheur"
     },
-    "value": { "unavailable_counter": "indisponible / {value}" }
+    "value": { "current": "Actuel", "retained": "Retained", "last_known": "Dernière valeur connue", "unavailable_counter": "indisponible / {value}", "runtime_combine_detail": "Avant : {before} ; cible : {target} ; après : {after} ; écart : {mismatch} ; écriture demandée : {attempted} ; écriture réussie : {write_succeeded} ; confirmé : {confirmed} ; indicateurs : {flags_before} → {flags_after} ; FOV : {input_fov} → {output_fov}." }
   },
   "notification": {
     "hotkey_conflict": "Conflit de raccourcis clavier", "hotkey_title": "Raccourci : {setting}",

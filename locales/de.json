@@ -1,7 +1,7 @@
 {
   "app": { "title": "STALKER 2 Camera Tweaks" },
   "common": {
-    "enabled": "Aktiviert", "disabled": "Deaktiviert", "unavailable": "Nicht verfügbar",
+    "enabled": "Aktiviert", "disabled": "Deaktiviert", "default": "Standard", "unavailable": "Nicht verfügbar",
     "unavailable_value": "nicht verfügbar", "cannot_assess": "Nicht beurteilbar",
     "active": "Aktiv", "ready": "Bereit", "applying": "Wird angewendet",
     "starting": "Wird gestartet", "ending": "Wird beendet", "waiting": "Warten",
@@ -20,21 +20,22 @@
     "gameplay_mode": "Spielmodus", "cinematic_aspect": "Format der Zwischensequenzen",
     "cinematic_fov": "FOV der Zwischensequenzen", "dialogue_zoom": "Dialogzoom",
     "overlay_toggle": "Overlay umschalten", "language": "Sprache", "font_size": "Textgröße", "mode": "Modus",
-    "aspect_ratio": "Seitenverhältnis", "fov_mode": "FOV-Modus", "zoom": "Zoom"
+    "cinematic_framing": "Bildausschnitt", "fov_mode": "FOV-Modus", "zoom": "Zoom"
   },
   "notice": { "mouse_capture": "Die Mauseingabe wird erfasst, solange dieses Fenster geöffnet ist. Drücke {key}, um die Maussteuerung an das Spiel zurückzugeben, oder Esc, um das Overlay zu schließen." },
   "rebind": { "press_key": "Taste drücken" },
-  "ui": { "viewport_aspect": "Seitenverhältnis des Spielfensters" },
+  "ui": { "viewport_aspect": "Seitenverhältnis des Clientbereichs im Spielfenster" },
   "transition": {
     "waiting": "Warten",
-    "aligned": "Abgestimmt", "not_aligned": "Nicht abgestimmt",
+    "aligned": "Nahtloser Übergang", "not_aligned": "Abweichung",
     "detail": {
-      "waiting": "Die Kamera ist für einen abgestimmten Übergang konfiguriert. Es werden Gameplay-Kameradaten zur Bestätigung erwartet.",
-      "aligned": "Die Kamerapfade von Zwischensequenzen und Spiel sind abgestimmt.",
-      "not_aligned": "Die Kamerapfade von Zwischensequenzen und Spiel unterscheiden sich beim Seitenverhältnis oder FOV-Verhalten.",
-      "cannot_assess": "Es liegen nicht genügend Laufzeitdaten vor, um die Kamerapfade zu vergleichen."
+      "aligned": "Die beobachteten Seitenverhältnis- und FOV-Werte der Gameplay- und Cinematic-Kamera stimmen überein.",
+      "not_aligned": "Der beobachtete Seitenverhältnis- oder FOV-Wert der Gameplay- und Cinematic-Kamera weicht ab.",
+      "cannot_assess": "Es liegen nicht genügend Laufzeitdaten vor, um die Kamerapfade zu vergleichen.",
+      "waiting": "Wartet auf eine aktuelle Cinematic-Kamerabeobachtung zum Vergleich mit dem Gameplay-Grenzsample.",
+      "expected_seamless": "Die ausgewählten Einstellungen sollten einen nahtlosen Kameraübergang ermöglichen. Die Laufzeitprüfung wartet auf eine Cinematic-Kamerabeobachtung."
     },
-    "active_value": "Aktiv — {value}"
+    "active_value": "Aktiv — {value}", "context_active_selection": "Die Bewertung verwendet die aktive Zwischensequenz-Auswahl.", "context_next_selection": "Die Bewertung verwendet die Einstellungen für die nächste Zwischensequenz."
   },
   "status": { "detail": {
     "gameplay_incomplete": "Der Spielstatus ist noch nicht verfügbar.",
@@ -47,8 +48,8 @@
     "horplus_active": "HorPlus passt das Spiel-FOV in Echtzeit an.",
     "native_recalculation_enabled": "Die native Kameraanpassung des Spiels ist aktiviert.",
     "cinematic_incomplete": "Der Status der Zwischensequenz ist noch nicht verfügbar.",
-    "cinematic_unavailable": "Die Kameraintegration für Zwischensequenzen ist nicht verfügbar.",
-    "cinematic_native_ready": "Die nächste Zwischensequenz verwendet den ursprünglichen Bildausschnitt.",
+    "cinematic_unavailable": "Die Kameraintegration für Zwischensequenzen ist nicht verfügbar.", "cinematic_disabled": "Korrekturen für Zwischensequenzen sind deaktiviert; die native Kameraausgabe des Spiels wird verwendet.",
+    "cinematic_native_ready": "Korrekturen für Zwischensequenzen sind deaktiviert; die native Kameraausgabe des Spiels wird verwendet.",
     "next_cinematic_ready": "Änderungen gelten ab der nächsten Zwischensequenz.",
     "cinematic_active": "Die laufende Zwischensequenz verwendet das ausgewählte Seitenverhältnis und den FOV-Modus.",
     "cinematic_selection_incomplete": "Informationen zur aktiven Zwischensequenz sind unvollständig.",
@@ -56,7 +57,7 @@
     "dialogue_hook_unavailable": "Die Dialogkameraintegration ist nicht verfügbar.",
     "dialogue_capability_unavailable": "Der Status des Dialogzooms ist nicht verfügbar.",
     "dialogue_mode_unavailable": "Der ausgewählte Dialogzoom-Modus ist nicht verfügbar.",
-    "dialogue_native_ready": "Der nächste Dialog verwendet den nativen Zoom des Spiels.",
+    "dialogue_native_ready": "Die Dialogkorrektur ist deaktiviert; das Kameraverhalten des Spiels bleibt unverändert.",
     "dialogue_adaptive_ready": "Adaptiver Zoom ist für den nächsten Dialog eingestellt.",
     "dialogue_reduced_ready": "Reduzierter Zoom ist für den nächsten Dialog eingestellt.",
     "dialogue_disabled_ready": "Auf Dialoge wird kein zusätzlicher Zoom angewendet.",
@@ -73,16 +74,17 @@
     "gameplay": {
       "enabled": "Aktiviert die ausgewählte Spielkorrektur.",
       "disabled": "Verhindert weitere Spielkorrekturen. Das Ergebnis einer nativen Kameraneuberechnung kann bis zum Neustart des Spiels oder zum erneuten Laden des Spielstands bestehen bleiben.",
-      "horplus": "Empfohlen. Bewahrt native FOV-Änderungen im Spiel und passt sie in Echtzeit an das aktuelle Spielfenster an, auch während des Zooms.",
+      "horplus": "Bewahrt FOV-Änderungen des Gameplay-Writers und transformiert jede Probe anhand des beim Writer beobachteten Seitenverhältnisses, auch beim Zoomen.",
       "horplus_examples_context": "Spiel-FOV · ohne Zoom",
       "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
       "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
       "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
-      "aspect_recalculation": "Verwendet den nativen Seitenverhältnisübergang des Spiels und bewahrt das ausgewählte Spiel-FOV. Bei benutzerdefiniertem Fensterformat kann Auto das native Seitenverhältnis und die native Fenstergröße wiederherstellen."
+      "aspect_recalculation": "Verwendet den nativen Seitenverhältnisübergang des Spiels und bewahrt das ausgewählte Spiel-FOV. Bei benutzerdefiniertem Fensterformat kann Auto das native Seitenverhältnis und die native Fenstergröße wiederherstellen.",
+      "runtime_combine": "Kombiniert die früheren Modi Aspect Recalculation und HorPlus für nahtlose Übergänge zwischen Gameplay und Zwischensequenzen. Synchronisiert das Seitenverhältnis der Gameplay-Kamera mit dem aktuellen Fensterverhältnis, statt sich auf den beim Laden der Kamera erfassten Wert zu verlassen, und synchronisiert es bei einer Änderung der Anzeigeauflösung erneut. Die Hor+-FOV-Korrektur wird erst nach bestätigter Synchronisierung angewendet. Dies ist der empfohlene Modus für fließende Übergänge in Zwischensequenzen und zurück."
     },
-    "cinematics": { "aspect": {
+    "cinematics": { "enabled": "Aktiviert die ausgewählte Bildausschnitt- und FOV-Korrektur für Zwischensequenzen. Deaktiviert lässt Camera Tweaks die native Kameraausgabe unverändert.", "aspect": {
       "auto": "Verwendet das aktuelle Seitenverhältnis des Spielfensters für den Bildausschnitt von Zwischensequenzen. Unterstützt beliebige gültige Seitenverhältnisse.",
-      "native": "Lässt den nativen Bildausschnitt der Zwischensequenzen unverändert. Der ausgewählte FOV-Modus bleibt aktiv.",
+      "native": "Das native Verhalten wird über den separaten Schalter gesteuert; verfügbar sind Auto, 16:9, 21:9 und 32:9.",
       "16_9": "Verwendet für Zwischensequenzen 16:9, unabhängig vom Bildschirmformat.",
       "21_9": "Verwendet für Zwischensequenzen 21:9, unabhängig vom Bildschirmformat.",
       "32_9": "Verwendet für Zwischensequenzen 32:9, unabhängig vom Bildschirmformat.",
@@ -96,14 +98,13 @@
       "native_examples_context": "Cinematic-FOV 90° · Ergebnisse nach Seitenverhältnis",
       "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
     } },
-    "dialogue": { "zoom": {
-      "native": "Verwendet das ursprüngliche Zoomverhalten der Dialoge.",
+    "dialogue": {
+      "enabled": "Wenn die Dialogkorrektur deaktiviert ist, verwendet das Spiel seinen nativen Dialogzoom mit einem Standard-FOV von 70°.",
+      "zoom": {
       "adaptive": "Bewahrt die Stärke des nativen optischen Zooms relativ zum aktuellen Spiel-FOV.",
       "reduced": "Verwendet die halbe Stärke des adaptiven optischen Zooms.",
       "disabled": "Deaktiviert den Dialogzoom und behält das aktuelle Spiel-FOV bei.",
       "examples_context": "Spiel-FOV → Dialog-FOV",
-      "native_example_90": "90° → 70°.",
-      "native_example_110": "110° → 70°.",
       "adaptive_example_90": "90° → 70°.",
       "adaptive_example_110": "110° → ~90°.",
       "reduced_example_90": "90° → ~80°.",
@@ -115,46 +116,64 @@
       "disabled": "Deaktiviert diese Aktionen. Die separate Overlay-Taste bleibt aktiv.",
       "change": "Klicke auf die aktuelle Taste, um die Neubelegung zu starten.",
       "change_overlay": "Klicke auf die aktuelle Overlay-Taste, um die Neubelegung zu starten.",
-      "single_key": "Binde eine einzelne normale Tastaturtaste; Tastenkombinationen und Maustasten werden nicht unterstützt.",
+      "single_key": "Binde eine einzelne normale Tastaturtaste; Tastenkombinationen und Maustasten werden nicht unterstützt.",
+
       "rebind": "Drücke eine Taste, um sie zuzuweisen. Esc bricht ab.",
-      "gameplay_cycle": "Schaltet die Gameplay-Korrektur sofort weiter: AspectRecalculation -> HorPlus -> AspectRecalculation.",
-      "cinematic_aspect_cycle": "Legt das Seitenverhältnis für die nächste Zwischensequenz fest: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Eine laufende Zwischensequenz bleibt unverändert.",
+      "gameplay_cycle": "Schaltet die Gameplay-Korrektur sofort weiter: AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Wechselt den Bildausschnitt der nächsten Zwischensequenz: Auto → 16:9 → 21:9 → 32:9 → Auto.",
       "cinematic_fov_cycle": "Legt den FOV-Modus für die nächste Zwischensequenz fest: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Eine laufende Zwischensequenz bleibt unverändert.",
-      "dialogue_cycle": "Legt den Zoommodus für den nächsten Dialog fest: Native -> Adaptive -> Reduced -> Disabled -> Native. Ein laufender Dialog bleibt unverändert."
+      "dialogue_cycle": "Wechselt den Korrekturmodus für den nächsten Dialog: Adaptive -> Reduced -> Disabled -> Adaptive. Ein laufender Dialog bleibt unverändert."
     },
     "overlay": { "always_active": "Mit dieser Taste öffnest oder schließt du das Overlay." },
     "runtime": {
       "viewport": "Aktuelles Seitenverhältnis des Spielfensters. Es kann sich mit der Auflösung oder Fenstergröße ändern.",
+      "writer_aspect": "Das aktuell vom Gameplay-Kamera-Writer beobachtete Seitenverhältnis. Es ist unabhängig vom Seitenverhältnis des Viewports.",
+      "policy_aspect": "Das Seitenverhältnis der aktuellen Gameplay-FOV-Policy-Beobachtung. Es ist kein endgültiger Projektionswert.",
       "viewport_auto": "Die Auto-Regel für Zwischensequenzen verwendet dieses Seitenverhältnis als Ziel.",
       "viewport_unavailable": "Die aktuellen Abmessungen des Spielfensters sind nicht verfügbar.",
       "aspect_matched": "Die Seitenverhältnisse von Zwischensequenz und Spiel stimmen innerhalb der Vergleichstoleranz überein.",
       "aspect_mismatch": "Die Seitenverhältnisse von Zwischensequenz und Spiel unterscheiden sich.",
       "aspect_cannot_assess": "Es liegen nicht genügend gültige Laufzeitinformationen für einen Vergleich vor.",
-      "cinematic_aspect": "Der erste Wert ist das aus den Zwischensequenz-Einstellungen ermittelte Seitenverhältnis; der zweite ist das aktuelle Spiel-Fensterformat.",
+      "cinematic_aspect": "Dies ist eine UI-Vorschau anhand der aktiven oder nächsten Auswahl und des aktuellen Client-Seitenverhältnisses. Die Produktion kann bei nicht verfügbaren Client-Abmessungen auf das Anzeige- oder native Seitenverhältnis zurückfallen. Dies bestätigt weder das angewendete Cinematic-Seitenverhältnis noch das endgültige Projektionsverhältnis.",
+      "cinematic_default": "Es gilt das standardmäßige Kameraverhalten des Spiels; Camera Tweaks ändert weder Seitenverhältnis noch FOV.",
       "cinematic_aspect_unavailable": "Ein gültiges Zielseitenverhältnis der Zwischensequenz oder das aktuelle Spielfensterformat ist nicht verfügbar.",
-      "gameplay_fov": "Das beibehaltene neutrale Spiel-FOV. Es unterscheidet sich von temporären Zoomzuständen wie ADS, Fernglas, Dialogen und Zwischensequenzen.",
+      "gameplay_fov": "Beibehaltenes neutrales Gameplay-Writer-FOV aus stabilen Bedingungen; kein konfigurierter oder endgültig sichtbarer FOV-Wert.",
       "gameplay_fov_unavailable": "Ein gültiges neutrales Spiel-FOV wurde noch nicht beobachtet.",
-      "native_fov": "Aktuelle FOV-Eingabe vor der HorPlus-Transformation. Sie kann sich bei ADS, Fernglaszoom, Dialogen oder Kameraübergängen ändern.",
+      "native_fov": "FOV-Eingabe des Gameplay-Writers vor der HorPlus-Transformation dieses Mods; kann sich während ADS ändern und ist kein endgültiger sichtbarer FOV-Messwert.",
       "native_fov_unavailable": "Ein gültiges aktuelles natives FOV ist nicht verfügbar.",
-      "horplus_fov": "Transformiertes Gegenstück des nativen FOV für das aktuelle Spielfenster. Es kann sich bei Zoom und Kameraübergängen ändern.",
-      "horplus_fov_unavailable": "Ein gültiges transformiertes FOV ist nicht verfügbar."
+      "horplus_fov": "Das Ergebnis der Gameplay-FOV-Richtlinie verwendet das beim Writer-Aufruf erfasste und validierte Seitenverhältnis des Spielfensters; es ist kein endgültiger sichtbarer FOV-Messwert.",
+      "horplus_fov_unavailable": "Ein gültiges transformiertes FOV ist nicht verfügbar.",
+      "current_output_fov": "Das FOV, das die aktuelle Mod-Kameratransaktion nach der geltenden Korrekturpolicy zurückgibt.",
+      "transition_evidence": "Gespeicherter Nachweis einer akzeptierten Cinematic-ENTER-Grenze; getrennt vom Live-Kamerastatus.",
+      "transition_generation": "Cinematic-Lifecycle-Generation dieses akzeptierten ENTER-Nachweises.",
+      "gameplay_boundary_aspect": "Gameplay-seitiger Aspect-Wert an der akzeptierten Gameplay-zu-Cinematic-ENTER-Grenze.",
+      "cinematic_enter_aspect": "Cinematic-seitiger Aspect-Wert an der akzeptierten ENTER-Grenze.",
+      "aspect_delta": "Absoluter Unterschied zwischen Gameplay Boundary Aspect und Cinematic ENTER Aspect.",
+      "gameplay_boundary_fov": "Gameplay-seitiger FOV-Wert von ENTER; Übergangsnachweis, keine Live-FOV-Messung.",
+      "cinematic_enter_fov": "Cinematic-seitiger FOV-Wert von ENTER; Übergangsnachweis, keine Live-FOV-Messung.",
+      "fov_delta": "Absoluter Unterschied zwischen Gameplay Boundary FOV und Cinematic ENTER FOV.",
+      "fov_match": "Vergleich der erfassten FOV-Grenzwerte mit semantischer Toleranz von ±1°.",
+      "camera_transition": "Gesamtbewertung der bestätigten Gameplay-zu-Cinematic-Grenze anhand verfügbarer Aspect- und FOV-Daten.",
+      "gameplay_status": "Aktueller Darstellungsstatus der Gameplay-Kameraintegration.",
+      "cinematic_status": "Aktueller Darstellungsstatus der Cinematic-Kameraintegration."
     }
   },
   "camera_state": {
     "waiting": "Warten auf die erste vollständige Kameraaktualisierung.",
     "field": {
+      "last_publication": "Last publication state", "coordinator": "Coordinator", "aspect_preview": "Cinematic aspect preview",
       "state": "Status", "gameplay_fov": "Spiel-FOV", "provenance": "Herkunft", "epoch": "Epoche", "mode": "Modus",
       "valid": "Gültig", "direction": "Richtung", "active": "Aktiv",
       "evidence_valid": "Nachweis gültig", "sequence": "Sequenz", "primary": "Primär",
       "secondary": "Sekundär", "source": "Quelle", "confidence": "Konfidenz",
       "policy_valid": "Richtlinie gültig", "recovery_excluded": "Von Wiederherstellung ausgeschlossen",
-      "target": "Ziel", "setting_known": "Einstellung bekannt", "game_source": "Spielquelle",
-      "native": "Natives FOV", "native_source": "Native Quelle", "horplus": "HorPlus-FOV",
-      "horplus_source": "HorPlus-Quelle", "aspect": "Seitenverhältnis", "aspect_source": "Quelle des Seitenverhältnisses",
+      "target": "Ziel", "game_source": "Spielquelle",
+      "native": "Natives FOV", "native_source": "Native Quelle", "horplus": "HorPlus Target", "current_output": "Current Output FOV", "aspect_source": "Quelle des Seitenverhältnisses", "writer_aspect": "Natives Writer-Seitenverhältnis", "gameplay_policy_aspect": "Gameplay-Richtlinien-Seitenverhältnis",
       "flags": "Flags", "gameplay_writer": "Spiel-Schreibvorgang",
-      "presentation_epoch": "Darstellungsepoche", "event_sequence": "Ereignissequenz"
+      "runtime_combine": "Runtime-Combine-Transaktion",
+      "presentation_epoch": "Darstellungsepoche", "event_sequence": "Ereignissequenz", "freshness": "Aktualität"
     },
-    "value": { "unavailable_counter": "nicht verfügbar / {value}" }
+    "value": { "current": "Aktuell", "retained": "Retained", "last_known": "Zuletzt bekannt", "unavailable_counter": "nicht verfügbar / {value}", "runtime_combine_detail": "Vorher: {before}; Ziel: {target}; nachher: {after}; Abweichung: {mismatch}; Schreibversuch: {attempted}; Schreiben erfolgreich: {write_succeeded}; bestätigt: {confirmed}; Flags: {flags_before} → {flags_after}; FOV: {input_fov} → {output_fov}." }
   },
   "notification": {
     "hotkey_conflict": "Tastenkürzelkonflikt", "hotkey_title": "Tastenkürzel: {setting}",

@@ -3,6 +3,7 @@
 #include "../config/feature_config.hpp"
 
 #include <cstdint>
+#include <utility>
 
 namespace cinematics
 {
@@ -25,4 +26,23 @@ namespace cinematics
         config::CinematicFovMode fovMode,
         std::uint64_t generation,
         CinematicSelectionSnapshot& snapshot) noexcept;
+
+    template <typename CommitAcceptedEnter>
+    bool TryCaptureCinematicSelectionTransactional(
+        bool activeSelectionValid,
+        config::CinematicAspectPolicy aspectPolicy,
+        config::CinematicFovMode fovMode,
+        std::uint64_t generation,
+        CinematicSelectionSnapshot& snapshot,
+        CommitAcceptedEnter&& commitAcceptedEnter)
+    {
+        CinematicSelectionSnapshot candidate{};
+        if (!TryCaptureCinematicSelection(activeSelectionValid, aspectPolicy,
+                fovMode, generation, candidate))
+            return false;
+
+        std::forward<CommitAcceptedEnter>(commitAcceptedEnter)(candidate);
+        snapshot = candidate;
+        return true;
+    }
 }

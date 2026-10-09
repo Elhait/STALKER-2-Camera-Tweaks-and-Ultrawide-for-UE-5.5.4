@@ -1,7 +1,7 @@
 {
   "app": { "title": "STALKER 2 Camera Tweaks" },
   "common": {
-    "enabled": "Etkin", "disabled": "Devre dışı", "unavailable": "Kullanılamıyor",
+    "enabled": "Etkin", "disabled": "Devre dışı", "default": "Varsayılan", "unavailable": "Kullanılamıyor",
     "unavailable_value": "kullanılamıyor", "cannot_assess": "Değerlendirilemiyor",
     "active": "Etkin", "ready": "Hazır", "applying": "Uygulanıyor",
     "starting": "Başlatılıyor", "ending": "Sonlandırılıyor", "waiting": "Bekleniyor",
@@ -20,21 +20,22 @@
     "gameplay_mode": "Oynanış modu", "cinematic_aspect": "Sinematik en-boy oranı",
     "cinematic_fov": "Sinematik FOV", "dialogue_zoom": "Diyalog yakınlaştırması",
     "overlay_toggle": "Kaplamayı aç/kapat", "language": "Dil", "font_size": "Metin boyutu", "mode": "Mod",
-    "aspect_ratio": "En-boy oranı", "fov_mode": "FOV modu", "zoom": "Yakınlaştırma"
+    "cinematic_framing": "Kadraj", "fov_mode": "FOV modu", "zoom": "Yakınlaştırma"
   },
   "notice": { "mouse_capture": "Bu pencere açıkken fare girişi yakalanır. Fare denetimini oyuna geri vermek için {key} tuşuna veya kaplamayı kapatmak için Esc tuşuna basın." },
   "rebind": { "press_key": "Bir tuşa basın" },
-  "ui": { "viewport_aspect": "Oyun görüntü alanının en-boy oranı" },
+  "ui": { "viewport_aspect": "Oyun penceresi istemci alanının en-boy oranı" },
   "transition": {
     "waiting": "Bekleniyor",
-    "aligned": "Uyumlu", "not_aligned": "Uyumsuz",
+    "aligned": "Kesintisiz geçiş", "not_aligned": "Uyumsuzluk",
     "detail": {
-      "waiting": "Kamera, uyumlu bir geçiş için yapılandırıldı. Durumu doğrulamak üzere oynanış kamerası verileri bekleniyor.",
-      "aligned": "Sinematik ve oynanış kamera yolları uyumludur.",
-      "not_aligned": "Sinematik ve oynanış kamera yollarının en-boy oranı veya FOV davranışı farklıdır.",
-      "cannot_assess": "Kamera yollarını karşılaştırmak için yeterli çalışma zamanı verisi yok."
+      "aligned": "Oynanış ve sinematik kamera için gözlemlenen en-boy oranı ve FOV değerleri eşleşiyor.",
+      "not_aligned": "Oynanış ve sinematik kamera için gözlemlenen en-boy oranı veya FOV değerleri farklı.",
+      "cannot_assess": "Kamera yollarını karşılaştırmak için yeterli çalışma zamanı verisi yok.",
+      "waiting": "Oyun sınır örneğiyle karşılaştırmak için güncel sinematik kamera gözlemi bekleniyor.",
+      "expected_seamless": "Seçilen ayarların kesintisiz bir kamera geçişi sağlaması bekleniyor. Çalışma zamanı doğrulaması sinematik kamera gözlemini bekliyor."
     },
-    "active_value": "Etkin — {value}"
+    "active_value": "Etkin — {value}", "context_active_selection": "Değerlendirme etkin sinematik seçimini kullanır.", "context_next_selection": "Değerlendirme sonraki sinematik seçiminin ayarlarını kullanır."
   },
   "status": { "detail": {
     "gameplay_incomplete": "Oynanış durumu henüz kullanılamıyor.",
@@ -47,8 +48,8 @@
     "horplus_active": "HorPlus, oynanış FOV değerini gerçek zamanlı ayarlar.",
     "native_recalculation_enabled": "Oyunun yerel kamera ayarı etkin.",
     "cinematic_incomplete": "Sinematik durumu henüz kullanılamıyor.",
-    "cinematic_unavailable": "Sinematik kamera tümleştirmesi kullanılamıyor.",
-    "cinematic_native_ready": "Sonraki sinematik özgün kadrajı kullanacak.",
+    "cinematic_unavailable": "Sinematik kamera tümleştirmesi kullanılamıyor.", "cinematic_disabled": "Sinematik düzeltmeleri kapalı; oyunun doğal kamera çıktısı kullanılıyor.",
+    "cinematic_native_ready": "Sinematik düzeltmeleri kapalı; oyunun doğal kamera çıktısı kullanılıyor.",
     "next_cinematic_ready": "Değişiklikler sonraki sinematikten itibaren geçerlidir.",
     "cinematic_active": "Etkin sinematikte seçilen en-boy oranı ve FOV modu kullanılıyor.",
     "cinematic_selection_incomplete": "Etkin sinematik bilgileri eksik.",
@@ -56,7 +57,7 @@
     "dialogue_hook_unavailable": "Diyalog kamerası tümleştirmesi kullanılamıyor.",
     "dialogue_capability_unavailable": "Diyalog yakınlaştırma durumu kullanılamıyor.",
     "dialogue_mode_unavailable": "Seçilen diyalog yakınlaştırma modu kullanılamıyor.",
-    "dialogue_native_ready": "Sonraki diyalog oyunun yerel yakınlaştırmasını kullanacak.",
+    "dialogue_native_ready": "Diyalog düzeltmesi kapalı; oyunun kamera davranışı değişmez.",
     "dialogue_adaptive_ready": "Uyarlamalı yakınlaştırma sonraki diyalog için ayarlandı.",
     "dialogue_reduced_ready": "Azaltılmış yakınlaştırma sonraki diyalog için ayarlandı.",
     "dialogue_disabled_ready": "Diyaloglara ek yakınlaştırma uygulanmayacak.",
@@ -73,16 +74,17 @@
     "gameplay": {
       "enabled": "Seçilen oynanış düzeltmesini etkinleştirir.",
       "disabled": "Oynanış düzeltmelerini durdurur. Yerel kamera yeniden hesaplamasının sonucu, oyun yeniden başlatılana veya kayıt tekrar yüklenene kadar kalabilir.",
-      "horplus": "Önerilir. Yerel oynanış FOV değişikliklerini korur ve yakınlaştırma sırasında da bunları geçerli oyun görüntü alanına gerçek zamanlı uyarlar.",
+      "horplus": "Oynanış writer FOV değişikliklerini korur ve her örneği writer'da gözlemlenen en-boy oranına göre dönüştürür; yakınlaştırmada da geçerlidir.",
       "horplus_examples_context": "oynanış FOV · yakınlaştırma yok",
       "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
       "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
       "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
-      "aspect_recalculation": "Seçilen oynanış FOV değerini korurken oyunun yerel en-boy oranı geçişini kullanır. Özel oranlı pencerede Auto'ya dönmek, pencerenin yerel oranını ve boyutunu geri yükleyebilir."
+      "aspect_recalculation": "Seçilen oynanış FOV değerini korurken oyunun yerel en-boy oranı geçişini kullanır. Özel oranlı pencerede Auto'ya dönmek, pencerenin yerel oranını ve boyutunu geri yükleyebilir.",
+      "runtime_combine": "Gameplay ile sinematikler arasında kesintisiz geçişler için önceki Aspect Recalculation ve HorPlus modlarını birleştirir. Kamera yüklenirken kaydedilen değere bağlı kalmadan Gameplay kamerasının en-boy oranını geçerli pencere oranıyla eşitler ve ekran çözünürlüğü değiştiğinde yeniden eşitler. Hor+ FOV düzeltmesi yalnızca eşitleme doğrulandıktan sonra uygulanır. Sinematiklere girip çıkarken akıcı geçişler için önerilen moddur."
     },
-    "cinematics": { "aspect": {
+    "cinematics": { "enabled": "Açıkken sinematikler için seçilen kadraj ve FOV düzeltmelerini uygular. Kapalıyken Camera Tweaks oyunun doğal kamera çıktısını değiştirmez.", "aspect": {
       "auto": "Sinematik kadrajı için geçerli oyun görüntü alanının oranını kullanır. Geçerli tüm oranları destekler.",
-      "native": "Oyunun yerel sinematik kadrajını değiştirmez. Seçilen FOV modu uygulanmaya devam eder.",
+      "native": "Doğal davranış ayrı Enabled anahtarıyla kontrol edilir; kadraj seçenekleri Auto, 16:9, 21:9 ve 32:9’dur.",
       "16_9": "Ekran oranından bağımsız olarak sinematiklerde 16:9 kadraj kullanır.",
       "21_9": "Ekran oranından bağımsız olarak sinematiklerde 21:9 kadraj kullanır.",
       "32_9": "Ekran oranından bağımsız olarak sinematiklerde 32:9 kadraj kullanır.",
@@ -96,14 +98,13 @@
       "native_examples_context": "90° sinematik FOV · en-boy oranı sonuçları",
       "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
     } },
-    "dialogue": { "zoom": {
-      "native": "Oyunun özgün diyalog yakınlaştırma davranışını kullanır.",
+    "dialogue": {
+      "enabled": "Diyalog düzeltmesi kapatıldığında oyun yerel diyalog yakınlaştırmasını kullanır; varsayılan FOV 70°'dir.",
+      "zoom": {
       "adaptive": "Oyunun özgün optik yakınlaştırma gücünü geçerli oynanış FOV değerine göre korur.",
       "reduced": "Uyarlamalı optik yakınlaştırma gücünün yarısını kullanır.",
       "disabled": "Diyalog yakınlaştırmasını kapatır ve geçerli oynanış FOV değerini korur.",
       "examples_context": "oynanış FOV → diyalog FOV",
-      "native_example_90": "90° → 70°.",
-      "native_example_110": "110° → 70°.",
       "adaptive_example_90": "90° → 70°.",
       "adaptive_example_110": "110° → ~90°.",
       "reduced_example_90": "90° → ~80°.",
@@ -115,46 +116,64 @@
       "disabled": "Bu eylemleri devre dışı bırakır. Ayrı kaplama aç/kapat tuşu etkin kalır.",
       "change": "Yeniden atamayı başlatmak için geçerli tuş denetimine tıklayın.",
       "change_overlay": "Yeniden atamayı başlatmak için geçerli kaplama tuşuna tıklayın.",
-      "single_key": "Tek bir normal klavye tuşu atayın; değiştirici tuş kombinasyonları ve fare düğmeleri desteklenmez.",
+      "single_key": "Tek bir normal klavye tuşu atayın; değiştirici tuş kombinasyonları ve fare düğmeleri desteklenmez.",
+
       "rebind": "Atamak için bir tuşa basın. İptal etmek için Esc tuşuna basın.",
-      "gameplay_cycle": "Oynanış düzeltmesini hemen döngüsel değiştirir: AspectRecalculation -> HorPlus -> AspectRecalculation.",
-      "cinematic_aspect_cycle": "Sonraki sinematiğin en-boy oranını ayarlar: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Devam eden sinematiği etkilemez.",
+      "gameplay_cycle": "Oynanış düzeltmesini hemen döngüsel değiştirir: AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "Sonraki sinematiğin kadrajını değiştirir: Auto → 16:9 → 21:9 → 32:9 → Auto.",
       "cinematic_fov_cycle": "Sonraki sinematiğin FOV modunu ayarlar: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Devam eden sinematiği etkilemez.",
-      "dialogue_cycle": "Sonraki diyalog yakınlaştırmasını ayarlar: Native -> Adaptive -> Reduced -> Disabled -> Native. Devam eden diyaloğu etkilemez."
+      "dialogue_cycle": "Sonraki diyalog için düzeltme modunu değiştirir: Adaptive -> Reduced -> Disabled -> Adaptive. Devam eden diyaloğu etkilemez."
     },
     "overlay": { "always_active": "Bu tuş arayüzü açar veya kapatır." },
     "runtime": {
       "viewport": "Oyunun geçerli görüntü alanı oranı. Çözünürlük veya pencere boyutu değiştiğinde değişebilir.",
+      "writer_aspect": "Gameplay kamera writer içinde şu anda gözlemlenen en-boy oranıdır. İstemci görünüm alanının oranından ayrıdır.",
+      "policy_aspect": "Geçerli Gameplay FOV politikası gözleminde kullanılan orandır. Nihai izdüşüm oranı okuması değildir.",
       "viewport_auto": "Sinematik Auto en-boy oranı ilkesi hedef olarak bu görüntü alanı oranını kullanır.",
       "viewport_unavailable": "Geçerli oyun görüntü alanı boyutları kullanılamıyor.",
       "aspect_matched": "Sinematik ve oynanış görüntü alanı oranları karşılaştırma toleransı içinde eşleşiyor.",
       "aspect_mismatch": "Sinematik ve oynanış görüntü alanı oranları farklı.",
       "aspect_cannot_assess": "Oranları karşılaştırmak için yeterli geçerli çalışma zamanı bilgisi yok.",
-      "cinematic_aspect": "İlk değer sinematik ayarlarından çözümlenen orandır; ikinci değer geçerli oynanış görüntü alanı oranıdır.",
+      "cinematic_aspect": "Bu, etkin veya sonraki seçim ile geçerli istemci alanı oranına dayalı bir arayüz önizlemesidir. İstemci alanı boyutları kullanılamadığında üretim kodu ekran veya yerel oranı kullanabilir. Uygulanan sinematik oranı ya da nihai yansıtma oranını doğrulamaz.",
+      "cinematic_default": "Oyunun varsayılan kamera davranışı kullanılır; Camera Tweaks en-boy oranını veya FOV değerini değiştirmez.",
       "cinematic_aspect_unavailable": "Geçerli bir sinematik hedef oranı veya geçerli görüntü alanı oranı kullanılamıyor.",
-      "gameplay_fov": "Korunan nötr oynanış FOV değeri. ADS, dürbün, diyalog ve sinematik gibi geçici yakınlaştırma durumlarından ayrıdır.",
+      "gameplay_fov": "Kararlı koşullarda gözlemlenip korunan nötr Gameplay writer FOV değeridir; yapılandırılmış bir değer veya nihai görünür FOV değildir.",
       "gameplay_fov_unavailable": "Geçerli nötr oynanış FOV değeri henüz gözlemlenmedi.",
-      "native_fov": "HorPlus dönüşümünden önceki geçerli FOV girdisi. ADS, dürbün yakınlaştırması, diyalog veya kamera geçişlerinde değişebilir.",
+      "native_fov": "Bu modun HorPlus dönüşümünden önceki mevcut Gameplay writer FOV girdisidir. ADS sırasında değişebilir; nihai görünür FOV okuması değildir.",
       "native_fov_unavailable": "Geçerli yerel FOV kullanılamıyor.",
-      "horplus_fov": "Geçerli görüntü alanı için yerel FOV'un dönüştürülmüş karşılığı. Yakınlaştırma ve kamera geçişlerinde değişebilir.",
-      "horplus_fov_unavailable": "Geçerli dönüştürülmüş FOV kullanılamıyor."
+      "horplus_fov": "Gameplay FOV politikası sonucu, bu writer çağrısında alınan doğrulanmış oyun penceresi istemci alanı oranını kullanır; son görünür FOV okuması değildir.",
+      "horplus_fov_unavailable": "Geçerli dönüştürülmüş FOV kullanılamıyor.",
+      "current_output_fov": "Uygun düzeltme politikası sonrasında mevcut mod kamera işleminin döndürdüğü FOV.",
+      "transition_evidence": "Kabul edilmiş Cinematic ENTER sınırından saklanan kanıt; canlı kamera durumundan ayrıdır.",
+      "transition_generation": "Bu kabul edilmiş ENTER kanıtıyla ilişkili sinematik yaşam döngüsü nesli.",
+      "gameplay_boundary_aspect": "Kabul edilen ENTER sınırında kaydedilen Gameplay tarafı aspect değeri.",
+      "cinematic_enter_aspect": "Kabul edilen ENTER sınırında kaydedilen Cinematic tarafı aspect değeri.",
+      "aspect_delta": "Gameplay Boundary Aspect ile Cinematic ENTER Aspect arasındaki mutlak fark.",
+      "gameplay_boundary_fov": "ENTER sırasında kaydedilen Gameplay FOV; canlı okuma değil geçiş kanıtıdır.",
+      "cinematic_enter_fov": "ENTER sırasında kaydedilen Cinematic FOV; canlı okuma değil geçiş kanıtıdır.",
+      "fov_delta": "Gameplay Boundary FOV ile Cinematic ENTER FOV arasındaki mutlak fark.",
+      "fov_match": "Kaydedilen sınır FOV değerlerinin ±1° anlamsal toleransla karşılaştırılması.",
+      "camera_transition": "Mevcut aspect ve FOV kanıtlarıyla doğrulanan Gameplay-to-Cinematic sınırının genel değerlendirmesi.",
+      "gameplay_status": "Gameplay kamera entegrasyonunun mevcut sunum durumu.",
+      "cinematic_status": "Cinematic kamera entegrasyonunun mevcut sunum durumu."
     }
   },
   "camera_state": {
     "waiting": "İlk eksiksiz kamera güncellemesi bekleniyor.",
     "field": {
+      "last_publication": "Son tam yayın", "coordinator": "Geçerli koordinatör", "aspect_preview": "Sinematik en-boy oranı önizlemesi",
       "state": "Durum", "gameplay_fov": "Oynanış FOV", "provenance": "Köken", "epoch": "Dönem", "mode": "Mod",
       "valid": "Geçerli", "direction": "Yön", "active": "Etkin",
       "evidence_valid": "Kanıt geçerli", "sequence": "Sıra", "primary": "Birincil",
       "secondary": "İkincil", "source": "Kaynak", "confidence": "Güven",
       "policy_valid": "İlke geçerli", "recovery_excluded": "Kurtarmanın dışında",
-      "target": "Hedef", "setting_known": "Ayar biliniyor", "game_source": "Oyun kaynağı",
-      "native": "Yerel FOV", "native_source": "Yerel kaynak", "horplus": "HorPlus FOV",
-      "horplus_source": "HorPlus kaynağı", "aspect": "En-boy oranı", "aspect_source": "Oran kaynağı",
+      "target": "Hedef", "game_source": "Oyun kaynağı",
+      "native": "Yerel FOV", "native_source": "Yerel kaynak", "horplus": "HorPlus Target", "current_output": "Current Output FOV", "aspect_source": "Oran kaynağı", "writer_aspect": "Yerel writer en-boy oranı", "gameplay_policy_aspect": "Gameplay politika oranı",
       "flags": "Bayraklar", "gameplay_writer": "Oyun yazıcısı",
-      "presentation_epoch": "Görüntüleme dönemi", "event_sequence": "Olay sırası"
+      "runtime_combine": "Runtime Combine işlemi",
+      "presentation_epoch": "Görüntüleme dönemi", "event_sequence": "Olay sırası", "freshness": "Güncellik"
     },
-    "value": { "unavailable_counter": "kullanılamıyor / {value}" }
+    "value": { "current": "Güncel", "retained": "Retained", "last_known": "Son bilinen", "unavailable_counter": "kullanılamıyor / {value}", "runtime_combine_detail": "Önce: {before}; hedef: {target}; sonra: {after}; fark: {mismatch}; yazma denemesi: {attempted}; yazma başarılı: {write_succeeded}; doğrulandı: {confirmed}; bayraklar: {flags_before} → {flags_after}; FOV: {input_fov} → {output_fov}." }
   },
   "notification": {
     "hotkey_conflict": "Kısayol çakışması", "hotkey_title": "{setting} kısayolu",

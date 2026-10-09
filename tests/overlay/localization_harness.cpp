@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -88,21 +89,23 @@ int main()
         }
         return true;
     };
-    constexpr std::string_view gameplayNames[]{"AspectRecalculation", "HorPlus"};
-    constexpr std::string_view aspectNames[]{"Auto", "Native", "16:9", "21:9", "32:9"};
+    constexpr std::string_view gameplayNames[]{"AspectRecalculation", "HorPlus",
+        "RuntimeCombine"};
+    constexpr std::string_view aspectNames[]{"Auto", "16:9", "21:9", "32:9"};
     constexpr std::string_view fovNames[]{"NativeHorPlus", "GameplayHorPlus"};
-    constexpr std::string_view dialogueNames[]{"Native", "Adaptive", "Reduced", "Disabled"};
+    constexpr std::string_view dialogueNames[]{"Adaptive", "Reduced", "Disabled"};
     constexpr config::GameplayMode gameplayValues[]{
-        config::GameplayMode::AspectRecalculation, config::GameplayMode::HorPlus};
+        config::GameplayMode::AspectRecalculation, config::GameplayMode::HorPlus,
+        config::GameplayMode::RuntimeCombine};
     constexpr config::CinematicAspectPolicy aspectValues[]{
-        config::CinematicAspectPolicy::Auto, config::CinematicAspectPolicy::Native,
-        config::CinematicAspectPolicy::Forced16x9, config::CinematicAspectPolicy::Forced21x9,
+        config::CinematicAspectPolicy::Auto, config::CinematicAspectPolicy::Forced16x9,
+        config::CinematicAspectPolicy::Forced21x9,
         config::CinematicAspectPolicy::Forced32x9};
     constexpr config::CinematicFovMode fovValues[]{
         config::CinematicFovMode::NativeHorPlus, config::CinematicFovMode::GameplayHorPlus};
     constexpr config::DialogueZoomPolicy dialogueValues[]{
-        config::DialogueZoomPolicy::Native, config::DialogueZoomPolicy::Adaptive,
-        config::DialogueZoomPolicy::Reduced, config::DialogueZoomPolicy::Disabled};
+        config::DialogueZoomPolicy::Adaptive, config::DialogueZoomPolicy::Reduced,
+        config::DialogueZoomPolicy::Disabled};
     constexpr Key aspectRecalculationDescriptions[]{
         overlay::loc::tooltip::gameplay::AspectRecalculation};
     constexpr Key horPlusDescriptions[]{overlay::loc::tooltip::gameplay::HorPlus};
@@ -111,7 +114,6 @@ int main()
         overlay::loc::tooltip::gameplay::HorPlusExample100,
         overlay::loc::tooltip::gameplay::HorPlusExample110};
     constexpr Key aspectAutoDescriptions[]{overlay::loc::tooltip::cinematics::AspectAuto};
-    constexpr Key aspectNativeDescriptions[]{overlay::loc::tooltip::cinematics::AspectNative};
     constexpr Key aspect169Descriptions[]{overlay::loc::tooltip::cinematics::Aspect169};
     constexpr Key aspect219Descriptions[]{overlay::loc::tooltip::cinematics::Aspect219};
     constexpr Key aspect329Descriptions[]{overlay::loc::tooltip::cinematics::Aspect329};
@@ -123,10 +125,6 @@ int main()
         overlay::loc::tooltip::cinematics::FovGameplayExample90,
         overlay::loc::tooltip::cinematics::FovGameplayExample112_6};
     constexpr Key dialogueContext = overlay::loc::tooltip::dialogue::ZoomExamplesContext;
-    constexpr Key dialogueNativeDescriptions[]{overlay::loc::tooltip::dialogue::ZoomNative};
-    constexpr Key dialogueNativeExamples[]{
-        overlay::loc::tooltip::dialogue::ZoomNativeExample90,
-        overlay::loc::tooltip::dialogue::ZoomNativeExample110};
     constexpr Key dialogueAdaptiveDescriptions[]{overlay::loc::tooltip::dialogue::ZoomAdaptive};
     constexpr Key dialogueAdaptiveExamples[]{
         overlay::loc::tooltip::dialogue::ZoomAdaptiveExample90,
@@ -158,22 +156,23 @@ int main()
     assert(matches(gameplayOptions[0], aspectRecalculationDescriptions, {}, {}));
     assert(matches(gameplayOptions[1], horPlusDescriptions,
         overlay::loc::tooltip::gameplay::HorPlusExamplesContext, horPlusExamples));
+    constexpr Key runtimeCombineDescriptions[]{
+        overlay::loc::tooltip::gameplay::RuntimeCombine};
+    assert(matches(gameplayOptions[2], runtimeCombineDescriptions, {}, {}));
     assert(matches(aspectOptions[0], aspectAutoDescriptions, {}, {}));
-    assert(matches(aspectOptions[1], aspectNativeDescriptions, {}, {}));
-    assert(matches(aspectOptions[2], aspect169Descriptions, {}, {}));
-    assert(matches(aspectOptions[3], aspect219Descriptions, {}, {}));
-    assert(matches(aspectOptions[4], aspect329Descriptions, {}, aspect329Examples));
+    assert(matches(aspectOptions[1], aspect169Descriptions, {}, {}));
+    assert(matches(aspectOptions[2], aspect219Descriptions, {}, {}));
+    assert(matches(aspectOptions[3], aspect329Descriptions, {}, aspect329Examples));
     assert(matches(fovOptions[0], fovNativeDescriptions,
         overlay::loc::tooltip::cinematics::FovNativeExamplesContext, fovNativeExamples));
     assert(matches(fovOptions[1], fovGameplayDescriptions,
         overlay::loc::tooltip::cinematics::FovGameplayExamplesContext, fovGameplayExamples));
-    assert(matches(dialogueOptions[0], dialogueNativeDescriptions,
-        dialogueContext, dialogueNativeExamples));
-    assert(matches(dialogueOptions[1], dialogueAdaptiveDescriptions,
+    assert(dialogueOptions.size() == 3);
+    assert(matches(dialogueOptions[0], dialogueAdaptiveDescriptions,
         dialogueContext, dialogueAdaptiveExamples));
-    assert(matches(dialogueOptions[2], dialogueReducedDescriptions,
+    assert(matches(dialogueOptions[1], dialogueReducedDescriptions,
         dialogueContext, dialogueReducedExamples));
-    assert(matches(dialogueOptions[3], dialogueDisabledDescriptions,
+    assert(matches(dialogueOptions[2], dialogueDisabledDescriptions,
         dialogueContext, dialogueDisabledExamples));
 
     assert(!overlay::ShouldSynchronizeAutoLanguage(false, false));
@@ -237,8 +236,10 @@ int main()
     for (const Option& option : aspectOptions) assertIniContentMatches(option);
     for (const Option& option : fovOptions) assertIniContentMatches(option);
     for (const Option& option : dialogueOptions) assertIniContentMatches(option);
-    assert(overlay::LocalizationValidator::ValidateCanonical(
-        english, overlay::loc::Inventory(), error));
+    const bool canonicalValid = overlay::LocalizationValidator::ValidateCanonical(
+        english, overlay::loc::Inventory(), error);
+    if (!canonicalValid) std::cerr << "canonical localization validation: " << error << '\n';
+    assert(canonicalValid);
     assert(english.size() == overlay::loc::Inventory().size());
     overlay::LocalizationCatalog ukrainian;
     {
@@ -255,6 +256,8 @@ int main()
         ukrainian.Find(overlay::loc::tooltip::gameplay::HorPlus));
     assert(english.Find(overlay::loc::tooltip::gameplay::HorPlusExamplesContext) !=
         ukrainian.Find(overlay::loc::tooltip::gameplay::HorPlusExamplesContext));
+    assert(english.Find(overlay::loc::tooltip::gameplay::RuntimeCombine) !=
+        ukrainian.Find(overlay::loc::tooltip::gameplay::RuntimeCombine));
     for (const auto& descriptor : localization::LocaleRegistry) {
         std::string path{"locales/"};
         path += descriptor.catalogFileName;
@@ -333,7 +336,8 @@ int main()
             assert(a.RasterizerMultiply == b.RasterizerMultiply);
         }
     };
-    const auto verifyTextGlyphs = [](ImFont* uiFont, std::string_view value) {
+    std::vector<std::uint32_t> missingTextGlyphs;
+    const auto verifyTextGlyphs = [&](ImFont* uiFont, std::string_view value) {
         assert(uiFont);
         for (std::size_t i = 0; i < value.size();) {
                 const auto first = static_cast<unsigned char>(value[i]);
@@ -348,9 +352,7 @@ int main()
                         (static_cast<unsigned char>(value[i + j]) & 0x3F);
                 assert(codepoint <= 0xFFFF);
                 if (!uiFont->FindGlyphNoFallback(static_cast<ImWchar>(codepoint)))
-                    std::fprintf(stderr, "missing_text_glyph=U+%04X\n",
-                        static_cast<unsigned>(codepoint));
-                assert(uiFont->FindGlyphNoFallback(static_cast<ImWchar>(codepoint)));
+                    missingTextGlyphs.push_back(codepoint);
                 i += length;
         }
     };
@@ -434,6 +436,9 @@ int main()
         io.FontDefault = overlay::AddLocalizationFont(fontSize, "base");
         assert(io.FontDefault && overlay::AddLocalizationSelectorFonts(fontSize));
         assert(io.FontDefault && io.Fonts->Build());
+        // Regression for Latin Extended glyph U+0148 (ň), which is not
+        // currently present in any catalog string and must stay pinned.
+        verifyTextGlyphs(io.FontDefault, "\xC5\x88");
         const AtlasSnapshot coldStart = captureAtlas();
         io.Fonts->Clear();
         io.FontDefault = overlay::AddLocalizationFont(fontSize == 13 ? 14 : 13,
@@ -476,6 +481,11 @@ int main()
         assert(localization::FindLocaleDescriptor(descriptor.code) == &descriptor);
         assert(manager.SetLocale(descriptor.code));
         assert(manager.localeCode() == descriptor.code);
+        const std::string dialogueEnabledTooltip = manager.Text(
+            overlay::loc::tooltip::dialogue::Enabled);
+        assert(!dialogueEnabledTooltip.empty() &&
+            dialogueEnabledTooltip.rfind("[missing:", 0) != 0 &&
+            dialogueEnabledTooltip.find("70°") != std::string::npos);
         const std::string runtimeLabel = manager.Text(overlay::loc::section::RuntimeSettings);
         assert(!runtimeLabel.empty() && runtimeLabel.rfind("[missing:", 0) != 0);
         const auto startupHint = manager.Format(
@@ -501,5 +511,12 @@ int main()
     assert(unavailableCatalog.initialized() && !unavailableCatalog.ready());
     assert(unavailableCatalog.Text(overlay::loc::section::RuntimeSettings)
         .rfind("[missing:", 0) == 0);
+    std::sort(missingTextGlyphs.begin(), missingTextGlyphs.end());
+    missingTextGlyphs.erase(std::unique(missingTextGlyphs.begin(),
+        missingTextGlyphs.end()), missingTextGlyphs.end());
+    for (const auto codepoint : missingTextGlyphs)
+        std::fprintf(stderr, "missing_text_glyph=U+%04X\n",
+            static_cast<unsigned>(codepoint));
     ImGui::DestroyContext();
+    if (!missingTextGlyphs.empty()) return 1;
 }

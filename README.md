@@ -1,21 +1,23 @@
 # STALKER 2 Camera Tweaks and Ultrawide for UE 5.5.4
 
-This repository contains `STALKER2CameraTweaks.asi`, a unified camera/FOV and ultrawide mod for **S.T.A.L.K.E.R. 2: Heart of Chornobyl**. It has been exercised in-game on Steam build `2.0.6` with Unreal Engine `5.5.4`; most documented behavior has been checked. The scenarios listed below summarize the recorded coverage.
+This repository contains `STALKER2CameraTweaks.asi`, a unified camera/FOV and ultrawide mod for **S.T.A.L.K.E.R. 2: Heart of Chornobyl**. The current potential v3.0 candidate is not released; its latest automated and in-game regression checks have passed.
 
 Camera Tweaks are not limited to ultrawide: camera/FOV options and custom cinematic framing are also available on a standard 16:9 display.
 
-The mod is especially useful if you play with a Gameplay FOV other than the game's default 90°. Whether you use a standard 16:9 display, a 32:9 ultrawide or even an unusual aspect ratio such as 3:1 or 48:9, Gameplay HorPlus uses the FOV selected in the game's settings and adapts it to that aspect ratio. The 16:9, 21:9 and 32:9 choices are cinematic framing presets—not a limit on gameplay aspect ratios.
+The mod is especially useful if you play with a Gameplay FOV other than the game's default 90°. Gameplay supports arbitrary valid aspect ratios, including unusual formats such as 3:1 or 48:9. The 16:9, 21:9 and 32:9 choices are cinematic framing presets—not a limit on gameplay aspect ratios.
 
 ## Features
 
+- **Independent modules.** Gameplay, Cinematics, Dialogue and Overlay each have their own enable/disable setting. Turning one off does not disable the others. Camera modules still coordinate camera ownership during transitions when enabled.
 - Uses the Gameplay FOV selected in the game's own settings as its baseline—no separate mod FOV value needs to be configured. Aspect-aware correction follows it during gameplay; by default, cinematics also use that value as their baseline while preserving authored FOV changes.
-- `Gameplay.Mode` selects `HorPlus` gameplay correction or native `AspectRecalculation`.
-- Supports cinematic aspect policies `Auto`, `Native`, `16:9`, `21:9` and `32:9`, independently of the display aspect.
+- `Gameplay.Mode` selects `HorPlus`, native `AspectRecalculation`, or `RuntimeCombine` (`RuntimeCombine` is the recommended default). `HorPlus` applies the existing Hor+ policy to the native Gameplay writer aspect. `RuntimeCombine` instead synchronizes a mismatched Gameplay camera aspect to the validated current viewport aspect, confirms the read-back, and only then applies Hor+; if synchronization cannot be confirmed, it fails closed without applying Hor+ in the unconfirmed domain. RuntimeCombine accepts arbitrary valid aspect ratios.
+- Supports cinematic aspect policies `Auto`, `16:9`, `21:9` and `32:9`, independently of the display aspect. Set `Cinematics.Enabled=false` to leave cinematic camera output native.
 - `Cinematics.FovMode` selects `GameplayHorPlus`, which uses the game-selected FOV as its cinematic baseline, or `NativeHorPlus`, which applies Hor+ to the game's authored cinematic FOV independently of Gameplay FOV.
-- Offers FOV-aware Dialogue zoom modes: `Native`, `Adaptive`, `Reduced` and `Disabled`.
+- Offers three FOV-aware Dialogue zoom modes: `Adaptive`, `Reduced` and `Disabled`. Set `Dialogue.Enabled=false` to leave dialogue camera output entirely to the game; the game's default dialogue zoom targets 70° FOV.
 - Includes an in-game overlay for settings, runtime status, hotkeys and the read-only Camera State view.
 - Ships 18 embedded overlay languages with locale-specific font profiles; `Auto (Game Language)` follows the game's interface language.
 - Uses the configured Overlay Toggle (`Delete` by default); `Esc` dismisses the open overlay. Optional mode hotkeys are disabled by default.
+- `[Overlay] Enabled=false` disables the Overlay subsystem after a game restart without disabling Gameplay, Cinematics or Dialogue correction.
 - Creates and documents `STALKER2CameraTweaks.ini` automatically; overlay settings are saved there as well.
 - Resolves gameplay and cinematic hooks through guarded signatures and fails safely when validation is ambiguous or unsuccessful.
 
@@ -61,21 +63,25 @@ The default configuration is:
 ```ini
 [Gameplay]
 Enabled=true
-Mode=HorPlus
+Mode=RuntimeCombine
 
 [Cinematics]
-AspectRatio=Auto
+Enabled=true
+Mode=Auto
 FovMode=GameplayHorPlus
 
 [Dialogue]
-Zoom=Adaptive
+Enabled=true
+Mode=Adaptive
 
 [Diagnostics]
 Enabled=false
 
 [Overlay]
+Enabled=true
 Language=Auto
 ToggleKey=VK_2E
+FontSize=13
 
 [Hotkeys]
 Enabled=false
@@ -123,11 +129,11 @@ Dialogue zoom is calculated relative to the current gameplay FOV. The comparison
 
 | Configuration | Example |
 | --- | --- |
-| `Adaptive` / `Native` at gameplay FOV 90 | ![Dialogue Adaptive or Native zoom](screens/Dialog%20Default%20zoom%20or%20Adaptive%20for%2090%20game%20fov%20in%205120x1440.jpg) |
+| `Adaptive` compared with the game's default zoom at gameplay FOV 90 | ![Dialogue Adaptive compared with the game's default zoom](screens/Dialog%20Default%20zoom%20or%20Adaptive%20for%2090%20game%20fov%20in%205120x1440.jpg) |
 | `Reduced` at gameplay FOV 90 | ![Dialogue Reduced zoom](screens/Dialog%20Reduced%20zoom%20in%205120x1440.jpg) |
 | `Disabled` | ![Dialogue Disabled zoom](screens/Dialog%20Disabled%20zoom%20in%205120x1440.jpg) |
 
-`Native` preserves the game's original dialogue zoom, `Adaptive` preserves its optical zoom strength relative to gameplay, `Reduced` applies half of the Adaptive strength, and `Disabled` keeps the gameplay FOV during dialogue.
+`Adaptive` preserves the game's original optical zoom strength relative to gameplay, `Reduced` applies half of the Adaptive strength, and `Disabled` keeps the gameplay FOV during dialogue. Turning `Dialogue.Enabled` off leaves the dialogue camera to the game without applying a Dialogue correction.
 
 ## Known viewmodel limitation
 
@@ -145,20 +151,15 @@ These recordings show additional runtime behavior of the unified ASI:
 
 ## Tested scope and limitations
 
-- Runtime-tested on Steam game build `2.0.6`; the tested executable identity is recorded in the startup log.
-- Static resolver portability was also checked against Steam builds `2.0.2`, `2.0.3`, `2.0.4` and `2.0.5`; these older builds do not have separate runtime validation for this release.
-- Gameplay tested at 16:9, 21:9 and 32:9, including startup, hot aspect switching, death/load rebuild and FOV preservation.
-- `Auto` cinematics tested through `16:9 → 21:9 → 32:9 → 16:9 → 21:9 → 32:9` without restarting the game.
-- Cinematics tested with `Native`, forced `16:9`, forced `21:9` and forced `32:9` policies on `5120x1440`.
-- Forced 32:9 framing was also tested at `2560x1440` and correctly produced cinematic letterbox bars.
-- `NativeHorPlus` and `GameplayHorPlus` cinematic FOV modes were tested with live F11 switching.
-- F9 live switching between `AspectRecalculation` and `HorPlus` was tested without a reload, including ADS and binocular transitions.
-- Dialogue coexistence, save/load camera recreation and cinematic EXIT/recovery were tested in the combined runtime session.
-- The game retains its native post-cinematic FOV recovery; this release does not force or rewrite that native transition.
+- The current candidate was runtime-tested on Steam game build `2.0.6` with Unreal Engine `5.5.4`. The maintainer reports the final regression matrix passed, covering Gameplay/Cinematic transitions and recovery, aspect-policy changes, Dialogue during cinematics, skip/continuation, and Overlay enabled/disabled.
+- Gameplay and cinematic framing were tested at standard, ultrawide and custom aspects. `RuntimeCombine` supports arbitrary valid Gameplay aspects; the 16:9, 21:9 and 32:9 cinematic choices are framing presets.
+- The latest offline test suite and production/diagnostic builds pass. Embedded catalog/font coverage passes for all 18 languages. These checks do not establish visual correctness for every glyph, Arabic shaping, bidirectional text or RTL layout.
+- Static resolver portability was checked against Steam builds `2.0.2`–`2.0.5`; these older builds do not have separate runtime validation for this release. Signature resolution does not guarantee compatibility with future game patches.
+- Detailed test results and runtime evidence are recorded in [TESTING_AND_RESEARCH.md](TESTING_AND_RESEARCH.md) and the [v2.1-to-potential-v3.0 change inventory](research/reports/V2_1_TO_POTENTIAL_V3_0_CHANGE_INVENTORY_2026-10-08.md).
+- The game retains its native post-cinematic FOV recovery; this mod does not force or rewrite that native transition.
 - Weapon/viewmodel FOV can remain incorrectly framed after a cinematic, load or gameplay-camera rebuild. This is a separate game-side issue and is not fixed by this mod.
 - In windowed mode, a custom resolution whose aspect is not represented by a native game aspect mode may be resized by the game's native `AspectRecalculation` return to `Auto`. This does not mean arbitrary-aspect HorPlus is unsupported.
-- Changing the game resolution during a session is validated for `AspectRatio=Auto`; restart the game after changing the configuration file itself.
-- Signature resolution improves resilience to address relocation but does not guarantee compatibility with future patches. The plugin fails safely when validation does not pass.
+- Changing the game resolution during a session is validated for `Cinematics.Mode=Auto`; restart the game after changing the configuration file itself.
 
 ## Build requirements
 
@@ -201,25 +202,41 @@ The following tools were used during development, reverse engineering and valida
 - UAssetGUI was considered for traditional `.uasset/.uexp` inspection, but the direct CUE4Parse path made it unnecessary.
 - FModel was considered for package discovery, but it was not used as the authoritative WVF analysis path.
 
-The research tools and probes are kept under `research/` and are not part of the production release package.
+The research tools and probes are kept under `research/` and are not part of the production release package. A v3.0.0 package has been assembled locally for release review but has not been published; the download link above points to the latest published release.
 
 ## License and credits
 
-Original v1.0+ project code is source-available under the terms in [LICENSE.md](LICENSE.md). Contributions and collaboration are welcome. You may study and experiment with the source, create public development forks, collaborate on changes, publish research and signatures, and share experimental builds with collaborators or testers while developing changes, compatibility fixes or contributions.
+Original v1.0+ Project material is governed by the custom source-available
+[LICENSE.md](LICENSE.md), which is not an OSI-approved open-source license.
+It permits research, collaboration and development, but explicit written
+permission is required before publishing modified or independently rebuilt
+public binaries, repackaged or rebranded releases, public derivatives,
+continuations or ports, or commercial distributions. Exact, unmodified release
+mirrors are allowed only when notices are retained, Elhait and the original
+Project are credited and linked, and the mirror is not presented as an official
+release channel. The license also has a separate attribution requirement when
+Project material materially informs a publicly released work, including through
+AI-assisted research. General ideas and independently developed work are not
+claimed; see the license for the complete terms.
 
-The main restriction is on publishing modified versions of this Project's protected code as independent public end-user releases without permission. The license does not claim ownership of general ideas, methods or technical knowledge. Work developed independently without copying or adapting protected Project code does not require release permission merely because the Project was used as a technical reference. However, when Covered Work materially contributes as a reference or research source to a publicly released mod, tool or product, its public page must credit Elhait, identify the Project as a source and link to the original Project. If there is no public page, this acknowledgement belongs in the accompanying publicly accessible documentation. This applies to both direct study and AI-assisted use, including context, training and evaluation. See section 5 of [LICENSE.md](LICENSE.md) for the full requirement. Exact unmodified mirrors of official release packages are allowed.
+GSC Game World has a separate permission for official S.T.A.L.K.E.R. 2
+development, limited to material Elhait owns or can license; it does not grant
+rights to third-party or game material. See
+[GSC_DEVELOPER_PERMISSION.md](GSC_DEVELOPER_PERMISSION.md).
 
-With Elhait's permission, another developer may maintain or continue the Project and publish releases through GitHub. This does not provide access to Elhait's Nexus Mods account or permission to update the existing Nexus Mods page.
-
-This is not an OSI-approved open-source license. Third-party components remain under their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-Additional permission for GSC Game World is described separately in [GSC_DEVELOPER_PERMISSION.md](GSC_DEVELOPER_PERMISSION.md).
-
-BigChenga has separate permission to use Project implementations and solutions directly in WIDEBOY Fixes. Elhait remains responsible for official Project releases, with collaboration and upstream contributions as the intended path. If Elhait permanently stops maintaining or abandons the Project, BigChenga may maintain and publish a clearly attributed continuation. Temporary inactivity or a period without releases does not activate this permission. See [BIGCHENGA_PERMISSION.md](BIGCHENGA_PERMISSION.md).
+BigChenga has separate permanent permission to use and adapt covered Project
+material in WIDEBOY Fixes and successor versions. A clearly attributed
+continuation of this Project is permitted only under the specific conditions
+in [BIGCHENGA_PERMISSION.md](BIGCHENGA_PERMISSION.md), including permanent
+cessation/abandonment (not temporary inactivity), contact attempts if status is
+unclear, and retention of the main license and third-party terms. This does
+not grant access to Elhait's Nexus Mods account.
 
 Versions released before v1.0.0 were published under the MIT License. Those historical grants remain valid and are not revoked by the v1.0+ terms.
 
-Official release channels are this project's GitHub repository and Nexus Mods page. Exact unmodified mirrors of official release packages are permitted. Modified or independently rebuilt packages are not official releases unless they are published under explicit maintainer or continuation permission from Elhait.
+Official release channels are this project's GitHub repository and Nexus Mods
+page. A modified or independently rebuilt package is not an official release
+unless published under explicit permission from Elhait.
 
 Special thanks to Lyall and [STALKER2Tweak](https://github.com/lyall/STALKER2Tweak) for providing an early reference point and inspiration for this project. The project has since grown into its own independent implementation and feature set.
 

@@ -1,6 +1,7 @@
 #include "renderer_runtime.hpp"
 #include "optional_overlay_boundary.hpp"
 #include "../diagnostics/diagnostic_runtime.hpp"
+#include "../diagnostics/overlay_activation_trace.hpp"
 #include "../diagnostics/startup_journal.hpp"
 
 #include <imgui.h>
@@ -14,6 +15,7 @@
 #include "selector_documentation_view.hpp"
 #include "tooltip_row_layout.hpp"
 #include "camera_state_view.hpp"
+#include "aspect_ratio_format.hpp"
 #include "overlay_layout_metrics.hpp"
 #include "placement_config.hpp"
 #ifdef OVERLAY_SETTINGS_FRONTEND
@@ -289,6 +291,107 @@ namespace overlay
             }
         }
 
+        const char* RuntimeStatusValue(FeatureStatusKind kind)
+        {
+            switch (kind) {
+            case FeatureStatusKind::CannotAssess: return "Unavailable";
+            case FeatureStatusKind::Unavailable: return "Unavailable";
+            case FeatureStatusKind::Disabled: return "Disabled";
+            case FeatureStatusKind::Active: return "Active";
+            case FeatureStatusKind::EnabledStateful: return "Enabled";
+            case FeatureStatusKind::Ready: return "Ready";
+            case FeatureStatusKind::Applying: return "Applying";
+            case FeatureStatusKind::Starting: return "Starting";
+            case FeatureStatusKind::Ending: return "Ending";
+            case FeatureStatusKind::Waiting: return "Waiting";
+            }
+            return "Unknown";
+        }
+
+        bool BeginRuntimeTelemetryGrid(const char* id)
+        {
+            if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_SizingStretchProp |
+                ImGuiTableFlags_NoSavedSettings))
+                return false;
+            ImGui::TableSetupColumn("field", ImGuiTableColumnFlags_WidthStretch, 0.46f);
+            ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch, 0.54f);
+            return true;
+        }
+
+        struct RuntimeTelemetryRowBounds
+        {
+            ImVec2 min{};
+            ImVec2 max{};
+            float contentBottom{};
+        };
+
+        RuntimeTelemetryRowBounds BeginRuntimeTelemetryRow(std::string_view field)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            const auto cursor = ImGui::GetCursorScreenPos();
+            const auto cellPadding = ImGui::GetStyle().CellPadding;
+            RuntimeTelemetryRowBounds bounds{
+                ImVec2(cursor.x - cellPadding.x, cursor.y - cellPadding.y), {}, 0.0f};
+            ImGui::TextUnformatted(field.data(), field.data() + field.size());
+            bounds.contentBottom = ImGui::GetItemRectMax().y;
+            ImGui::TableSetColumnIndex(1);
+            const auto valueCursor = ImGui::GetCursorScreenPos();
+            bounds.max.x = valueCursor.x + ImGui::GetContentRegionAvail().x +
+                cellPadding.x;
+            return bounds;
+        }
+
+        void FinishRuntimeTelemetryRow(RuntimeTelemetryRowBounds& bounds)
+        {
+            bounds.contentBottom = (std::max)(bounds.contentBottom,
+                ImGui::GetItemRectMax().y);
+            bounds.max.y = bounds.contentBottom + ImGui::GetStyle().CellPadding.y;
+        }
+
+        void DrawRuntimeTelemetryRow(std::string_view field, const char* value,
+            bool valueUnavailable = false)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(field.data(), field.data() + field.size());
+            ImGui::TableSetColumnIndex(1);
+            if (valueUnavailable)
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                    ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextWrapped("%s", value);
+            if (valueUnavailable)
+                ImGui::PopStyleColor();
+        }
+
+        void DrawRuntimeTelemetrySubheading(std::string_view heading)
+        {
+            ImGui::TableNextRow(ImGuiTableRowFlags_None, 5.0f);
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.70f, 0.73f, 0.79f, 1.0f));
+            ImGui::TextUnformatted(heading.data(), heading.data() + heading.size());
+            ImGui::PopStyleColor();
+            const auto headingRect = ImGui::GetItemRectMax();
+            const auto windowPosition = ImGui::GetWindowPos();
+            const auto contentMinLocal = ImGui::GetWindowContentRegionMin();
+            const auto contentMaxLocal = ImGui::GetWindowContentRegionMax();
+            const ImVec2 contentMin(windowPosition.x + contentMinLocal.x,
+                windowPosition.y + contentMinLocal.y);
+            const ImVec2 contentMax(windowPosition.x + contentMaxLocal.x,
+                windowPosition.y + contentMaxLocal.y);
+            auto lineColor = ImGui::GetStyleColorVec4(ImGuiCol_Border);
+            lineColor.w *= 0.78f;
+            const float lineY = (headingRect.y + ImGui::GetItemRectMin().y) * 0.5f;
+            auto* drawList = ImGui::GetWindowDrawList();
+            drawList->PushClipRect(contentMin, contentMax, false);
+            drawList->AddLine(
+                ImVec2(headingRect.x + ImGui::GetStyle().ItemSpacing.x, lineY),
+                ImVec2(contentMax.x, lineY),
+                ImGui::GetColorU32(lineColor), 1.0f);
+            drawList->PopClipRect();
+        }
+
         void DrawActiveStatus(const LocalizationManager& i18n, FeatureStatusTone tone,
             loc::Key detailKey, const std::string& activeValue)
         {
@@ -300,12 +403,9 @@ namespace overlay
         }
 
         template <std::size_t Count>
-        void ShowOptionListTooltip(const LocalizationManager& i18n,
+        void DrawOptionListTooltipContent(const LocalizationManager& i18n,
             const TooltipOption (&options)[Count])
         {
-            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) || !ImGui::BeginTooltip())
-                return;
-
             tooltip_row_layout::DrawAlignedTooltipRows(Count,
                 [&i18n, &options](std::size_t index) {
                     const auto& option = options[index];
@@ -317,32 +417,84 @@ namespace overlay
                     ImGui::TextWrapped("%s", description.c_str());
                 },
                 [](std::size_t) {});
+        }
+
+        template <std::size_t Count>
+        void ShowOptionListTooltip(const LocalizationManager& i18n,
+            const TooltipOption (&options)[Count])
+        {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) || !ImGui::BeginTooltip())
+                return;
+            DrawOptionListTooltipContent(i18n, options);
             ImGui::EndTooltip();
         }
 
         template <std::size_t Count>
-        void DrawRuntimeInfoRow(const LocalizationManager& i18n, loc::Key label, const char* value,
-            const TooltipOption (&options)[Count])
+        void ShowRuntimeRowTooltip(const LocalizationManager& i18n,
+            const TooltipOption (&options)[Count],
+            const RuntimeTelemetryRowBounds& bounds)
         {
-            ImGui::BeginGroup();
-            const auto labelText = Tr(i18n, label);
-            const float rowWidth = ImGui::GetContentRegionAvail().x;
-            const float labelWidth = ImGui::CalcTextSize(labelText.c_str()).x;
-            const float valueWidth = ImGui::CalcTextSize(value).x;
-            if (labelWidth + ImGui::GetStyle().ItemSpacing.x + valueWidth <= rowWidth) {
-                ImGui::TextUnformatted(labelText.c_str());
-                ImGui::SameLine();
-                ImGui::TextUnformatted(value);
-                ImGui::SameLine(0.0f, 0.0f);
-                const float remainingWidth = ImGui::GetContentRegionAvail().x;
-                if (remainingWidth > 1.0f)
-                    ImGui::Dummy(ImVec2(remainingWidth, ImGui::GetTextLineHeight()));
-            } else {
-                ImGui::TextUnformatted(labelText.c_str());
-                ImGui::TextWrapped("%s", value);
-            }
-            ImGui::EndGroup();
+            if (!ImGui::IsWindowHovered() ||
+                !ImGui::IsMouseHoveringRect(bounds.min, bounds.max, false) ||
+                !ImGui::BeginTooltip())
+                return;
+            DrawOptionListTooltipContent(i18n, options);
+            ImGui::EndTooltip();
+        }
+
+        void ShowDirectTooltip(const LocalizationManager& i18n, loc::Key key)
+        {
+            const TooltipOption options[] = {{{}, {}, key}};
             ShowOptionListTooltip(i18n, options);
+        }
+
+        void DrawRuntimeSectionStatus(const LocalizationManager& i18n,
+            std::string_view label, const FeaturePresentation& status)
+        {
+            auto bounds = BeginRuntimeTelemetryRow(label);
+            const auto headingKey = label == "Gameplay Status"
+                ? loc::tooltip::runtime::GameplayStatus
+                : loc::tooltip::runtime::CinematicStatus;
+            const TooltipOption options[] = {
+                {{}, {}, headingKey},
+                {{}, {}, status.detail},
+            };
+            ImGui::TextColored(FeatureStatusColor(status.tone), "%s",
+                RuntimeStatusValue(status.kind));
+            FinishRuntimeTelemetryRow(bounds);
+            ShowRuntimeRowTooltip(i18n, options, bounds);
+        }
+
+        template <std::size_t Count>
+        void DrawRuntimeTelemetryRow(std::string_view field, const char* value,
+            const LocalizationManager& i18n, const TooltipOption (&options)[Count],
+            bool valueUnavailable = false)
+        {
+            auto bounds = BeginRuntimeTelemetryRow(field);
+            if (valueUnavailable)
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                    ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextWrapped("%s", value);
+            if (valueUnavailable)
+                ImGui::PopStyleColor();
+            FinishRuntimeTelemetryRow(bounds);
+            ShowRuntimeRowTooltip(i18n, options, bounds);
+        }
+
+        void DrawRuntimeTelemetryRow(std::string_view field, const char* value,
+            const LocalizationManager& i18n, loc::Key tooltip,
+            bool valueUnavailable = false)
+        {
+            auto bounds = BeginRuntimeTelemetryRow(field);
+            if (valueUnavailable)
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                    ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextWrapped("%s", value);
+            if (valueUnavailable)
+                ImGui::PopStyleColor();
+            FinishRuntimeTelemetryRow(bounds);
+            const TooltipOption options[] = {{{}, {}, tooltip}};
+            ShowRuntimeRowTooltip(i18n, options, bounds);
         }
 
         void ShowGameplayEnabledTooltip(const LocalizationManager& i18n)
@@ -352,6 +504,16 @@ namespace overlay
                 {{}, loc::common::Disabled, loc::tooltip::gameplay::Disabled},
             };
             ShowOptionListTooltip(i18n, options);
+        }
+
+        void ShowCinematicsEnabledTooltip(const LocalizationManager& i18n)
+        {
+            ShowDirectTooltip(i18n, loc::tooltip::cinematics::Enabled);
+        }
+
+        void ShowDialogueEnabledTooltip(const LocalizationManager& i18n)
+        {
+            ShowDirectTooltip(i18n, loc::tooltip::dialogue::Enabled);
         }
 
         void ShowHotkeysEnabledTooltip(const LocalizationManager& i18n)
@@ -436,12 +598,14 @@ namespace overlay
         {
             switch (assessment) {
             case OverallIntegrationAssessment::Waiting:
-                return FeatureStatusTone::Warning;
-            case OverallIntegrationAssessment::ConfigurationAligned:
+                return FeatureStatusTone::Neutral;
+            case OverallIntegrationAssessment::Seamless:
                 return FeatureStatusTone::Positive;
-            case OverallIntegrationAssessment::NotAligned:
+            case OverallIntegrationAssessment::Mismatch:
                 return FeatureStatusTone::Warning;
             case OverallIntegrationAssessment::CannotAssess:
+                return FeatureStatusTone::Neutral;
+            case OverallIntegrationAssessment::Unknown:
                 return FeatureStatusTone::Neutral;
             }
             return FeatureStatusTone::Neutral;
@@ -452,12 +616,14 @@ namespace overlay
         {
             switch (assessment) {
             case OverallIntegrationAssessment::Waiting:
-                return loc::transition::DetailWaiting;
-            case OverallIntegrationAssessment::ConfigurationAligned:
+                return loc::transition::DetailExpectedSeamless;
+            case OverallIntegrationAssessment::Seamless:
                 return loc::transition::DetailAligned;
-            case OverallIntegrationAssessment::NotAligned:
+            case OverallIntegrationAssessment::Mismatch:
                 return loc::transition::DetailNotAligned;
             case OverallIntegrationAssessment::CannotAssess:
+                return loc::transition::DetailCannotAssess;
+            case OverallIntegrationAssessment::Unknown:
                 return loc::transition::DetailCannotAssess;
             }
             return loc::transition::DetailCannotAssess;
@@ -468,12 +634,14 @@ namespace overlay
             return config::DialogueZoomPolicyName(policy);
         }
 
-        loc::Key AspectAssessmentLabel(AspectAssessment assessment)
+        loc::Key CameraValueMatchLabel(CameraValueMatch assessment)
         {
             switch (assessment) {
-            case AspectAssessment::Matched: return loc::transition::Aligned;
-            case AspectAssessment::Mismatch: return loc::transition::NotAligned;
-            case AspectAssessment::CannotAssess: return loc::common::CannotAssess;
+            case CameraValueMatch::Waiting: return loc::common::Waiting;
+            case CameraValueMatch::Matched: return loc::common::Yes;
+            case CameraValueMatch::Mismatch: return loc::common::No;
+            case CameraValueMatch::CannotAssess: return loc::common::CannotAssess;
+            case CameraValueMatch::Unknown: return loc::common::CannotAssess;
             }
             return loc::common::CannotAssess;
         }
@@ -483,10 +651,11 @@ namespace overlay
             switch (assessment) {
             case OverallIntegrationAssessment::Waiting:
                 return loc::transition::Waiting;
-            case OverallIntegrationAssessment::ConfigurationAligned:
+            case OverallIntegrationAssessment::Seamless:
                 return loc::transition::Aligned;
-            case OverallIntegrationAssessment::NotAligned: return loc::transition::NotAligned;
+            case OverallIntegrationAssessment::Mismatch: return loc::transition::NotAligned;
             case OverallIntegrationAssessment::CannotAssess: return loc::common::CannotAssess;
+            case OverallIntegrationAssessment::Unknown: return loc::common::CannotAssess;
             }
             return loc::common::CannotAssess;
         }
@@ -1442,6 +1611,13 @@ namespace overlay
         PrepareStartupNotification();
         UpdateNotifications();
         const bool overlayVisible = visible_.load(std::memory_order_acquire);
+        const auto activationRequest = overlayVisible
+            ? diagnostics::overlay_activation_trace::CurrentRequest() : 0;
+        if (overlayVisible)
+            diagnostics::overlay_activation_trace::RecordStage(logger_,
+                activationRequest,
+                diagnostics::overlay_activation_trace::Stage::FrameBegin,
+                "frame_begin", true, ready());
         if (!overlayVisible && notifications_.empty() && !surfaceDirty_)
             return false;
         if (ImGui::GetCurrentContext())
@@ -1491,7 +1667,9 @@ namespace overlay
                 mainViewport->Size.x, dpiScale_);
             ImGui::SetNextWindowPos(ImVec2(overlayPositionX_, overlayPositionY_),
                 ImGuiCond_Once);
-            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f),
+            const float preferredOverlayWidth = 1024.0f * dpiScale_;
+            ImGui::SetNextWindowSizeConstraints(
+                ImVec2((std::min)(preferredOverlayWidth, maxOverlayWidth), 0.0f),
                 ImVec2(maxOverlayWidth, FLT_MAX));
             const auto overlayTitle = Tr(localization_, loc::app::Title);
             ImGui::Begin(overlayTitle.c_str(), nullptr,
@@ -1525,10 +1703,18 @@ namespace overlay
             }
 #ifdef OVERLAY_SETTINGS_FRONTEND
         plugin::OverlaySemanticSnapshot semantic{};
+        diagnostics::overlay_activation_trace::RecordStage(logger_,
+            activationRequest,
+            diagnostics::overlay_activation_trace::Stage::SemanticReadBegin,
+            "semantic_read_begin", overlayVisible, ready());
         const bool semanticReady = plugin::GetOverlaySemanticSnapshot(semantic) &&
             semantic.gameplayEnabled.valid && semantic.gameplayMode.valid &&
             semantic.cinematicAspectPolicy.valid && semantic.cinematicFovMode.valid &&
-            semantic.dialogueZoomPolicy.valid;
+            semantic.dialogueEnabled.valid && semantic.dialogueZoomPolicy.valid;
+        diagnostics::overlay_activation_trace::RecordStage(logger_,
+            activationRequest,
+            diagnostics::overlay_activation_trace::Stage::SemanticReadEnd,
+            "semantic_read_end", overlayVisible, ready(), semanticReady);
         const bool settingsReady = semanticReady && frameSettingsAvailable;
         if (!settingsReady) {
             const auto unavailable = Tr(localization_, loc::common::Unavailable);
@@ -1548,10 +1734,10 @@ namespace overlay
             ImGui::SeparatorText(transitionHeader.c_str());
             ImGui::BeginGroup();
             ImGui::TextColored(FeatureStatusColor(
-                CameraTransitionTone(integration.overall)), "%s",
-                Tr(localization_, OverallIntegrationLabel(integration.overall)).c_str());
+                CameraTransitionTone(integration.potential.overall)), "%s",
+                Tr(localization_, OverallIntegrationLabel(integration.potential.overall)).c_str());
             ImGui::EndGroup();
-            const auto transitionDetail = Tr(localization_, CameraTransitionDetail(integration.overall));
+            const auto transitionDetail = Tr(localization_, CameraTransitionDetail(integration.potential.overall));
             ImGui::TextWrapped("%s", transitionDetail.c_str());
             const auto gameplayModes = setting_tooltip_content::GameplaySelectorOptions();
             const auto cinematicAspects = setting_tooltip_content::CinematicAspectSelectorOptions();
@@ -1572,11 +1758,13 @@ namespace overlay
                     IntrinsicOptionWidth(locale.displayName));
             }
 
-            const ImGuiTableFlags layoutFlags = ImGuiTableFlags_SizingFixedSame |
+            const ImGuiTableFlags layoutFlags = ImGuiTableFlags_SizingStretchProp |
                 ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoSavedSettings;
             if (ImGui::BeginTable("settings_runtime_layout", 2, layoutFlags)) {
-                ImGui::TableSetupColumn("settings");
-                ImGui::TableSetupColumn("runtime");
+                ImGui::TableSetupColumn("settings", ImGuiTableColumnFlags_WidthStretch,
+                    0.44f);
+                ImGui::TableSetupColumn("runtime", ImGuiTableColumnFlags_WidthStretch,
+                    0.56f);
                 ImGui::TableNextColumn();
             const auto gameplayHeader = Tr(localization_, loc::section::Gameplay);
             ImGui::SeparatorText(gameplayHeader.c_str());
@@ -1605,6 +1793,18 @@ namespace overlay
             const auto cinematicsHeader = Tr(localization_, loc::section::Cinematics);
             ImGui::SeparatorText(cinematicsHeader.c_str());
             ImGui::BeginGroup();
+            bool cinematicsEnabled = frameSettings.cinematicsEnabled;
+            if (ImGui::Checkbox("##cinematics_enabled", &cinematicsEnabled)) {
+                if (ApplySetting(plugin::RuntimeSettingMutation::CinematicsEnabled(
+                    cinematicsEnabled), logger_))
+                    frameSettings.cinematicsEnabled = cinematicsEnabled;
+            }
+            ImGui::SameLine();
+            DrawParameterLabel(localization_, loc::common::Enabled);
+            ImGui::EndGroup();
+            ShowCinematicsEnabledTooltip(localization_);
+            ImGui::BeginDisabled(!frameSettings.cinematicsEnabled);
+            ImGui::BeginGroup();
             ImGui::SetNextItemWidth(commonSelectWidth);
             const auto cinematicAspectCombo = DrawSelectorCombo("##cinematic_aspect",
                 frameSettings.cinematicAspectPolicy, cinematicAspects);
@@ -1612,7 +1812,7 @@ namespace overlay
                 ApplySetting(plugin::RuntimeSettingMutation::CinematicAspect(
                     cinematicAspectCombo.value), logger_);
             ImGui::SameLine();
-            DrawParameterLabel(localization_, loc::setting::AspectRatio);
+            DrawParameterLabel(localization_, loc::setting::CinematicFraming);
             ImGui::EndGroup();
             ShowSettingOptionsTooltip(localization_, setting_tooltip_content::CinematicAspect(),
                 cinematicAspectCombo.interaction);
@@ -1626,6 +1826,7 @@ namespace overlay
             ImGui::SameLine();
             DrawParameterLabel(localization_, loc::setting::FovMode);
             ImGui::EndGroup();
+            ImGui::EndDisabled();
             ShowSettingOptionsTooltip(localization_, setting_tooltip_content::CinematicFov(),
                 cinematicFovCombo.interaction);
             const auto cinematicStatus = ProjectCinematicPresentation(semantic);
@@ -1641,6 +1842,17 @@ namespace overlay
             const auto dialogueHeader = Tr(localization_, loc::section::Dialogue);
             ImGui::SeparatorText(dialogueHeader.c_str());
             ImGui::BeginGroup();
+            bool dialogueEnabled = frameSettings.dialogueEnabled;
+            if (ImGui::Checkbox("##dialogue_enabled", &dialogueEnabled) &&
+                ApplySetting(plugin::RuntimeSettingMutation::DialogueEnabled(
+                    dialogueEnabled), logger_))
+                frameSettings.dialogueEnabled = dialogueEnabled;
+            ImGui::SameLine();
+            DrawParameterLabel(localization_, loc::common::Enabled);
+            ImGui::EndGroup();
+            ShowDialogueEnabledTooltip(localization_);
+            ImGui::BeginDisabled(!frameSettings.dialogueEnabled);
+            ImGui::BeginGroup();
             ImGui::SetNextItemWidth(commonSelectWidth);
             const auto dialogueCombo = DrawSelectorCombo("##dialogue_zoom",
                 frameSettings.dialogueZoomPolicy, dialoguePolicies);
@@ -1648,8 +1860,9 @@ namespace overlay
                 ApplySetting(plugin::RuntimeSettingMutation::Dialogue(
                     dialogueCombo.value), logger_);
             ImGui::SameLine();
-            DrawParameterLabel(localization_, loc::setting::Zoom);
+            DrawParameterLabel(localization_, loc::setting::Mode);
             ImGui::EndGroup();
+            ImGui::EndDisabled();
             ShowSettingOptionsTooltip(localization_, setting_tooltip_content::Dialogue(),
                 dialogueCombo.interaction);
             const auto dialogueStatus = ProjectDialoguePresentation(semantic);
@@ -1780,96 +1993,300 @@ namespace overlay
             }
 
             ImGui::TableNextColumn();
-            const auto runtimeHeader = Tr(localization_, loc::section::Runtime);
-            ImGui::SeparatorText(runtimeHeader.c_str());
-            const auto unavailableValue = Tr(localization_, loc::common::UnavailableValue);
-            static constexpr TooltipOption viewportAspectTooltip[] = {
-                {{}, loc::ui::ViewportAspect, loc::tooltip::runtime::Viewport},
-                {"Auto", {}, loc::tooltip::runtime::ViewportAuto},
-                {{}, loc::common::Unavailable, loc::tooltip::runtime::ViewportUnavailable},
-            };
-            char viewportAspectValue[64]{};
-            if (semantic.runtimeViewportAspect.valid)
-                std::snprintf(viewportAspectValue, sizeof(viewportAspectValue), ": %.4f",
-                    semantic.runtimeViewportAspect.value);
-            else
-                std::snprintf(viewportAspectValue, sizeof(viewportAspectValue), ": %s",
-                    unavailableValue.c_str());
-            DrawRuntimeInfoRow(localization_, loc::ui::ViewportAspect, viewportAspectValue,
-                viewportAspectTooltip);
-
-            const auto cameraIntegrationHeader = Tr(localization_, loc::section::CameraIntegration);
-            ImGui::SeparatorText(cameraIntegrationHeader.c_str());
-            static constexpr TooltipOption aspectTooltip[] = {
-                {{}, loc::transition::Aligned, loc::tooltip::runtime::AspectMatched},
-                {{}, loc::transition::NotAligned, loc::tooltip::runtime::AspectMismatch},
-                {{}, loc::common::CannotAssess, loc::tooltip::runtime::AspectCannotAssess},
-            };
-            char aspectValue[64]{};
-            std::snprintf(aspectValue, sizeof(aspectValue), ": %s",
-                Tr(localization_, AspectAssessmentLabel(integration.aspect)).c_str());
-            DrawRuntimeInfoRow(localization_, loc::camera_state::Aspect, aspectValue, aspectTooltip);
-
-            static constexpr TooltipOption cinematicAspectTooltip[] = {
-                {{}, loc::setting::CinematicAspect, loc::tooltip::runtime::CinematicAspect},
-                {{}, loc::common::Unavailable, loc::tooltip::runtime::CinematicAspectUnavailable},
-            };
-            char cinematicAspectValue[96]{};
-            if (integration.resolvedCinematicAspectValid &&
-                semantic.runtimeViewportAspect.valid) {
-                std::snprintf(cinematicAspectValue, sizeof(cinematicAspectValue),
-                    ": %.4f -> viewport %.4f", integration.resolvedCinematicAspect,
-                    semantic.runtimeViewportAspect.value);
-            } else {
-                std::snprintf(cinematicAspectValue, sizeof(cinematicAspectValue), ": %s",
-                    unavailableValue.c_str());
+            ImGui::SeparatorText("Current State");
+            constexpr const char* unavailableValue = "Unavailable";
+            const auto viewportAspect = semantic.runtimeViewportAspect.valid
+                ? FormatAspectRatioNine(semantic.runtimeViewportAspect.value)
+                : std::nullopt;
+            const std::string viewportAspectValue = viewportAspect
+                ? *viewportAspect : unavailableValue;
+            if (BeginRuntimeTelemetryGrid("runtime_viewport_telemetry")) {
+                DrawRuntimeTelemetryRow("Viewport Aspect", viewportAspectValue.c_str(),
+                    localization_, loc::tooltip::runtime::Viewport,
+                    !viewportAspect.has_value());
+                ImGui::EndTable();
             }
-            DrawRuntimeInfoRow(localization_, loc::setting::CinematicAspect, cinematicAspectValue,
-                cinematicAspectTooltip);
 
+            ImGui::SeparatorText("Camera Integration");
             static constexpr TooltipOption gameplayFovTooltip[] = {
                 {{}, loc::camera_state::GameplayFov, loc::tooltip::runtime::GameplayFov},
                 {{}, loc::common::Unavailable, loc::tooltip::runtime::GameplayFovUnavailable},
             };
-            char gameplayFovValue[64]{};
-            if (integration.gameplayFovValid)
-                std::snprintf(gameplayFovValue, sizeof(gameplayFovValue), ": %.2f",
-                    integration.gameplayFov);
-            else
-                std::snprintf(gameplayFovValue, sizeof(gameplayFovValue), ": %s",
-                    unavailableValue.c_str());
-            DrawRuntimeInfoRow(localization_, loc::camera_state::GameplayFov, gameplayFovValue,
-                gameplayFovTooltip);
+            const auto formatFovFact = [this, &unavailableValue](float value,
+                bool valid, camera::SnapshotFreshness freshness) {
+                if (!valid) return std::string(unavailableValue);
+                char numeric[32]{};
+                std::snprintf(numeric, sizeof(numeric), "%.2f", value);
+                const char* freshnessText = freshness == camera::SnapshotFreshness::Current
+                    ? "Current" : freshness == camera::SnapshotFreshness::Retained
+                        ? "Retained" : freshness == camera::SnapshotFreshness::Historical
+                            ? "Historical" : unavailableValue;
+                return std::string(numeric) + " (" + freshnessText + ")";
+            };
+            const auto gameplayFovValue = formatFovFact(integration.gameplayFov,
+                integration.gameplayFovValid, integration.gameplayFovFreshness);
 
             static constexpr TooltipOption nativeFovTooltip[] = {
                 {{}, loc::camera_state::Native, loc::tooltip::runtime::NativeFov},
                 {{}, loc::common::Unavailable, loc::tooltip::runtime::NativeFovUnavailable},
             };
-            char nativeFovValue[64]{};
-            if (integration.nativeFovValid)
-                std::snprintf(nativeFovValue, sizeof(nativeFovValue), ": %.2f",
-                    integration.nativeFov);
-            else
-                std::snprintf(nativeFovValue, sizeof(nativeFovValue), ": %s",
-                    unavailableValue.c_str());
-            DrawRuntimeInfoRow(localization_, loc::camera_state::Native, nativeFovValue, nativeFovTooltip);
+            const auto nativeFovValue = formatFovFact(integration.nativeFov,
+                integration.nativeFovValid, integration.nativeFovFreshness);
 
             static constexpr TooltipOption horPlusFovTooltip[] = {
                 {{}, loc::camera_state::HorPlus, loc::tooltip::runtime::HorPlusFov},
                 {{}, loc::common::Unavailable, loc::tooltip::runtime::HorPlusFovUnavailable},
             };
-            char horPlusFovValue[64]{};
-            if (integration.horPlusFovValid)
-                std::snprintf(horPlusFovValue, sizeof(horPlusFovValue), ": %.2f",
-                    integration.horPlusFov);
+            const auto horPlusFovValue = formatFovFact(integration.horPlusTargetFov,
+                integration.horPlusTargetFovValid,
+                integration.horPlusTargetFovFreshness);
+            const auto currentOutputFovValue = formatFovFact(
+                integration.currentOutputFov, integration.currentOutputFovValid,
+                integration.currentOutputFovFreshness);
+
+            char gameplayBoundaryFovValue[64]{};
+            if (integration.gameplayBoundaryFovValid)
+                std::snprintf(gameplayBoundaryFovValue,
+                    sizeof(gameplayBoundaryFovValue), "%.2f",
+                    integration.gameplayBoundaryFov);
             else
-                std::snprintf(horPlusFovValue, sizeof(horPlusFovValue), ": %s",
-                    unavailableValue.c_str());
-            DrawRuntimeInfoRow(localization_, loc::camera_state::HorPlus, horPlusFovValue, horPlusFovTooltip);
-            const auto cameraStateLabel = Tr(localization_, loc::section::CameraState);
-            if (ImGui::TreeNodeEx(cameraStateLabel.c_str(), ImGuiTreeNodeFlags_Framed |
+                std::snprintf(gameplayBoundaryFovValue,
+                    sizeof(gameplayBoundaryFovValue), "%s",
+                    unavailableValue);
+
+            char cinematicFovValue[64]{};
+            if (integration.cinematicEnterFovValid)
+                std::snprintf(cinematicFovValue, sizeof(cinematicFovValue), "%.2f",
+                    integration.cinematicEnterFov);
+            else
+                std::snprintf(cinematicFovValue, sizeof(cinematicFovValue), "%s",
+                    unavailableValue);
+
+            const auto nativeWriterAspect = integration.nativeWriterAspectValid
+                ? FormatAspectRatioNine(integration.nativeWriterAspect)
+                : std::nullopt;
+            const std::string nativeWriterAspectValue =
+                nativeWriterAspect ? *nativeWriterAspect : unavailableValue;
+            const auto gameplayPolicyAspect = integration.horPlusPolicyAspectValid
+                ? FormatAspectRatioNine(integration.horPlusPolicyAspect)
+                : std::nullopt;
+            const std::string gameplayPolicyAspectValue =
+                gameplayPolicyAspect ? *gameplayPolicyAspect : unavailableValue;
+            const auto gameplayBoundaryAspect = integration.gameplayBoundaryAspectValid
+                ? FormatAspectRatioNine(integration.gameplayBoundaryAspect) : std::nullopt;
+            const auto cinematicEnterAspect = integration.cinematicEnterAspectValid
+                ? FormatAspectRatioNine(integration.cinematicEnterAspect) : std::nullopt;
+            const std::string gameplayBoundaryAspectValue = gameplayBoundaryAspect
+                ? *gameplayBoundaryAspect : unavailableValue;
+            const std::string cinematicEnterAspectValue = cinematicEnterAspect
+                ? *cinematicEnterAspect : unavailableValue;
+            char aspectDeltaValue[48]{};
+            if (integration.aspectDeltaValid)
+                std::snprintf(aspectDeltaValue, sizeof(aspectDeltaValue), "%.5f",
+                    integration.aspectDelta);
+            else std::snprintf(aspectDeltaValue, sizeof(aspectDeltaValue), "%s",
+                unavailableValue);
+            char fovDeltaValue[48]{};
+            if (integration.fovDeltaValid)
+                std::snprintf(fovDeltaValue, sizeof(fovDeltaValue), "%.3f°",
+                    integration.fovDelta);
+            else std::snprintf(fovDeltaValue, sizeof(fovDeltaValue), "%s",
+                unavailableValue);
+
+            const auto assessmentValue = [](CameraValueMatch value) -> const char* {
+                switch (value) {
+                case CameraValueMatch::Waiting: return "Waiting";
+                case CameraValueMatch::Matched: return "Match";
+                case CameraValueMatch::Mismatch: return "Mismatch";
+                case CameraValueMatch::CannotAssess: return "Unavailable";
+                case CameraValueMatch::Unknown: return "Unknown";
+                }
+                return "Unknown";
+            };
+            const auto overallValue = [](OverallIntegrationAssessment value) -> const char* {
+                switch (value) {
+                case OverallIntegrationAssessment::Waiting: return "Waiting";
+                case OverallIntegrationAssessment::Seamless: return "Seamless";
+                case OverallIntegrationAssessment::Mismatch: return "Mismatch";
+                case OverallIntegrationAssessment::CannotAssess: return "Unavailable";
+                case OverallIntegrationAssessment::Unknown: return "Unknown";
+                }
+                return "Unknown";
+            };
+            const char* aspectValue = assessmentValue(integration.aspect);
+            const char* fovMatchValue = assessmentValue(integration.fov);
+            const char* potentialAspectValue = assessmentValue(integration.potential.aspect);
+            const char* potentialFovValue = assessmentValue(integration.potential.fov);
+            const char* potentialOverallValue = overallValue(integration.potential.overall);
+            static constexpr TooltipOption aspectTooltip[] = {
+                {{}, loc::common::Waiting, loc::transition::DetailWaiting},
+                {"Match", {}, loc::tooltip::runtime::AspectMatched},
+                {"Mismatch", {}, loc::tooltip::runtime::AspectMismatch},
+                {"Unavailable", {}, loc::tooltip::runtime::AspectCannotAssess},
+            };
+
+            static constexpr TooltipOption cinematicAspectTooltip[] = {
+                {{}, loc::setting::CinematicAspect, loc::tooltip::runtime::CinematicAspect},
+                {{}, loc::common::Default, loc::tooltip::runtime::CinematicDefault},
+                {{}, loc::common::Unavailable, loc::tooltip::runtime::CinematicAspectUnavailable},
+            };
+            const auto cinematicAspect = integration.cinematicAspectPreviewValid
+                ? FormatAspectRatioNine(integration.cinematicAspectPreview)
+                : std::nullopt;
+            const std::string defaultValue = "Default";
+            const bool showCinematicDefault = integration.cinematicEnabledKnown &&
+                !integration.cinematicCorrectionEnabled;
+            const std::string cinematicAspectValue = showCinematicDefault
+                ? defaultValue
+                : cinematicAspect ? *cinematicAspect : unavailableValue;
+            std::string cinematicContextValue;
+            if (integration.cinematicContext !=
+                CinematicAssessmentContext::CannotAssess) {
+                cinematicContextValue = integration.cinematicContext ==
+                    CinematicAssessmentContext::ActiveSelection ? "Active" : "Next";
+            } else {
+                cinematicContextValue = unavailableValue;
+            }
+            const auto cinematicFovMode = integration.cinematicContext ==
+                CinematicAssessmentContext::ActiveSelection &&
+                semantic.activeCinematicFovMode.valid
+                ? config::CinematicFovModeName(semantic.activeCinematicFovMode.value)
+                : integration.cinematicContext ==
+                    CinematicAssessmentContext::NextSelection &&
+                    semantic.cinematicFovMode.valid
+                    ? config::CinematicFovModeName(semantic.cinematicFovMode.value)
+                    : nullptr;
+            const std::string cinematicFovModeValue = showCinematicDefault
+                ? defaultValue
+                : cinematicFovMode ? cinematicFovMode : unavailableValue;
+            const char* cinematicFovRowLabel = "FOV Mode";
+
+            if (BeginRuntimeTelemetryGrid("camera_integration_telemetry")) {
+                DrawRuntimeSectionStatus(localization_, "Gameplay Status",
+                    ProjectGameplayPresentation(semantic));
+                static constexpr TooltipOption gameplayModeTooltip[] = {
+                    {"AspectRecalculation", {}, loc::tooltip::gameplay::AspectRecalculation},
+                    {"HorPlus", {}, loc::tooltip::gameplay::HorPlus},
+                    {"RuntimeCombine", {}, loc::tooltip::gameplay::RuntimeCombine},
+                };
+                DrawRuntimeTelemetryRow("Mode", config::GameplayModeName(
+                    frameSettings.gameplayMode), localization_, gameplayModeTooltip);
+                DrawRuntimeTelemetryRow("Writer Aspect", nativeWriterAspectValue.c_str(),
+                    localization_, loc::tooltip::runtime::WriterAspect,
+                    !nativeWriterAspect.has_value());
+                DrawRuntimeTelemetryRow("Policy Aspect", gameplayPolicyAspectValue.c_str(),
+                    localization_, loc::tooltip::runtime::PolicyAspect,
+                    !gameplayPolicyAspect.has_value());
+
+                DrawRuntimeTelemetrySubheading("FOV");
+                DrawRuntimeTelemetryRow("Gameplay FOV", gameplayFovValue.c_str(),
+                    localization_, gameplayFovTooltip, !integration.gameplayFovValid);
+                DrawRuntimeTelemetryRow("Native FOV", nativeFovValue.c_str(),
+                    localization_, nativeFovTooltip, !integration.nativeFovValid);
+                DrawRuntimeTelemetryRow("HorPlus Target", horPlusFovValue.c_str(),
+                    localization_, horPlusFovTooltip, !integration.horPlusTargetFovValid);
+                DrawRuntimeTelemetryRow("Current Output FOV",
+                    currentOutputFovValue.c_str(),
+                    localization_, loc::tooltip::runtime::CurrentOutputFov,
+                    !integration.currentOutputFovValid);
+                DrawRuntimeTelemetrySubheading("Camera Transition");
+                DrawRuntimeTelemetrySubheading("Potential");
+                DrawRuntimeTelemetryRow("Aspect Match", potentialAspectValue,
+                    localization_, aspectTooltip,
+                    integration.potential.aspect == CameraValueMatch::CannotAssess);
+                DrawRuntimeTelemetryRow("FOV Match", potentialFovValue,
+                    localization_, loc::tooltip::runtime::FovMatch,
+                    integration.potential.fov == CameraValueMatch::CannotAssess);
+                DrawRuntimeTelemetryRow("Camera Transition", potentialOverallValue,
+                    localization_, loc::tooltip::runtime::CameraTransition,
+                    integration.potential.overall ==
+                        OverallIntegrationAssessment::CannotAssess);
+
+                DrawRuntimeTelemetrySubheading("Actual");
+                if (integration.transitionBoundaryObserved) {
+                    const char* evidenceLabel = "Last Validated";
+                    if (semantic.coordinator.valid && semantic.coordinator.value ==
+                        plugin::OverlayCoordinatorState::CinematicActive)
+                        evidenceLabel = "Active";
+                    DrawRuntimeTelemetryRow("Evidence", evidenceLabel,
+                        localization_, loc::tooltip::runtime::TransitionEvidence);
+                    char generationValue[32]{};
+                    std::snprintf(generationValue, sizeof(generationValue), "%llu",
+                        static_cast<unsigned long long>(integration.transitionGeneration));
+                    DrawRuntimeTelemetryRow("Generation", generationValue,
+                        localization_, loc::tooltip::runtime::TransitionGeneration);
+                    DrawRuntimeTelemetryRow("Gameplay Boundary Aspect",
+                        gameplayBoundaryAspectValue.c_str(), localization_,
+                        loc::tooltip::runtime::GameplayBoundaryAspect,
+                        !integration.gameplayBoundaryAspectValid);
+                    DrawRuntimeTelemetryRow("Cinematic ENTER Aspect",
+                        cinematicEnterAspectValue.c_str(), localization_,
+                        loc::tooltip::runtime::CinematicEnterAspect,
+                        !integration.cinematicEnterAspectValid);
+                    DrawRuntimeTelemetryRow("Aspect Delta", aspectDeltaValue,
+                        localization_, loc::tooltip::runtime::AspectDelta,
+                        !integration.aspectDeltaValid);
+                    DrawRuntimeTelemetryRow("Aspect Match", aspectValue,
+                        localization_, aspectTooltip,
+                        integration.aspect == CameraValueMatch::CannotAssess);
+                    DrawRuntimeTelemetryRow("Gameplay Boundary FOV",
+                        gameplayBoundaryFovValue, localization_,
+                        loc::tooltip::runtime::GameplayBoundaryFov,
+                        !integration.gameplayBoundaryFovValid);
+                    DrawRuntimeTelemetryRow("Cinematic ENTER FOV", cinematicFovValue,
+                        localization_, loc::tooltip::runtime::CinematicEnterFov,
+                        !integration.cinematicEnterFovValid);
+                    DrawRuntimeTelemetryRow("FOV Delta", fovDeltaValue,
+                        localization_, loc::tooltip::runtime::FovDelta,
+                        !integration.fovDeltaValid);
+                    DrawRuntimeTelemetryRow("FOV Match", fovMatchValue,
+                        localization_, loc::tooltip::runtime::FovMatch,
+                        integration.fov == CameraValueMatch::CannotAssess);
+                    DrawRuntimeTelemetryRow("Camera Transition", overallValue(integration.overall),
+                        localization_, loc::tooltip::runtime::CameraTransition,
+                        integration.overall == OverallIntegrationAssessment::CannotAssess);
+                } else {
+                    DrawRuntimeTelemetryRow("Evidence", unavailableValue,
+                        localization_, loc::tooltip::runtime::TransitionEvidence, true);
+                    DrawRuntimeTelemetryRow("Aspect Match", aspectValue,
+                        localization_, aspectTooltip,
+                        integration.aspect == CameraValueMatch::CannotAssess);
+                    DrawRuntimeTelemetryRow("FOV Match", fovMatchValue,
+                        localization_, loc::tooltip::runtime::FovMatch,
+                        integration.fov == CameraValueMatch::CannotAssess);
+                    DrawRuntimeTelemetryRow("Camera Transition", overallValue(integration.overall),
+                        localization_, loc::tooltip::runtime::CameraTransition,
+                        integration.overall == OverallIntegrationAssessment::CannotAssess);
+                }
+
+                DrawRuntimeTelemetrySubheading("Cinematics");
+                DrawRuntimeSectionStatus(localization_, "Cinematic Status",
+                    ProjectCinematicPresentation(semantic));
+                DrawRuntimeTelemetryRow("Cinematic Aspect Preview",
+                    cinematicAspectValue.c_str(),
+                    localization_, cinematicAspectTooltip,
+                    !showCinematicDefault && !cinematicAspect.has_value());
+                DrawRuntimeTelemetryRow("Selection", cinematicContextValue.c_str(),
+                    localization_, integration.cinematicContext ==
+                        CinematicAssessmentContext::ActiveSelection
+                        ? loc::transition::ActiveSelectionContext
+                        : loc::transition::NextSelectionContext,
+                    integration.cinematicContext ==
+                        CinematicAssessmentContext::CannotAssess);
+                const bool gameplayCinematicFov = cinematicFovMode &&
+                    std::string_view(cinematicFovMode) == "GameplayHorPlus";
+                DrawRuntimeTelemetryRow(cinematicFovRowLabel, cinematicFovModeValue.c_str(),
+                    localization_, showCinematicDefault
+                        ? loc::tooltip::runtime::CinematicDefault
+                        : gameplayCinematicFov
+                            ? loc::tooltip::cinematics::FovGameplay
+                            : loc::tooltip::cinematics::FovNative,
+                    !showCinematicDefault && cinematicFovMode == nullptr);
+                ImGui::EndTable();
+            }
+            if (ImGui::TreeNodeEx("Camera State", ImGuiTreeNodeFlags_Framed |
                 ImGuiTreeNodeFlags_SpanAvailWidth)) {
-                DrawCameraStateView(localization_, semantic);
+                DrawCameraStateView(semantic, integration);
                 ImGui::TreePop();
             }
                 ImGui::EndTable();
@@ -1938,6 +2355,16 @@ namespace overlay
         damageTracker_.Publish(currentBounds, surfaceExtent);
         forceFullDamage_ = false;
         surfaceDirty_ = false;
+        if (overlayVisible && !damage.empty()) {
+            diagnostics::overlay_activation_trace::RecordStage(logger_,
+                activationRequest,
+                diagnostics::overlay_activation_trace::Stage::RenderSubmitted,
+                "render_submitted", true, ready());
+            diagnostics::overlay_activation_trace::RecordStage(logger_,
+                activationRequest,
+                diagnostics::overlay_activation_trace::Stage::FirstVisibleFrame,
+                "first_visible_frame", true, ready());
+        }
         if (!firstFrameLogged_) {
             firstFrameLogged_ = true;
             LogDiagnostic(logger_, "OVERLAY_FIRST_FRAME");

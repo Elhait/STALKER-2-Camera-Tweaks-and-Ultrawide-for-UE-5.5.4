@@ -1,7 +1,7 @@
 {
   "app": { "title": "STALKER 2 Camera Tweaks" },
   "common": {
-    "enabled": "有効", "disabled": "無効", "unavailable": "利用不可",
+    "enabled": "有効", "disabled": "無効", "default": "標準", "unavailable": "利用不可",
     "unavailable_value": "利用不可", "cannot_assess": "評価できません",
     "active": "有効", "ready": "準備完了", "applying": "適用中",
     "starting": "開始中", "ending": "終了中", "waiting": "待機中",
@@ -20,21 +20,22 @@
     "gameplay_mode": "ゲームプレイモード", "cinematic_aspect": "カットシーンのアスペクト比",
     "cinematic_fov": "カットシーンのFOV", "dialogue_zoom": "会話ズーム",
     "overlay_toggle": "オーバーレイ切り替え", "language": "言語", "font_size": "文字サイズ", "mode": "モード",
-    "aspect_ratio": "アスペクト比", "fov_mode": "FOVモード", "zoom": "ズーム"
+    "cinematic_framing": "画角", "fov_mode": "FOVモード", "zoom": "ズーム"
   },
   "notice": { "mouse_capture": "このウィンドウを開いている間、マウス入力はキャプチャされます。{key} を押すとマウス操作をゲームに戻し、Esc で終了します。" },
   "rebind": { "press_key": "キーを押してください" },
-  "ui": { "viewport_aspect": "ゲームビューポートのアスペクト比" },
+  "ui": { "viewport_aspect": "ゲームウィンドウのクライアント領域比率" },
   "transition": {
     "waiting": "待機中",
-    "aligned": "一致", "not_aligned": "不一致",
+    "aligned": "シームレス", "not_aligned": "不一致",
     "detail": {
-      "waiting": "カメラ設定は一致する経路です。状態確認に必要なゲームプレイカメラ情報を待っています。",
-      "aligned": "カットシーンとゲームプレイのカメラ経路は一致しています。",
-      "not_aligned": "カットシーンとゲームプレイのカメラ経路で、アスペクト比またはFOVの動作が異なります。",
-      "cannot_assess": "カメラ経路を比較するための実行時情報が不足しています。"
+      "aligned": "ゲームプレイとシネマティックのカメラで観測されたアスペクト比とFOVが一致しています。",
+      "not_aligned": "ゲームプレイとシネマティックのカメラで観測されたアスペクト比またはFOVが異なります。",
+      "cannot_assess": "カメラ経路を比較するための実行時情報が不足しています。",
+      "waiting": "ゲームプレイ境界サンプルと比較するため、現在のシネマティックカメラ観測を待っています。",
+      "expected_seamless": "選択した設定ではシームレスなカメラ遷移が期待されます。実行時検証はシネマティックカメラの観測を待っています。"
     },
-    "active_value": "有効 — {value}"
+    "active_value": "有効 — {value}", "context_active_selection": "評価は現在のカットシーン選択を使用します。", "context_next_selection": "評価は次のカットシーン選択の設定を使用します。"
   },
   "status": { "detail": {
     "gameplay_incomplete": "ゲームプレイの状態はまだ利用できません。",
@@ -47,8 +48,8 @@
     "horplus_active": "HorPlusはゲームプレイのFOVをリアルタイムで調整します。",
     "native_recalculation_enabled": "ゲーム本来のカメラ調整は有効です。",
     "cinematic_incomplete": "カットシーンの状態はまだ利用できません。",
-    "cinematic_unavailable": "カットシーンカメラとの統合は利用できません。",
-    "cinematic_native_ready": "次のカットシーンでは元の画角を使用します。",
+    "cinematic_unavailable": "カットシーンカメラとの統合は利用できません。", "cinematic_disabled": "カットシーン補正は無効です。ゲーム本来のカメラ設定を使用します。",
+    "cinematic_native_ready": "カットシーン補正は無効です。ゲーム本来のカメラ設定を使用します。",
     "next_cinematic_ready": "変更は次のカットシーンから適用されます。",
     "cinematic_active": "現在のカットシーンでは、選択した比率とFOVモードが使用されています。",
     "cinematic_selection_incomplete": "現在のカットシーン情報が不完全です。",
@@ -56,7 +57,7 @@
     "dialogue_hook_unavailable": "会話カメラとの統合は利用できません。",
     "dialogue_capability_unavailable": "会話ズームの状態は利用できません。",
     "dialogue_mode_unavailable": "選択した会話ズームモードは利用できません。",
-    "dialogue_native_ready": "次の会話ではゲーム本来のズームを使用します。",
+    "dialogue_native_ready": "会話補正は無効です。ゲームのカメラ動作は変更されません。",
     "dialogue_adaptive_ready": "次の会話に適応ズームを設定しました。",
     "dialogue_reduced_ready": "次の会話に低減ズームを設定しました。",
     "dialogue_disabled_ready": "会話に追加ズームは適用されません。",
@@ -73,16 +74,17 @@
     "gameplay": {
       "enabled": "選択したゲームプレイ補正を有効にします。",
       "disabled": "以降のゲームプレイ補正を停止します。ネイティブカメラ再計算の結果は、ゲームの再起動またはセーブデータの再読み込みまで残る場合があります。",
-      "horplus": "Recommended. ゲーム本来のFOV変更を維持し、ズーム中も含めて現在のビューポートにリアルタイムで適応させます。",
+      "horplus": "Gameplay writer の FOV 変化を維持し、writer で観測した比率を使って各サンプルを変換します。ズーム中も同様です。",
       "horplus_examples_context": "Gameplay FOV - no zoom",
       "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
       "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
       "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
-      "aspect_recalculation": "選択したゲームプレイFOVを維持しながら、ゲーム本来のアスペクト遷移を使用します。独自のウィンドウ比率では、Autoに戻すとウィンドウが本来の比率とサイズに戻る場合があります。"
+      "aspect_recalculation": "選択したゲームプレイFOVを維持しながら、ゲーム本来のアスペクト遷移を使用します。独自のウィンドウ比率では、Autoに戻すとウィンドウが本来の比率とサイズに戻る場合があります。",
+      "runtime_combine": "従来のAspect RecalculationとHorPlusを組み合わせ、Gameplayとシネマティック間のシームレスな移行を実現します。カメラ読み込み時の値に依存せず、Gameplayカメラのアスペクト比を現在のウィンドウ比に同期し、画面解像度が変わると再同期します。同期が確認された後にのみHor+ FOV補正を適用します。シネマティックへの移行と復帰を滑らかにする推奨モードです。"
     },
-    "cinematics": { "aspect": {
+    "cinematics": { "enabled": "有効にすると、選択したカットシーンの画角とFOV補正を適用します。無効にすると、Camera Tweaksはゲーム本来のカメラ設定を維持します。", "aspect": {
       "auto": "現在のゲームビューポート比率をカットシーンの画角に使用します。有効な任意のアスペクト比に対応します。",
-      "native": "カットシーン本来の画角を変更しません。選択したFOVモードは引き続き適用されます。",
+      "native": "ゲーム本来の動作は別のEnabledスイッチで切り替えます。画角はAuto、16:9、21:9、32:9です。",
       "16_9": "ディスプレイのアスペクト比にかかわらず、カットシーンを16:9で表示します。",
       "21_9": "ディスプレイのアスペクト比にかかわらず、カットシーンを21:9で表示します。",
       "32_9": "ディスプレイのアスペクト比にかかわらず、カットシーンを32:9で表示します。",
@@ -96,14 +98,13 @@
       "native_examples_context": "Cinematic FOV 90 degrees - results by aspect",
       "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
     } },
-    "dialogue": { "zoom": {
-      "native": "ゲーム本来の会話ズーム動作を使用します。",
+    "dialogue": {
+      "enabled": "会話補正を無効にすると、ゲーム本来のズームになり、標準FOVは70°です。",
+      "zoom": {
       "adaptive": "現在のゲームプレイFOVに対する、ゲーム本来の光学ズームの強さを維持します。",
       "reduced": "適応光学ズームの半分の強さを使用します。",
       "disabled": "会話ズームを無効にし、現在のゲームプレイFOVを維持します。",
       "examples_context": "Gameplay FOV to dialogue FOV",
-      "native_example_90": "90° → 70°.",
-      "native_example_110": "110° → 70°.",
       "adaptive_example_90": "90° → 70°.",
       "adaptive_example_110": "110° → ~90°.",
       "reduced_example_90": "90° → ~80°.",
@@ -115,45 +116,63 @@
       "disabled": "これらの操作を無効にします。別個のオーバーレイ切り替えキーは引き続き有効です。",
       "change": "Click the current key control to start rebinding.",
       "change_overlay": "Click the current overlay key control to start rebinding.",
-      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+
       "rebind": "Press a key to assign it. Press Esc to cancel.",
-      "gameplay_cycle": "Cycles Gameplay correction immediately: AspectRecalculation -> HorPlus -> AspectRecalculation.",
-      "cinematic_aspect_cycle": "Sets aspect ratio for the next cinematic: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Does not affect a cinematic already playing.",
+      "gameplay_cycle": "Cycles Gameplay correction immediately: AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "次のカットシーンの画角を切り替えます: Auto → 16:9 → 21:9 → 32:9 → Auto。",
       "cinematic_fov_cycle": "Sets FOV mode for the next cinematic: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Does not affect a cinematic already playing.",
-      "dialogue_cycle": "Sets zoom mode for the next dialogue: Native -> Adaptive -> Reduced -> Disabled -> Native. Does not affect a dialogue already in progress."
+      "dialogue_cycle": "Cycles the Dialogue correction mode for the next dialogue: Adaptive -> Reduced -> Disabled -> Adaptive. Does not affect a dialogue already in progress."
     },
     "overlay": { "always_active": "このキーでオーバーレイを開閉します。" },
     "runtime": {
       "viewport": "現在のゲームビューポートのアスペクト比です。解像度やウィンドウサイズで変化します。",
+      "writer_aspect": "Gameplayカメラwriterで現在観測されたアスペクト比です。クライアントビューポートのアスペクト比とは別の値です。",
+      "policy_aspect": "現在のGameplay FOVポリシーの観測で使用されるアスペクト比です。最終的な投影アスペクト比の読み取り値ではありません。",
       "viewport_auto": "カットシーンのAutoアスペクト設定では、このビューポート比率を目標にします。",
       "viewport_unavailable": "現在のゲームビューポートの寸法は利用できません。",
       "aspect_matched": "カットシーンとゲームプレイのビューポート比率は、比較許容範囲内で一致しています。",
       "aspect_mismatch": "カットシーンとゲームプレイのビューポート比率が異なります。",
       "aspect_cannot_assess": "比率の比較に必要な有効な実行時情報が不足しています。",
-      "cinematic_aspect": "1つ目はカットシーン設定から解決した比率、2つ目は現在のゲームプレイビューポート比率です。",
+      "cinematic_aspect": "1つ目は現在または次のシネマティック選択に設定された目標、2つ目はゲームウィンドウのクライアント領域比率です。最終的な投影比率を示すものではありません。 UI preview only; production may fall back to display/native aspect.",
+      "cinematic_default": "ゲーム標準のカメラ動作を使用します。Camera Tweaks はアスペクト比や FOV を変更しません。",
       "cinematic_aspect_unavailable": "有効なカットシーン目標比率または現在のビューポート比率を取得できません。",
-      "gameplay_fov": "維持されるニュートラルなゲームプレイFOVです。ADS、双眼鏡、会話、カットシーンなどの一時的なズーム状態とは別です。",
+      "gameplay_fov": "安定した条件で観測され、保持されたニュートラルなGameplay writer FOVです。設定値でも最終的な表示FOVでもありません。",
       "gameplay_fov_unavailable": "有効なニュートラルゲームプレイFOVはまだ観測されていません。",
-      "native_fov": "HorPlus変換前の現在のFOV入力です。ADS、双眼鏡ズーム、会話、カメラ遷移中に変化する場合があります。",
+      "native_fov": "このmodのHorPlus変換前における現在のGameplay writer FOV入力です。ADS中に変化する場合があり、最終的な表示FOVの読み取り値ではありません。",
       "native_fov_unavailable": "有効な現在のネイティブFOVを取得できません。",
-      "horplus_fov": "現在のビューポートに対するネイティブFOVの変換値です。ズームやカメラ遷移中に変化する場合があります。",
-      "horplus_fov_unavailable": "有効な変換済みFOVを取得できません。"
+      "horplus_fov": "Gameplay FOVポリシーの結果です。このwriter呼び出し時に取得・検証したゲームウィンドウのクライアント領域比率を使用します。最終表示FOVの読み取り値ではありません。",
+      "horplus_fov_unavailable": "有効な変換済みFOVを取得できません。",
+      "current_output_fov": "適用される補正ポリシー後に、現在のMODカメラトランザクションが返したFOVです。",
+      "transition_evidence": "受理されたCinematic ENTER境界の保存済み証拠です。ライブカメラ状態とは別です。",
+      "transition_generation": "受理されたENTER証拠に対応するシネマティックのライフサイクル世代です。",
+      "gameplay_boundary_aspect": "受理されたENTER境界で記録されたGameplay側のアスペクトです。",
+      "cinematic_enter_aspect": "受理されたENTER境界で記録されたCinematic側のアスペクトです。",
+      "aspect_delta": "Gameplay Boundary AspectとCinematic ENTER Aspectの絶対差です。",
+      "gameplay_boundary_fov": "ENTER時に記録されたGameplay側FOVです。ライブ値ではなく遷移証拠です。",
+      "cinematic_enter_fov": "ENTER時に記録されたCinematic側FOVです。ライブ値ではなく遷移証拠です。",
+      "fov_delta": "Gameplay Boundary FOVとCinematic ENTER FOVの絶対差です。",
+      "fov_match": "境界FOVの比較結果です。意味上の許容差は±1°です。",
+      "camera_transition": "利用可能なアスペクトおよびFOV証拠に基づく、検証済み境界の総合評価です。",
+      "gameplay_status": "Gameplayカメラ統合の現在の表示状態です。",
+      "cinematic_status": "Cinematicカメラ統合の現在の表示状態です。"
     }
   },
   "camera_state": {
-    "waiting": "最初の完全なカメラ更新を待っています。",
+    "waiting": "カメラの更新を待っています。",
     "field": {
+      "last_publication": "Last publication state", "coordinator": "Coordinator", "aspect_preview": "Cinematic aspect preview",
       "state": "状態", "gameplay_fov": "ゲームプレイFOV", "provenance": "由来", "epoch": "エポック", "mode": "モード",
       "valid": "有効", "direction": "方向", "active": "有効",
       "evidence_valid": "証拠は有効", "sequence": "シーケンス", "primary": "主要", "secondary": "副次",
       "source": "ソース", "confidence": "信頼度", "policy_valid": "ポリシーは有効",
-      "recovery_excluded": "復旧対象外", "target": "対象", "setting_known": "設定を確認済み",
+      "recovery_excluded": "復旧対象外", "target": "対象",
       "game_source": "ゲームソース", "native": "ネイティブFOV", "native_source": "ネイティブソース",
-      "horplus": "HorPlus FOV", "horplus_source": "HorPlusソース", "aspect": "アスペクト比",
-      "aspect_source": "アスペクト比ソース", "flags": "フラグ", "gameplay_writer": "ゲーム書き込み元",
-      "presentation_epoch": "表示エポック", "event_sequence": "イベントシーケンス"
+      "horplus": "HorPlus目標", "aspect_source": "アスペクト比ソース", "writer_aspect": "Native writer側のアスペクト比", "gameplay_policy_aspect": "Gameplayポリシーのアスペクト比", "flags": "フラグ", "gameplay_writer": "ゲーム書き込み元", "current_output": "現在の出力FOV",
+      "runtime_combine": "Runtime Combine トランザクション",
+      "presentation_epoch": "表示エポック", "event_sequence": "イベントシーケンス", "freshness": "新しさ"
     },
-    "value": { "unavailable_counter": "利用不可 / {value}" }
+    "value": { "current": "現在", "retained": "Retained", "last_known": "Last known", "unavailable_counter": "利用不可 / {value}", "runtime_combine_detail": "変更前: {before}; 目標: {target}; 変更後: {after}; 不一致: {mismatch}; 書き込み試行: {attempted}; 書き込み成功: {write_succeeded}; 確認済み: {confirmed}; フラグ: {flags_before} → {flags_after}; FOV: {input_fov} → {output_fov}." }
   },
   "notification": {
     "hotkey_conflict": "ホットキーの競合", "hotkey_title": "{setting} のホットキー",

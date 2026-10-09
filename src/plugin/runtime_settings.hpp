@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../camera/camera_state_snapshot.hpp"
+#include "../camera/fov_observation.hpp"
 #include "../config/feature_config.hpp"
 
 #include <atomic>
@@ -14,11 +15,13 @@ namespace plugin
     struct RuntimeSettingsSnapshot
     {
         bool gameplayEnabled{};
-        config::GameplayMode gameplayMode{config::GameplayMode::HorPlus};
+        config::GameplayMode gameplayMode{config::GameplayMode::RuntimeCombine};
+        bool cinematicsEnabled{true};
         config::CinematicAspectPolicy cinematicAspectPolicy{
             config::CinematicAspectPolicy::Auto};
         config::CinematicFovMode cinematicFovMode{
             config::CinematicFovMode::GameplayHorPlus};
+        bool dialogueEnabled{true};
         config::DialogueZoomPolicy dialogueZoomPolicy{
             config::DialogueZoomPolicy::Adaptive};
         std::string overlayLocaleCode{localization::CanonicalLocaleCode};
@@ -54,6 +57,7 @@ namespace plugin
         CameraStateSnapshot,
         PresentationCoordinator,
         RuntimeViewportResolver,
+        CameraBoundaryObservation,
     };
 
     enum class SemanticFreshness : std::uint8_t
@@ -96,9 +100,11 @@ namespace plugin
     {
         SemanticFact<bool> gameplayEnabled{};
         SemanticFact<config::GameplayMode> gameplayMode{};
+        SemanticFact<bool> cinematicsEnabled{};
         SemanticFact<config::CinematicAspectPolicy> cinematicAspectPolicy{};
         SemanticFact<config::CinematicFovMode> cinematicFovMode{};
         SemanticFact<config::DialogueZoomPolicy> dialogueZoomPolicy{};
+        SemanticFact<bool> dialogueEnabled{};
         SemanticFact<bool> gameplayHookAvailable{};
         SemanticFact<bool> gameplayEnableApplyPending{};
         SemanticFact<bool> gameplayDisableRestorePending{};
@@ -108,13 +114,16 @@ namespace plugin
         SemanticFact<bool> cinematicSelectionActive{};
         SemanticFact<config::CinematicAspectPolicy> activeCinematicAspectPolicy{};
         SemanticFact<config::CinematicFovMode> activeCinematicFovMode{};
+        SemanticFact<bool> activeCinematicsEnabled{};
         SemanticFact<bool> dialogueBoundaryHookAvailable{};
         SemanticFact<bool> dialogueNonNativeCapabilityAvailable{};
         SemanticFact<OverlayDialoguePhase> dialoguePhase{};
         SemanticFact<config::DialogueZoomPolicy> activeDialogueZoomPolicy{};
+        SemanticFact<bool> activeDialogueCorrection{};
         SemanticFact<bool> gameplayBaselineUsable{};
         camera::CameraStateSnapshot cameraState{};
         bool cameraStateValid{};
+        SemanticFact<camera::CameraTransitionBoundaryObservation> cameraTransitionBoundary{};
         SemanticFact<OverlayCoordinatorState> coordinator{};
         SemanticFact<float> runtimeViewportAspect{};
     };
@@ -123,8 +132,10 @@ namespace plugin
     {
         GameplayEnabled,
         GameplayMode,
+        CinematicsEnabled,
         CinematicAspectPolicy,
         CinematicFovMode,
+        DialogueEnabled,
         DialogueZoomPolicy,
         OverlayLocaleCode,
         OverlayAutoLocale,
@@ -156,12 +167,16 @@ namespace plugin
 
         static RuntimeSettingMutation Gameplay(config::GameplayMode value)
         { return {RuntimeSettingKind::GameplayMode, value}; }
+        static RuntimeSettingMutation CinematicsEnabled(bool value)
+        { return {RuntimeSettingKind::CinematicsEnabled, value}; }
         static RuntimeSettingMutation CinematicAspect(config::CinematicAspectPolicy value)
         { return {RuntimeSettingKind::CinematicAspectPolicy, value}; }
         static RuntimeSettingMutation CinematicFov(config::CinematicFovMode value)
         { return {RuntimeSettingKind::CinematicFovMode, value}; }
         static RuntimeSettingMutation Dialogue(config::DialogueZoomPolicy value)
         { return {RuntimeSettingKind::DialogueZoomPolicy, value}; }
+        static RuntimeSettingMutation DialogueEnabled(bool value)
+        { return {RuntimeSettingKind::DialogueEnabled, value}; }
         static RuntimeSettingMutation LocaleCode(std::string value)
         { return {RuntimeSettingKind::OverlayLocaleCode, value}; }
         static RuntimeSettingMutation AutoLocale(bool value)
@@ -279,10 +294,14 @@ namespace plugin
                     std::holds_alternative<bool>(mutation.value)) ||
                 (mutation.kind == RuntimeSettingKind::GameplayMode &&
                     std::holds_alternative<config::GameplayMode>(mutation.value)) ||
+                (mutation.kind == RuntimeSettingKind::CinematicsEnabled &&
+                    std::holds_alternative<bool>(mutation.value)) ||
                 (mutation.kind == RuntimeSettingKind::CinematicAspectPolicy &&
                     std::holds_alternative<config::CinematicAspectPolicy>(mutation.value)) ||
                 (mutation.kind == RuntimeSettingKind::CinematicFovMode &&
                     std::holds_alternative<config::CinematicFovMode>(mutation.value)) ||
+                (mutation.kind == RuntimeSettingKind::DialogueEnabled &&
+                    std::holds_alternative<bool>(mutation.value)) ||
                 (mutation.kind == RuntimeSettingKind::DialogueZoomPolicy &&
                     std::holds_alternative<config::DialogueZoomPolicy>(mutation.value)) ||
                 (mutation.kind == RuntimeSettingKind::OverlayLocaleCode &&

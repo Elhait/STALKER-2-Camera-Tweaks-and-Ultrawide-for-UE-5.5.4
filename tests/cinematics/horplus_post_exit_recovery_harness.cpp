@@ -1,6 +1,7 @@
 #include "../../src/camera/gameplay_baseline.hpp"
 #include "../../src/camera/horplus.hpp"
 #include "../../src/cinematics/cinematic_fov.hpp"
+#include "../../src/cinematics/cinematic_recovery_retirement.hpp"
 #include "../../src/dialogue/dialogue_state.hpp"
 #include "../../src/gameplay/gameplay_state.hpp"
 #include "../../src/gameplay/horplus_gameplay.hpp"
@@ -13,7 +14,7 @@ namespace
 {
     constexpr float kNativeAspect = 16.0f / 9.0f;
     constexpr float kAspect = 3440.0f / 1440.0f;
-    constexpr float kRecoveryEpsilon = 0.01f;
+    constexpr float kRecoveryEndpointToleranceDegrees = 0.01f;
     constexpr std::uintptr_t kCameraSource = 0x1234;
 
     bool Check(bool condition, const char* name)
@@ -59,7 +60,7 @@ namespace
         bool gameplayEnabled = true)
     {
         auto observation = recovery.ObserveValidated(
-            source, inputFov, kRecoveryEpsilon);
+            source, inputFov, kRecoveryEndpointToleranceDegrees);
         const auto retainedBaseline = baseline.Read();
         gameplay::HorPlusRecoverySample sample{};
         sample.source = source;
@@ -72,17 +73,21 @@ namespace
         sample.exitNativeTarget = exitTarget;
         sample.cachedCinematicFov = cachedCinematicFov;
         sample.aspect = aspect;
+        sample.policyAspect = aspect;
+        sample.policyAspectValid = std::isfinite(aspect) && aspect > 0.0f;
         sample.flags = flags;
         sample.cameraReadable = cameraReadable;
         sample.gameplayEnabled = gameplayEnabled;
         auto action = gameplay::ResolveHorPlusRecoveryAction(coordinator,
-            sample, gameplay::IsNativeHorPlusRecoverySample(sample, kRecoveryEpsilon),
-            kRecoveryEpsilon);
+            sample, gameplay::IsNativeHorPlusRecoverySample(
+                sample, kRecoveryEndpointToleranceDegrees),
+            kRecoveryEndpointToleranceDegrees);
         if (action == gameplay::HorPlusRecoveryAction::HoldNativePassThrough) {
             if (observation == dialogue::PostCinematicRecoveryExclusion::Observation::Inactive ||
                 observation == dialogue::PostCinematicRecoveryExclusion::Observation::Cancelled) {
                 recovery.Arm(exitTarget);
-                recovery.ObserveValidated(source, inputFov, kRecoveryEpsilon);
+                recovery.ObserveValidated(source, inputFov,
+                    kRecoveryEndpointToleranceDegrees);
             }
             return inputFov;
         }
@@ -168,16 +173,18 @@ namespace
         gameplay::HorPlusRecoverySample native{};
         native.source = kCameraSource;
         native.validatedSource = kCameraSource;
-        native.inputFov = 90.6557f;
-        native.exitNativeTarget = 90.6557f;
+        native.inputFov = 90.0f;
+        native.exitNativeTarget = 90.0f;
         native.aspect = 3.0f;
         native.flags = 0x4;
         native.cameraReadable = true;
-        pass &= Check(gameplay::IsNativeHorPlusRecoverySample(native, kRecoveryEpsilon),
+        pass &= Check(gameplay::IsNativeHorPlusRecoverySample(
+                native, kRecoveryEndpointToleranceDegrees),
             "recorded_native_recovery_evidence_accepted");
         const auto reject = [&pass](const gameplay::HorPlusRecoverySample& sample,
             const char* name) {
-            pass &= Check(!gameplay::IsNativeHorPlusRecoverySample(sample, kRecoveryEpsilon), name);
+            pass &= Check(!gameplay::IsNativeHorPlusRecoverySample(
+                    sample, kRecoveryEndpointToleranceDegrees), name);
         };
         auto sample = native;
         sample.inputFov = 119.272f;
@@ -209,9 +216,15 @@ namespace
         sample = native;
         sample.exitNativeTarget = 0.0f;
         reject(sample, "invalid_exit_target_is_not_recovery");
-        pass &= Check(!gameplay::IsNativeHorPlusRecoverySample(native, -1.0f) &&
-            !gameplay::IsNativeHorPlusRecoverySample(native,
-                std::numeric_limits<float>::quiet_NaN()), "invalid_epsilon_is_not_recovery");
+        sample = native;
+        sample.inputFov = 90.6557f;
+        pass &= Check(!gameplay::IsNativeHorPlusRecoverySample(
+                sample, kRecoveryEndpointToleranceDegrees),
+            "subdegree_difference_alone_does_not_complete_recovery_lifecycle");
+        sample.inputFov = 91.01f;
+        pass &= Check(!gameplay::IsNativeHorPlusRecoverySample(
+                sample, kRecoveryEndpointToleranceDegrees),
+            "native_recovery_requires_more_than_one_degree_to_remain_unconverged");
 
         camera::GameplayBaselineStore baseline;
         const auto transformed = gameplay::EvaluateHorPlus(90.0f, kAspect, 0x4, kNativeAspect);
@@ -238,6 +251,402 @@ namespace
         return pass;
     }
 }
+
+    bool CheckGenerationScopedRecoveryOwner()
+    {
+        bool pass = true;
+        constexpr std::uintptr_t sourceA = 0xA100;
+        constexpr std::uintptr_t sourceB = 0xB200;
+        cinematics::CinematicWriterAssociationSnapshot association{};
+        association.generationActive = true;
+        association.generation = 41;
+        association.aspectStoreTargetObject = sourceA;
+        association.associatedWriterRsi = sourceA;
+        association.observedWriterRbx = 0xC300;
+        association.associationValid = true;
+
+        cinematics::CinematicRecoveryOwner owner;
+        pass &= Check(owner.Capture(association, 41) && owner.MatchesSource(sourceA),
+            "accepted_exit_captures_the_generation_scoped_associated_rsi");
+        auto snapshot = owner.Read();
+        pass &= Check(snapshot.valid && snapshot.generation == 41 &&
+            snapshot.writerRsi == sourceA && snapshot.observedWriterRbx == 0xC300 &&
+            !snapshot.recoveryComplete,
+            "recovery_owner_keeps_generation_rsi_and_rbx_metadata");
+
+        const auto foreignSample = [&](float input, std::uint8_t flags,
+            bool& wouldMutate, bool& wouldComplete) {
+            wouldMutate = owner.MatchesSource(sourceB) && flags == 0x4;
+            wouldComplete = wouldMutate && std::fabs(input - 90.0f) <=
+                kRecoveryEndpointToleranceDegrees;
+            return wouldMutate ? 106.688f : input;
+        };
+        bool bMutation = false;
+        bool bCompletion = false;
+        const float bDeparture = foreignSample(118.0f, 0x4, bMutation, bCompletion);
+        pass &= Check(Near(bDeparture, 118.0f) && !bMutation && !bCompletion &&
+            owner.MatchesSource(sourceA) && !owner.Read().recoveryComplete,
+            "foreign_b_departure_is_pass_through_and_does_not_change_owner_or_progress");
+        const float bEndpoint = foreignSample(90.0f, 0x4, bMutation, bCompletion);
+        pass &= Check(Near(bEndpoint, 90.0f) && !bMutation && !bCompletion &&
+            owner.MatchesSource(sourceA) && !owner.Read().recoveryComplete,
+            "foreign_b_endpoint_cannot_complete_or_capture_horplus_recovery");
+
+        gameplay::HorPlusRecoverySample aRecovery{};
+        aRecovery.source = sourceA;
+        aRecovery.validatedSource = owner.Read().writerRsi;
+        aRecovery.inputFov = 90.0f;
+        aRecovery.exitNativeTarget = 90.0f;
+        aRecovery.cachedCinematicFov = 106.688f;
+        aRecovery.aspect = kAspect;
+        aRecovery.flags = 0x4;
+        aRecovery.cameraReadable = true;
+        aRecovery.gameplayEnabled = true;
+        const auto aAction = gameplay::ResolveHorPlusRecoveryAction(
+            camera::CoordinatorState::CinematicExiting, aRecovery,
+            gameplay::IsNativeHorPlusRecoverySample(aRecovery,
+                kRecoveryEndpointToleranceDegrees), kRecoveryEndpointToleranceDegrees);
+        const float aOutput = owner.MatchesSource(sourceA) &&
+            aAction == gameplay::HorPlusRecoveryAction::ResumeGameplay
+            ? gameplay::EvaluateHorPlus(aRecovery.inputFov, aRecovery.aspect,
+                aRecovery.flags, kNativeAspect).outputFov
+            : aRecovery.inputFov;
+        pass &= Check(aAction == gameplay::HorPlusRecoveryAction::ResumeGameplay &&
+            Near(aOutput, 106.688f) && owner.MarkComplete(41) &&
+            owner.Read().recoveryComplete && !owner.MatchesSource(sourceA),
+            "associated_a_mutates_to_gameplay_output_and_completes_after_foreign_b");
+
+        owner.Clear();
+        pass &= Check(!owner.Read().valid && !owner.MatchesSource(sourceA),
+            "new_generation_or_terminal_clear_does_not_inherit_old_owner");
+        pass &= Check(!owner.Capture(association, 42),
+            "generation_mismatch_cannot_capture_recovery_owner");
+        auto invalid = association;
+        invalid.associationConflict = true;
+        pass &= Check(!owner.Capture(invalid, 41),
+            "conflicted_association_cannot_arm_recovery");
+        invalid = association;
+        invalid.associationValid = false;
+        auto noOwnerCoordinator = camera::CoordinatorState::CinematicExiting;
+        const float noOwnerInput = 94.0f;
+        const float noOwnerOutput = owner.Capture(invalid, 41)
+            ? 106.688f : noOwnerInput;
+        if (!owner.Read().valid)
+            noOwnerCoordinator = camera::CoordinatorState::Gameplay;
+        pass &= Check(Near(noOwnerOutput, noOwnerInput) &&
+            noOwnerCoordinator == camera::CoordinatorState::Gameplay &&
+            !owner.Read().valid,
+            "exit_without_association_passes_output_and_cannot_stick_exiting");
+        invalid = association;
+        invalid.associatedWriterRsi = sourceB;
+        pass &= Check(!owner.Capture(invalid, 41),
+            "association_source_target_conflict_fails_closed");
+
+        // The same source gate used before AspectRecalculation endpoint and
+        // atomic handoff paths must reject B without touching either output.
+        constexpr float aspectEndpoint = 90.0f;
+        bool aspectCompletion = owner.MatchesSource(sourceB) &&
+            std::fabs(aspectEndpoint - 90.0f) <= kRecoveryEndpointToleranceDegrees;
+        bool aspectMutation = owner.MatchesSource(sourceB) && aspectCompletion;
+        const float aspectOutput = aspectMutation ? 3.0f : aspectEndpoint;
+        pass &= Check(Near(aspectOutput, aspectEndpoint) && !aspectMutation &&
+            !aspectCompletion && !owner.Read().valid,
+            "foreign_b_aspect_endpoint_keeps_output_and_does_not_complete");
+        bool atomicHandoffWrite = owner.MatchesSource(sourceB);
+        const float atomicHandoffAspect = atomicHandoffWrite ? 1.7778f : 3.0f;
+        pass &= Check(!atomicHandoffWrite && Near(atomicHandoffAspect, 3.0f),
+            "foreign_b_cannot_capture_or_apply_atomic_aspect_handoff");
+        return pass;
+    }
+
+    bool CheckCompletedRecoveryReleasesGameplayWriterGate()
+    {
+        constexpr std::uintptr_t sourceA = 0xA100;
+        constexpr std::uintptr_t sourceB = 0xB200;
+        constexpr std::uint64_t generation = 52;
+        bool pass = true;
+
+        cinematics::CinematicWriterAssociationSnapshot association{};
+        association.generationActive = true;
+        association.generation = generation;
+        association.aspectStoreTargetObject = sourceA;
+        association.associatedWriterRsi = sourceA;
+        association.observedWriterRbx = 0xC300;
+        association.associationValid = true;
+        cinematics::CinematicRecoveryOwner owner;
+        pass &= Check(owner.Capture(association, generation),
+            "completion_gate_test_captures_owner_a");
+
+        dialogue::PostCinematicRecoveryExclusion exclusion;
+        exclusion.Arm(90.0f);
+        const auto aObservation = exclusion.ObserveValidated(sourceA, 100.0f, 0.01f);
+        pass &= Check(aObservation ==
+                dialogue::PostCinematicRecoveryExclusion::Observation::Suppressed &&
+            exclusion.IsActive() && owner.MatchesSource(sourceA),
+            "active_recovery_a_keeps_independent_dialogue_exclusion_active");
+
+        pass &= Check(owner.MarkComplete(generation),
+            "recovery_completion_marks_owner_metadata");
+        auto completedOwner = owner.Read();
+        pass &= Check(completedOwner.valid && completedOwner.recoveryComplete &&
+            !completedOwner.HasRecoveryAuthority() && !owner.MatchesSource(sourceA) &&
+            exclusion.IsActive(),
+            "completed_owner_retains_metadata_but_has_no_recovery_authority");
+
+        constexpr float nativeInput = 90.6557f;
+        const bool rejectedByStaleOwner =
+            cinematics::ShouldRejectPostRecoveryForeignWriter(
+                completedOwner, exclusion.IsActive(), sourceB);
+        const auto bExclusionObservation = exclusion.ObserveValidated(
+            sourceB, nativeInput, 0.01f);
+        if (completedOwner.valid && completedOwner.recoveryComplete &&
+            bExclusionObservation !=
+                dialogue::PostCinematicRecoveryExclusion::Observation::Suppressed) {
+            owner.Clear();
+            completedOwner = {};
+        }
+        const auto gameplayOutput = gameplay::EvaluateHorPlus(
+            nativeInput, kAspect, 0x4, kNativeAspect);
+        const float expectedGameplayOutput = camera::HorPlus(
+            nativeInput, kAspect, kNativeAspect);
+        const bool bAppliedGameplayCorrection = gameplayOutput.applied;
+        pass &= Check(!rejectedByStaleOwner &&
+            bExclusionObservation ==
+                dialogue::PostCinematicRecoveryExclusion::Observation::Cancelled &&
+            !exclusion.IsActive() && !completedOwner.valid &&
+            bAppliedGameplayCorrection &&
+            Near(gameplayOutput.outputFov, expectedGameplayOutput) &&
+            !Near(gameplayOutput.outputFov, nativeInput),
+            "writer_b_cancels_own_exclusion_context_then_gets_gameplay_output");
+        pass &= Check(!owner.Read().valid &&
+            !cinematics::ShouldRejectPostRecoveryForeignWriter(
+                owner.Read(), exclusion.IsActive(), sourceB),
+            "completed_owner_is_cleared_after_exclusion_source_mismatch");
+        return pass;
+    }
+
+    bool CheckWriterChangeRetiresRecoveryBeforeGameplayDispatch()
+    {
+        bool pass = true;
+        constexpr std::uintptr_t sourceA = 0xA100;
+        constexpr std::uintptr_t outputA = 0xA200;
+        constexpr std::uintptr_t sourceB = 0xB100;
+        constexpr std::uintptr_t outputB = 0xB200;
+        constexpr float nativeInput = 90.0f;
+
+        cinematics::CinematicWriterAssociation observedWriter;
+        static_cast<void>(observedWriter.ObserveWriter(
+            camera::CoordinatorState::Gameplay, sourceA, outputA,
+            nativeInput, kAspect, true, 0x4, true));
+        cinematics::SharedWriterPairTransition sameOwnerTransition{};
+        static_cast<void>(observedWriter.ObserveWriter(
+            camera::CoordinatorState::CinematicExiting, sourceA, outputA,
+            nativeInput, kAspect, true, 0x4, true, &sameOwnerTransition));
+
+        cinematics::CinematicWriterAssociationSnapshot association{};
+        association.generationActive = true;
+        association.generation = 52;
+        association.aspectStoreTargetObject = sourceA;
+        association.associatedWriterRsi = sourceA;
+        association.observedWriterRbx = outputA;
+        association.associationValid = true;
+        cinematics::CinematicRecoveryOwner owner;
+        pass &= Check(owner.Capture(association, 52),
+            "writer_change_test_captures_owner_a");
+
+        auto coordinator = camera::CoordinatorState::CinematicExiting;
+        const bool sameOwnerRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            coordinator, owner.Read(), sameOwnerTransition, [&] {
+                owner.Clear();
+                coordinator = camera::CoordinatorState::Gameplay;
+            });
+        pass &= Check(!sameOwnerTransition.changed && !sameOwnerRetired &&
+            coordinator == camera::CoordinatorState::CinematicExiting &&
+            owner.MatchesSource(sourceA),
+            "same_owner_callback_keeps_recovery_a_active");
+
+        cinematics::SharedWriterPairTransition transitionToB{};
+        static_cast<void>(observedWriter.ObserveWriter(
+            camera::CoordinatorState::CinematicExiting, sourceB, outputB,
+            nativeInput, kAspect, true, 0x4, true, &transitionToB));
+        pass &= Check(transitionToB.changed &&
+            transitionToB.previous.source == sourceA &&
+            transitionToB.current.source == sourceB,
+            "shared_observer_reports_a_to_b_receiver_transition");
+
+        struct RecoveryAuxiliaryState
+        {
+            bool continuationPending{};
+            bool continuationInterpolationActive{};
+            bool postCinematicExclusion{};
+            bool atomicHandoffPending{};
+            std::uintptr_t continuationSource{};
+            std::uintptr_t gameplayBaselineContinuationSource{};
+            float continuationExitNativeTarget{};
+            float continuationPreviousTarget{};
+            float continuationStartFov{};
+            float exitNativeTarget{};
+            float exitCinematicTarget{};
+            std::uintptr_t atomicHandoffSource{};
+            float atomicHandoffPreviousFov{};
+            bool postExitTraceArmed{};
+            std::uint32_t postExitTraceWriterCount{};
+            std::uint64_t postExitTraceStart{};
+            bool dialogueLifecycleActive{};
+        } auxiliary{ true, true, true, true, sourceA, sourceA, 90.0f,
+            100.0f, 95.0f, 90.0f, 106.688f, sourceA, 90.5f, true, 3, 123, true };
+
+        const bool retired = cinematics::RetireRecoveryForWriterRsiChange(
+            coordinator, owner.Read(), transitionToB, [&] {
+                owner.Clear();
+                auxiliary.continuationPending = false;
+                auxiliary.continuationInterpolationActive = false;
+                auxiliary.postCinematicExclusion = false;
+                auxiliary.atomicHandoffPending = false;
+                auxiliary.continuationSource = 0;
+                auxiliary.gameplayBaselineContinuationSource = 0;
+                auxiliary.continuationExitNativeTarget =
+                    std::numeric_limits<float>::quiet_NaN();
+                auxiliary.continuationPreviousTarget =
+                    std::numeric_limits<float>::quiet_NaN();
+                auxiliary.continuationStartFov =
+                    std::numeric_limits<float>::quiet_NaN();
+                auxiliary.exitNativeTarget = std::numeric_limits<float>::quiet_NaN();
+                auxiliary.exitCinematicTarget = std::numeric_limits<float>::quiet_NaN();
+                auxiliary.atomicHandoffSource = 0;
+                auxiliary.atomicHandoffPreviousFov =
+                    std::numeric_limits<float>::quiet_NaN();
+                auxiliary.postExitTraceArmed = false;
+                auxiliary.postExitTraceWriterCount = 0;
+                auxiliary.postExitTraceStart = 0;
+                coordinator = camera::CoordinatorState::Gameplay;
+            });
+
+        // This models the same writer callback continuing directly into the
+        // regular Gameplay policy after retirement; no retry is needed.
+        const auto gameplayTransform = gameplay::EvaluateHorPlus(
+            nativeInput, kAspect, 0x4, kNativeAspect);
+        const float outputAfterRetirement = retired &&
+                coordinator == camera::CoordinatorState::Gameplay
+            ? gameplayTransform.outputFov : nativeInput;
+        pass &= Check(retired && coordinator == camera::CoordinatorState::Gameplay &&
+            !owner.Read().valid && !owner.MatchesSource(sourceB) &&
+            Near(outputAfterRetirement, gameplayTransform.outputFov) &&
+            Near(outputAfterRetirement, 106.688f),
+            "retirement_precedes_same_callback_gameplay_horplus_output_without_rebinding_b");
+        pass &= Check(!auxiliary.continuationPending &&
+            !auxiliary.continuationInterpolationActive &&
+            !auxiliary.postCinematicExclusion && !auxiliary.atomicHandoffPending &&
+            auxiliary.continuationSource == 0 &&
+            auxiliary.gameplayBaselineContinuationSource == 0 &&
+            !std::isfinite(auxiliary.continuationExitNativeTarget) &&
+            !std::isfinite(auxiliary.continuationPreviousTarget) &&
+            !std::isfinite(auxiliary.continuationStartFov) &&
+            !std::isfinite(auxiliary.exitNativeTarget) &&
+            !std::isfinite(auxiliary.exitCinematicTarget) &&
+            auxiliary.atomicHandoffSource == 0 &&
+            !std::isfinite(auxiliary.atomicHandoffPreviousFov) &&
+            !auxiliary.postExitTraceArmed && auxiliary.postExitTraceWriterCount == 0 &&
+            auxiliary.postExitTraceStart == 0 &&
+            auxiliary.dialogueLifecycleActive,
+            "retirement_clears_all_recovery_continuation_exclusion_and_handoff_state");
+
+        // The retirement decision is independent of Gameplay.Enabled; the OFF
+        // branch still retires stale owner state but leaves this callback native.
+        cinematics::CinematicRecoveryOwner disabledOwner;
+        pass &= Check(disabledOwner.Capture(association, 52),
+            "gameplay_off_case_captures_owner_a");
+        auto disabledCoordinator = camera::CoordinatorState::CinematicExiting;
+        bool gameplayEnabled = false;
+        const bool diagnosticsEnabled = false;
+        bool retirementEventEmitted = false;
+        const bool disabledRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            disabledCoordinator, disabledOwner.Read(), transitionToB, [&] {
+                disabledOwner.Clear();
+                disabledCoordinator = camera::CoordinatorState::Gameplay;
+                if (diagnosticsEnabled) retirementEventEmitted = true;
+            });
+        const float disabledOutput = disabledRetired && gameplayEnabled
+            ? gameplayTransform.outputFov : nativeInput;
+        pass &= Check(disabledRetired &&
+            disabledCoordinator == camera::CoordinatorState::Gameplay &&
+            !disabledOwner.Read().valid && Near(disabledOutput, nativeInput) &&
+            !retirementEventEmitted,
+            "gameplay_off_and_diagnostics_off_retire_without_correction_or_event");
+
+        cinematics::SharedWriterPairTransition rbxOnly{};
+        static_cast<void>(observedWriter.ObserveWriter(
+            camera::CoordinatorState::CinematicExiting, sourceA, outputA,
+            nativeInput, kAspect, true, 0x4, true));
+        static_cast<void>(observedWriter.ObserveWriter(
+            camera::CoordinatorState::CinematicExiting, sourceA, 0xA300,
+            nativeInput, kAspect, true, 0x4, true, &rbxOnly));
+        auto rbxOwner = cinematics::CinematicRecoveryOwner{};
+        pass &= Check(rbxOwner.Capture(association, 52),
+            "rbx_only_case_captures_owner_a");
+        bool rbxRetired = false;
+        rbxRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::CinematicExiting, rbxOwner.Read(), rbxOnly,
+            [&] { rbxOwner.Clear(); });
+        pass &= Check(rbxOnly.changed && rbxOnly.previous.source == sourceA &&
+            rbxOnly.current.source == sourceA && !rbxRetired &&
+            rbxOwner.MatchesSource(sourceA),
+            "rbx_only_change_does_not_retire_receiver_owned_recovery");
+
+        bool noOwnerRetired = false;
+        noOwnerRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::CinematicExiting, {}, transitionToB,
+            [&] { noOwnerRetired = true; });
+        auto cinematicOwner = cinematics::CinematicRecoveryOwner{};
+        pass &= Check(cinematicOwner.Capture(association, 52),
+            "cinematic_active_case_captures_owner_a");
+        bool activeCinematicRetired = false;
+        activeCinematicRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::CinematicActive, cinematicOwner.Read(),
+            transitionToB, [&] {
+                activeCinematicRetired = true;
+                cinematicOwner.Clear();
+            });
+        pass &= Check(!noOwnerRetired && !activeCinematicRetired &&
+            cinematicOwner.MatchesSource(sourceA),
+            "no_owner_and_cinematic_active_writer_changes_do_not_retire");
+
+        bool inactiveRecoveryRetired = false;
+        inactiveRecoveryRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::Gameplay, cinematicOwner.Read(), transitionToB,
+            [&] { inactiveRecoveryRetired = true; });
+        pass &= Check(!inactiveRecoveryRetired && cinematicOwner.MatchesSource(sourceA),
+            "writer_change_without_active_recovery_has_no_f4_side_effect");
+
+        auto mismatchedPrior = transitionToB;
+        mismatchedPrior.previous.source = 0xC100;
+        bool mismatchedPriorRetired = false;
+        mismatchedPriorRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::CinematicExiting, cinematicOwner.Read(),
+            mismatchedPrior, [&] { mismatchedPriorRetired = true; });
+        auto nullCurrent = transitionToB;
+        nullCurrent.current.source = 0;
+        bool nullCurrentRetired = false;
+        nullCurrentRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::CinematicExiting, cinematicOwner.Read(),
+            nullCurrent, [&] { nullCurrentRetired = true; });
+        pass &= Check(!mismatchedPriorRetired && !nullCurrentRetired &&
+            cinematicOwner.MatchesSource(sourceA),
+            "prior_source_mismatch_or_unknown_current_source_fails_closed");
+
+        auto completedOwner = cinematics::CinematicRecoveryOwner{};
+        pass &= Check(completedOwner.Capture(association, 52) &&
+            completedOwner.MarkComplete(52),
+            "completed_recovery_owner_setup");
+        bool completedRetired = false;
+        completedRetired = cinematics::RetireRecoveryForWriterRsiChange(
+            camera::CoordinatorState::CinematicExiting, completedOwner.Read(),
+            transitionToB, [&] { completedRetired = true; });
+        pass &= Check(!completedRetired && completedOwner.Read().valid &&
+            completedOwner.Read().recoveryComplete,
+            "completed_owner_is_not_reclassified_as_active_recovery");
+        return pass;
+    }
 
 bool TestRecordedRecoveryInterpolationRemainsInHorPlusSpace()
 {
@@ -288,7 +697,8 @@ bool TestRecordedRecoveryInterpolationRemainsInHorPlusSpace()
         gameplay::HorPlusRecoverySample candidate, const char* name) {
         pass &= Check(gameplay::ResolveHorPlusRecoveryAction(
                 camera::CoordinatorState::CinematicExiting, candidate, false,
-                kRecoveryEpsilon) == gameplay::HorPlusRecoveryAction::HoldNativePassThrough,
+                kRecoveryEndpointToleranceDegrees) ==
+                gameplay::HorPlusRecoveryAction::HoldNativePassThrough,
             name);
     };
     auto ambiguous = evidence;
@@ -391,6 +801,9 @@ int main()
     pass &= CheckAlreadyNativeRecovery(110.0f, 48.0f / 9.0f);
     pass &= CheckAlreadyNativeRecovery(70.0f, kNativeAspect);
     pass &= CheckRecoveryEvidenceGates();
+    pass &= CheckGenerationScopedRecoveryOwner();
+    pass &= CheckCompletedRecoveryReleasesGameplayWriterGate();
+    pass &= CheckWriterChangeRetiresRecoveryBeforeGameplayDispatch();
     pass &= TestRecordedRecoveryInterpolationRemainsInHorPlusSpace();
 
     std::cout << "horplus_post_exit_recovery=" << (pass ? "PASS" : "FAIL") << "\n";

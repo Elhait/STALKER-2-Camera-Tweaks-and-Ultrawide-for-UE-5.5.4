@@ -1,7 +1,7 @@
 {
   "app": { "title": "STALKER 2 Camera Tweaks" },
   "common": {
-    "enabled": "مفعّل", "disabled": "معطّل", "unavailable": "غير متاح",
+    "enabled": "مفعّل", "disabled": "معطّل", "default": "افتراضي", "unavailable": "غير متاح",
     "unavailable_value": "غير متاح", "cannot_assess": "يتعذر التقييم",
     "active": "نشط", "ready": "جاهز", "applying": "جارٍ التطبيق",
     "starting": "جارٍ البدء", "ending": "جارٍ الإنهاء", "waiting": "قيد الانتظار",
@@ -20,21 +20,22 @@
     "gameplay_mode": "وضع اللعب", "cinematic_aspect": "نسبة عرض المشاهد السينمائية",
     "cinematic_fov": "FOV المشاهد السينمائية", "dialogue_zoom": "تقريب الحوار",
     "overlay_toggle": "تبديل الطبقة العلوية", "language": "اللغة", "font_size": "حجم النص", "mode": "الوضع",
-    "aspect_ratio": "نسبة العرض إلى الارتفاع", "fov_mode": "وضع FOV", "zoom": "التقريب"
+    "cinematic_framing": "التأطير", "fov_mode": "وضع FOV", "zoom": "التقريب"
   },
   "notice": { "mouse_capture": "يتم التقاط إدخال الفأرة أثناء فتح هذه النافذة. اضغط {key} لإعادة التحكم بالفأرة إلى اللعبة، أو اضغط Esc لإغلاق التراكب." },
   "rebind": { "press_key": "اضغط مفتاحاً" },
-  "ui": { "viewport_aspect": "نسبة عرض نافذة اللعبة" },
+  "ui": { "viewport_aspect": "نسبة مساحة العميل في نافذة اللعبة" },
   "transition": {
     "waiting": "قيد الانتظار",
-    "aligned": "متوافق", "not_aligned": "غير متوافق",
+    "aligned": "انتقال سلس", "not_aligned": "عدم تطابق",
     "detail": {
-      "waiting": "إعدادات الكاميرا متوافقة للانتقال. ننتظر بيانات كاميرا اللعب لتأكيد الحالة.",
-      "aligned": "مسارا كاميرا المشاهد السينمائية واللعب متوافقان.",
-      "not_aligned": "يختلف مسار كاميرا المشاهد السينمائية عن اللعب في نسبة العرض أو سلوك FOV.",
-      "cannot_assess": "لا تتوفر أدلة تشغيل كافية لمقارنة مساري الكاميرا."
+      "aligned": "تتطابق قيمتا نسبة العرض وFOV المرصودتان لكاميرتي اللعب والمشهد السينمائي.",
+      "not_aligned": "تختلف نسبة العرض أو قيمة FOV المرصودة بين كاميرتي اللعب والمشهد السينمائي.",
+      "cannot_assess": "لا تتوفر أدلة تشغيل كافية لمقارنة مساري الكاميرا.",
+      "waiting": "بانتظار ملاحظة حالية لكاميرا المشهد لمقارنتها بعينة حدّ اللعب.",
+      "expected_seamless": "من المتوقع أن تحقق الإعدادات المحددة انتقالًا سلسًا للكاميرا. ينتظر التحقق وقت التشغيل رصد كاميرا المشهد السينمائي."
     },
-    "active_value": "نشط — {value}"
+    "active_value": "نشط — {value}", "context_active_selection": "يستخدم التقييم اختيار المشهد السينمائي النشط.", "context_next_selection": "يستخدم التقييم إعدادات اختيار المشهد السينمائي التالي."
   },
   "status": { "detail": {
     "gameplay_incomplete": "حالة اللعب غير متاحة بعد.",
@@ -47,8 +48,8 @@
     "horplus_active": "يضبط HorPlus مجال الرؤية FOV أثناء اللعب في الوقت الفعلي.",
     "native_recalculation_enabled": "ضبط الكاميرا الأصلي في اللعبة مفعّل.",
     "cinematic_incomplete": "حالة المشهد السينمائي غير متاحة بعد.",
-    "cinematic_unavailable": "تكامل كاميرا المشاهد السينمائية غير متاح.",
-    "cinematic_native_ready": "سيستخدم المشهد السينمائي التالي التأطير الأصلي.",
+    "cinematic_unavailable": "تكامل كاميرا المشاهد السينمائية غير متاح.", "cinematic_disabled": "تصحيحات المشاهد متوقفة؛ يُستخدم إخراج الكاميرا الأصلي للعبة.",
+    "cinematic_native_ready": "تصحيحات المشاهد متوقفة؛ يُستخدم إخراج الكاميرا الأصلي للعبة.",
     "next_cinematic_ready": "تسري التغييرات ابتداءً من المشهد السينمائي التالي.",
     "cinematic_active": "يستخدم المشهد السينمائي الحالي نسبة العرض ووضع FOV المحددين.",
     "cinematic_selection_incomplete": "معلومات المشهد السينمائي النشط غير مكتملة.",
@@ -56,7 +57,7 @@
     "dialogue_hook_unavailable": "تكامل كاميرا الحوار غير متاح.",
     "dialogue_capability_unavailable": "حالة تقريب الحوار غير متاحة.",
     "dialogue_mode_unavailable": "وضع تقريب الحوار المحدد غير متاح.",
-    "dialogue_native_ready": "سيستخدم الحوار التالي التقريب الأصلي للعبة.",
+    "dialogue_native_ready": "تصحيح الحوار متوقف؛ سلوك كاميرا اللعبة لم يتغير.",
     "dialogue_adaptive_ready": "تم إعداد التقريب التكيفي للحوار التالي.",
     "dialogue_reduced_ready": "تم إعداد التقريب المخفّض للحوار التالي.",
     "dialogue_disabled_ready": "لن يُطبّق تقريب إضافي على الحوار.",
@@ -73,16 +74,17 @@
     "gameplay": {
       "enabled": "يفعّل تصحيح اللعب المحدد.",
       "disabled": "يوقف أي تصحيح إضافي للعب. قد تستمر نتيجة إعادة حساب الكاميرا الأصلية إلى أن تُعاد اللعبة أو يُحمّل الحفظ من جديد.",
-      "horplus": "موصى به. يحافظ على تغييرات FOV الأصلية أثناء اللعب ويكيّفها في الوقت الفعلي مع نافذة اللعبة الحالية، بما في ذلك أثناء التقريب.",
+      "horplus": "يحافظ على تغييرات FOV من writer اللعب ويحوّل كل عينة باستخدام نسبة العرض المرصودة عند writer، بما في ذلك أثناء التقريب.",
       "horplus_examples_context": "FOV اللعب · دون تقريب",
       "horplus_example_90": "90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
       "horplus_example_100": "100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
       "horplus_example_110": "110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
-      "aspect_recalculation": "يستخدم انتقال نسبة العرض الأصلي للعبة مع الحفاظ على FOV المحدد. في النافذة ذات النسبة المخصصة، قد تؤدي إعادة الخيار إلى Auto إلى استعادة نسبة النافذة وحجمها الأصليين."
+      "aspect_recalculation": "يستخدم انتقال نسبة العرض الأصلي للعبة مع الحفاظ على FOV المحدد. في النافذة ذات النسبة المخصصة، قد تؤدي إعادة الخيار إلى Auto إلى استعادة نسبة النافذة وحجمها الأصليين.",
+      "runtime_combine": "يجمع بين وضعي Aspect Recalculation وHorPlus السابقين لتوفير انتقالات سلسة بين أسلوب اللعب والمشاهد السينمائية. يزامن نسبة عرض كاميرا أسلوب اللعب مع نسبة النافذة الحالية بدلاً من الاعتماد على القيمة المسجلة عند تحميل الكاميرا، ويعيد المزامنة عند تغيير دقة العرض. لا يُطبَّق تصحيح Hor+ لمجال الرؤية (FOV) إلا بعد تأكيد المزامنة. هذا هو الوضع الموصى به للانتقال بسلاسة إلى المشاهد السينمائية والخروج منها."
     },
-    "cinematics": { "aspect": {
+    "cinematics": { "enabled": "عند التفعيل، يطبّق تصحيحات تأطير الكاميرا ومجال الرؤية (FOV) المحددة للمشاهد. عند إيقافه، يترك Camera Tweaks إخراج كاميرا المشاهد كما هو.", "aspect": {
       "auto": "يستخدم نسبة نافذة اللعبة الحالية لتأطير المشاهد السينمائية. يدعم أي نسبة صالحة.",
-      "native": "يترك تأطير المشاهد السينمائية الأصلي دون تغيير. يظل وضع FOV المحدد سارياً.",
+      "native": "يتحكم مفتاح التفعيل المنفصل في السلوك الأصلي؛ أوضاع التأطير المتاحة هي Auto و16:9 و21:9 و32:9.",
       "16_9": "يستخدم تأطير 16:9 للمشاهد السينمائية بغض النظر عن نسبة الشاشة.",
       "21_9": "يستخدم تأطير 21:9 للمشاهد السينمائية بغض النظر عن نسبة الشاشة.",
       "32_9": "يستخدم تأطير 32:9 للمشاهد السينمائية بغض النظر عن نسبة الشاشة.",
@@ -96,14 +98,13 @@
       "native_examples_context": "FOV المشهد السينمائي 90° · النتائج حسب نسبة العرض",
       "native_example_90": "16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
     } },
-    "dialogue": { "zoom": {
-      "native": "استخدم سلوك تقريب الحوار الأصلي في اللعبة.",
+    "dialogue": {
+      "enabled": "عند تعطيل تصحيح الحوارات، تستخدم اللعبة تقريبها الأصلي للحوارات، ويكون FOV الافتراضي 70°.",
+      "zoom": {
       "adaptive": "يحافظ على قوة التقريب البصري الأصلي للعبة نسبةً إلى FOV الحالي.",
       "reduced": "يستخدم نصف قوة التقريب البصري التكيفي.",
       "disabled": "يعطّل تقريب الحوار ويحافظ على FOV اللعب الحالي.",
       "examples_context": "FOV اللعب → FOV الحوار",
-      "native_example_90": "90° → 70°.",
-      "native_example_110": "110° → 70°.",
       "adaptive_example_90": "90° → 70°.",
       "adaptive_example_110": "110° → ~90°.",
       "reduced_example_90": "90° → ~80°.",
@@ -115,46 +116,64 @@
       "disabled": "يعطّل هذه الإجراءات. يظل مفتاح تبديل الطبقة العلوية المنفصل نشطاً.",
       "change": "انقر على زر المفتاح الحالي لبدء إعادة التعيين.",
       "change_overlay": "انقر على زر مفتاح الواجهة لبدء إعادة التعيين.",
-      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+      "single_key": "Bind one ordinary keyboard key; modifiers and mouse buttons are unsupported.",
+
       "rebind": "Press a key to assign it. Press Esc to cancel.",
-      "gameplay_cycle": "Cycles Gameplay correction immediately: AspectRecalculation -> HorPlus -> AspectRecalculation.",
-      "cinematic_aspect_cycle": "Sets aspect ratio for the next cinematic: Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto. Does not affect a cinematic already playing.",
+      "gameplay_cycle": "Cycles Gameplay correction immediately: AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
+      "cinematic_aspect_cycle": "يتناوب تأطير المشاهد التالية: Auto -> 16:9 -> 21:9 -> 32:9 -> Auto.",
       "cinematic_fov_cycle": "Sets FOV mode for the next cinematic: NativeHorPlus -> GameplayHorPlus -> NativeHorPlus. Does not affect a cinematic already playing.",
-      "dialogue_cycle": "Sets zoom mode for the next dialogue: Native -> Adaptive -> Reduced -> Disabled -> Native. Does not affect a dialogue already in progress."
+      "dialogue_cycle": "Cycles the Dialogue correction mode for the next dialogue: Adaptive -> Reduced -> Disabled -> Adaptive. Does not affect a dialogue already in progress."
     },
     "overlay": { "always_active": "استخدم هذا المفتاح لفتح الواجهة أو إغلاقها." },
     "runtime": {
       "viewport": "نسبة العرض الحالية لنافذة عرض اللعبة. قد تتغير مع دقة اللعبة أو حجم النافذة.",
+      "writer_aspect": "نسبة العرض التي يرصدها حاليًا كاتب كاميرا أسلوب اللعب. وهي منفصلة عن نسبة مساحة العرض.",
+      "policy_aspect": "نسبة العرض المستخدمة في ملاحظة سياسة FOV الحالية للعب. لا تمثل قراءة نهائية لنسبة الإسقاط.",
       "viewport_auto": "تستخدم سياسة Auto لنسبة المشاهد السينمائية هذه النسبة هدفاً.",
       "viewport_unavailable": "أبعاد نافذة عرض اللعبة الحالية غير متاحة.",
       "aspect_matched": "تتطابق نسب نافذة العرض للمشاهد السينمائية واللعب ضمن هامش المقارنة.",
       "aspect_mismatch": "تختلف نسب نافذة العرض للمشاهد السينمائية واللعب.",
       "aspect_cannot_assess": "لا تتوفر معلومات تشغيل صالحة كافية لمقارنة النسب.",
-      "cinematic_aspect": "القيمة الأولى هي النسبة المستنتجة من إعدادات المشهد السينمائي؛ والثانية هي نسبة نافذة اللعب الحالية.",
+      "cinematic_aspect": "هذه معاينة للواجهة وفق الاختيار السينمائي الحالي أو التالي ونسبة مساحة العميل الحالية. قد يستخدم الإنتاج نسبة الشاشة أو النسبة الأصلية عند تعذر أبعاد مساحة العميل. لا تؤكد هذه القيمة نسبة العرض السينمائي المطبقة أو نسبة الإسقاط النهائية.",
+      "cinematic_default": "تُستخدم سلوكيات الكاميرا الافتراضية للعبة؛ ولا يغيّر Camera Tweaks قيم aspect أو FOV.",
       "cinematic_aspect_unavailable": "النسبة المستهدفة الصالحة للمشهد السينمائي أو نسبة نافذة اللعب الحالية غير متاحة.",
-      "gameplay_fov": "قيمة FOV المحايدة المحفوظة للعب. تختلف عن حالات التقريب المؤقتة مثل ADS والمنظار والحوار والمشاهد السينمائية.",
+      "gameplay_fov": "قيمة FOV محايدة محتفظ بها من Gameplay writer في ظروف مستقرة؛ ليست قيمة إعداد أو FOV مرئي نهائي.",
       "gameplay_fov_unavailable": "لم تتم ملاحظة FOV محايد صالح للعب بعد.",
-      "native_fov": "إدخال FOV الحالي قبل تحويل HorPlus. قد يتغير أثناء ADS أو تقريب المنظار أو الحوار أو انتقالات الكاميرا.",
+      "native_fov": "مدخل FOV الحالي من Gameplay writer قبل تحويل HorPlus لهذا التعديل؛ قد يتغير أثناء ADS وليس قراءة نهائية لـFOV المرئي.",
       "native_fov_unavailable": "قيمة FOV الأصلية الحالية الصالحة غير متاحة.",
-      "horplus_fov": "القيمة المحوّلة المقابلة لـFOV الأصلي لنافذة اللعب الحالية. قد تتغير أثناء التقريب وانتقالات الكاميرا.",
-      "horplus_fov_unavailable": "لا تتوفر قيمة FOV محوّلة صالحة."
+      "horplus_fov": "نتيجة سياسة FOV للعب باستخدام نسبة أبعاد مساحة نافذة اللعبة الحالية التي تم التحقق منها عند استدعاء writer؛ وليست قراءة نهائية لـFOV المرئي.",
+      "horplus_fov_unavailable": "لا تتوفر قيمة FOV محوّلة صالحة.",
+      "current_output_fov": "قيمة FOV التي أعادتها معاملة الكاميرا الحالية للمود بعد تطبيق سياسة التصحيح المناسبة.",
+      "transition_evidence": "بيانات محفوظة من حد ENTER مقبول للقطات؛ وهي منفصلة عن حالة الكاميرا المباشرة.",
+      "transition_generation": "جيل دورة حياة اللقطة المرتبط ببيانات ENTER المقبولة.",
+      "gameplay_boundary_aspect": "قيمة aspect من جهة Gameplay المسجلة عند حد ENTER المقبول للانتقال إلى اللقطة.",
+      "cinematic_enter_aspect": "قيمة aspect من جهة اللقطة المسجلة عند حد ENTER المقبول.",
+      "aspect_delta": "الفرق المطلق بين Aspect حد Gameplay وAspect Cinematic ENTER.",
+      "gameplay_boundary_fov": "قيمة FOV من جهة Gameplay المسجلة عند ENTER؛ هذه بيانات انتقال وليست قراءة مباشرة.",
+      "cinematic_enter_fov": "قيمة FOV من جهة اللقطة المسجلة عند ENTER؛ هذه بيانات انتقال وليست قراءة مباشرة.",
+      "fov_delta": "الفرق المطلق بين FOV حد Gameplay وFOV Cinematic ENTER.",
+      "fov_match": "مقارنة قيم FOV المسجلة عند الحد باستخدام سماحية دلالية قدرها ±1°.",
+      "camera_transition": "التقييم العام لحد Gameplay-to-Cinematic المؤكد باستخدام بيانات aspect وFOV المتاحة.",
+      "gameplay_status": "حالة العرض الحالية لتكامل كاميرا Gameplay.",
+      "cinematic_status": "حالة العرض الحالية لتكامل كاميرا اللقطات."
     }
   },
   "camera_state": {
     "waiting": "بانتظار أول تحديث كامل للكاميرا.",
     "field": {
+      "last_publication": "Last publication state", "coordinator": "Coordinator", "aspect_preview": "Cinematic aspect preview",
       "state": "الحالة", "gameplay_fov": "FOV اللعب", "provenance": "المصدر والأصل", "epoch": "الفترة", "mode": "الوضع",
       "valid": "صالح", "direction": "الاتجاه", "active": "نشط",
       "evidence_valid": "الدليل صالح", "sequence": "التسلسل", "primary": "أساسي",
       "secondary": "ثانوي", "source": "المصدر", "confidence": "الثقة",
       "policy_valid": "السياسة صالحة", "recovery_excluded": "مستبعد من الاستعادة",
-      "target": "الهدف", "setting_known": "الإعداد معروف", "game_source": "مصدر اللعبة",
-      "native": "FOV الأصلي", "native_source": "المصدر الأصلي", "horplus": "FOV HorPlus",
-      "horplus_source": "مصدر HorPlus", "aspect": "نسبة العرض", "aspect_source": "مصدر النسبة",
+      "target": "الهدف", "game_source": "مصدر اللعبة",
+      "native": "FOV الأصلي", "native_source": "المصدر الأصلي", "horplus": "HorPlus Target", "current_output": "Current Output FOV", "aspect_source": "مصدر النسبة", "writer_aspect": "نسبة writer الأصلية", "gameplay_policy_aspect": "نسبة سياسة اللعب",
       "flags": "العلامات", "gameplay_writer": "كاتب اللعب",
-      "presentation_epoch": "فترة العرض", "event_sequence": "تسلسل الأحداث"
+      "runtime_combine": "معاملة Runtime Combine",
+      "presentation_epoch": "فترة العرض", "event_sequence": "تسلسل الأحداث", "freshness": "الحداثة"
     },
-    "value": { "unavailable_counter": "غير متاح / {value}" }
+    "value": { "current": "الحالي", "retained": "Retained", "last_known": "آخر قيمة معروفة", "unavailable_counter": "غير متاح / {value}", "runtime_combine_detail": "قبل: {before}؛ الهدف: {target}؛ بعد: {after}؛ اختلاف: {mismatch}؛ طُلبت الكتابة: {attempted}؛ نجحت الكتابة: {write_succeeded}؛ تأكيد: {confirmed}؛ الأعلام: {flags_before} → {flags_after}؛ FOV: {input_fov} → {output_fov}." }
   },
   "notification": {
     "hotkey_conflict": "تعارض مفاتيح الاختصار", "hotkey_title": "اختصار {setting}",

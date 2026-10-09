@@ -4,6 +4,17 @@
 
 namespace plugin
 {
+template <typename OverlayStartup>
+bool TryStartConfiguredOverlay(bool enabled, OverlayStartup&& startOverlay) noexcept
+    {
+        if (!enabled) return false;
+        try {
+            return std::forward<OverlayStartup>(startOverlay)();
+        } catch (...) {
+            return false;
+        }
+    }
+
 template <typename OverlayStartup, typename CoreInitialization,
     typename CoreReady, typename OverlayFailure>
 auto InitializeOptionalOverlayThenCore(OverlayStartup&& startOverlay,

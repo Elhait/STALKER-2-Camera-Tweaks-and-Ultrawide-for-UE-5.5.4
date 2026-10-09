@@ -4,6 +4,7 @@
 #include "canonical_ini_documentation.hpp"
 #include "feature_config.hpp"
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <string>
@@ -25,8 +26,10 @@ namespace config
 
         using canonical_ini_documentation::GameplayEnabledComments;
         using canonical_ini_documentation::GameplayModeComments;
+        using canonical_ini_documentation::CinematicEnabledComments;
         using canonical_ini_documentation::CinematicAspectComments;
         using canonical_ini_documentation::CinematicFovComments;
+        using canonical_ini_documentation::DialogueEnabledComments;
         using canonical_ini_documentation::DialogueZoomComments;
         using canonical_ini_documentation::HotkeysEnabledComments;
         using canonical_ini_documentation::HotkeyGameplayCycleComments;
@@ -35,36 +38,59 @@ namespace config
         using canonical_ini_documentation::HotkeyDialogueCycleComments;
         using canonical_ini_documentation::OverlayToggleComments;
         constexpr std::string_view diagnosticsComments[] = {
-            "; Enables the supported read-only runtime telemetry in the canonical ASI.",
-            "; false - keep diagnostic hooks and telemetry disabled.",
-            "; true  - enable CameraState, ZOOM and HorPlus FOV telemetry.",
+            "# ------------------------------------------------------------------------------",
+            "# Optional read-only runtime telemetry.",
+            "# ------------------------------------------------------------------------------",
+            "# Enable CameraState, ZOOM and HorPlus FOV telemetry.",
+            "# Default: false",
         };
         constexpr std::string_view overlayPositionComments[] = {
-            "; Last overlay position in screen coordinates. Updated automatically when dragged.",
+            "# ------------------------------------------------------------------------------",
+            "# Automatically managed Overlay layout settings",
+            "# ------------------------------------------------------------------------------",
+            "# Saved Overlay window position in pixels.",
+            "# Default: 30, 30",
         };
         constexpr std::string_view overlayMigrationComments[] = {
-            "; Internal one-time migration marker for the former separate overlay INI.",
+            "# Internal one-time migration marker for the former separate Overlay INI.",
+            "# Default: 0",
+        };
+        constexpr std::string_view legacyOverlayPositionCurrent[] = {
+            "# Automatically managed settings. Do not edit unless resetting the Overlay layout.",
+            "# Default: 30",
         };
         constexpr std::string_view overlayLanguageComments[] = {
-            "; Auto follows the game's Interface Language when the overlay opens.",
-            "; Or select a locale code from the registry to override the game language.",
-            "; Missing or unknown values use English; Auto remains configured on read failure.",
+            "# Auto follows the game's Interface Language when the Overlay opens.",
+            "# Or select a locale code from the supported locale registry.",
+            "# Default: Auto",
+        };
+        constexpr std::string_view overlayEnabledComments[] = {
+            "# ------------------------------------------------------------------------------",
+            "# Controls the optional Overlay subsystem.",
+            "# ------------------------------------------------------------------------------",
+            "# Startup-only. Restart the game after changing this value.",
+            "# false - disable the Overlay completely; camera corrections remain active.",
+            "# true - enable the Overlay.",
+            "# Default: true",
         };
         constexpr std::string_view overlayFontSizeComments[] = {
-            "; Overlay font size in pixels. Supported range: 12-24; locale changes select that locale's initial size.",
-            "; Changes apply immediately and are saved to this configuration file.",
+            "# Overlay font size in pixels. Supported range: 12-24.",
+            "# Changes apply immediately and are saved to this configuration file.",
+            "# Default: 13",
         };
 
         constexpr ManagedKey gameplayKeys[] = {
             {"Enabled", "Enabled=true", GameplayEnabledComments, std::size(GameplayEnabledComments)},
-            {"Mode", "Mode=HorPlus", GameplayModeComments, std::size(GameplayModeComments)},
+            {"Mode", "Mode=RuntimeCombine", GameplayModeComments, std::size(GameplayModeComments)},
         };
         constexpr ManagedKey cinematicKeys[] = {
-            {"AspectRatio", "AspectRatio=Auto", CinematicAspectComments, std::size(CinematicAspectComments)},
+            {"Enabled", "Enabled=true", CinematicEnabledComments, std::size(CinematicEnabledComments)},
+            {"Mode", "Mode=Auto", CinematicAspectComments, std::size(CinematicAspectComments)},
             {"FovMode", "FovMode=GameplayHorPlus", CinematicFovComments, std::size(CinematicFovComments)},
         };
         constexpr ManagedKey dialogueKeys[] = {
-            {"Zoom", "Zoom=Adaptive", DialogueZoomComments, std::size(DialogueZoomComments)},
+            {"Enabled", "Enabled=true", DialogueEnabledComments, std::size(DialogueEnabledComments)},
+            {"Mode", "Mode=Adaptive", DialogueZoomComments, std::size(DialogueZoomComments)},
         };
         constexpr ManagedKey diagnosticsKeys[] = {
             {"Enabled", "Enabled=false", diagnosticsComments, std::size(diagnosticsComments)},
@@ -82,6 +108,8 @@ namespace config
                 std::size(HotkeyDialogueCycleComments)},
         };
         constexpr ManagedKey overlayKeys[] = {
+            {"Enabled", "Enabled=true", overlayEnabledComments,
+                std::size(overlayEnabledComments)},
             {"ToggleKey", "ToggleKey=VK_2E", OverlayToggleComments,
                 std::size(OverlayToggleComments)},
             {"Language", "Language=Auto", overlayLanguageComments,
@@ -90,10 +118,32 @@ namespace config
                 std::size(overlayFontSizeComments)},
             {"PositionX", "PositionX=30", overlayPositionComments,
                 std::size(overlayPositionComments)},
-            {"PositionY", "PositionY=30", overlayPositionComments,
-                std::size(overlayPositionComments)},
+            {"PositionY", "PositionY=30", nullptr, 0},
             {"PositionMigrationComplete", "PositionMigrationComplete=0",
                 overlayMigrationComments, std::size(overlayMigrationComments)},
+        };
+
+        constexpr std::string_view canonicalHeader[] = {
+            "# ==============================================================================",
+            "# STALKER 2 CAMERA TWEAKS",
+            "# ==============================================================================",
+            "# Author: Elhait",
+            "# Engine: Unreal Engine 5.5.4",
+            "#",
+            "# GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4",
+            "# Nexus: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+            "#",
+            "# Edit this file while the game is closed.",
+            "# Settings changed in the Overlay are saved automatically where supported.",
+            "# Boolean values: true / false.",
+            "# ==============================================================================",
+        };
+        constexpr std::string_view legacyHeaderLines[] = {
+            "# STALKER 2 Camera Tweaks and Ultrawide for UE 5.5.4",
+            "# Author: Elhait",
+            "# GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4",
+            "# Nexus Mods: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+            "#",
         };
 
         const ManagedKey* KeysForSection(const std::string& section, std::size_t& count)
@@ -106,6 +156,12 @@ namespace config
             if (section == "Overlay") { count = std::size(overlayKeys); return overlayKeys; }
             count = 0;
             return nullptr;
+        }
+
+        bool IsContinuationManagedKey(const std::string& section,
+            std::string_view key) noexcept
+        {
+            return section == "Overlay" && key == "PositionY";
         }
 
         struct CommentBlock
@@ -124,6 +180,15 @@ namespace config
         constexpr std::string_view legacyGameplayEnabledGenerated[] = {
             "; Enables ultrawide aspect-ratio correction during gameplay.",
         };
+        constexpr std::string_view legacyGameplayModeGenerated[] = {
+            "; HorPlus - Preserves Gameplay writer FOV changes and transforms each sample using the aspect observed at that writer, including during zoom.",
+            ";", "; Examples - Gameplay FOV · no zoom:",
+            "; 90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+            "; 100° → 16:9: 100°; 21:9: ~116.04°; 32:9: ~134.48°.",
+            "; 110° → 16:9: 110°; 21:9: ~124.95°; 32:9: ~141.41°.",
+            ";", "; AspectRecalculation - Uses the game's native aspect transition while preserving the selected Gameplay FOV. On custom windowed aspects, restoring Auto may return the window to its native aspect and size.",
+            ";", "; RuntimeCombine - Recommended. When they differ, synchronizes the Gameplay camera aspect to the current viewport aspect, confirms the change, and only then applies Hor+ FOV correction. If synchronization cannot be confirmed, Hor+ is not applied."
+        };
         constexpr std::string_view legacyCinematicAspect[] = {
             "; Controls cinematic framing on ultrawide displays.",
             "; Auto   - use the detected display aspect ratio.",
@@ -141,22 +206,32 @@ namespace config
             "; 21:9   - force a 21:9 cinematic frame.",
             "; 32:9   - force a 32:9 cinematic frame.",
         };
-        constexpr std::string_view legacyDialogueZoom[] = {
-            "; Controls the native dialogue camera zoom.",
-            "; Native   - use the game's original dialogue zoom, currently targeting 70°.",
-            "; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV.",
-            "; Reduced  - apply half of the Adaptive optical zoom strength.",
-            ";            Example: 110° gameplay FOV -> Adaptive ≈90°, Reduced ≈100°.",
-            "; Disabled - keep the current gameplay FOV during dialogue.",
-            "; Native, Reduced, Disabled",
+        constexpr std::string_view legacyCinematicAspectModeCurrent[] = {
+            "# Available modes:",
+            "#   Auto - Uses the current runtime viewport aspect for cinematic framing. Supports arbitrary valid aspect ratios.",
+            "#   Native - Native behavior is controlled by the separate Enabled switch; framing choices are Auto, 16:9, 21:9 and 32:9.",
+            "#   16:9 - Uses 16:9 framing for cinematics, regardless of the display aspect.",
+            "#   21:9 - Uses 21:9 framing for cinematics, regardless of the display aspect.",
+            "#   32:9 - Uses 32:9 framing for cinematics, regardless of the display aspect.",
+            "# Example: Example: 32:9 on a 16:9 display produces wider framing with black bars above and below.",
+            "# Default: Auto"
         };
-        constexpr std::string_view legacyDialogueZoomGenerated[] = {
-            "; Controls the native dialogue camera zoom.",
-            "; Native   - use the game's original dialogue zoom, currently targeting 70°.",
-            "; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV.",
-            "; Reduced  - apply half of the Adaptive optical zoom strength.",
-            ";            Example: 110° gameplay FOV -> Adaptive ≈90°, Reduced ≈100°.",
-            "; Disabled - keep the current gameplay FOV during dialogue.",
+        constexpr std::string_view legacyCinematicEnabledGenerated[] = {
+            "; true - When enabled, applies the selected cinematic framing and FOV corrections. When disabled, Camera Tweaks leaves cinematic camera output native.",
+            "; false - use the game's native cinematic camera output without Camera Tweaks corrections."
+        };
+        constexpr std::string_view legacyCinematicFovGenerated[] = {
+            "; GameplayHorPlus - Follows current Gameplay FOV while preserving cinematic variation. Falls back to NativeHorPlus if needed context is unavailable.",
+            ";", "; Examples - Cinematic FOV 90° · Gameplay FOV inputs:",
+            "; 90° → 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°.",
+            "; 112.6° → 16:9: 112.6°; 21:9: 118.51°; 32:9: ~143.13°.",
+            ";", "; NativeHorPlus - Applies HorPlus to the authored cinematic FOV, independently of the player's Gameplay FOV setting.",
+            ";", "; Examples - Cinematic FOV 90° · results by aspect:",
+            "; 16:9: 90°; 21:9: ~106.69°; 32:9: ~126.87°."
+        };
+        constexpr std::string_view legacyDialogueEnabledGenerated[] = {
+            "; true - apply the selected Dialogue mode after an accepted dialogue start.",
+            "; false - keep native camera output while continuing to observe dialogue lifecycle."
         };
         constexpr std::string_view legacyHotkeysEnabled[] = {
             "; Enables or disables all runtime hotkeys.",
@@ -193,13 +268,63 @@ namespace config
             "; Native -> Adaptive -> Reduced -> Disabled -> Native.",
             "; Does not affect a dialogue that is already in progress.",
         };
+        constexpr std::string_view legacyDialogueZoom[] = {
+            "; Controls the native dialogue camera zoom.",
+            "; Native   - use the game's original dialogue zoom, currently targeting 70°.",
+            "; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV.",
+            "; Reduced  - apply half of the Adaptive optical zoom strength.",
+            ";            Example: 110° gameplay FOV -> Adaptive ≈90°, Reduced ≈100°.",
+            "; Disabled - keep the current gameplay FOV during dialogue.",
+        };
+        constexpr std::string_view legacyDialogueZoomGenerated[] = {
+            "; Adaptive - Preserve the game's original optical zoom strength relative to current Gameplay FOV.",
+            "; Examples - Gameplay FOV → dialogue FOV:",
+            "; 90° → 70°.",
+            "; 110° → approximately 90°.",
+            ";",
+            "; Adaptive - Preserve the game's original optical zoom strength relative to current Gameplay FOV.",
+            "; Examples - Gameplay FOV → dialogue FOV:",
+            "; 90° → 70°.",
+            "; 110° → approximately 90°.",
+            ";",
+            "; Reduced - Use half of the Adaptive optical zoom strength.",
+            "; Examples - Gameplay FOV → dialogue FOV:",
+            "; 90° → approximately 80°.",
+            "; 110° → approximately 100°.",
+            ";",
+            "; Disabled - Disable dialogue zoom and keep current Gameplay FOV.",
+            "; Examples - Gameplay FOV → dialogue FOV:",
+            "; 90° → 90°.",
+            "; 110° → 110°."
+        };
+        constexpr std::string_view legacyDialogueZoomModeCurrent[] = {
+            "# Available modes:",
+            "#   Native - use the game's original Dialogue zoom behavior.",
+            "#   Adaptive - Preserve the game's original optical zoom strength relative to current Gameplay FOV.",
+            "# Examples - Gameplay FOV → dialogue FOV:",
+            "# 90° → 70°.",
+            "# 110° → approximately 90°.",
+            "#   Reduced - Use half of the Adaptive optical zoom strength.",
+            "# 90° → approximately 80°.",
+            "# 110° → approximately 100°.",
+            "#   Disabled - Disable dialogue zoom and keep current Gameplay FOV.",
+            "# 90° → 90°.",
+            "# 110° → 110°.",
+            "# Default: Adaptive"
+        };
+        constexpr std::string_view legacyOverlayEnabled[] = {
+            "; Controls the optional Overlay subsystem.",
+            "; Startup-only. Restart the game after changing this value.",
+            "; false - disable the Overlay completely; camera corrections remain active.",
+            "; true - enable the Overlay."
+        };
         constexpr std::string_view legacyGameplayCycle[] = {
             "; Key used to cycle the gameplay correction mode immediately.",
-            "; AspectRecalculation -> HorPlus -> AspectRecalculation.",
+            "; AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
         };
         constexpr std::string_view legacyGameplayCycleCurrent[] = {
             "; Key used to cycle the gameplay correction mode immediately.",
-            "; AspectRecalculation -> HorPlus -> AspectRecalculation.",
+            "; AspectRecalculation -> HorPlus -> RuntimeCombine -> AspectRecalculation.",
             "; Bind a single ordinary keyboard key; modifiers and mouse buttons are not supported.",
         };
         constexpr std::string_view legacyCinematicAspectCycleCurrent[] = {
@@ -221,7 +346,7 @@ namespace config
         };
         constexpr std::string_view legacyDialogueCycleCurrent[] = {
             "; Key used to cycle the dialogue zoom mode for the next dialogue.",
-            "; Native -> Adaptive -> Reduced -> Disabled -> Native.",
+            "; Adaptive -> Reduced -> Disabled -> Adaptive.",
             "; Does not affect a dialogue that is already in progress.",
             "; Bind a single ordinary keyboard key; modifiers and mouse buttons are not supported.",
         };
@@ -243,10 +368,13 @@ namespace config
         constexpr CommentBlock legacyManagedCommentBlocks[] = {
             {"Gameplay", "Enabled", legacyGameplayEnabled, std::size(legacyGameplayEnabled)},
             {"Gameplay", "Enabled", legacyGameplayEnabledGenerated, std::size(legacyGameplayEnabledGenerated)},
+            {"Gameplay", "Mode", legacyGameplayModeGenerated, std::size(legacyGameplayModeGenerated)},
             {"Cinematics", "AspectRatio", legacyCinematicAspect, std::size(legacyCinematicAspect)},
             {"Cinematics", "AspectRatio", legacyCinematicAspectGenerated, std::size(legacyCinematicAspectGenerated)},
-            {"Dialogue", "Zoom", legacyDialogueZoom, std::size(legacyDialogueZoom)},
-            {"Dialogue", "Zoom", legacyDialogueZoomGenerated, std::size(legacyDialogueZoomGenerated)},
+            {"Cinematics", "Mode", legacyCinematicAspectModeCurrent,
+                std::size(legacyCinematicAspectModeCurrent)},
+            {"Cinematics", "Enabled", legacyCinematicEnabledGenerated, std::size(legacyCinematicEnabledGenerated)},
+            {"Cinematics", "FovMode", legacyCinematicFovGenerated, std::size(legacyCinematicFovGenerated)},
             {"Hotkeys", "Enabled", legacyHotkeysEnabled, std::size(legacyHotkeysEnabled)},
             {"Hotkeys", "Enabled", legacyHotkeysEnabledOptions, std::size(legacyHotkeysEnabledOptions)},
             {"Hotkeys", "Enabled", legacyHotkeysEditorial, std::size(legacyHotkeysEditorial)},
@@ -261,15 +389,92 @@ namespace config
             {"Hotkeys", "CinematicFovCycle", legacyCinematicFovCycleCurrent, std::size(legacyCinematicFovCycleCurrent)},
             {"Hotkeys", "DialogueCycle", legacyDialogueCycleCurrent, std::size(legacyDialogueCycleCurrent)},
             {"Hotkeys", "DialogueCycle", legacyDialogueCycle, std::size(legacyDialogueCycle)},
+            {"Dialogue", "Zoom", legacyDialogueZoom, std::size(legacyDialogueZoom)},
+            {"Dialogue", "Enabled", legacyDialogueEnabledGenerated, std::size(legacyDialogueEnabledGenerated)},
+            {"Dialogue", "Mode", legacyDialogueZoomGenerated,
+                std::size(legacyDialogueZoomGenerated)},
+            {"Dialogue", "Mode", legacyDialogueZoomModeCurrent,
+                std::size(legacyDialogueZoomModeCurrent)},
+            {"Overlay", "Enabled", legacyOverlayEnabled, std::size(legacyOverlayEnabled)},
+            {"Overlay", "PositionX", legacyOverlayPositionCurrent,
+                std::size(legacyOverlayPositionCurrent)},
+            {"Overlay", "PositionY", legacyOverlayPositionCurrent,
+                std::size(legacyOverlayPositionCurrent)},
             {"Hotkeys", "OverlayToggle", legacyOverlayToggleCurrent, std::size(legacyOverlayToggleCurrent)},
             {"Hotkeys", "OverlayToggle", legacyOverlayToggleInsert, std::size(legacyOverlayToggleInsert)},
             {"Hotkeys", "OverlayToggle", legacyOverlayToggleDelete, std::size(legacyOverlayToggleDelete)},
         };
 
+        bool IsSectionHeader(const std::string& line, std::string& section);
+
         bool IsCommentOrBlank(const std::string& line)
         {
             const auto trimmed = Trim(line);
-            return trimmed.empty() || trimmed.front() == ';';
+            return trimmed.empty() || trimmed.front() == ';' || trimmed.front() == '#';
+        }
+
+        std::string NormalizeCommentPrefix(std::string line)
+        {
+            const auto first = line.find_first_not_of(" \t");
+            if (first != std::string::npos && line[first] == ';')
+                line[first] = '#';
+            return line;
+        }
+
+        bool EquivalentComment(std::string actual, std::string expected)
+        {
+            actual = Trim(std::move(actual));
+            expected = Trim(std::move(expected));
+            if (!actual.empty() && (actual.front() == ';' || actual.front() == '#'))
+                actual = Trim(actual.substr(1));
+            if (!expected.empty() && (expected.front() == ';' || expected.front() == '#'))
+                expected = Trim(expected.substr(1));
+            return actual == expected;
+        }
+
+        std::vector<std::string> NormalizeHeader(
+            const std::vector<std::string>& source)
+        {
+            std::vector<std::string> retainedPreamble;
+            std::size_t firstSection = source.size();
+            for (std::size_t index = 0; index < source.size(); ++index) {
+                std::string section;
+                if (IsSectionHeader(Trim(source[index]), section)) {
+                    firstSection = index;
+                    break;
+                }
+                const auto line = Trim(source[index]);
+                const bool oldHeader = std::find(std::begin(legacyHeaderLines),
+                    std::end(legacyHeaderLines), line) != std::end(legacyHeaderLines);
+                const bool canonicalLine = std::find(std::begin(canonicalHeader),
+                    std::end(canonicalHeader), line) != std::end(canonicalHeader);
+                const bool emptyComment = line == "#" || line == ";";
+                if (!oldHeader && !canonicalLine && !emptyComment && !line.empty())
+                    retainedPreamble.emplace_back(source[index]);
+            }
+
+            std::vector<std::string> result;
+            result.reserve(std::size(canonicalHeader) + retainedPreamble.size() +
+                source.size() - firstSection + 2);
+            for (const auto line : canonicalHeader) result.emplace_back(line);
+            if (!retainedPreamble.empty()) {
+                result.emplace_back("");
+                result.insert(result.end(), retainedPreamble.begin(),
+                    retainedPreamble.end());
+            }
+            result.emplace_back("");
+            result.insert(result.end(), source.begin() + firstSection, source.end());
+            return result;
+        }
+
+        std::string FormatAssignment(const std::string& line)
+        {
+            const auto trimmed = Trim(line);
+            const auto separator = trimmed.find('=');
+            if (separator == std::string::npos) return line;
+            const auto key = Trim(trimmed.substr(0, separator));
+            const auto value = Trim(trimmed.substr(separator + 1));
+            return key + " = " + value;
         }
 
         std::vector<std::string> RemoveExactCommentBlocks(
@@ -293,7 +498,8 @@ namespace config
                     for (std::size_t start = runStart; start <= lastStart; ++start) {
                         bool matches = true;
                         for (std::size_t lineIndex = 0; lineIndex < block.lineCount; ++lineIndex) {
-                            if (Trim(body[start + lineIndex]) != block.lines[lineIndex]) {
+                            if (!EquivalentComment(body[start + lineIndex],
+                                    std::string(block.lines[lineIndex]))) {
                                 matches = false;
                                 break;
                             }
@@ -324,8 +530,6 @@ namespace config
                         keys[index].commentCount});
             return RemoveExactCommentBlocks(body, section, blocks.data(), blocks.size());
         }
-
-        bool IsSectionHeader(const std::string& line, std::string& section);
 
         std::vector<std::string> RemoveLegacyManagedCommentBlocks(
             const std::vector<std::string>& source)
@@ -368,16 +572,22 @@ namespace config
 
         std::vector<std::string> source;
         std::string line;
-        while (std::getline(input, line)) source.push_back(std::move(line));
+        while (std::getline(input, line)) {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            source.push_back(std::move(line));
+        }
         input.close();
+        const auto original = source;
 
         const auto sourceWithoutLegacyDescriptions = RemoveLegacyManagedCommentBlocks(source);
-        const bool removedLegacyDescriptions = sourceWithoutLegacyDescriptions != source;
         source = sourceWithoutLegacyDescriptions;
+        for (auto& current : source)
+            current = NormalizeCommentPrefix(std::move(current));
+        const auto normalizedHeader = NormalizeHeader(source);
+        source = normalizedHeader;
 
         std::string legacyOverlayToggle;
         bool hasOverlayToggle = false;
-        bool sourceMigrated = removedLegacyDescriptions;
         std::string sourceSection;
         for (const auto& current : source) {
             const auto trimmed = Trim(current);
@@ -419,7 +629,6 @@ namespace config
                 migrated.emplace_back("ToggleKey=" + legacyOverlayToggle);
             }
             source = std::move(migrated);
-            sourceMigrated = true;
         } else if (!legacyOverlayToggle.empty()) {
             std::string activeSection;
             std::vector<std::string> migrated;
@@ -439,7 +648,235 @@ namespace config
                 migrated.push_back(current);
             }
             source = std::move(migrated);
-            sourceMigrated = true;
+        }
+
+        // Migrate the former Cinematics.AspectRatio setting into the new
+        // Enabled + Mode model before inserting defaults. This preserves an
+        // old Native selection instead of letting the new Enabled=true
+        // default accidentally override it.
+        bool cinematicEnabledFound = false;
+        bool cinematicEnabledValid = false;
+        bool cinematicAspectFound = false;
+        bool cinematicModeValid = false;
+        bool cinematicAspectValid = false;
+        bool legacyAspectFixFound = false;
+        bool legacyAspectFix = true;
+        std::string cinematicLegacyMode;
+        {
+            std::string activeSection;
+            std::string activeLegacySection;
+            for (const auto& current : source) {
+                std::string section;
+                if (IsSectionHeader(Trim(current), section)) {
+                    activeSection = std::move(section);
+                    activeLegacySection = activeSection;
+                    continue;
+                }
+                const auto trimmed = Trim(current);
+                const auto separator = trimmed.find('=');
+                if (separator == std::string::npos) continue;
+                const auto key = Trim(trimmed.substr(0, separator));
+                const auto value = Trim(trimmed.substr(separator + 1));
+                if (activeSection == "Cinematics") {
+                    if (key == "Enabled") {
+                        cinematicEnabledFound = true;
+                        bool parsed = false;
+                        if (ParseBool(value, parsed)) cinematicEnabledValid = true;
+                    } else if (key == "Mode") {
+                        CinematicAspectPolicy parsed{};
+                        if (ParseCinematicAspectPolicy(value, parsed)) {
+                            cinematicModeValid = true;
+                            cinematicLegacyMode = value;
+                        }
+                    } else if (key == "AspectRatio") {
+                        cinematicAspectFound = true;
+                        CinematicAspectPolicy parsed{};
+                        if (ParseCinematicAspectPolicy(value, parsed)) {
+                            cinematicAspectValid = true;
+                            if (!cinematicModeValid) cinematicLegacyMode = value;
+                        }
+                    } else if (key == "AspectFix") {
+                        bool parsed = true;
+                        if (ParseBool(value, parsed)) {
+                            legacyAspectFixFound = true;
+                            legacyAspectFix = parsed;
+                        }
+                    }
+                } else if (activeLegacySection == "Features" && key == "CinematicAspectFix") {
+                    bool parsed = true;
+                    if (ParseBool(value, parsed)) {
+                        legacyAspectFixFound = true;
+                        legacyAspectFix = parsed;
+                    }
+                }
+            }
+        }
+        const bool legacyPolicyFound = cinematicModeValid || cinematicAspectValid;
+        const bool legacyNative = _stricmp(cinematicLegacyMode.c_str(), "Native") == 0;
+        const bool cinematicEnabledMigrationNeeded = !cinematicEnabledValid &&
+            (legacyPolicyFound || legacyAspectFixFound);
+        if (cinematicEnabledMigrationNeeded || cinematicAspectFound ||
+            (cinematicModeValid && legacyNative) ||
+            (cinematicEnabledFound && !cinematicEnabledValid && legacyPolicyFound)) {
+            const std::string migratedEnabled = legacyPolicyFound
+                ? (legacyNative ? "false" : "true")
+                : (legacyAspectFix ? "true" : "false");
+            std::vector<std::string> migrated;
+            migrated.reserve(source.size() + (cinematicEnabledMigrationNeeded ? 1 : 0));
+            std::string activeSection;
+            bool insertedEnabled = false;
+            for (const auto& current : source) {
+                std::string section;
+                if (IsSectionHeader(Trim(current), section)) {
+                    activeSection = std::move(section);
+                    migrated.push_back(current);
+                    if (cinematicEnabledMigrationNeeded && activeSection == "Cinematics" &&
+                        !insertedEnabled) {
+                        migrated.emplace_back("Enabled=" + migratedEnabled);
+                        insertedEnabled = true;
+                    }
+                    continue;
+                }
+                const auto trimmed = Trim(current);
+                const auto separator = trimmed.find('=');
+                if (activeSection == "Cinematics" && separator != std::string::npos) {
+                    const auto key = Trim(trimmed.substr(0, separator));
+                    const auto value = Trim(trimmed.substr(separator + 1));
+                    if (key == "AspectRatio") {
+                        CinematicAspectPolicy parsed{};
+                        if (!cinematicModeValid &&
+                            ParseCinematicAspectPolicy(value, parsed)) {
+                            migrated.emplace_back("Mode=" +
+                                (parsed == CinematicAspectPolicy::Native
+                                    ? std::string("Auto")
+                                    : std::string(CinematicAspectPolicyName(parsed))));
+                        }
+                        continue;
+                    }
+                    if (key == "Mode") {
+                        CinematicAspectPolicy parsed{};
+                        if (ParseCinematicAspectPolicy(value, parsed) &&
+                            parsed == CinematicAspectPolicy::Native) {
+                            migrated.emplace_back("Mode=Auto");
+                            continue;
+                        }
+                    }
+                    if (key == "AspectFix") continue;
+                } else if (activeSection == "Features" && separator != std::string::npos &&
+                    Trim(trimmed.substr(0, separator)) == "CinematicAspectFix") {
+                    continue;
+                }
+                migrated.push_back(current);
+            }
+            if (cinematicEnabledMigrationNeeded && !insertedEnabled) {
+                migrated.emplace_back("[Cinematics]");
+                migrated.emplace_back("Enabled=" + migratedEnabled);
+            }
+            source = std::move(migrated);
+        }
+
+        // Resolve Dialogue's former Zoom key before managed defaults are
+        // inserted. Build both canonical keys in one source rewrite so an
+        // interrupted migration can never leave a half-updated file.
+        bool dialogueEnabledFound = false;
+        bool dialogueEnabledValid = false;
+        bool dialogueEnabledValue = true;
+        bool dialogueModeFound = false;
+        bool dialogueModeValid = false;
+        DialogueZoomPolicy dialogueModeValue = DialogueZoomPolicy::Adaptive;
+        bool dialogueZoomFound = false;
+        bool dialogueZoomValid = false;
+        DialogueZoomPolicy dialogueZoomValue = DialogueZoomPolicy::Adaptive;
+        bool dialogueModeNeedsCanonicalization = false;
+        {
+            std::string activeSection;
+            for (const auto& current : source) {
+                std::string section;
+                if (IsSectionHeader(Trim(current), section)) {
+                    activeSection = std::move(section);
+                    continue;
+                }
+                if (activeSection != "Dialogue") continue;
+                const auto trimmed = Trim(current);
+                const auto separator = trimmed.find('=');
+                if (separator == std::string::npos) continue;
+                const auto key = Trim(trimmed.substr(0, separator));
+                const auto value = Trim(trimmed.substr(separator + 1));
+                if (key == "Enabled") {
+                    dialogueEnabledFound = true;
+                    bool parsed = false;
+                    if (ParseBool(value, parsed)) {
+                        dialogueEnabledValid = true;
+                        dialogueEnabledValue = parsed;
+                    }
+                } else if (key == "Mode") {
+                    dialogueModeFound = true;
+                    DialogueZoomPolicy parsed{};
+                    if (ParseDialogueMode(value, parsed)) {
+                        dialogueModeValid = true;
+                        dialogueModeValue = parsed;
+                    } else {
+                        dialogueModeNeedsCanonicalization = true;
+                    }
+                } else if (key == "Zoom") {
+                    dialogueZoomFound = true;
+                    DialogueZoomPolicy parsed{};
+                    if (ParseDialogueZoomPolicy(value, parsed)) {
+                        dialogueZoomValid = true;
+                        dialogueZoomValue = parsed;
+                    }
+                }
+            }
+        }
+        if (dialogueZoomFound ||
+            (dialogueModeFound && dialogueModeNeedsCanonicalization) ||
+            (dialogueEnabledFound && !dialogueEnabledValid)) {
+            const auto resolvedMode = dialogueModeValid
+                ? dialogueModeValue
+                : dialogueZoomValid && dialogueZoomValue != DialogueZoomPolicy::Native
+                    ? dialogueZoomValue
+                    : DialogueZoomPolicy::Adaptive;
+            const bool resolvedEnabled = dialogueEnabledValid
+                ? dialogueEnabledValue
+                : dialogueZoomValid
+                    ? dialogueZoomValue != DialogueZoomPolicy::Native
+                    : true;
+            std::vector<std::string> migrated;
+            migrated.reserve(source.size() + 1);
+            std::string activeSection;
+            bool insertedCanonical = false;
+            for (const auto& current : source) {
+                std::string section;
+                if (IsSectionHeader(Trim(current), section)) {
+                    activeSection = std::move(section);
+                    migrated.push_back(current);
+                    if (activeSection == "Dialogue" && !insertedCanonical) {
+                        migrated.emplace_back(std::string("Enabled=") +
+                            (resolvedEnabled ? "true" : "false"));
+                        migrated.emplace_back(std::string("Mode=") +
+                            DialogueZoomPolicyName(resolvedMode));
+                        insertedCanonical = true;
+                    }
+                    continue;
+                }
+                const auto trimmed = Trim(current);
+                const auto separator = trimmed.find('=');
+                if (activeSection == "Dialogue" && separator != std::string::npos) {
+                    const auto key = Trim(trimmed.substr(0, separator));
+                    if (key == "Enabled" || key == "Mode" || key == "Zoom")
+                        continue;
+                }
+                migrated.push_back(current);
+            }
+            if (!insertedCanonical) {
+                migrated.emplace_back("");
+                migrated.emplace_back("[Dialogue]");
+                migrated.emplace_back(std::string("Enabled=") +
+                    (resolvedEnabled ? "true" : "false"));
+                migrated.emplace_back(std::string("Mode=") +
+                    DialogueZoomPolicyName(resolvedMode));
+            }
+            source = std::move(migrated);
         }
 
         const auto appendSection = [](std::vector<std::string>& output,
@@ -447,9 +884,13 @@ namespace config
                 if (!output.empty() && !output.back().empty()) output.emplace_back("");
                 output.emplace_back("[" + std::string(sectionName) + "]");
                 for (std::size_t keyIndex = 0; keyIndex < keyCount; ++keyIndex) {
+                    if (keyIndex > 0 &&
+                        !IsContinuationManagedKey(sectionName, keys[keyIndex].name))
+                        output.emplace_back("");
                     for (std::size_t commentIndex = 0; commentIndex < keys[keyIndex].commentCount; ++commentIndex)
                         output.emplace_back(std::string(keys[keyIndex].comments[commentIndex]));
-                    output.emplace_back(std::string(keys[keyIndex].defaultLine));
+                    output.emplace_back(FormatAssignment(
+                        std::string(keys[keyIndex].defaultLine)));
                 }
             };
 
@@ -471,25 +912,56 @@ namespace config
                     }
 
                     if (matchingKey < keyCount && !found[matchingKey]) {
+                        if (!repaired.empty() && !repaired.back().empty() &&
+                            !IsContinuationManagedKey(section, keys[matchingKey].name))
+                            repaired.emplace_back("");
                         for (std::size_t commentIndex = 0; commentIndex < keys[matchingKey].commentCount; ++commentIndex)
                             repaired.emplace_back(std::string(keys[matchingKey].comments[commentIndex]));
                         found[matchingKey] = true;
                     }
-                    repaired.emplace_back(original);
+                    repaired.emplace_back(separator != std::string::npos
+                        ? FormatAssignment(original) : original);
                 }
 
                 for (std::size_t keyIndex = 0; keyIndex < keyCount; ++keyIndex) {
                     if (found[keyIndex]) continue;
-                    if (!repaired.empty() && !repaired.back().empty()) repaired.emplace_back("");
+                    if (!repaired.empty() && !repaired.back().empty() &&
+                        !IsContinuationManagedKey(section, keys[keyIndex].name))
+                        repaired.emplace_back("");
                     for (std::size_t commentIndex = 0; commentIndex < keys[keyIndex].commentCount; ++commentIndex)
                         repaired.emplace_back(std::string(keys[keyIndex].comments[commentIndex]));
-                    repaired.emplace_back(std::string(keys[keyIndex].defaultLine));
+                    repaired.emplace_back(FormatAssignment(
+                        std::string(keys[keyIndex].defaultLine)));
+                }
+                if (section == "Overlay") {
+                    const auto enabled = std::find_if(repaired.begin(), repaired.end(),
+                        [](const std::string& line) {
+                            const auto trimmed = Trim(line);
+                            const auto separator = trimmed.find('=');
+                            return separator != std::string::npos &&
+                                Trim(trimmed.substr(0, separator)) == "Enabled";
+                        });
+                    const auto enabledKey = std::find_if(keys, keys + keyCount,
+                        [](const ManagedKey& key) { return key.name == "Enabled"; });
+                    if (enabled != repaired.end() && enabledKey != keys + keyCount) {
+                        const auto keyIndex = static_cast<std::size_t>(enabled - repaired.begin());
+                        const auto commentCount = enabledKey->commentCount;
+                        if (commentCount <= keyIndex) {
+                            const auto blockStart = keyIndex - commentCount;
+                            std::vector<std::string> enabledBlock(
+                                repaired.begin() + blockStart, enabled + 1);
+                            repaired.erase(repaired.begin() + blockStart, enabled + 1);
+                            if (!repaired.empty() && !repaired.front().empty())
+                                enabledBlock.emplace_back("");
+                            repaired.insert(repaired.begin(), enabledBlock.begin(),
+                                enabledBlock.end());
+                        }
+                    }
                 }
                 return repaired;
             };
 
         std::vector<std::string> output;
-        bool changed = sourceMigrated;
         std::array<bool, 6> foundSections{};
         std::size_t index = 0;
         while (index < source.size()) {
@@ -520,7 +992,6 @@ namespace config
             const auto repaired = repairSection(body, section, keys, keyCount);
             output.emplace_back(source[sectionStart]);
             output.insert(output.end(), repaired.begin(), repaired.end());
-            if (repaired != body) changed = true;
 
             if (section == "Gameplay") foundSections[0] = true;
             if (section == "Cinematics") foundSections[1] = true;
@@ -538,10 +1009,25 @@ namespace config
             std::size_t keyCount = 0;
             const auto* keys = KeysForSection(sectionNames[sectionIndex], keyCount);
             appendSection(output, sectionNames[sectionIndex], keys, keyCount);
-            changed = true;
         }
 
-        if (!changed && output == source) return false;
+        std::vector<std::string> spacedOutput;
+        spacedOutput.reserve(output.size() + std::size(sectionNames) * 2);
+        for (const auto& outputLine : output) {
+            std::string section;
+            if (IsSectionHeader(Trim(outputLine), section) && !spacedOutput.empty()) {
+                while (!spacedOutput.empty() && spacedOutput.back().empty())
+                    spacedOutput.pop_back();
+                if (!spacedOutput.empty()) {
+                    spacedOutput.emplace_back("");
+                    spacedOutput.emplace_back("");
+                }
+            }
+            spacedOutput.emplace_back(outputLine);
+        }
+        output = std::move(spacedOutput);
+
+        if (output == original) return false;
         const auto temporary = std::filesystem::path(path.wstring() + L".tmp");
         {
             std::ofstream file(temporary, std::ios::out | std::ios::trunc);

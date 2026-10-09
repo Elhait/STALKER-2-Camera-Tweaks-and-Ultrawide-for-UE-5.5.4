@@ -33,6 +33,8 @@ namespace overlay::setting_tooltip_content
             loc::tooltip::gameplay::HorPlusExample110};
         inline constexpr loc::Key gameplayAspectRecalculationDescription[]{
             loc::tooltip::gameplay::AspectRecalculation};
+        inline constexpr loc::Key gameplayRuntimeCombineDescription[]{
+            loc::tooltip::gameplay::RuntimeCombine};
 
         inline constexpr loc::Key cinematicAspectAutoDescription[]{
             loc::tooltip::cinematics::AspectAuto};
@@ -57,11 +59,6 @@ namespace overlay::setting_tooltip_content
         inline constexpr loc::Key cinematicNativeFovExamples[]{
             loc::tooltip::cinematics::FovNativeExample90};
 
-        inline constexpr loc::Key dialogueNativeDescription[]{
-            loc::tooltip::dialogue::ZoomNative};
-        inline constexpr loc::Key dialogueNativeExamples[]{
-            loc::tooltip::dialogue::ZoomNativeExample90,
-            loc::tooltip::dialogue::ZoomNativeExample110};
         inline constexpr loc::Key dialogueAdaptiveDescription[]{
             loc::tooltip::dialogue::ZoomAdaptive};
         inline constexpr loc::Key dialogueAdaptiveExamples[]{
@@ -82,10 +79,10 @@ namespace overlay::setting_tooltip_content
             {"AspectRecalculation", gameplayAspectRecalculationDescription, {}, {}},
             {"HorPlus", gameplayHorPlusDescription,
                 loc::tooltip::gameplay::HorPlusExamplesContext, gameplayHorPlusExamples},
+            {"RuntimeCombine", gameplayRuntimeCombineDescription, {}, {}},
         };
         inline constexpr Option cinematicAspectOptions[]{
             {"Auto", cinematicAspectAutoDescription, {}, {}},
-            {"Native", cinematicAspectNativeDescription, {}, {}},
             {"16:9", cinematicAspect169Description, {}, {}},
             {"21:9", cinematicAspect219Description, {}, {}},
             {"32:9", cinematicAspect329Description, {}, cinematicAspect329Examples},
@@ -99,8 +96,6 @@ namespace overlay::setting_tooltip_content
                 cinematicGameplayFovExamples},
         };
         inline constexpr Option dialogueOptions[]{
-            {"Native", dialogueNativeDescription,
-                loc::tooltip::dialogue::ZoomExamplesContext, dialogueNativeExamples},
             {"Adaptive", dialogueAdaptiveDescription,
                 loc::tooltip::dialogue::ZoomExamplesContext, dialogueAdaptiveExamples},
             {"Reduced", dialogueReducedDescription,
@@ -114,14 +109,14 @@ namespace overlay::setting_tooltip_content
         gameplaySelectorOptions[]{
             {config::GameplayMode::AspectRecalculation, &detail::gameplayOptions[0]},
             {config::GameplayMode::HorPlus, &detail::gameplayOptions[1]},
+            {config::GameplayMode::RuntimeCombine, &detail::gameplayOptions[2]},
         };
     inline constexpr SelectorOptionBinding<config::CinematicAspectPolicy>
         cinematicAspectSelectorOptions[]{
             {config::CinematicAspectPolicy::Auto, &detail::cinematicAspectOptions[0]},
-            {config::CinematicAspectPolicy::Native, &detail::cinematicAspectOptions[1]},
-            {config::CinematicAspectPolicy::Forced16x9, &detail::cinematicAspectOptions[2]},
-            {config::CinematicAspectPolicy::Forced21x9, &detail::cinematicAspectOptions[3]},
-            {config::CinematicAspectPolicy::Forced32x9, &detail::cinematicAspectOptions[4]},
+            {config::CinematicAspectPolicy::Forced16x9, &detail::cinematicAspectOptions[1]},
+            {config::CinematicAspectPolicy::Forced21x9, &detail::cinematicAspectOptions[2]},
+            {config::CinematicAspectPolicy::Forced32x9, &detail::cinematicAspectOptions[3]},
         };
     inline constexpr SelectorOptionBinding<config::CinematicFovMode>
         cinematicFovSelectorOptions[]{
@@ -130,10 +125,9 @@ namespace overlay::setting_tooltip_content
         };
     inline constexpr SelectorOptionBinding<config::DialogueZoomPolicy>
         dialogueSelectorOptions[]{
-            {config::DialogueZoomPolicy::Native, &detail::dialogueOptions[0]},
-            {config::DialogueZoomPolicy::Adaptive, &detail::dialogueOptions[1]},
-            {config::DialogueZoomPolicy::Reduced, &detail::dialogueOptions[2]},
-            {config::DialogueZoomPolicy::Disabled, &detail::dialogueOptions[3]},
+            {config::DialogueZoomPolicy::Adaptive, &detail::dialogueOptions[0]},
+            {config::DialogueZoomPolicy::Reduced, &detail::dialogueOptions[1]},
+            {config::DialogueZoomPolicy::Disabled, &detail::dialogueOptions[2]},
         };
 
     inline std::span<const SelectorOptionBinding<config::GameplayMode>>

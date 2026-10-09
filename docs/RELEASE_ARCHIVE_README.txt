@@ -1,22 +1,24 @@
-STALKER 2 Camera Tweaks and Ultrawide for UE 5.5.4
+STALKER 2 CAMERA TWEAKS v3.0.0
 
-Gameplay, cinematic and dialogue camera/FOV adjustments for S.T.A.L.K.E.R. 2.
+Gameplay, cinematic and dialogue camera/FOV adjustments for S.T.A.L.K.E.R. 2: Heart of Chornobyl (Unreal Engine 5.5.4).
 
-Gameplay HorPlus uses the Gameplay FOV selected in the game's settings and adapts it to the current aspect ratio, from standard 16:9 and ultrawide displays to custom aspect ratios. The mod also provides cinematic framing/FOV options, dialogue zoom settings, runtime status and an in-game settings overlay with 18 interface languages.
+Gameplay uses the game's selected FOV and supports arbitrary aspect ratios. RuntimeCombine is the recommended default: it synchronizes the Gameplay camera aspect to the current viewport, verifies the change, and only then applies Hor+ correction. Cinematics provide Auto and forced 16:9, 21:9 and 32:9 framing. Dialogue offers Adaptive, Reduced and Disabled correction modes.
+
+Gameplay, Cinematics, Dialogue and Overlay each have an independent enable setting. Camera modules coordinate camera ownership during transitions when enabled. Disabling Overlay does not disable camera correction.
 
 INSTALLATION
 
 1. Close the game.
 2. Install Ultimate ASI Loader as dsound.dll in Stalker2\Binaries\Win64.
 3. Remove older STALKER2UltrawideFix.asi and STALKER2GameplayAspectFix.asi files so they are not loaded alongside this mod.
-4. Copy STALKER2CameraTweaks.asi and STALKER2CameraTweaks.ini into Stalker2\Binaries\Win64. If the INI is missing, the mod creates it.
+4. Copy STALKER2CameraTweaks.asi and STALKER2CameraTweaks.ini into Stalker2\Binaries\Win64.
 5. Start the game.
 
-Open or close the in-game overlay with Delete (the default toggle key). Press Esc while the overlay is active to dismiss it. Settings are saved in STALKER2CameraTweaks.ini; the generated file documents available options.
+Open or close the in-game Overlay with Delete (the default toggle key). Press Esc while it is open to dismiss it. Settings are saved in STALKER2CameraTweaks.ini. Manual INI changes require a game restart.
 
 The runtime log, STALKER2CameraTweaks.log, is written beside the game executable.
 
-For full documentation, tested scope, limitations and support, visit:
+For full documentation, known limitations and support, visit:
 GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4
 Nexus Mods: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416
 

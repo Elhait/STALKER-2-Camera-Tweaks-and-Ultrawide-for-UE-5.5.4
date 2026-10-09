@@ -29,6 +29,7 @@ int main()
     gameplay.writerSource = {0x1234, true};
     gameplay.writerFlags = 0x5;
     gameplay.writerFlagsValid = true;
+    gameplay.observedDuringGameplay = true;
     const auto committedGameplay = store.Publish(gameplay);
     pass &= Check(committedGameplay.publicationSequence == 1, "first_sequence");
     pass &= Check(committedGameplay.inputFov.space == FovSpace::Native &&
@@ -48,6 +49,31 @@ int main()
         "boundary_isolation_writer");
     pass &= Check(latestEnter.has_value() && latestEnter->inputFov.value == 90.0f,
         "boundary_isolation_enter");
+
+    auto generationOne = BeginCameraTransitionBoundary({}, 1,
+        latestGameplay, false);
+    generationOne.cinematic = committedEnter;
+    generationOne.cinematicValid = true;
+    const auto generationTwo = BeginCameraTransitionBoundary(generationOne, 2,
+        std::nullopt, true);
+    pass &= Check(generationOne.accepted && generationOne.gameplayValid &&
+        generationOne.cinematicValid && generationTwo.accepted &&
+        generationTwo.lifecycleGeneration == 2 && generationTwo.gameplayValid &&
+        !generationTwo.cinematicValid &&
+        generationTwo.gameplay.publicationSequence ==
+            generationOne.gameplay.publicationSequence,
+        "confirmed_continuation_carries_only_gameplay_boundary_into_new_enter_generation");
+    const auto unrelatedGeneration = BeginCameraTransitionBoundary(generationOne,
+        2, std::nullopt, false);
+    pass &= Check(unrelatedGeneration.accepted &&
+        !unrelatedGeneration.gameplayValid,
+        "unrelated_enter_does_not_reuse_old_gameplay_boundary");
+    const auto refreshedGeneration = BeginCameraTransitionBoundary(generationOne,
+        2, latestGameplay, true);
+    pass &= Check(refreshedGeneration.gameplayValid &&
+        refreshedGeneration.gameplay.publicationSequence ==
+            latestGameplay->publicationSequence,
+        "current_gameplay_boundary_takes_precedence_over_continued_evidence");
 
     CameraFovObservation cached{};
     cached.boundary = FovObservationBoundary::CameraWriter;

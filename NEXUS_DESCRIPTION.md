@@ -26,7 +26,7 @@ Bug reports must be reproduced with STALKER2CameraTweaks as the only installed c
 [*]Provides default GameplayHorPlus cinematic FOV that follows the selected Gameplay FOV, with NativeHorPlus as an independent alternative.
 [*]Supports custom cinematic framing: Auto, Native, 16:9, 21:9 and 32:9.
 [*]Allows 16:9 users to preview wider cinematic framing with letterbox bars.
-[*]Adds FOV-aware dialogue zoom: Native, Adaptive, Reduced and Disabled.
+[*]Adds three FOV-aware dialogue zoom correction modes: Adaptive, Reduced and Disabled. Dialogue correction can also be turned off to leave the game's camera behavior unchanged.
 [*]Provides optional read-only Diagnostics telemetry for research sessions; it is disabled by default and is not recommended for normal gameplay.
 [*]Provides optional F9/F10/F11/F12 runtime hotkeys: F9 gameplay, F10 cinematic aspect, F11 cinematic FOV and F12 dialogue.
 [*]Creates and synchronizes the INI configuration automatically.
@@ -63,9 +63,8 @@ Use `Cinematics.FovMode=GameplayHorPlus` or `Cinematics.FovMode=NativeHorPlus`. 
 Version 1.0.0 updates the unified ASI for Steam 2.0.6 while retaining dialogue zoom that adapts to the actual gameplay FOV:
 
 [list]
-[*]Native - keeps the game's original dialogue zoom, currently targeting 70 degrees.
-[*]Adaptive - preserves the game's native optical zoom strength relative to the current gameplay FOV.
-[*]Adaptive - default; preserves the game's native optical zoom strength relative to the current gameplay FOV.
+[*]Adaptive - preserves the game's original optical zoom strength relative to the current gameplay FOV.
+[*]Adaptive - default; preserves the game's original optical zoom strength relative to the current gameplay FOV.
 [*]Reduced - applies half of the Adaptive optical zoom strength.
 [*]Disabled - keeps the gameplay FOV during dialogue.
 [/list]
@@ -134,10 +133,6 @@ FovMode=GameplayHorPlus
 [Dialogue]
 ; Controls the camera zoom applied during dialogue.
 ;
-; Native   - use the game's original dialogue zoom behavior.
-;            Example: 90° gameplay FOV -> 70° during dialogue.
-;            Example: 110° gameplay FOV -> 70° during dialogue.
-;
 ; Adaptive - preserve the game's original optical zoom strength relative
 ;            to the current gameplay FOV.
 ;            Example: 90° gameplay FOV -> 70° during dialogue.
@@ -182,7 +177,7 @@ CinematicCycle=F10
 ; Supported keys: F1-F12, 0-9 and A-Z.
 CinematicFovCycle=F11
 
-; Cycle the dialogue zoom mode for the next dialogue: Native -> Adaptive -> Reduced -> Disabled -> Native. Does not affect a dialogue that is already in progress.
+; Cycle the dialogue zoom correction mode for the next dialogue: Adaptive -> Reduced -> Disabled -> Adaptive. Does not affect a dialogue that is already in progress.
 ; Supported keys: F1-F12, 0-9 and A-Z.
 DialogueCycle=F12
 [/code]
@@ -218,7 +213,7 @@ The plugin creates STALKER2CameraTweaks.log in the game folder. Include this log
 [*]16:9, 21:9 and 32:9 gameplay, including startup, aspect switching and death/load camera rebuilds.
 [*]Auto, Native, forced 16:9, 21:9 and 32:9 cinematic framing.
 [*]Runtime aspect changes after changing resolution during the same session in Auto mode.
-[*]Dialogue zoom Native, Adaptive, Reduced and Disabled on Steam 2.0.6.
+[*]Dialogue zoom correction modes Adaptive, Reduced and Disabled on Steam 2.0.6.
 [*]Sequential dialogue cycles and cinematic-to-dialogue state isolation.
 [*]NativeHorPlus and GameplayHorPlus cinematic FOV modes, including F11 switching.
 [*]F9 live switching between AspectRecalculation and HorPlus, including ADS/binocular transitions.

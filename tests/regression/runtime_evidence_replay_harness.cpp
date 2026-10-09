@@ -233,17 +233,17 @@ int main()
     dialogue::CandidateTracker tracker;
     tracker.Begin(candidate.initialSample, candidate.source, candidate.nativeTarget);
     pass &= Check(tracker.Observe(candidate.descendingSample, candidate.source,
-        candidate.nativeTarget, 0.01f, 0.01f, 0.01f) ==
+        candidate.nativeTarget, 0.01f, 0.01f) ==
         dialogue::CandidateDecision::Activate,
         "coherent_candidate_promotes");
     tracker.Begin(candidate.initialSample, candidate.source, candidate.nativeTarget);
     pass &= Check(tracker.Observe(candidate.descendingSample, candidate.changedSource,
-        candidate.nativeTarget, 0.01f, 0.01f, 0.01f) ==
+        candidate.nativeTarget, 0.01f, 0.01f) ==
         dialogue::CandidateDecision::Cancel && !tracker.IsPending(),
         "changed_source_cancels_candidate");
     tracker.Begin(candidate.initialSample, candidate.source, candidate.nativeTarget);
     pass &= Check(tracker.Observe(candidate.descendingSample, candidate.source,
-        candidate.contradictoryTarget, 0.01f, 0.01f, 0.01f) ==
+        candidate.contradictoryTarget, 0.01f, 0.01f) ==
         dialogue::CandidateDecision::Cancel && !tracker.IsPending(),
         "contradictory_target_cancels_candidate");
 

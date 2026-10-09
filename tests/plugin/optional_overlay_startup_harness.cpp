@@ -5,6 +5,14 @@
 
 int main()
 {
+    bool disabledStartCallbackInvoked = false;
+    const bool disabledSkipsInitialization = !plugin::TryStartConfiguredOverlay(false,
+        [&]() { disabledStartCallbackInvoked = true; return true; }) &&
+        !disabledStartCallbackInvoked;
+    const bool enabledStarts = plugin::TryStartConfiguredOverlay(true,
+        []() { return true; });
+    const bool startupExceptionIsolated = !plugin::TryStartConfiguredOverlay(true,
+        []() -> bool { throw std::runtime_error("startup"); });
     int sequence = 0;
     bool coreReady = false;
     bool overlayHooksArmed = false;
@@ -67,5 +75,11 @@ int main()
         << " overlay_failure_isolated=" << (passed ? "PASS" : "FAIL")
         << " overlay_exception_isolated=" << (exceptionIsolated ? "PASS" : "FAIL")
         << " readiness_exception_isolated=" << (readinessIsolated ? "PASS" : "FAIL") << '\n';
-    return passed && exceptionIsolated && readinessIsolated ? 0 : 1;
+    std::cout << "disabled_skips_overlay_initialization="
+        << (disabledSkipsInitialization ? "PASS" : "FAIL")
+        << " enabled_starts_overlay=" << (enabledStarts ? "PASS" : "FAIL")
+        << " configured_start_exception_isolated="
+        << (startupExceptionIsolated ? "PASS" : "FAIL") << '\n';
+    return passed && exceptionIsolated && readinessIsolated &&
+        disabledSkipsInitialization && enabledStarts && startupExceptionIsolated ? 0 : 1;
 }

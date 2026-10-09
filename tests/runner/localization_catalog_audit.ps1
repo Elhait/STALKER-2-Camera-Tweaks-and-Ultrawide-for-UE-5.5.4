@@ -293,9 +293,69 @@ $integerFontSizing = $renderer -notmatch 'FontGlobalScale' -and
 $cameraStateViewBoundary = (Test-CameraStateReadOnlyBoundary $cameraStateViewHeader $cameraStateView) -and
     $cameraStateView -match 'camera::EvidenceProvenanceName' -and
     $cameraStateView -match 'ImGui::BeginTable\(' -and
-    $renderer -match 'ImGui::TreeNodeEx\(cameraStateLabel\.c_str\(' -and
-    $renderer -match 'DrawCameraStateView\(localization_, semantic\)' -and
+    $cameraStateView -match 'Writer Observation Freshness' -and
+    $cameraStateView -match 'HorPlus Target' -and
+    $cameraStateView -match 'Current Output FOV' -and
+    $cameraStateView -match 'Readback Valid' -and
+    $cameraStateView -notmatch '\b(?:Tr|Format)\s*\(|LocalizationManager|loc::|SetTooltip|BeginTooltip' -and
+    $renderer -match 'ImGui::TreeNodeEx\("Camera State"' -and
+    $renderer -match 'DrawCameraStateView\(semantic, integration\)' -and
     $renderer -notmatch 'void DrawCameraState\('
+$rightTooltipPaths = @(
+    'tooltip.runtime.viewport', 'tooltip.runtime.writer_aspect',
+    'tooltip.runtime.policy_aspect', 'tooltip.runtime.gameplay_fov',
+    'tooltip.runtime.gameplay_fov_unavailable', 'tooltip.runtime.native_fov',
+    'tooltip.runtime.native_fov_unavailable', 'tooltip.runtime.horplus_fov',
+    'tooltip.runtime.horplus_fov_unavailable', 'tooltip.runtime.current_output_fov',
+    'tooltip.runtime.transition_evidence', 'tooltip.runtime.transition_generation',
+    'tooltip.runtime.gameplay_boundary_aspect', 'tooltip.runtime.cinematic_enter_aspect',
+    'tooltip.runtime.aspect_delta', 'tooltip.runtime.aspect_matched',
+    'tooltip.runtime.aspect_mismatch', 'tooltip.runtime.aspect_cannot_assess',
+    'tooltip.runtime.gameplay_boundary_fov', 'tooltip.runtime.cinematic_enter_fov',
+    'tooltip.runtime.fov_delta', 'tooltip.runtime.fov_match',
+    'tooltip.runtime.camera_transition', 'tooltip.runtime.gameplay_status',
+    'tooltip.runtime.cinematic_status', 'tooltip.runtime.cinematic_aspect',
+    'tooltip.runtime.cinematic_default', 'tooltip.runtime.cinematic_aspect_unavailable',
+    'transition.context_active_selection',
+    'transition.context_next_selection', 'tooltip.gameplay.aspect_recalculation',
+    'tooltip.gameplay.horplus', 'tooltip.gameplay.runtime_combine',
+    'tooltip.cinematics.fov.gameplay', 'tooltip.cinematics.fov.native'
+)
+$rightTooltipCatalogCoverage = $true
+foreach ($entry in $loadedCatalogs) {
+    foreach ($key in $rightTooltipPaths) {
+        $node = $entry.Catalog
+        foreach ($part in $key.Split('.')) {
+            $property = $node.PSObject.Properties[$part]
+            if (-not $property) { $node = $null; break }
+            $node = $property.Value
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$node)) {
+            $rightTooltipCatalogCoverage = $false
+        }
+    }
+}
+$rightTooltipSourceCoverage = $rightTooltipCatalogCoverage -and
+    $renderer -match 'loc::tooltip::runtime::GameplayStatus' -and
+    $renderer -match 'loc::tooltip::runtime::CinematicStatus' -and
+    $renderer -match 'loc::tooltip::runtime::CurrentOutputFov' -and
+    $renderer -match 'loc::tooltip::runtime::TransitionGeneration' -and
+    $renderer -match 'loc::tooltip::runtime::GameplayBoundaryAspect' -and
+    $renderer -match 'loc::tooltip::runtime::CinematicEnterAspect' -and
+    $renderer -match 'loc::tooltip::runtime::AspectDelta' -and
+    $renderer -match 'loc::tooltip::runtime::GameplayBoundaryFov' -and
+    $renderer -match 'loc::tooltip::runtime::CinematicEnterFov' -and
+    $renderer -match 'loc::tooltip::runtime::FovDelta' -and
+    $renderer -match 'loc::tooltip::runtime::FovMatch' -and
+    $renderer -match 'loc::tooltip::runtime::CameraTransition' -and
+    $renderer -match 'loc::tooltip::runtime::WriterAspect' -and
+    $renderer -match 'loc::tooltip::runtime::PolicyAspect' -and
+    $renderer -match 'loc::tooltip::runtime::Viewport' -and
+    $renderer -match 'loc::tooltip::runtime::GameplayFov' -and
+    $renderer -match 'loc::tooltip::runtime::NativeFov' -and
+    $renderer -match 'loc::tooltip::runtime::HorPlusFov' -and
+    $renderer -match 'loc::transition::ActiveSelectionContext' -and
+    $renderer -match 'loc::transition::NextSelectionContext'
 $buildImGuiBody = [regex]::Match($renderer,
     'bool Renderer::BuildImGui\(\)[\s\S]*?(?=\n\s*bool Renderer::RebuildFontAtlas)').Value
 $rendererInitializeBody = [regex]::Match($renderer,
@@ -303,7 +363,7 @@ $rendererInitializeBody = [regex]::Match($renderer,
 $localizationFailClosed = $buildImGuiBody -match 'if\s*\(!localization_\.Initialize\([\s\S]*?return false;' -and
     $rendererInitializeBody -match 'BuildImGui\(\)' -and
     $rendererInitializeBody -match 'Disable\("composition_initialization_failed"\)' -and
-    $compositionRuntime -match 'g_renderer\.Initialize\(candidate, width, height, dpi\)' -and
+    $compositionRuntime -match 'RendererInstance\(\)\.Initialize\(candidate, width, height, dpi\)' -and
     $compositionRuntime -match 'InstallInputHook\(candidate\)'
 $registryDrivenSelector = $renderer -match 'for\s*\(const auto& locale : localization_\.locales\(\)\)' -and
     $renderer -match 'ImGui::Selectable\(locale\.displayName\.data\(\)' -and
@@ -360,7 +420,7 @@ $inputRedrawScheduling = $compositionRuntime -match 'bridge\.PushRelativeMouseMo
     $compositionRuntime -match 'class PresenterWakeGate|g_redrawWakePending\.TrySchedule\(\)' -and
     $compositionHarness -match 'TestInputEventsScheduleOneOwnerWake'
 $minimizeRestoreRouting = $compositionRuntime -match 'SelectPresenterRoute\(' -and
-    $compositionRuntime -match 'g_renderer\.hasSurfaceGeneration\(\)' -and
+    $compositionRuntime -match 'RendererInstance\(\)\.hasSurfaceGeneration\(\)' -and
     $compositionRuntime -match 'PresenterRoute::UpdateGeometry' -and
     $compositionPolicy -match 'if \(!hasSurfaceGeneration\)' -and
     $renderer -match 'state_\.SetMinimized\(false\)' -and
@@ -413,7 +473,7 @@ $settingTooltipBody = [regex]::Match($selectorDocumentationView,
 $settingTooltipRenderBody = $settingTooltipBody
 $alignedTooltipBody = $tooltipRowLayout
 $optionListTooltipBody = [regex]::Match($renderer,
-    'void ShowOptionListTooltip\([\s\S]*?(?=\n\s*template <std::size_t Count>\s*\n\s*void DrawRuntimeInfoRow)').Value
+    'void DrawOptionListTooltipContent\([\s\S]*?(?=\n\s*template <std::size_t Count>\s*\n\s*void ShowOptionListTooltip)').Value
 $examplesBlockBody = [regex]::Match($selectorDocumentationView,
     'void DrawTooltipExamplesBlock\([\s\S]*?(?=\n        \}\r?\n    \})').Value
 $selectorTooltipColumns = $alignedTooltipBody -match 'std::max' -and
@@ -497,12 +557,58 @@ $statusPresentation = $renderer -notmatch 'void ShowStatusTooltip\(' -and
     $renderer -notmatch 'ImGui::TextDisabled\("\(\?\)"\)' -and
     $renderer -notmatch 'ShowCameraTransitionTooltip' -and
     $renderer -match 'SeparatorText\(transitionHeader\.c_str\(\)\)' -and
-    $renderer -match 'CameraTransitionDetail\(integration\.overall\)'
-$restoredOriginalLayout = $renderer -notmatch 'DrawSectionHeading|LocalizedLabelWidth|controlWidthLimit|hotkeyKeyColumn|minOverlayWidth' -and
-    $renderer -match 'ImGuiTableFlags_SizingFixedSame \|\s*ImGuiTableFlags_BordersInnerV' -and
-    $renderer -match 'SetNextWindowSizeConstraints\(ImVec2\(0\.0f, 0\.0f\)' -and
+    $renderer -match 'CameraTransitionDetail\(integration\.potential\.overall\)'
+$runtimeTelemetryBlock = [regex]::Match($renderer,
+    'ImGui::SeparatorText\("Current State"\);[\s\S]*?(?=ImGui::TreeNodeEx\("Camera State")').Value
+$fullRowTooltipHitbox = $renderer -match 'bounds\.max\.x\s*=\s*valueCursor\.x\s*\+\s*ImGui::GetContentRegionAvail\(\)\.x' -and
+    $renderer -match 'IsMouseHoveringRect\(bounds\.min,\s*bounds\.max,\s*false\)' -and
+    $renderer -match 'ImGui::IsWindowHovered\(\)' -and
+    $renderer -match 'FinishRuntimeTelemetryRow\(bounds\);\s*ShowRuntimeRowTooltip\(i18n,\s*options,\s*bounds\)' -and
+    $renderer -match 'const TooltipOption options\[\]\s*=\s*\{\{\{\},\s*\{\},\s*tooltip\}\};[\s\S]*?ShowRuntimeRowTooltip\(i18n,\s*options,\s*bounds\)' -and
+    $renderer -match 'DrawRuntimeSectionStatus[\s\S]*?FinishRuntimeTelemetryRow\(bounds\);\s*ShowRuntimeRowTooltip\(i18n,\s*options,\s*bounds\)'
+$runtimeSubheadingBody = [regex]::Match($renderer,
+    'void DrawRuntimeTelemetrySubheading\([\s\S]*?(?=\n\s*void DrawActiveStatus)').Value
+$runtimeSubheadingStyle = $runtimeSubheadingBody -match 'TableNextRow\(ImGuiTableRowFlags_None,\s*5\.0f\)' -and
+    $runtimeSubheadingBody -match 'ImGui::TextUnformatted\(' -and
+    $runtimeSubheadingBody -match 'drawList->AddLine' -and
+    $runtimeSubheadingBody -match 'headingRect\.x\s*\+\s*ImGui::GetStyle\(\)\.ItemSpacing\.x' -and
+    $runtimeSubheadingBody -match 'PushClipRect\(contentMin,\s*contentMax,\s*false\)' -and
+    $runtimeSubheadingBody -notmatch 'TextDisabled|Show.*Tooltip|IsItemHovered'
+$rightDashboardLayout = $renderer -notmatch 'DrawSectionHeading|LocalizedLabelWidth|controlWidthLimit|hotkeyKeyColumn|minOverlayWidth' -and
+    $renderer -match 'ImGuiTableFlags_SizingStretchProp \|\s*ImGuiTableFlags_BordersInnerV' -and
+    $renderer -match 'TableSetupColumn\("settings", ImGuiTableColumnFlags_WidthStretch,\s*0\.44f\)' -and
+    $renderer -match 'TableSetupColumn\("runtime", ImGuiTableColumnFlags_WidthStretch,\s*0\.56f\)' -and
+    $renderer -match 'preferredOverlayWidth = 1024\.0f \* dpiScale_' -and
+    $renderer -match 'SetNextWindowSizeConstraints\(' -and
     $renderer -match 'SetNextItemWidth\(commonSelectWidth\)' -and
-    $renderer -match 'SeparatorText\(runtimeHeader\.c_str\(\)\)' -and
+    $renderer -match 'SeparatorText\("Current State"\)' -and
+    $renderer -match 'SeparatorText\("Camera Integration"\)' -and
+    $renderer -match 'DrawRuntimeSectionStatus\(localization_, "Gameplay Status"' -and
+    $renderer -match 'DrawRuntimeSectionStatus\(localization_, "Cinematic Status"' -and
+    $runtimeSubheadingStyle -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Viewport Aspect"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Writer Aspect"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Policy Aspect"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Gameplay FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Native FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("HorPlus Target"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Current Output FOV"' -and
+    $runtimeTelemetryBlock -match 'loc::tooltip::runtime::CurrentOutputFov' -and
+    $runtimeTelemetryBlock -notmatch 'DrawRuntimeTelemetryRow\("HorPlus FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Aspect Match"' -and
+    $runtimeTelemetryBlock -match '"Cinematic Aspect Preview"' -and
+    $runtimeTelemetryBlock -match 'cinematicFovRowLabel = "FOV Mode"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Cinematic ENTER FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Gameplay Boundary FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("FOV Match"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetrySubheading\("Cinematics"\)' -and
+    $runtimeTelemetryBlock -match 'loc::tooltip::runtime::FovMatch' -and
+    $runtimeTelemetryBlock -match 'loc::tooltip::runtime::GameplayBoundaryAspect' -and
+    $runtimeTelemetryBlock -match 'loc::tooltip::runtime::CinematicEnterAspect' -and
+    $runtimeTelemetryBlock -match 'loc::tooltip::runtime::GameplayBoundaryFov' -and
+    $runtimeTelemetryBlock -match 'loc::tooltip::runtime::CinematicEnterFov' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Camera Transition"' -and
+    $runtimeTelemetryBlock -notmatch 'DrawRuntimeInfoRow\(' -and
     $renderer -match 'for\s*\(const auto& binding : HotkeyBindingPresentations\)' -and
     $renderer -match 'DrawHotkeyBinding\(localization_, binding\.label, binding\.id,'
 $stableHotkeyWidgetIdentity = Test-HotkeyStableIdentity $hotkeyBindingBody
@@ -534,7 +640,14 @@ $declaredNames = @([regex]::Matches($keySource, 'inline constexpr Key (\w+)\{"([
     ForEach-Object { [pscustomobject]@{ Name = $_.Groups[1].Value; Path = $_.Groups[2].Value } })
 $usedNames = [regex]::Matches($sourceText, 'loc::(?:[A-Za-z_]\w*::)*([A-Za-z_]\w*)') |
     ForEach-Object { $_.Groups[1].Value }
-$obsolete = @($declaredNames | Where-Object { $_.Name -notin $usedNames })
+$obsolete = @($declaredNames | Where-Object {
+    $_.Name -notin $usedNames -and $_.Path -notlike 'camera_state.*' -and
+        $_.Path -notin @('common.unavailable_value', 'section.runtime', 'section.camera_integration',
+            'section.camera_state', 'section.presentation', 'section.zoom',
+            'section.fov', 'section.sources', 'section.generation',
+            'ui.viewport_aspect', 'setting.zoom', 'tooltip.runtime.viewport_auto',
+            'tooltip.runtime.viewport_unavailable')
+})
 $pocText = [regex]::Matches($renderer, 'ImGui::Text(?:Unformatted)?\("(?:Overlay Rendering POC|Presentation path: OK|D3D12 queue: DIRECT|Buffers: %u)')
 $unexpectedDirectUiText = [regex]::Matches(($localizedPresentationModules -join "`n"), 'ImGui::Text(?:Unformatted|Disabled|Wrapped)?\("(?!##|Overlay Rendering POC|Presentation path: OK|D3D12 queue: DIRECT|Buffers: %u)[A-Za-z][^"]{2,}"')
 
@@ -561,7 +674,8 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
     -not $placementSaveContract -or
     -not $conditionalExamplesOptionGap -or
     -not $tooltipContentOwnership -or -not $statusPresentation -or
-    -not $restoredOriginalLayout -or
+    -not $rightDashboardLayout -or -not $rightTooltipSourceCoverage -or
+    -not $fullRowTooltipHitbox -or
     -not $stableHotkeyWidgetIdentity -or -not $hotkeyIdentityNegativeFixture -or
     -not $inlineHotkeyPresentation -or -not $notificationInlineWrap -or
     -not $notificationHeader -or
@@ -605,7 +719,9 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
         ' conditional_examples_gap=' + $conditionalExamplesOptionGap +
         ' tooltip_content_ownership=' + $tooltipContentOwnership +
         ' status_presentation=' + $statusPresentation +
-        ' restored_original_layout=' + $restoredOriginalLayout +
+        ' right_dashboard_layout=' + $rightDashboardLayout +
+        ' right_tooltip_coverage_18_locales=' + $rightTooltipSourceCoverage +
+        ' full_row_tooltip_hitbox=' + $fullRowTooltipHitbox +
         ' stable_hotkey_widget_identity=' + $stableHotkeyWidgetIdentity +
         ' hotkey_identity_negative_fixture=' + $hotkeyIdentityNegativeFixture +
         ' inline_hotkeys=' + $inlineHotkeyPresentation +
@@ -623,7 +739,7 @@ Write-Output ('locales=' + $descriptors.Count + ' canonical=' + $canonicalCode +
     ' keys=' + $catalogKeys.Count + ' registry_lookup=PASS locale_parity=PASS placeholders=PASS utf8=PASS ' +
     'embedded_resources=PASS generic_manager=PASS registry_selector=PASS single_asi=PASS ' +
     'embedded_font_profiles=PASS locale_metadata_glyphs=PASS selector_font_faces=PASS ' +
-    'camera_state_view_boundary=PASS ' +
+    'camera_state_view_boundary=PASS right_tooltip_coverage_18_locales=PASS full_row_tooltip_hitbox=PASS ' +
     'proggyclean_merge=PASS integer_font_sizes=PASS')
 Write-Output ('font_rendering_scope=offline embedded glyph coverage; ' +
     'Arabic shaping/bidi/RTL and runtime visual rendering not established')

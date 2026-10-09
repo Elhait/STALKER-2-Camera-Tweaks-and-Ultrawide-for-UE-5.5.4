@@ -11,6 +11,7 @@ namespace overlay::loc
     namespace common {
         inline constexpr Key Enabled{"common.enabled"};
         inline constexpr Key Disabled{"common.disabled"};
+        inline constexpr Key Default{"common.default"};
         inline constexpr Key Unavailable{"common.unavailable"};
         inline constexpr Key UnavailableValue{"common.unavailable_value"};
         inline constexpr Key CannotAssess{"common.cannot_assess"};
@@ -50,13 +51,13 @@ namespace overlay::loc
     namespace setting {
         inline constexpr Key GameplayMode{"setting.gameplay_mode"};
         inline constexpr Key CinematicAspect{"setting.cinematic_aspect"};
+        inline constexpr Key CinematicFraming{"setting.cinematic_framing"};
         inline constexpr Key CinematicFov{"setting.cinematic_fov"};
         inline constexpr Key DialogueZoom{"setting.dialogue_zoom"};
         inline constexpr Key OverlayToggle{"setting.overlay_toggle"};
         inline constexpr Key Language{"setting.language"};
         inline constexpr Key FontSize{"setting.font_size"};
         inline constexpr Key Mode{"setting.mode"};
-        inline constexpr Key AspectRatio{"setting.aspect_ratio"};
         inline constexpr Key FovMode{"setting.fov_mode"};
         inline constexpr Key Zoom{"setting.zoom"};
     }
@@ -66,11 +67,14 @@ namespace overlay::loc
         inline constexpr Key Waiting{"transition.waiting"};
         inline constexpr Key Aligned{"transition.aligned"};
         inline constexpr Key NotAligned{"transition.not_aligned"};
-        inline constexpr Key DetailWaiting{"transition.detail.waiting"};
         inline constexpr Key DetailAligned{"transition.detail.aligned"};
         inline constexpr Key DetailNotAligned{"transition.detail.not_aligned"};
         inline constexpr Key DetailCannotAssess{"transition.detail.cannot_assess"};
+        inline constexpr Key DetailWaiting{"transition.detail.waiting"};
+        inline constexpr Key DetailExpectedSeamless{"transition.detail.expected_seamless"};
         inline constexpr Key ActiveValue{"transition.active_value"};
+        inline constexpr Key ActiveSelectionContext{"transition.context_active_selection"};
+        inline constexpr Key NextSelectionContext{"transition.context_next_selection"};
     }
     namespace status {
         inline constexpr Key GameplayIncomplete{"status.detail.gameplay_incomplete"};
@@ -85,6 +89,7 @@ namespace overlay::loc
         inline constexpr Key CinematicIncomplete{"status.detail.cinematic_incomplete"};
         inline constexpr Key CinematicUnavailable{"status.detail.cinematic_unavailable"};
         inline constexpr Key CinematicNativeReady{"status.detail.cinematic_native_ready"};
+        inline constexpr Key CinematicDisabled{"status.detail.cinematic_disabled"};
         inline constexpr Key NextCinematicReady{"status.detail.next_cinematic_ready"};
         inline constexpr Key CinematicActive{"status.detail.cinematic_active"};
         inline constexpr Key CinematicSelectionIncomplete{"status.detail.cinematic_selection_incomplete"};
@@ -115,8 +120,10 @@ namespace overlay::loc
             inline constexpr Key HorPlusExample100{"tooltip.gameplay.horplus_example_100"};
             inline constexpr Key HorPlusExample110{"tooltip.gameplay.horplus_example_110"};
             inline constexpr Key AspectRecalculation{"tooltip.gameplay.aspect_recalculation"};
+            inline constexpr Key RuntimeCombine{"tooltip.gameplay.runtime_combine"};
         }
         namespace cinematics {
+            inline constexpr Key Enabled{"tooltip.cinematics.enabled"};
             inline constexpr Key AspectAuto{"tooltip.cinematics.aspect.auto"};
             inline constexpr Key AspectNative{"tooltip.cinematics.aspect.native"};
             inline constexpr Key Aspect169{"tooltip.cinematics.aspect.16_9"};
@@ -132,10 +139,8 @@ namespace overlay::loc
             inline constexpr Key FovNativeExample90{"tooltip.cinematics.fov.native_example_90"};
         }
         namespace dialogue {
-            inline constexpr Key ZoomNative{"tooltip.dialogue.zoom.native"};
+            inline constexpr Key Enabled{"tooltip.dialogue.enabled"};
             inline constexpr Key ZoomExamplesContext{"tooltip.dialogue.zoom.examples_context"};
-            inline constexpr Key ZoomNativeExample90{"tooltip.dialogue.zoom.native_example_90"};
-            inline constexpr Key ZoomNativeExample110{"tooltip.dialogue.zoom.native_example_110"};
             inline constexpr Key ZoomAdaptive{"tooltip.dialogue.zoom.adaptive"};
             inline constexpr Key ZoomAdaptiveExample90{"tooltip.dialogue.zoom.adaptive_example_90"};
             inline constexpr Key ZoomAdaptiveExample110{"tooltip.dialogue.zoom.adaptive_example_110"};
@@ -161,12 +166,15 @@ namespace overlay::loc
         namespace overlay { inline constexpr Key AlwaysActive{"tooltip.overlay.always_active"}; }
         namespace runtime {
             inline constexpr Key Viewport{"tooltip.runtime.viewport"};
+            inline constexpr Key WriterAspect{"tooltip.runtime.writer_aspect"};
+            inline constexpr Key PolicyAspect{"tooltip.runtime.policy_aspect"};
             inline constexpr Key ViewportAuto{"tooltip.runtime.viewport_auto"};
             inline constexpr Key ViewportUnavailable{"tooltip.runtime.viewport_unavailable"};
             inline constexpr Key AspectMatched{"tooltip.runtime.aspect_matched"};
             inline constexpr Key AspectMismatch{"tooltip.runtime.aspect_mismatch"};
             inline constexpr Key AspectCannotAssess{"tooltip.runtime.aspect_cannot_assess"};
             inline constexpr Key CinematicAspect{"tooltip.runtime.cinematic_aspect"};
+            inline constexpr Key CinematicDefault{"tooltip.runtime.cinematic_default"};
             inline constexpr Key CinematicAspectUnavailable{"tooltip.runtime.cinematic_aspect_unavailable"};
             inline constexpr Key GameplayFov{"tooltip.runtime.gameplay_fov"};
             inline constexpr Key GameplayFovUnavailable{"tooltip.runtime.gameplay_fov_unavailable"};
@@ -174,11 +182,27 @@ namespace overlay::loc
             inline constexpr Key NativeFovUnavailable{"tooltip.runtime.native_fov_unavailable"};
             inline constexpr Key HorPlusFov{"tooltip.runtime.horplus_fov"};
             inline constexpr Key HorPlusFovUnavailable{"tooltip.runtime.horplus_fov_unavailable"};
+            inline constexpr Key CurrentOutputFov{"tooltip.runtime.current_output_fov"};
+            inline constexpr Key TransitionEvidence{"tooltip.runtime.transition_evidence"};
+            inline constexpr Key TransitionGeneration{"tooltip.runtime.transition_generation"};
+            inline constexpr Key GameplayBoundaryAspect{"tooltip.runtime.gameplay_boundary_aspect"};
+            inline constexpr Key CinematicEnterAspect{"tooltip.runtime.cinematic_enter_aspect"};
+            inline constexpr Key AspectDelta{"tooltip.runtime.aspect_delta"};
+            inline constexpr Key GameplayBoundaryFov{"tooltip.runtime.gameplay_boundary_fov"};
+            inline constexpr Key CinematicEnterFov{"tooltip.runtime.cinematic_enter_fov"};
+            inline constexpr Key FovDelta{"tooltip.runtime.fov_delta"};
+            inline constexpr Key FovMatch{"tooltip.runtime.fov_match"};
+            inline constexpr Key CameraTransition{"tooltip.runtime.camera_transition"};
+            inline constexpr Key GameplayStatus{"tooltip.runtime.gameplay_status"};
+            inline constexpr Key CinematicStatus{"tooltip.runtime.cinematic_status"};
         }
     }
     namespace camera_state {
         inline constexpr Key Waiting{"camera_state.waiting"};
         inline constexpr Key State{"camera_state.field.state"};
+        inline constexpr Key LastPublication{"camera_state.field.last_publication"};
+        inline constexpr Key Coordinator{"camera_state.field.coordinator"};
+        inline constexpr Key AspectPreview{"camera_state.field.aspect_preview"};
         inline constexpr Key GameplayFov{"camera_state.field.gameplay_fov"};
         inline constexpr Key Provenance{"camera_state.field.provenance"};
         inline constexpr Key Epoch{"camera_state.field.epoch"};
@@ -195,18 +219,24 @@ namespace overlay::loc
         inline constexpr Key PolicyValid{"camera_state.field.policy_valid"};
         inline constexpr Key RecoveryExcluded{"camera_state.field.recovery_excluded"};
         inline constexpr Key Target{"camera_state.field.target"};
-        inline constexpr Key SettingKnown{"camera_state.field.setting_known"};
         inline constexpr Key GameSource{"camera_state.field.game_source"};
         inline constexpr Key Native{"camera_state.field.native"};
         inline constexpr Key NativeSource{"camera_state.field.native_source"};
         inline constexpr Key HorPlus{"camera_state.field.horplus"};
-        inline constexpr Key HorPlusSource{"camera_state.field.horplus_source"};
-        inline constexpr Key Aspect{"camera_state.field.aspect"};
+        inline constexpr Key CurrentOutput{"camera_state.field.current_output"};
+        inline constexpr Key WriterAspect{"camera_state.field.writer_aspect"};
+        inline constexpr Key GameplayPolicyAspect{"camera_state.field.gameplay_policy_aspect"};
+        inline constexpr Key RuntimeCombineDetail{"camera_state.value.runtime_combine_detail"};
+        inline constexpr Key RuntimeCombine{"camera_state.field.runtime_combine"};
         inline constexpr Key AspectSource{"camera_state.field.aspect_source"};
         inline constexpr Key Flags{"camera_state.field.flags"};
         inline constexpr Key GameplayWriter{"camera_state.field.gameplay_writer"};
         inline constexpr Key PresentationEpoch{"camera_state.field.presentation_epoch"};
         inline constexpr Key EventSequence{"camera_state.field.event_sequence"};
+        inline constexpr Key Freshness{"camera_state.field.freshness"};
+        inline constexpr Key Current{"camera_state.value.current"};
+        inline constexpr Key Retained{"camera_state.value.retained"};
+        inline constexpr Key LastKnown{"camera_state.value.last_known"};
         inline constexpr Key UnavailableCounter{"camera_state.value.unavailable_counter"};
     }
     namespace notification {

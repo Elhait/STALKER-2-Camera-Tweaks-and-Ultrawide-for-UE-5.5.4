@@ -1,5 +1,18 @@
 # Production Architecture
 
+## Camera FOV semantics
+
+Runtime FOV values can differ by up to ±1.0 degree through native recalculation
+and interpolation while representing the same camera intent. The canonical
+inclusive tolerance is `camera::kSemanticFovToleranceDegrees` in
+`src/camera/fov_semantics.hpp`. Use it only when deciding whether two FOV
+values express the same camera intent. Never infer camera source/provenance
+from FOV proximity. Do not substitute it for stricter endpoint evidence
+required by an active recovery/interpolation lifecycle. Keep numerical
+precision, projection singularity, interpolation range, sample stability, and
+test-output tolerances separate; a difference larger than 1.0 degree is a
+reason to investigate, not proof of a transition.
+
 ## Runtime ownership
 
 The translation-unit-private `RuntimeState` in `src/plugin/runtime.cpp` is the
@@ -18,10 +31,45 @@ and cross-domain coordination. A separate coordinator type is not required
 unless it can own an independent state machine without receiving the entire
 runtime as callbacks.
 
+## Persistent runtime diagnostics
+
+Runtime diagnostics are persistent project infrastructure, not disposable
+task-specific scaffolding. Instrumentation that has demonstrated practical
+value for investigating camera, lifecycle, ownership, source or compatibility
+behavior should remain available in the ordinary production ASI under the
+standard Diagnostic Mode after the triggering issue is resolved. A future
+investigation should reuse and extend these observation points instead of
+recreating them by default.
+
+Instrumentation and emission are separate concerns. Diagnostic Mode may
+enable bounded observation snapshots, classification and logging; it must not
+change camera output, aspect, lifecycle, ownership, association, correction
+gates or state-machine timing. Emission should be event/change based and
+semantically deduplicated where useful, not per-frame by default. When
+Diagnostic Mode is off, diagnostic-only reads, snapshots, formatting and log
+emission should be skipped; shared observation required by production
+ownership/correction remains active independently of that mode.
+
+Persistent runtime diagnostic marker names, symbols, types and filenames name
+the runtime concept they observe, not a temporary finding number, remediation
+phase or build-profile label. Finding IDs belong in remediation documentation
+and historical evidence only. When an established marker is renamed, preserve
+the old spelling only as historical evidence and document the current marker.
+
+Remove or replace established instrumentation only with a documented,
+evidence-backed reason: it is unsafe or invasive, has a material measured
+performance cost, depends on a stale/unsafe runtime layout or signature, or
+is fully superseded by a safer and more generally useful observation contract.
+Keep the diagnostic capability when replacing its implementation, and update
+the relevant tests and this contract. A temporary build profile may still be
+used for instrumentation that cannot safely ship in the ordinary artifact;
+that exception must be explicit and must not become the default for reusable,
+bounded diagnostics.
+
 User-facing feature configuration and lifecycle capability are separate
 concerns. A domain may install an observation-only dependency for another
 domain without enabling its presentation intervention. A dependent
-non-Native Dialogue lifecycle is available only when its cinematic lifecycle
+corrected Dialogue lifecycle is available only when its cinematic lifecycle
 observation and Gameplay recovery observation capabilities are available;
 otherwise it fails closed while unrelated feature status remains independent.
 

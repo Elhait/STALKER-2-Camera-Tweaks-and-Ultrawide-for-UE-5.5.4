@@ -57,11 +57,15 @@ int main()
         source, 90.0f, source, 100.0f, 5.0f);
     const auto stable = gameplay::EvaluateGameplayContextChange(
         source, 90.0f, source, 90.1f, 5.0f);
+    const auto nativeVariance = gameplay::EvaluateGameplayContextChange(
+        source, 90.0f, source, 90.6557f, 5.0f);
     pass &= Check(sourceChange.InvalidatesDialogue() && sourceChange.sourceChanged,
         "source_change_invalidates");
     pass &= Check(fovChange.InvalidatesDialogue() && fovChange.materialFovJump,
         "material_fov_jump_invalidates");
     pass &= Check(!stable.InvalidatesDialogue(), "stable_context_is_retained");
+    pass &= Check(!nativeVariance.InvalidatesDialogue(),
+        "subdegree_native_fov_variance_does_not_invalidate_camera_intent");
 
     std::printf("gameplay_camera_safety=%s\n", pass ? "PASS" : "FAIL");
     return pass ? 0 : 1;

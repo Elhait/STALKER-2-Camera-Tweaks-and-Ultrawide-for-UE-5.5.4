@@ -1,4 +1,5 @@
 #include "dialogue_state.hpp"
+#include "../camera/fov_semantics.hpp"
 
 #include <cmath>
 
@@ -19,8 +20,8 @@ namespace dialogue
     bool CandidatePromotionAllowed(config::DialogueZoomPolicy selectedPolicy,
         bool coordinatorGameplay, bool postCinematicExclusionInactive) noexcept
     {
-        return selectedPolicy != config::DialogueZoomPolicy::Native &&
-            coordinatorGameplay && postCinematicExclusionInactive;
+        (void)selectedPolicy;
+        return coordinatorGameplay && postCinematicExclusionInactive;
     }
 
     void CandidateTracker::Reset() noexcept
@@ -96,13 +97,12 @@ namespace dialogue
     }
 
     CandidateDecision CandidateTracker::Observe(float sample, std::uintptr_t source,
-        float nativeTarget, float sourceTargetEpsilon, float reversalEpsilon,
+        float nativeTarget, float reversalEpsilon,
         float stabilityEpsilon, std::uint32_t stableSampleLimit) noexcept
     {
         if (!pending_ || source_ == 0 || source != source_ ||
             !std::isfinite(nativeTarget_) || !std::isfinite(nativeTarget) ||
-            !std::isfinite(sourceTargetEpsilon) || sourceTargetEpsilon < 0.0f ||
-            std::fabs(nativeTarget - nativeTarget_) > sourceTargetEpsilon) {
+            !camera::AreFovValuesSemanticallyEquivalent(nativeTarget, nativeTarget_)) {
             Reset();
             return CandidateDecision::Cancel;
         }
@@ -146,6 +146,26 @@ namespace dialogue
         return value_;
     }
 
+    void CorrectionActivation::Reset() noexcept
+    {
+        armed_.store(false, std::memory_order_release);
+    }
+
+    void CorrectionActivation::AcceptedStart(bool moduleEnabled) noexcept
+    {
+        armed_.store(moduleEnabled, std::memory_order_release);
+    }
+
+    void CorrectionActivation::ModuleEnabledChanged(bool enabled) noexcept
+    {
+        if (!enabled) armed_.store(false, std::memory_order_release);
+    }
+
+    bool CorrectionActivation::CanCorrect(bool moduleEnabled) const noexcept
+    {
+        return moduleEnabled && armed_.load(std::memory_order_acquire);
+    }
+
     void RecoveryRearm::Reset() noexcept
     {
         pending_ = false;
@@ -176,7 +196,7 @@ namespace dialogue
     }
 
     RecoveryRearm::Decision RecoveryRearm::Observe(std::uintptr_t source, float sample,
-        float nativeTarget, float targetEpsilon, float stabilityEpsilon,
+        float nativeTarget, float endpointToleranceDegrees,
         std::uint32_t requiredStableSamples) noexcept
     {
         if (!pending_) return Decision::Cancel;
@@ -185,21 +205,20 @@ namespace dialogue
             return Decision::Cancel;
         }
         if (!std::isfinite(sample) || !std::isfinite(nativeTarget) ||
-            !std::isfinite(previous_) || !std::isfinite(targetEpsilon) ||
-            !std::isfinite(stabilityEpsilon) || targetEpsilon < 0.0f ||
-            stabilityEpsilon < 0.0f || requiredStableSamples == 0) {
+            !std::isfinite(previous_) || !std::isfinite(endpointToleranceDegrees) ||
+            endpointToleranceDegrees < 0.0f || requiredStableSamples == 0) {
             // An unavailable target is not evidence of completion. Keep the
             // pending lifecycle fail-closed until a valid native sample arrives.
             return Decision::Pending;
         }
         if (!std::isfinite(nativeTarget_)) {
             nativeTarget_ = nativeTarget;
-        } else if (std::fabs(nativeTarget - nativeTarget_) > stabilityEpsilon) {
+        } else if (!camera::AreFovValuesSemanticallyEquivalent(nativeTarget, nativeTarget_)) {
             nativeTarget_ = nativeTarget;
             stableSamples_ = 0;
         }
 
-        if (std::fabs(sample - nativeTarget_) <= targetEpsilon) {
+        if (std::fabs(sample - nativeTarget_) <= endpointToleranceDegrees) {
             Reset();
             return Decision::Complete;
         }
@@ -234,13 +253,13 @@ namespace dialogue
 
     PostCinematicRecoveryExclusion::Observation
     PostCinematicRecoveryExclusion::ObserveValidated(
-        std::uintptr_t source, float currentFov, float epsilon) noexcept
+        std::uintptr_t source, float currentFov, float endpointToleranceDegrees) noexcept
     {
         if (!IsActive()) return Observation::Inactive;
 
         const float targetFov = targetFov_.load(std::memory_order_acquire);
         if (!source || !std::isfinite(currentFov) || !std::isfinite(targetFov) ||
-            !std::isfinite(epsilon) || epsilon < 0.0f) {
+            !std::isfinite(endpointToleranceDegrees) || endpointToleranceDegrees < 0.0f) {
             Reset();
             return Observation::Cancelled;
         }
@@ -258,11 +277,11 @@ namespace dialogue
 
         const float distanceFromTarget = std::fabs(currentFov - targetFov);
         if (!recoveryStarted_.load(std::memory_order_acquire)) {
-            if (distanceFromTarget > epsilon)
+            if (distanceFromTarget > endpointToleranceDegrees)
                 recoveryStarted_.store(true, std::memory_order_release);
             return Observation::Suppressed;
         }
-        if (distanceFromTarget <= epsilon) {
+        if (distanceFromTarget <= endpointToleranceDegrees) {
             Reset();
             return Observation::Recovered;
         }
@@ -270,8 +289,8 @@ namespace dialogue
     }
 
     bool PostCinematicRecoveryExclusion::Observe(
-        std::uintptr_t source, float currentFov, float epsilon) noexcept
+        std::uintptr_t source, float currentFov, float endpointToleranceDegrees) noexcept
     {
-        return ObserveValidated(source, currentFov, epsilon) == Observation::Suppressed;
+        return ObserveValidated(source, currentFov, endpointToleranceDegrees) == Observation::Suppressed;
     }
 }

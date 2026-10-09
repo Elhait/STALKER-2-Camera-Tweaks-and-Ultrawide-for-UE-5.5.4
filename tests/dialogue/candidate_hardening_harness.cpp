@@ -55,33 +55,33 @@ int main()
 
     candidate.Begin(90.0f, 0x2000, 70.0f);
     pass &= Check(candidate.HasContext(), "context_is_captured");
-    pass &= Check(candidate.Observe(89.97f, 0x2000, 70.0f, epsilon,
+    pass &= Check(candidate.Observe(89.97f, 0x2000, 70.6557f,
         epsilon, epsilon) == dialogue::CandidateDecision::Activate,
-        "same_context_activates");
+        "subdegree_native_target_variance_preserves_same_context");
 
     candidate.Begin(90.0f, 0x2000, 70.0f);
-    pass &= Check(candidate.Observe(89.97f, 0x3000, 70.0f, epsilon,
+    pass &= Check(candidate.Observe(89.97f, 0x3000, 70.0f,
         epsilon, epsilon) == dialogue::CandidateDecision::Cancel,
         "source_change_cancels");
     pass &= Check(!candidate.IsPending(), "source_change_clears_candidate");
 
     candidate.Begin(90.0f, 0x2000, 70.0f);
-    pass &= Check(candidate.Observe(89.97f, 0x2000, 80.0f, epsilon,
+    pass &= Check(candidate.Observe(89.97f, 0x2000, 80.0f,
         epsilon, epsilon) == dialogue::CandidateDecision::Cancel,
         "target_change_cancels");
 
     candidate.Begin(90.0f, 0, 70.0f);
     pass &= Check(!candidate.HasContext(), "zero_source_fails_closed");
-    pass &= Check(candidate.Observe(89.97f, 0, 70.0f, epsilon,
+    pass &= Check(candidate.Observe(89.97f, 0, 70.0f,
         epsilon, epsilon) == dialogue::CandidateDecision::Cancel,
         "zero_source_does_not_activate");
 
     candidate.Begin(90.0f, 0x2000, std::numeric_limits<float>::quiet_NaN());
     pass &= Check(!candidate.HasContext(), "invalid_target_fails_closed");
 
-    pass &= Check(!dialogue::CandidatePromotionAllowed(
+    pass &= Check(dialogue::CandidatePromotionAllowed(
         config::DialogueZoomPolicy::Native, true, true),
-        "native_policy_blocks_promotion");
+        "correction_policy_does_not_gate_shared_dialogue_observation");
     pass &= Check(!dialogue::CandidatePromotionAllowed(
         config::DialogueZoomPolicy::Adaptive, false, true),
         "non_gameplay_blocks_promotion");
@@ -92,7 +92,7 @@ int main()
         config::DialogueZoomPolicy::Adaptive, true, true) &&
         dialogue::CandidatePromotionAllowed(
             config::DialogueZoomPolicy::Reduced, true, true),
-        "non_native_policy_change_remains_allowed");
+        "dialogue_observation_is_independent_of_active_mode");
 
     dialogue::RecoveryRearm recovery;
     recovery.Begin(0x1000, 89.5f, 90.0f);

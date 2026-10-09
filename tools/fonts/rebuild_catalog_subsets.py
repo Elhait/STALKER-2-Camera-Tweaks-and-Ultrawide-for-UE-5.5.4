@@ -51,6 +51,22 @@ OUTPUTS = {
     "chinese-traditional": "NotoSansTC-Catalog.ttf",
 }
 
+SCRIPT_RANGES = {
+    "arabic": ((0x0600, 0x06FF),),
+    "japanese": ((0x3000, 0x30FF), (0x4E00, 0x9FFF),
+                 (0xFF00, 0xFFEF)),
+    "korean": ((0xAC00, 0xD7AF),),
+    "chinese-simplified": ((0x3000, 0x303F), (0x4E00, 0x9FFF),
+                           (0xFF00, 0xFFEF)),
+    "chinese-traditional": ((0x3000, 0x303F), (0x4E00, 0x9FFF),
+                            (0xFF00, 0xFFEF)),
+}
+
+
+def belongs_to_profile_script(profile: str, codepoint: int) -> bool:
+    return any(first <= codepoint <= last
+        for first, last in SCRIPT_RANGES[profile])
+
 
 def sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -94,6 +110,14 @@ def main() -> int:
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
     if contract.get("format") != 1 or set(contract.get("profiles", {})) != set(SOURCES):
         raise RuntimeError("glyph contract profile set is invalid")
+    required_common = {int(value, 16) for value in
+        contract.get("additionalRequiredCommonCodepoints", [])}
+    if any(point < 0x20 or point > 0x10FFFF for point in required_common):
+        raise RuntimeError("additional common glyph codepoint is invalid")
+    locked_common = {int(value, 16) for value in
+        contract["profiles"]["common"]["codepoints"]}
+    if not args.update_contract and not required_common.issubset(locked_common):
+        raise RuntimeError("additional required common glyph is absent from subset contract")
 
     registry_source = (ROOT / "src/localization/locale_registry.hpp").read_text(
         encoding="utf-8")
@@ -162,11 +186,32 @@ def main() -> int:
         profile_points = {profile: {int(value, 16)
             for value in data["codepoints"]}
             for profile, data in contract["profiles"].items()}
-        for code, points in display_name_points.items():
+        for profile in SOURCES:
+            if profile != "common":
+                profile_points[profile].clear()
+        common_points = profile_points["common"]
+        common_points.update(required_common)
+        for code, points in required_by_locale.items():
             profile = contract["localeProfiles"][code]
-            target = "common" if profile == "base" else profile
-            already_covered = baseline.get(code, set()) if profile == "base" else set()
-            profile_points[target].update(points - already_covered)
+            if profile == "base":
+                # Preserve only previously established base-font coverage.
+                # Newly introduced catalog text must be embedded instead of
+                # being assumed to exist in ImGui's default fonts.
+                profile_points["common"].update(
+                    points - baseline.get(code, set()))
+            else:
+                # Script fonts are merged only over their configured ranges.
+                # Put the rest of each locale's text in the common font unless
+                # the existing base fonts already provide it.
+                profile_points["common"].update(
+                    point for point in points
+                    if not belongs_to_profile_script(profile, point) and
+                    point not in baseline.get(code, set()))
+                # Script-specific profiles need every catalog codepoint not
+                # already supplied by the common subset or an established
+                # base-font coverage entry for that locale.
+                profile_points[profile].update(
+                    points - common_points - baseline.get(code, set()))
         for profile, points in profile_points.items():
             contract["profiles"][profile]["codepoints"] = [
                 f"{point:04X}" for point in sorted(points)]
@@ -220,7 +265,13 @@ def main() -> int:
 
         built = TTFont(output)
         built_cmap = set(built.getBestCmap())
-        if built_cmap != set(points):
+        if args.update_contract:
+            # Record the actual generated cmap, including any codepoints the
+            # subsetter retains as aliases for selected glyphs.
+            contract["profiles"][profile]["codepoints"] = [
+                f"{point:04X}" for point in sorted(built_cmap)]
+            points = sorted(built_cmap)
+        elif built_cmap != set(points):
             raise RuntimeError(f"subset cmap differs from locked contract: {profile}")
         font_cmaps[profile] = built_cmap
         print(f"{profile}: {output.stat().st_size} bytes, {len(built_cmap)} cmap, "

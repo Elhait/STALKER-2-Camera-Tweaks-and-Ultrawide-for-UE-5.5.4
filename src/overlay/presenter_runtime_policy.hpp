@@ -123,4 +123,10 @@ namespace overlay
     private:
         std::atomic<bool> pending_{};
     };
+
+    inline bool TryScheduleVisibleCameraStateRedraw(bool overlayVisible,
+        PresenterWakeGate& wakeGate) noexcept
+    {
+        return overlayVisible && wakeGate.TrySchedule();
+    }
 }

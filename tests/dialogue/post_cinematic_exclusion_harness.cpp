@@ -40,7 +40,7 @@ int main()
         dialogue::PostCinematicRecoveryExclusion::Observation::Suppressed,
         "neutral_first_sample_stays_suppressed");
     pass &= Check(exclusion.IsActive(), "neutral_first_sample_waits");
-    pass &= Check(exclusion.ObserveValidated(0x1000, 89.8f, 0.01f) ==
+    pass &= Check(exclusion.ObserveValidated(0x1000, 88.8f, 0.01f) ==
         dialogue::PostCinematicRecoveryExclusion::Observation::Suppressed,
         "later_recovery_start_is_suppressed");
     pass &= Check(exclusion.IsActive(), "recovery_stage_is_active");

@@ -10,9 +10,32 @@ namespace camera
         Unavailable,
         NativeEvent,
         NativeNumericObservation,
+        PassThroughResult,
+        ClientViewportObservation,
         ModDerivedState,
         ClassifierHypothesis,
         ConfirmedModLifecycle,
+    };
+
+    // Freshness describes whether a value is current for its own provenance
+    // group. Historical retains the last value for inspection without
+    // presenting it as current camera state.
+    enum class SnapshotFreshness : std::uint8_t
+    {
+        Unavailable,
+        Current,
+        Retained,
+        Historical,
+    };
+
+    struct CameraStateFreshness
+    {
+        SnapshotFreshness writerObservation{SnapshotFreshness::Unavailable};
+        SnapshotFreshness transformedResult{SnapshotFreshness::Unavailable};
+        SnapshotFreshness presentation{SnapshotFreshness::Unavailable};
+        SnapshotFreshness dialogue{SnapshotFreshness::Unavailable};
+        SnapshotFreshness gameplayMode{SnapshotFreshness::Unavailable};
+        SnapshotFreshness zoom{SnapshotFreshness::Unavailable};
     };
 
     enum class PresentationState : std::uint8_t
@@ -41,6 +64,7 @@ namespace camera
     };
 
     const char* EvidenceProvenanceName(EvidenceProvenance value) noexcept;
+    const char* SnapshotFreshnessName(SnapshotFreshness value) noexcept;
     const char* PresentationStateName(PresentationState value) noexcept;
     const char* DialogueStateName(DialogueState value) noexcept;
     const char* ZoomDirectionName(ZoomDirection value) noexcept;
@@ -101,22 +125,53 @@ namespace camera
         bool valid{};
     };
 
+    // A semantic FOV fact is independently valid and can remain Retained
+    // across camera-owner changes without being presented as a live sample.
+    struct CameraFovFact
+    {
+        float value{std::numeric_limits<float>::quiet_NaN()};
+        bool valid{};
+        EvidenceProvenance provenance{EvidenceProvenance::Unavailable};
+        SnapshotFreshness freshness{SnapshotFreshness::Unavailable};
+        std::uintptr_t source{};
+        bool sourceValid{};
+        std::uint64_t sequence{};
+    };
+
     struct CameraEvidenceSnapshot
     {
-        float nativeWriterFov{std::numeric_limits<float>::quiet_NaN()};
+        CameraFovFact gameplayFov{};
+        CameraFovFact nativeFov{};
+        CameraFovFact horPlusTargetFov{};
+        CameraFovFact currentOutputFov{};
         float aspect{std::numeric_limits<float>::quiet_NaN()};
         std::uint8_t flags{};
-        float transformedFov{std::numeric_limits<float>::quiet_NaN()};
-        bool nativeWriterFovValid{};
         bool aspectValid{};
-        bool transformedFovValid{};
-        EvidenceProvenance nativeWriterFovProvenance{EvidenceProvenance::Unavailable};
+        // Retains whether a full writer publication supplied any usable FOV
+        // or aspect evidence, independently of transaction Native FOV.
+        bool writerObservationHasEvidence{};
         EvidenceProvenance aspectProvenance{EvidenceProvenance::Unavailable};
-        EvidenceProvenance transformedFovProvenance{EvidenceProvenance::Unavailable};
         bool configuredGameplayFovKnown{};
-        float retainedGameplayFov{std::numeric_limits<float>::quiet_NaN()};
-        bool retainedGameplayFovValid{};
-        EvidenceProvenance retainedGameplayFovProvenance{EvidenceProvenance::Unavailable};
+        float gameplayPolicyAspect{std::numeric_limits<float>::quiet_NaN()};
+        bool gameplayPolicyAspectValid{};
+        EvidenceProvenance gameplayPolicyAspectProvenance{EvidenceProvenance::Unavailable};
+        float currentViewportAspect{std::numeric_limits<float>::quiet_NaN()};
+        bool currentViewportAspectValid{};
+        EvidenceProvenance currentViewportAspectProvenance{EvidenceProvenance::Unavailable};
+        bool runtimeCombineValid{};
+        float runtimeCombineAspectBefore{std::numeric_limits<float>::quiet_NaN()};
+        float runtimeCombineTargetAspect{std::numeric_limits<float>::quiet_NaN()};
+        float runtimeCombineAspectAfter{std::numeric_limits<float>::quiet_NaN()};
+        float runtimeCombineFovInput{std::numeric_limits<float>::quiet_NaN()};
+        float runtimeCombineFovOutput{std::numeric_limits<float>::quiet_NaN()};
+        std::uint8_t runtimeCombineFlagsBefore{};
+        std::uint8_t runtimeCombineFlagsAfter{};
+        bool runtimeCombineMismatch{};
+        bool runtimeCombineWriteAttempted{};
+        bool runtimeCombineWriteSucceeded{};
+        bool runtimeCombineReadbackValid{};
+        bool runtimeCombineConfirmed{};
+        bool runtimeCombineFovApplied{};
     };
 
     struct SourceProvenance
@@ -141,6 +196,7 @@ namespace camera
         CameraEvidenceSnapshot evidence{};
         SourceProvenance source{};
         GenerationProvenance generation{};
+        CameraStateFreshness freshness{};
     };
 
     struct CameraStateInput

@@ -49,6 +49,23 @@ namespace
         return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     }
 
+    bool HasAssignment(const std::string& text, const char* key, const char* value)
+    {
+        std::size_t start = 0;
+        while (start < text.size()) {
+            const auto end = text.find('\n', start);
+            const auto lineEnd = end == std::string::npos ? text.size() : end;
+            const auto line = config::Trim(text.substr(start, lineEnd - start));
+            const auto separator = line.find('=');
+            if (separator != std::string::npos &&
+                config::Trim(line.substr(0, separator)) == key &&
+                config::Trim(line.substr(separator + 1)) == value) return true;
+            if (end == std::string::npos) break;
+            start = end + 1;
+        }
+        return false;
+    }
+
     bool FlushProfileCache(const std::filesystem::path& path)
     {
         return WritePrivateProfileStringW(nullptr, nullptr, nullptr,
@@ -84,8 +101,7 @@ namespace
             L"PositionX", -1, path.c_str()));
         const int storedY = static_cast<int>(GetPrivateProfileIntW(L"Overlay",
             L"PositionY", -1, path.c_str()));
-        const bool keptCustom = ReadText(path).find("CustomValue=keep") !=
-            std::string::npos;
+        const bool keptCustom = HasAssignment(ReadText(path), "CustomValue", "keep");
         if (storedX != 640 || storedY != 360 || !keptCustom)
             std::printf("placement_test=saved_values_mismatch x=%d y=%d custom=%d\n",
                 storedX, storedY, keptCustom ? 1 : 0);
@@ -124,11 +140,11 @@ namespace
         }
 
         const auto contents = ReadText(configPath);
-        if (contents.find("Language=uk") == std::string::npos ||
-            contents.find("Enabled=false") == std::string::npos ||
-            contents.find("PositionX=777") == std::string::npos ||
-            contents.find("PositionY=333") == std::string::npos ||
-            contents.find("PositionMigrationComplete=1") == std::string::npos) {
+        if (!HasAssignment(contents, "Language", "uk") ||
+            !HasAssignment(contents, "Enabled", "false") ||
+            !HasAssignment(contents, "PositionX", "777") ||
+            !HasAssignment(contents, "PositionY", "333") ||
+            !HasAssignment(contents, "PositionMigrationComplete", "1")) {
             std::printf("placement_test=migration_values_not_preserved\n");
             return false;
         }
@@ -188,7 +204,7 @@ namespace
 
             const auto contents = ReadText(path);
             const bool settingKept = settingResult &&
-                contents.find("Enabled=false") != std::string::npos;
+                HasAssignment(contents, "Enabled", "false");
             const int storedX = static_cast<int>(GetPrivateProfileIntW(
                 L"Overlay", L"PositionX", -1, path.c_str()));
             const int storedY = static_cast<int>(GetPrivateProfileIntW(

@@ -1,17 +1,83 @@
 # Testing And Research Summary
 
-## Current unified mod — v2.0.1 working-tree candidate (not released)
+## Current release-candidate status — potential v3.0 (not released)
 
-The unified production mod is `STALKER2CameraTweaks.asi`, intended to replace
-the older `STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi`. Do not
-load old and new files together. The repository's `v2.0.0` tag is the previous
-release baseline. The current working-tree candidate includes the v2.0.1
-camera/recovery work and a production Overlay backend migration from game
-DXGI/D3D12 interception to an independent D3D11/DirectComposition presenter.
-These changes are not committed, tagged or released. The complete categorized comparison
-is in [`research/reports/V2_0_0_TO_V2_0_1_DIFF_REPORT_2026-09-28.md`](research/reports/V2_0_0_TO_V2_0_1_DIFF_REPORT_2026-09-28.md).
+The unified production mod is `STALKER2CameraTweaks.asi`; do not load it together
+with the older `STALKER2UltrawideFix.asi` or `STALKER2GameplayAspectFix.asi`.
+The current unreleased candidate includes the post-v2.1 Gameplay, Cinematics,
+Dialogue, Overlay, configuration, localization/font and Camera State changes.
+The categorized v2.1 comparison is in
+[`research/reports/V2_1_TO_POTENTIAL_V3_0_CHANGE_INVENTORY_2026-10-08.md`](research/reports/V2_1_TO_POTENTIAL_V3_0_CHANGE_INVENTORY_2026-10-08.md).
 
-The current default configuration is:
+### Latest verification — 2026-10-09
+
+- R01 fixed: Cinematic ENTER now resolves aspect from the accepted selection's
+  policy, not the previously active policy. The actual-adapter regression
+  checks target, writer output and publication for a changed policy.
+- R02 fixed: font subsets and the derived glyph contract were regenerated from
+  current catalogs. Embedded glyph/resource coverage passes for all 18 locales:
+  1,146 unique required codepoints, missing=0. U+0148 remains pinned in the
+  common subset.
+- Full `test.cmd`: PASS, exit 0; 59/59 registered runners compiled and
+  executed. The production-adapter matrix passed 64 cases with Diagnostic Mode
+  OFF and ON (128 fresh fixture processes).
+- Production `build.cmd` and diagnostic build: PASS, exit 0. The loaded
+  production ASI SHA-256 was
+  `53763B95362F6536FCB40A9AED30B88C817855E8CF6F3C988E96A6B24FC62465`.
+- The user confirms the final in-game runtime regression matrix passed without
+  issues. The supplied log independently verifies R01 on that exact ASI:
+  generation 1 entered with `16:9`, effective aspect `1.77778`, target FOV
+  `95.1311`, and the first post-ENTER writer retained `95.1311`. Later Auto
+  entries used aspect `3` and target `135.398`; recovery completion was logged.
+- No release archive has been assembled or independently inspected, and no
+  release/publishing action has been performed. Runtime regression is reported
+  PASS; packaging remains a separate step.
+
+## Historical working-tree snapshot — v2.0.1 / RuntimeCombine, 2026-10-07
+
+The following records describe an earlier candidate and are retained as
+historical evidence; their test failures, defaults and artifact hashes do not
+describe the current release candidate.
+
+### RuntimeCombine acceptance at that snapshot (working-tree build, not released)
+
+- `RuntimeCombine` is included in the ordinary production source/build,
+  configuration parser/persistence, mode selector, localized tooltips and
+  Camera State diagnostics. Existing `HorPlus` and `AspectRecalculation`
+  modes retain their semantics; the configured default remains `HorPlus`.
+- User-provided runtime log identity: tested mod SHA-256
+  `BD7D96A668044C763EFBA23F55AD7840FA535714E22910B32B2A2BCEBA7A73BC`; game
+  executable SHA-256
+  `61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B`.
+- Integrated scenario: `Load @16:9 → viewport 3:1 → Gameplay → Cinematic
+  ENTER → Cinematic EXIT → Gameplay`. The log confirms aspect synchronization
+  and read-back `1.77778 → 3.0`, FOV `90.6557 → 119.272`, matching Cinematic
+  target, EXIT recovery output held at `119.272` during native interpolation,
+  and resumed Gameplay output `119.274`. The user reports the full sequence
+  looked correct. This validates that artifact and scenario only; mirrored
+  load direction and a broader runtime aspect matrix are not established.
+- Ordinary `cmd /c build.cmd`: PASS. Canonical artifact
+  `STALKER2CameraTweaks.asi`, 3,340,288 bytes, SHA-256
+  `66D301551BAC31F041A6DCD744E0AF190A743526EEE817CA2B812DD88841EC75`.
+  Byte comparison with the runtime-tested artifact found differences only in
+  two timestamp fields (`0x110`, `0x1FA494`); the ordinary output itself was
+  built but not installed or runtime-run.
+- Localization catalog/resource/embedded glyph audit: PASS, 18 locales / 191
+  keys; all 18 catalogs contain the RuntimeCombine tooltip.
+- `test.cmd` compiled all 58 registered harnesses but exited at
+  `config_persistence_harness`, which reports multiple persistence, migration,
+  template and hotkey failures while atomic-preservation controls pass. The
+  failure's baseline cause is not established here. Separately run relevant
+  harnesses passed: camera writer transaction, cinematic lifecycle transaction,
+  Gameplay mode, runtime settings API, Overlay feature presentation and camera
+  integration. `localization_harness` separately fails on missing glyph
+  `U+0148`; this is distinct from the build-time catalog/resource audit.
+- `git diff --check` could not run in this checkout (`fatal: this operation
+  must be run in a work tree`) although `git status` and `rev-parse` work. A
+  direct trailing-whitespace scan of the documentation/evidence files changed
+  for this promotion found no trailing whitespace.
+
+At that historical snapshot, the default configuration was:
 
 ```ini
 [Gameplay]
@@ -41,9 +107,11 @@ CinematicFovCycle=F11
 DialogueCycle=F12
 ```
 
-`Gameplay.Mode` selects `HorPlus` or `AspectRecalculation`; HorPlus uses the
-Gameplay FOV selected in the game's settings and adapts it to the current
-aspect ratio. Cinematics offer automatic/native/forced framing and
+`Gameplay.Mode` selects `HorPlus`, `AspectRecalculation` or `RuntimeCombine`.
+`HorPlus` uses the native Gameplay writer aspect for its correction;
+`RuntimeCombine` synchronizes a mismatched Gameplay aspect to the validated
+current viewport, confirms the read-back, and only then applies HorPlus.
+Cinematics offer automatic/native/forced framing and
 `GameplayHorPlus` or `NativeHorPlus` FOV policies. Dialogue zoom supports
 `Native`, `Adaptive`, `Reduced` and `Disabled`. Optional cycling hotkeys are
 disabled by default and take effect at the next applicable lifecycle.
@@ -59,7 +127,7 @@ Camera State view. Its 18 embedded language catalogs and offline glyph/resource
 coverage are audited; offline checks do not establish runtime rendering for
 every glyph, Arabic shaping, bidirectional text or RTL layout.
 
-## Current validation snapshot — 2026-09-29, production DComp candidate
+## Historical validation snapshot — 2026-09-29, production DComp candidate
 
 - The current production candidate is the canonical root artifact
   `STALKER2CameraTweaks.asi`, SHA-256
@@ -573,7 +641,7 @@ game; none were added to the production ASI.
   reproduced without the mod, and no production compatibility or fix claim is
   made for it.
 
-## v2.0.1 working-tree candidate status (not released)
+## Historical v2.0.1 working-tree candidate status (not released)
 
 - The current offline suite, localization/resource coverage and production
   build have passed as recorded in the 2026-09-28 validation snapshot above.

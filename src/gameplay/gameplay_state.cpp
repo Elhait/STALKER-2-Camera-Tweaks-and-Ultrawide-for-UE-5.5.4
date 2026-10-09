@@ -1,4 +1,5 @@
 #include "gameplay_state.hpp"
+#include "../camera/fov_semantics.hpp"
 
 #include <cmath>
 
@@ -14,6 +15,23 @@ namespace gameplay
         return "Unknown";
     }
 
+    bool IsCinematicOwnershipContinuation(const CinematicReentrySample& sample) noexcept
+    {
+        if (sample.previousCoordinator != camera::CoordinatorState::CinematicExiting ||
+            !sample.awaitingValidatedRecovery || !sample.targetEstablished ||
+            sample.previousSource == 0 || sample.previousSource != sample.currentSource ||
+            !std::isfinite(sample.previousExitNativeTarget) ||
+            !std::isfinite(sample.previousTransformedTarget) ||
+            !std::isfinite(sample.authoredEnterFov) ||
+            !std::isfinite(sample.transformedTargetFov))
+            return false;
+
+        return camera::AreFovValuesSemanticallyEquivalent(
+                sample.previousExitNativeTarget, sample.authoredEnterFov) &&
+            camera::AreFovValuesSemanticallyEquivalent(
+                sample.previousTransformedTarget, sample.transformedTargetFov);
+    }
+
     CinematicExitTransition ResolveCinematicExitTransition(bool gameplayAvailable)
     {
         if (gameplayAvailable)
@@ -25,17 +43,17 @@ namespace gameplay
         bool recoveryObserverAvailable, bool gameplayEnabled,
         config::GameplayMode gameplayMode)
     {
-        if (gameplayMode == config::GameplayMode::HorPlus) {
-            return { recoveryObserverAvailable
-                    ? camera::CoordinatorState::CinematicExiting
-                    : camera::CoordinatorState::Gameplay,
-                false };
-        }
-        return ResolveCinematicExitTransition(recoveryObserverAvailable && gameplayEnabled);
+        return {
+            recoveryObserverAvailable
+                ? camera::CoordinatorState::CinematicExiting
+                : camera::CoordinatorState::Gameplay,
+            recoveryObserverAvailable && gameplayEnabled &&
+                gameplayMode == config::GameplayMode::AspectRecalculation
+        };
     }
 
-    bool IsNativeHorPlusRecoverySample(
-        const HorPlusRecoverySample& sample, float epsilon) noexcept
+    bool IsNativeHorPlusRecoverySample(const HorPlusRecoverySample& sample,
+        float endpointToleranceDegrees) noexcept
     {
         // Gameplay may already be native on the first post-EXIT writer call.
         // Dialogue's depart-then-return sequence is not a Gameplay prerequisite.
@@ -46,8 +64,8 @@ namespace gameplay
             sample.inputFov < 179.0f &&
             std::isfinite(sample.exitNativeTarget) && sample.exitNativeTarget > 1.0f &&
             sample.exitNativeTarget < 179.0f &&
-            std::isfinite(epsilon) && epsilon >= 0.0f &&
-            std::fabs(sample.inputFov - sample.exitNativeTarget) <= epsilon;
+            std::isfinite(endpointToleranceDegrees) && endpointToleranceDegrees >= 0.0f &&
+            std::fabs(sample.inputFov - sample.exitNativeTarget) <= endpointToleranceDegrees;
     }
 
     namespace
@@ -86,11 +104,12 @@ namespace gameplay
 
     HorPlusRecoveryAction ResolveHorPlusRecoveryAction(
         camera::CoordinatorState coordinator, const HorPlusRecoverySample& sample,
-        bool nativeRecoveryValidated, float epsilon) noexcept
+        bool nativeRecoveryValidated, float endpointToleranceDegrees) noexcept
     {
         if (coordinator != camera::CoordinatorState::CinematicExiting)
             return HorPlusRecoveryAction::NotWaiting;
-        if (nativeRecoveryValidated && IsNativeHorPlusRecoverySample(sample, epsilon))
+        if (nativeRecoveryValidated && IsNativeHorPlusRecoverySample(
+                sample, endpointToleranceDegrees))
             return HorPlusRecoveryAction::ResumeGameplay;
         return IsRecoveryInterpolationSample(sample, 0.0f)
             ? HorPlusRecoveryAction::TransformRecoveryInterpolation
@@ -151,6 +170,9 @@ namespace gameplay
             }
             return GameplayEnabledAction::ApplyHorPlus;
         }
+
+        if (input.selectedMode == config::GameplayMode::RuntimeCombine)
+            return GameplayEnabledAction::ApplyRuntimeCombine;
 
         if (input.replayState == ReplayState::Complete)
             return GameplayEnabledAction::AlreadyApplied;

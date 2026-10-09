@@ -32,6 +32,8 @@ namespace camera
         case FovProvenance::PassThroughResult: return "PassThroughResult";
         case FovProvenance::CachedCinematicEnter: return "CachedCinematicEnter";
         case FovProvenance::ResolvedAspect: return "ResolvedAspect";
+        case FovProvenance::NativeWriterAspect: return "NativeWriterAspect";
+        case FovProvenance::ClientViewportAspect: return "ClientViewportAspect";
         }
         return "Unavailable";
     }

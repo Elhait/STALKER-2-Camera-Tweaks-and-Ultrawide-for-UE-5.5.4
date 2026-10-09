@@ -22,6 +22,21 @@ namespace gameplay
     };
 
     const char* ReplayStateName(ReplayState state);
+    struct CinematicReentrySample
+    {
+        camera::CoordinatorState previousCoordinator{camera::CoordinatorState::Gameplay};
+        std::uintptr_t previousSource{};
+        std::uintptr_t currentSource{};
+        float previousExitNativeTarget{std::numeric_limits<float>::quiet_NaN()};
+        float previousTransformedTarget{std::numeric_limits<float>::quiet_NaN()};
+        float authoredEnterFov{std::numeric_limits<float>::quiet_NaN()};
+        float transformedTargetFov{std::numeric_limits<float>::quiet_NaN()};
+        bool awaitingValidatedRecovery{};
+        bool targetEstablished{};
+    };
+
+    bool IsCinematicOwnershipContinuation(const CinematicReentrySample& sample) noexcept;
+
     CinematicExitTransition ResolveCinematicExitTransition(bool gameplayAvailable);
     CinematicExitTransition ResolveCinematicExitTransition(
         bool recoveryObserverAvailable, bool gameplayEnabled,
@@ -43,16 +58,18 @@ namespace gameplay
         float exitNativeTarget{std::numeric_limits<float>::quiet_NaN()};
         float cachedCinematicFov{std::numeric_limits<float>::quiet_NaN()};
         float aspect{std::numeric_limits<float>::quiet_NaN()};
+        float policyAspect{std::numeric_limits<float>::quiet_NaN()};
+        bool policyAspectValid{};
         std::uint8_t flags{};
         bool cameraReadable{};
         bool gameplayEnabled{true};
     };
 
-    bool IsNativeHorPlusRecoverySample(
-        const HorPlusRecoverySample& sample, float epsilon) noexcept;
+    bool IsNativeHorPlusRecoverySample(const HorPlusRecoverySample& sample,
+        float endpointToleranceDegrees) noexcept;
     HorPlusRecoveryAction ResolveHorPlusRecoveryAction(
         camera::CoordinatorState coordinator, const HorPlusRecoverySample& sample,
-        bool nativeRecoveryValidated, float epsilon) noexcept;
+        bool nativeRecoveryValidated, float endpointToleranceDegrees) noexcept;
     float ResolveHorPlusRecoveryInterpolationFov(
         const HorPlusRecoverySample& sample, float nativeAspect) noexcept;
 
@@ -75,6 +92,7 @@ namespace gameplay
         RestoreNativeAspect,
         ApplyHorPlus,
         ApplyAspectRecalculation,
+        ApplyRuntimeCombine,
         AlreadyApplied,
     };
 

@@ -7,6 +7,7 @@
 #include "presentation_contracts.hpp"
 #include "renderer_runtime.hpp"
 #include "../diagnostics/diagnostic_runtime.hpp"
+#include "../diagnostics/overlay_activation_trace.hpp"
 #include "../diagnostics/performance_telemetry.hpp"
 #include "../diagnostics/startup_journal.hpp"
 #include "../plugin/runtime.hpp"
@@ -19,6 +20,7 @@
 #include <fstream>
 #include <mutex>
 #include <iterator>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -41,7 +43,11 @@ namespace
     std::atomic<bool> g_frameClockAvailable{};
     std::atomic<bool> g_frameClockDemand{};
     std::atomic<bool> g_presenterMinimized{};
-    auto& g_renderer = *new overlay::Renderer;
+    std::atomic<overlay::Renderer*> g_renderer{};
+    overlay::Renderer& RendererInstance() noexcept
+    {
+        return *g_renderer.load(std::memory_order_acquire);
+    }
     std::ofstream g_log;
     HMODULE g_module{};
     DWORD g_processId{};
@@ -353,7 +359,7 @@ namespace
     void DisableAfterOverlayException()
     {
         std::scoped_lock lock{g_rendererMutex};
-        g_renderer.Disable("composition_runtime_exception");
+        RendererInstance().Disable("composition_runtime_exception");
         overlay::GetInputEventBridge().Deactivate();
         RemoveInputHook();
         const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
@@ -365,7 +371,7 @@ namespace
     {
         OverlayWindowDecision decision{};
         auto& input = overlay::GetInputState();
-        if (g_renderer.disabled() || window !=
+        if (RendererInstance().disabled() || window !=
                 g_inputWindow.load(std::memory_order_acquire))
             return decision;
         if (message == overlay::AutoLanguageSyncMessage) {
@@ -469,7 +475,19 @@ namespace
         const UINT toggleMessage = escapeDismiss ? WM_KEYUP : message;
         if (input.HandleToggleMessage(toggleMessage, wParam, toggleKey)) {
             plugin::SetHotkeyRebindCaptureActive(false);
-            g_renderer.SetVisible(input.visible());
+            const auto activationRequest =
+                diagnostics::overlay_activation_trace::BeginRequest(
+                    &Log, input.visible(), RendererInstance().ready());
+            RendererInstance().SetVisible(input.visible());
+            diagnostics::overlay_activation_trace::RecordStage(&Log,
+                activationRequest,
+                diagnostics::overlay_activation_trace::Stage::VisibilityRequested,
+                "visibility_requested", input.visible(), RendererInstance().ready());
+            diagnostics::overlay_activation_trace::RecordStage(&Log,
+                activationRequest,
+                diagnostics::overlay_activation_trace::Stage::PresenterReadiness,
+                "presenter_readiness", input.visible(), RendererInstance().ready(),
+                RendererInstance().ready());
             if (input.visible()) {
                 input.SetFocused(true);
                 diagnostics::RequestRuntimePerformanceSummary();
@@ -537,7 +555,7 @@ namespace
                 input.Toggle();
                 input.CancelRebind();
                 plugin::SetHotkeyRebindCaptureActive(false);
-                g_renderer.SetVisible(false);
+                RendererInstance().SetVisible(false);
                 SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(32512)));
                 Log("OVERLAY_CURSOR_RESTORE=WINDOW_DESTROY_ARROW");
             }
@@ -648,9 +666,9 @@ namespace
         const bool minimized = g_presenterMinimized.load(
             std::memory_order_acquire);
         const auto frameState = overlay::SelectPresenterFrameState(
-            g_renderer.ready(), minimized,
-            g_renderer.notificationAnimationActive(),
-            g_renderer.needsRenderWork(), g_renderer.visible());
+            RendererInstance().ready(), minimized,
+            RendererInstance().notificationAnimationActive(),
+            RendererInstance().needsRenderWork(), RendererInstance().visible());
         if (overlay::NeedsCompositorClock(frameState) &&
             g_frameClockAvailable.load(std::memory_order_acquire)) {
             const auto timerId = g_renderTimer.TakeForCancellation();
@@ -672,7 +690,7 @@ namespace
         const auto returnedId = SetTimer(nullptr, RenderTimerSeed, interval, nullptr);
         if (!returnedId) {
             Log("OVERLAY_RENDER_TIMER_FAILED");
-            g_renderer.Disable("presenter_timer_unavailable");
+            RendererInstance().Disable("presenter_timer_unavailable");
             overlay::GetInputEventBridge().Deactivate();
             RemoveInputHook();
             return;
@@ -685,7 +703,7 @@ namespace
 
     void ReconcileTerminalInputOwnership() noexcept
     {
-        if (!g_renderer.disabled()) return;
+        if (!RendererInstance().disabled()) return;
         overlay::GetInputEventBridge().Deactivate();
         RemoveInputHook();
     }
@@ -711,13 +729,13 @@ namespace
         g_presenterMinimized.store(minimized, std::memory_order_release);
 
         std::scoped_lock lock{g_rendererMutex};
-        if (g_renderer.disabled()) {
+        if (RendererInstance().disabled()) {
             overlay::GetInputEventBridge().Deactivate();
             RemoveInputHook();
             return;
         }
         const auto route = overlay::SelectPresenterRoute(
-            g_renderer.hasSurfaceGeneration(), g_renderer.OwnsWindow(candidate),
+            RendererInstance().hasSurfaceGeneration(), RendererInstance().OwnsWindow(candidate),
             minimized, observedWindow == candidate);
         if (route == overlay::PresenterRoute::WaitForWindow) {
             UpdateRenderTimer();
@@ -730,7 +748,7 @@ namespace
                 static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(candidate)));
             diagnostics::startup_journal::Flush();
 #endif
-            if (g_renderer.Initialize(candidate, width, height, dpi)) {
+            if (RendererInstance().Initialize(candidate, width, height, dpi)) {
                 if (InstallInputHook(candidate))
                     Log("OVERLAY_PRESENTER_ATTACHED hwnd=" +
                         std::to_string(reinterpret_cast<std::uintptr_t>(candidate)));
@@ -739,14 +757,14 @@ namespace
             }
         } else if (route == overlay::PresenterRoute::RebindWindow) {
             RemoveInputHook();
-            if (g_renderer.RebindWindow(candidate, width, height, dpi) &&
+            if (RendererInstance().RebindWindow(candidate, width, height, dpi) &&
                 InstallInputHook(candidate))
                 Log("OVERLAY_PRESENTER_REBOUND hwnd=" +
                     std::to_string(reinterpret_cast<std::uintptr_t>(candidate)));
         } else if (route == overlay::PresenterRoute::UpdateGeometry) {
             if (minimized) {
-                g_renderer.OnWindowGeometry(candidate, width, height, true, dpi);
-            } else if (g_renderer.OnWindowGeometry(candidate, width, height, false, dpi)) {
+                RendererInstance().OnWindowGeometry(candidate, width, height, true, dpi);
+            } else if (RendererInstance().OnWindowGeometry(candidate, width, height, false, dpi)) {
                 Log("OVERLAY_WINDOW_GEOMETRY_UPDATED width=" +
                     std::to_string(width) + " height=" + std::to_string(height));
             }
@@ -765,7 +783,15 @@ namespace
         MSG message{};
         PeekMessageW(&message, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
         OpenLog();
-        g_renderer.SetLogger(&Log);
+        auto* renderer = new (std::nothrow) overlay::Renderer{};
+        if (!renderer) {
+            Log("OVERLAY_RENDERER_ALLOCATION_FAILED");
+            g_workerStarted.store(false, std::memory_order_release);
+            g_uiThreadId.store(0, std::memory_order_release);
+            return 0;
+        }
+        g_renderer.store(renderer, std::memory_order_release);
+        RendererInstance().SetLogger(&Log);
         Log(previousDpiContext ? "OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2"
             : "OVERLAY_DPI_THREAD_CONTEXT=UNCHANGED_API_UNAVAILABLE");
         Log("OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0");
@@ -798,13 +824,13 @@ namespace
                     bool discoveryNeeded{};
                     {
                         std::scoped_lock lock{g_rendererMutex};
-                        g_renderer.RequestRedraw();
-                        discoveryNeeded = !g_renderer.hasSurfaceGeneration() ||
-                            (candidate && !g_renderer.OwnsWindow(candidate));
+                        RendererInstance().RequestRedraw();
+                        discoveryNeeded = !RendererInstance().hasSurfaceGeneration() ||
+                            (candidate && !RendererInstance().OwnsWindow(candidate));
                         if (!discoveryNeeded &&
                             !g_frameClockAvailable.load(std::memory_order_acquire) &&
                             !g_presenterMinimized.load(std::memory_order_acquire))
-                            g_renderer.Render();
+                            RendererInstance().Render();
                         if (!discoveryNeeded) UpdateRenderTimer();
                     }
                     if (discoveryNeeded)
@@ -814,10 +840,10 @@ namespace
                 g_frameClockTickPending.BeginHandling();
                 overlay::RunOptionalOverlayWork([&]() {
                     std::scoped_lock lock{g_rendererMutex};
-                    if (g_renderer.ready() &&
+                    if (RendererInstance().ready() &&
                         !g_presenterMinimized.load(std::memory_order_acquire) &&
-                        g_renderer.needsRenderWork())
-                        g_renderer.Render();
+                        RendererInstance().needsRenderWork())
+                        RendererInstance().Render();
                     ReconcileTerminalInputOwnership();
                     UpdateRenderTimer();
                 }, &DisableAfterOverlayException);
@@ -828,8 +854,8 @@ namespace
                 overlay::RunOptionalOverlayWork([&]() {
                     std::scoped_lock lock{g_rendererMutex};
                     if (!g_presenterMinimized.load(std::memory_order_acquire) &&
-                        g_renderer.needsRenderWork())
-                        g_renderer.Render();
+                        RendererInstance().needsRenderWork())
+                        RendererInstance().Render();
                     UpdateRenderTimer();
                 }, &DisableAfterOverlayException);
             } else if (message.message == WM_TIMER &&
@@ -838,10 +864,10 @@ namespace
                     std::scoped_lock lock{g_rendererMutex};
                     const HWND activeWindow =
                         g_inputWindow.load(std::memory_order_acquire);
-                    if (g_renderer.ready() && (!activeWindow || !IsIconic(activeWindow)) &&
-                        g_renderer.needsRenderWork())
-                        g_renderer.Render();
-                    if (g_renderer.disabled()) {
+                    if (RendererInstance().ready() && (!activeWindow || !IsIconic(activeWindow)) &&
+                        RendererInstance().needsRenderWork())
+                        RendererInstance().Render();
+                    if (RendererInstance().disabled()) {
                         ReconcileTerminalInputOwnership();
                     }
                     UpdateRenderTimer();
@@ -895,6 +921,17 @@ extern "C" void NotifyOverlayCameraCoreReady()
     diagnostics::startup_journal::Flush();
 #endif
     RequestOverlayRedraw();
+}
+
+extern "C" void NotifyOverlayCameraStatePublished() noexcept
+{
+    auto* renderer = g_renderer.load(std::memory_order_acquire);
+    if (!renderer || !overlay::TryScheduleVisibleCameraStateRedraw(
+            renderer->visible(), g_redrawWakePending))
+        return;
+    const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
+    if (!threadId || !PostThreadMessageW(threadId, WakeMessage, 0, 0))
+        g_redrawWakePending.CancelFailedPost();
 }
 
 extern "C" void RequestOverlayRedraw()

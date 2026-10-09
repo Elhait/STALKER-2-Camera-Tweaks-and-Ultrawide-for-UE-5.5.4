@@ -4,6 +4,8 @@
 
 #include <Windows.h>
 
+#include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <mutex>
 #include <utility>
@@ -47,7 +49,10 @@ namespace config
             std::ifstream input(path);
             if (!input) return false;
             std::string line;
-            while (std::getline(input, line)) lines.push_back(std::move(line));
+            while (std::getline(input, line)) {
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                lines.push_back(std::move(line));
+            }
             return !input.bad();
         }
 
@@ -71,6 +76,32 @@ namespace config
             return result;
         }
 
+        std::string FormatAssignment(const std::string& raw)
+        {
+            const auto line = Trim(raw);
+            const auto separator = line.find('=');
+            if (separator == std::string::npos) return raw;
+            const auto key = Trim(line.substr(0, separator));
+            const auto value = Trim(line.substr(separator + 1));
+            return key + " = " + value;
+        }
+
+        void NormalizeSectionAssignments(std::vector<std::string>& lines,
+            const char* targetSection)
+        {
+            std::string section;
+            for (auto& raw : lines) {
+                const auto line = Trim(raw);
+                if (line.size() >= 2 && line.front() == '[' && line.back() == ']') {
+                    section = Trim(line.substr(1, line.size() - 2));
+                    continue;
+                }
+                if (section == targetSection && !line.empty() && line.front() != '#' &&
+                    line.front() != ';' && line.find('=') != std::string::npos)
+                    raw = FormatAssignment(raw);
+            }
+        }
+
         void SetValue(std::vector<std::string>& lines, const char* targetSection,
             const char* targetKey, const std::string& value)
         {
@@ -90,7 +121,7 @@ namespace config
                     const auto separator = line.find('=');
                     if (separator != std::string::npos &&
                         Trim(line.substr(0, separator)) == targetKey)
-                        lines[index] = std::string(targetKey) + "=" + value;
+                        lines[index] = FormatAssignment(std::string(targetKey) + "=" + value);
                 }
             }
             if (sectionStart != lines.size()) {
@@ -104,11 +135,13 @@ namespace config
                         Trim(line.substr(0, separator)) == targetKey;
                 }
                 if (!present) lines.insert(lines.begin() + sectionEnd, key);
+                NormalizeSectionAssignments(lines, targetSection);
                 return;
             }
             if (!lines.empty() && !lines.back().empty()) lines.emplace_back();
             lines.emplace_back(std::string("[") + targetSection + "]");
             lines.emplace_back(std::string(targetKey) + "=" + value);
+            NormalizeSectionAssignments(lines, targetSection);
         }
 
         int ParseInteger(const std::string& value, int fallback)
@@ -137,6 +170,7 @@ namespace config
     bool LoadFeatureConfig(const std::filesystem::path& path, FeatureConfig& config,
         const TemplateSynchronizer& synchronizeTemplate, const LogFunction& log)
     {
+        config.overlayEnabled = true;
         config.overlayLocaleCode = std::string(localization::CanonicalLocaleCode);
         config.overlayLocaleAuto = true;
         config.overlayFontSize = OverlayFontSizeDefault;
@@ -146,11 +180,6 @@ namespace config
             if (!std::filesystem::exists(path)) {
             std::ofstream created(path, std::ios::out | std::ios::trunc);
             if (!created) return false;
-            created << "; STALKER 2 Camera Tweaks and Ultrawide for UE 5.5.4\n"
-                << "; Author: Elhait\n"
-                << "; GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4\n"
-                << "; Nexus Mods: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416\n"
-                << ";\n";
             created.flush();
             if (!created) return false;
             created.close();
@@ -170,6 +199,15 @@ namespace config
         std::string line;
         bool overlayFontSizeValid = false;
         bool overlayToggleKeyExplicit = false;
+        bool cinematicEnabledExplicit = false;
+        bool legacyCinematicEnabledSpecified = false;
+        bool legacyCinematicEnabled = true;
+        bool dialogueEnabledExplicit = false;
+        bool dialogueEnabledValue = true;
+        bool dialogueModeValid = false;
+        DialogueZoomPolicy dialogueModeValue = DialogueZoomPolicy::Adaptive;
+        bool dialogueZoomValid = false;
+        DialogueZoomPolicy dialogueZoomValue = DialogueZoomPolicy::Adaptive;
         while (std::getline(input, line)) {
             line = Trim(line);
             if (line.empty() || line.front() == ';' || line.front() == '#') continue;
@@ -180,6 +218,14 @@ namespace config
             const auto separator = line.find('=');
             if (separator == std::string::npos) continue;
             const auto key = Trim(line.substr(0, separator));
+            if (section == "Overlay" && key == "Enabled") {
+                bool enabled = true;
+                if (ParseBool(line.substr(separator + 1), enabled))
+                    config.overlayEnabled = enabled;
+                else if (log)
+                    log("Unknown Overlay.Enabled; using true.");
+                continue;
+            }
             if (section == "Overlay" && key == "Language") {
                 if (Trim(line.substr(separator + 1)) == "Auto") {
                     config.overlayLocaleAuto = true;
@@ -212,10 +258,25 @@ namespace config
                 }
                 continue;
             }
-            if (section == "Cinematics" && key == "AspectRatio") {
+            if (section == "Cinematics" && key == "Enabled") {
+                bool enabled = true;
+                if (ParseBool(line.substr(separator + 1), enabled)) {
+                    config.cinematicsEnabled = enabled;
+                    cinematicEnabledExplicit = true;
+                } else if (log) log("Unknown Cinematics.Enabled; using true.");
+                continue;
+            }
+            if (section == "Cinematics" && (key == "Mode" || key == "AspectRatio")) {
                 CinematicAspectPolicy policy{};
                 if (ParseCinematicAspectPolicy(line.substr(separator + 1), policy)) {
-                    config.cinematicAspectPolicy = policy;
+                    if (policy == CinematicAspectPolicy::Native) {
+                        config.cinematicAspectPolicy = CinematicAspectPolicy::Auto;
+                        legacyCinematicEnabled = false;
+                    } else {
+                        config.cinematicAspectPolicy = policy;
+                        legacyCinematicEnabled = true;
+                    }
+                    legacyCinematicEnabledSpecified = true;
                     config.cinematicAspectPolicyExplicit = true;
                 }
                 continue;
@@ -233,13 +294,31 @@ namespace config
                 if (ParseGameplayMode(line.substr(separator + 1), mode))
                     config.gameplayMode = mode;
                 else if (log)
-                    log("Unknown Gameplay.Mode; using HorPlus.");
+                    log("Unknown Gameplay.Mode; using RuntimeCombine.");
+                continue;
+            }
+            if (section == "Dialogue" && key == "Enabled") {
+                bool enabled = true;
+                if (ParseBool(line.substr(separator + 1), enabled)) {
+                    dialogueEnabledExplicit = true;
+                    dialogueEnabledValue = enabled;
+                } else if (log) log("Unknown Dialogue.Enabled; using migrated/default semantics.");
+                continue;
+            }
+            if (section == "Dialogue" && key == "Mode") {
+                DialogueZoomPolicy policy{};
+                if (ParseDialogueMode(line.substr(separator + 1), policy)) {
+                    dialogueModeValid = true;
+                    dialogueModeValue = policy;
+                }
                 continue;
             }
             if (section == "Dialogue" && key == "Zoom") {
                 DialogueZoomPolicy policy{};
-                if (ParseDialogueZoomPolicy(line.substr(separator + 1), policy))
-                    config.dialogueZoomPolicy = policy;
+                if (ParseDialogueZoomPolicy(line.substr(separator + 1), policy)) {
+                    dialogueZoomValid = true;
+                    dialogueZoomValue = policy;
+                }
                 continue;
             }
             if (section == "Diagnostics" && key == "Enabled") {
@@ -262,12 +341,31 @@ namespace config
             bool value = true;
             if (!ParseBool(line.substr(separator + 1), value)) continue;
             if (section == "Gameplay" && key == "Enabled") config.gameplayEnabled = value;
-            else if (section == "Cinematics" && key == "AspectFix" && !config.cinematicAspectPolicyExplicit)
-                config.cinematicAspectPolicy = value ? CinematicAspectPolicy::Auto : CinematicAspectPolicy::Native;
+            else if (section == "Cinematics" && key == "AspectFix" && !config.cinematicAspectPolicyExplicit) {
+                config.cinematicAspectPolicy = CinematicAspectPolicy::Auto;
+                legacyCinematicEnabled = value;
+                legacyCinematicEnabledSpecified = true;
+            }
             else if (section == "Features" && key == "GameplayAspectFix") config.gameplayEnabled = value;
-            else if (section == "Features" && key == "CinematicAspectFix" && !config.cinematicAspectPolicyExplicit)
-                config.cinematicAspectPolicy = value ? CinematicAspectPolicy::Auto : CinematicAspectPolicy::Native;
+            else if (section == "Features" && key == "CinematicAspectFix" && !config.cinematicAspectPolicyExplicit) {
+                config.cinematicAspectPolicy = CinematicAspectPolicy::Auto;
+                legacyCinematicEnabled = value;
+                legacyCinematicEnabledSpecified = true;
+            }
         }
+        if (!cinematicEnabledExplicit && legacyCinematicEnabledSpecified)
+            config.cinematicsEnabled = legacyCinematicEnabled;
+        if (dialogueModeValid)
+            config.dialogueZoomPolicy = dialogueModeValue;
+        else if (dialogueZoomValid && dialogueZoomValue != DialogueZoomPolicy::Native)
+            config.dialogueZoomPolicy = dialogueZoomValue;
+        else
+            config.dialogueZoomPolicy = DialogueZoomPolicy::Adaptive;
+        config.dialogueEnabled = dialogueEnabledExplicit
+            ? dialogueEnabledValue
+            : dialogueZoomValid
+                ? dialogueZoomValue != DialogueZoomPolicy::Native
+                : true;
         if (!overlayFontSizeValid) {
             const auto* locale = localization::FindLocaleDescriptor(
                 config.overlayLocaleCode);
@@ -319,28 +417,61 @@ namespace config
 
         std::vector<std::string> lines;
         std::string line;
-        while (std::getline(input, line)) lines.push_back(std::move(line));
+        while (std::getline(input, line)) {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            lines.push_back(std::move(line));
+        }
         input.close();
 
-        bool inSection = false;
-        bool replaced = false;
-        for (auto& current : lines) {
-            const auto trimmed = Trim(current);
-            if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']')
-                inSection = Trim(trimmed.substr(1, trimmed.size() - 2)) == targetSection;
-            if (!inSection) continue;
-
-            const auto separator = trimmed.find('=');
-            if (separator != std::string::npos && Trim(trimmed.substr(0, separator)) == targetKey) {
-                current = std::string(targetKey) + "=" + value;
-                replaced = true;
+        bool sectionFound = false;
+        std::size_t sectionEnd = lines.size();
+        std::string section;
+        for (std::size_t index = 0; index < lines.size(); ++index) {
+            const auto trimmed = Trim(lines[index]);
+            if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']') {
+                if (section == targetSection && sectionFound) sectionEnd = index;
+                section = Trim(trimmed.substr(1, trimmed.size() - 2));
+                if (section == targetSection) sectionFound = true;
+                continue;
             }
+            if (!sectionFound || section != targetSection) continue;
+            const auto separator = trimmed.find('=');
+            if (separator != std::string::npos &&
+                Trim(trimmed.substr(0, separator)) == targetKey)
+                lines[index] = FormatAssignment(std::string(targetKey) + "=" + value);
         }
-        if (!replaced) {
-            lines.push_back("");
-            lines.push_back(std::string("[") + targetSection + "]");
-            lines.push_back(std::string(targetKey) + "=" + value);
+        if (!sectionFound) {
+            if (!lines.empty() && !lines.back().empty()) lines.emplace_back();
+            lines.emplace_back(std::string("[") + targetSection + "]");
+            lines.emplace_back(std::string(targetKey) + "=" + value);
+        } else {
+            if (sectionEnd == lines.size()) {
+                sectionEnd = lines.size();
+                section.clear();
+                for (std::size_t index = 0; index < lines.size(); ++index) {
+                    const auto trimmed = Trim(lines[index]);
+                    if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']')
+                        section = Trim(trimmed.substr(1, trimmed.size() - 2));
+                    else if (section == targetSection)
+                        sectionEnd = index + 1;
+                }
+            }
+            bool present = false;
+            section.clear();
+            for (std::size_t index = 0; index < lines.size(); ++index) {
+                const auto trimmed = Trim(lines[index]);
+                if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']') {
+                    section = Trim(trimmed.substr(1, trimmed.size() - 2));
+                    continue;
+                }
+                const auto separator = trimmed.find('=');
+                if (section == targetSection && separator != std::string::npos &&
+                    Trim(trimmed.substr(0, separator)) == targetKey) present = true;
+            }
+            if (!present) lines.insert(lines.begin() + sectionEnd,
+                std::string(targetKey) + "=" + value);
         }
+        NormalizeSectionAssignments(lines, targetSection);
 
         if (ReplaceConfig(path, lines)) return true;
 

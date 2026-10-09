@@ -38,7 +38,7 @@ namespace dialogue
         CandidateDecision Observe(float sample, float reversalEpsilon,
             float stabilityEpsilon, std::uint32_t stableSampleLimit = 3) noexcept;
         CandidateDecision Observe(float sample, std::uintptr_t source,
-            float nativeTarget, float sourceTargetEpsilon,
+            float nativeTarget,
             float reversalEpsilon, float stabilityEpsilon,
             std::uint32_t stableSampleLimit = 3) noexcept;
         bool IsPending() const noexcept;
@@ -68,6 +68,21 @@ namespace dialogue
         bool valid_{};
     };
 
+    // Correction activation is captured only at an accepted dialogue start.
+    // Disabling takes effect immediately; enabling never retroactively arms
+    // an already active lifecycle.
+    class CorrectionActivation
+    {
+    public:
+        void Reset() noexcept;
+        void AcceptedStart(bool moduleEnabled) noexcept;
+        void ModuleEnabledChanged(bool enabled) noexcept;
+        bool CanCorrect(bool moduleEnabled) const noexcept;
+
+    private:
+        std::atomic<bool> armed_{};
+    };
+
     class RecoveryRearm
     {
     public:
@@ -83,7 +98,7 @@ namespace dialogue
         bool IsPending() const noexcept;
         std::uint32_t StableSamples() const noexcept;
         Decision Observe(std::uintptr_t source, float sample, float nativeTarget,
-            float targetEpsilon, float stabilityEpsilon,
+            float endpointToleranceDegrees,
             std::uint32_t requiredStableSamples = 2) noexcept;
 
     private:
@@ -109,8 +124,9 @@ namespace dialogue
         bool Reset() noexcept;
         bool IsActive() const noexcept;
         Observation ObserveValidated(std::uintptr_t source, float currentFov,
-            float epsilon) noexcept;
-        bool Observe(std::uintptr_t source, float currentFov, float epsilon) noexcept;
+            float endpointToleranceDegrees) noexcept;
+        bool Observe(std::uintptr_t source, float currentFov,
+            float endpointToleranceDegrees) noexcept;
 
     private:
         std::atomic<bool> active_{false};

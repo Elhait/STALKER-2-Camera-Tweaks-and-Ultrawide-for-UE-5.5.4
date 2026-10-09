@@ -17,6 +17,11 @@ if not defined VSDEVCMD (
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64
 if errorlevel 1 goto :fail
 if not exist "build-artifacts\tests" mkdir "build-artifacts\tests"
+if errorlevel 1 goto :fail
+if not exist "build-artifacts\tests\temp" mkdir "build-artifacts\tests\temp"
+if errorlevel 1 goto :fail
+set "TEMP=%CD%\build-artifacts\tests\temp"
+set "TMP=%TEMP%"
 PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\test_cmd_audit.ps1 -RunnerPath test.cmd
 if errorlevel 1 goto :fail
 PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\localization_catalog_audit.ps1
@@ -28,11 +33,26 @@ rc /nologo /fo build-artifacts\tests\localization_resources.res src\overlay\loca
 if errorlevel 1 goto :fail
 set "COMMON=/nologo /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /Fobuild-artifacts\tests\ /Iexternal\safetyhook /Iexternal\spdlog\include /Iexternal\imgui"
 
+PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\runtime_native_adapter_inputs.ps1
+if errorlevel 1 goto :fail
+cl %COMMON% /DNDEBUG /DOVERLAY_PRODUCTION /DOVERLAY_SETTINGS_FRONTEND /DOVERLAY_COMBINED /DOVERLAY_STARTUP_JOURNAL /Iexternal\imgui\backends tests\plugin\runtime_native_adapter_harness.cpp tests\plugin\runtime_owner_binding_probe.cpp @build-artifacts\tests\runtime_adapter_sources.rsp /link user32.lib psapi.lib bcrypt.lib dxgi.lib d3d11.lib dcomp.lib d3dcompiler.lib build-artifacts\tests\localization_resources.res /OUT:build-artifacts\tests\runtime_native_adapter_harness.exe
+if errorlevel 1 goto :fail
+
 cl %COMMON% tests\lifecycle\worker_lifecycle_harness.cpp src\plugin\worker_lifecycle.cpp /link user32.lib /OUT:build-artifacts\tests\worker_lifecycle_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\feature_status\feature_status_harness.cpp src\plugin\feature_status.cpp /link /OUT:build-artifacts\tests\feature_status_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\plugin\optional_overlay_startup_harness.cpp /link /OUT:build-artifacts\tests\optional_overlay_startup_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\plugin\camera_correction_gate_harness.cpp src\dialogue\dialogue_state.cpp /link /OUT:build-artifacts\tests\camera_correction_gate_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\plugin\camera_setting_transaction_harness.cpp src\dialogue\dialogue_state.cpp /link /OUT:build-artifacts\tests\camera_setting_transaction_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\plugin\dialogue_boundary_transaction_harness.cpp src\dialogue\dialogue_state.cpp src\dialogue\dialogue_fov.cpp /link /OUT:build-artifacts\tests\dialogue_boundary_transaction_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\plugin\camera_writer_transaction_harness.cpp src\cinematics\cinematic_fov.cpp src\cinematics\cinematic_selection.cpp src\cinematics\cinematic_aspect.cpp src\hooks\signature_scanner.cpp src\gameplay\horplus_gameplay.cpp src\gameplay\gameplay_state.cpp src\gameplay\gameplay_camera.cpp src\hooks\instruction_validator.cpp external\safetyhook\Zydis.c src\gameplay\aspect_policy.cpp src\camera\horplus.cpp src\camera\fov_observation.cpp src\camera\gameplay_baseline.cpp src\camera\gameplay_aspect_restoration.cpp src\overlay\camera_integration.cpp src\dialogue\dialogue_state.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\camera_writer_transaction_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\plugin\cinematic_lifecycle_transaction_harness.cpp src\cinematics\cinematic_selection.cpp src\cinematics\cinematic_fov.cpp src\cinematics\cinematic_aspect.cpp src\hooks\signature_scanner.cpp src\hooks\instruction_validator.cpp external\safetyhook\Zydis.c src\gameplay\horplus_gameplay.cpp src\gameplay\gameplay_state.cpp src\gameplay\gameplay_camera.cpp src\gameplay\aspect_policy.cpp src\camera\horplus.cpp src\camera\fov_observation.cpp src\camera\gameplay_baseline.cpp src\camera\gameplay_aspect_restoration.cpp src\dialogue\dialogue_state.cpp src\dialogue\dialogue_fov.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\cinematic_lifecycle_transaction_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\startup_timeline_harness.cpp /link psapi.lib /OUT:build-artifacts\tests\startup_timeline_harness.exe
 if errorlevel 1 goto :fail
@@ -50,7 +70,9 @@ cl %COMMON% tests\gameplay\horplus_gameplay_harness.cpp src\gameplay\horplus_gam
 if errorlevel 1 goto :fail
 cl %COMMON% tests\gameplay\zoom_transition_harness.cpp src\gameplay\horplus_gameplay.cpp src\gameplay\aspect_policy.cpp src\cinematics\cinematic_fov.cpp src\camera\horplus.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\zoom_transition_harness.exe
 if errorlevel 1 goto :fail
-cl %COMMON% tests\gameplay\gameplay_mode_transition_harness.cpp src\gameplay\gameplay_state.cpp src\camera\presentation_state.cpp /link /OUT:build-artifacts\tests\gameplay_mode_transition_harness.exe
+cl %COMMON% tests\gameplay\gameplay_mode_transition_harness.cpp src\gameplay\gameplay_state.cpp src\cinematics\cinematic_selection.cpp src\cinematics\cinematic_fov.cpp src\camera\presentation_state.cpp src\camera\horplus.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\gameplay_mode_transition_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\regression\module_ownership_harness.cpp src\gameplay\gameplay_state.cpp src\cinematics\cinematic_selection.cpp src\cinematics\cinematic_fov.cpp src\dialogue\dialogue_fov.cpp src\dialogue\dialogue_state.cpp src\camera\presentation_state.cpp src\camera\horplus.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\module_ownership_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\gameplay\gameplay_camera_safety_harness.cpp src\gameplay\gameplay_camera.cpp src\hooks\instruction_validator.cpp external\safetyhook\Zydis.c /link /OUT:build-artifacts\tests\gameplay_camera_safety_harness.exe
 if errorlevel 1 goto :fail
@@ -66,6 +88,8 @@ cl %COMMON% tests\cinematics\cinematic_initialization_harness.cpp src\cinematics
 if errorlevel 1 goto :fail
 cl %COMMON% tests\cinematics\coordinator_recovery_harness.cpp src\gameplay\gameplay_state.cpp src\camera\presentation_state.cpp /link /OUT:build-artifacts\tests\coordinator_recovery_harness.exe
 if errorlevel 1 goto :fail
+cl %COMMON% tests\cinematics\cinematic_exit_authority_harness.cpp src\gameplay\horplus_gameplay.cpp src\gameplay\aspect_policy.cpp src\cinematics\cinematic_fov.cpp src\camera\horplus.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\cinematic_exit_authority_harness.exe
+if errorlevel 1 goto :fail
 cl %COMMON% tests\cinematics\horplus_post_exit_recovery_harness.cpp src\gameplay\gameplay_state.cpp src\camera\presentation_state.cpp src\gameplay\horplus_gameplay.cpp src\gameplay\aspect_policy.cpp src\camera\horplus.cpp src\camera\gameplay_baseline.cpp src\camera\fov_observation.cpp src\cinematics\cinematic_fov.cpp src\dialogue\dialogue_state.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\horplus_post_exit_recovery_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\cinematics\cinematic_selection_harness.cpp src\cinematics\cinematic_selection.cpp /link /OUT:build-artifacts\tests\cinematic_selection_harness.exe
@@ -78,7 +102,7 @@ cl %COMMON% tests\dialogue\candidate_hardening_harness.cpp src\dialogue\dialogue
 if errorlevel 1 goto :fail
 cl %COMMON% tests\dialogue\policy_snapshot_harness.cpp src\dialogue\dialogue_state.cpp /link /OUT:build-artifacts\tests\policy_snapshot_harness.exe
 if errorlevel 1 goto :fail
-cl %COMMON% tests\camera\camera_state_snapshot_harness.cpp src\camera\camera_state_snapshot.cpp /link /OUT:build-artifacts\tests\camera_state_snapshot_harness.exe
+cl %COMMON% tests\camera\camera_state_snapshot_harness.cpp src\camera\camera_state_snapshot.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\camera_state_snapshot_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\camera\fov_observation_harness.cpp src\camera\fov_observation.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\fov_observation_harness.exe
 if errorlevel 1 goto :fail
@@ -86,13 +110,19 @@ cl %COMMON% tests\camera\gameplay_baseline_harness.cpp src\camera\fov_observatio
 if errorlevel 1 goto :fail
 cl %COMMON% tests\camera\gameplay_aspect_restoration_harness.cpp src\camera\fov_observation.cpp src\camera\gameplay_aspect_restoration.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\gameplay_aspect_restoration_harness.exe
 if errorlevel 1 goto :fail
-cl %COMMON% tests\cinematics\cinematic_fov_harness.cpp src\cinematics\cinematic_fov.cpp src\camera\horplus.cpp src\camera\fov_observation.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\cinematic_fov_harness.exe
+cl %COMMON% tests\cinematics\cinematic_fov_harness.cpp src\cinematics\cinematic_fov.cpp src\camera\horplus.cpp src\camera\fov_observation.cpp src\camera\gameplay_baseline.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp src\diagnostics\cinematic_continuation_trace.cpp /link /OUT:build-artifacts\tests\cinematic_fov_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\cinematics\cinematic_aspect_harness.cpp src\cinematics\cinematic_aspect.cpp src\hooks\signature_scanner.cpp src\hooks\instruction_validator.cpp external\safetyhook\Zydis.c /link /OUT:build-artifacts\tests\cinematic_aspect_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\dialogue\dialogue_fov_harness.cpp src\dialogue\dialogue_fov.cpp /link /OUT:build-artifacts\tests\dialogue_fov_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\diagnostics\diagnostics_gate_harness.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\diagnostics_gate_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\diagnostics\dialogue_source_provenance_harness.cpp src\diagnostics\dialogue_source_provenance.cpp /link /OUT:build-artifacts\tests\dialogue_source_provenance_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\diagnostics\camera_writer_identity_harness.cpp /link /OUT:build-artifacts\tests\camera_writer_identity_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% tests\diagnostics\cinematic_lifecycle_context_harness.cpp /link /OUT:build-artifacts\tests\cinematic_lifecycle_context_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\diagnostics\performance_telemetry_harness.cpp src\diagnostics\performance_telemetry.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\performance_telemetry_harness.exe
 if errorlevel 1 goto :fail
@@ -106,13 +136,15 @@ cl %COMMON% tests\gameplay\gameplay_camera_resolver_harness.cpp src\gameplay\gam
 if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\composition_presenter_state_harness.cpp src\overlay\composition_presenter_state.cpp src\overlay\renderer_state.cpp src\overlay\input_state.cpp src\config\feature_config.cpp /link user32.lib /OUT:build-artifacts\tests\composition_presenter_state_harness.exe
 if errorlevel 1 goto :fail
+cl %COMMON% tests\overlay\activation_trace_harness.cpp src\diagnostics\diagnostic_runtime.cpp /link /OUT:build-artifacts\tests\activation_trace_harness.exe
+if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\overlay_layout_metrics_harness.cpp src\overlay\overlay_layout_metrics.cpp /link /OUT:build-artifacts\tests\overlay_layout_metrics_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\selector_tooltip_state_harness.cpp /link /OUT:build-artifacts\tests\selector_tooltip_state_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\input_state_harness.cpp src\overlay\input_state.cpp src\config\feature_config.cpp /link user32.lib /OUT:build-artifacts\tests\input_state_harness.exe
 if errorlevel 1 goto :fail
-cl %COMMON% tests\overlay\camera_integration_harness.cpp src\overlay\camera_integration.cpp /link /OUT:build-artifacts\tests\camera_integration_harness.exe
+cl %COMMON% tests\overlay\camera_integration_harness.cpp src\overlay\camera_integration.cpp src\camera\horplus.cpp /link /OUT:build-artifacts\tests\camera_integration_harness.exe
 if errorlevel 1 goto :fail
 cl %COMMON% tests\overlay\placement_config_harness.cpp src\overlay\placement_config.cpp src\config\config_repository.cpp src\config\feature_config.cpp src\config\config_template.cpp /link user32.lib /OUT:build-artifacts\tests\placement_config_harness.exe
 if errorlevel 1 goto :fail
@@ -129,6 +161,14 @@ build-artifacts\tests\feature_status_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\optional_overlay_startup_harness.exe
 if errorlevel 1 goto :fail
+build-artifacts\tests\camera_correction_gate_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\camera_setting_transaction_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\camera_writer_transaction_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\cinematic_lifecycle_transaction_harness.exe
+if errorlevel 1 goto :fail
 build-artifacts\tests\startup_timeline_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\startup_journal_harness.exe
@@ -139,6 +179,8 @@ build-artifacts\tests\gameplay_mode_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\runtime_settings_api_harness.exe
 if errorlevel 1 goto :fail
+build-artifacts\tests\dialogue_boundary_transaction_harness.exe
+if errorlevel 1 goto :fail
 build-artifacts\tests\aspect_policy_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\horplus_gameplay_harness.exe
@@ -146,6 +188,8 @@ if errorlevel 1 goto :fail
 build-artifacts\tests\zoom_transition_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\gameplay_mode_transition_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\module_ownership_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\gameplay_camera_safety_harness.exe
 if errorlevel 1 goto :fail
@@ -160,6 +204,8 @@ if errorlevel 1 goto :fail
 build-artifacts\tests\cinematic_initialization_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\coordinator_recovery_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\cinematic_exit_authority_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\horplus_post_exit_recovery_harness.exe
 if errorlevel 1 goto :fail
@@ -189,6 +235,12 @@ build-artifacts\tests\dialogue_fov_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\diagnostics_gate_harness.exe
 if errorlevel 1 goto :fail
+build-artifacts\tests\dialogue_source_provenance_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\camera_writer_identity_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\cinematic_lifecycle_context_harness.exe
+if errorlevel 1 goto :fail
 build-artifacts\tests\performance_telemetry_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\language_state_transition_harness.exe
@@ -200,6 +252,8 @@ if errorlevel 1 goto :fail
 build-artifacts\tests\gameplay_camera_resolver_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\composition_presenter_state_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\activation_trace_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\overlay_layout_metrics_harness.exe
 if errorlevel 1 goto :fail
@@ -216,6 +270,13 @@ if errorlevel 1 goto :fail
 build-artifacts\tests\semantic_snapshot_harness.exe
 if errorlevel 1 goto :fail
 build-artifacts\tests\localization_harness.exe
+if errorlevel 1 goto :fail
+
+build-artifacts\tests\runtime_native_adapter_harness.exe
+if errorlevel 1 goto :fail
+cl %COMMON% /DNDEBUG /DOVERLAY_PRODUCTION /DOVERLAY_SETTINGS_FRONTEND /DOVERLAY_COMBINED /DOVERLAY_STARTUP_JOURNAL /DZOOM_TRANSITION_DIAGNOSTIC /DHORPLUS_FOV_STATE_DIAGNOSTIC /DCAMERA_STATE_SNAPSHOT_DIAGNOSTIC /DHORPLUS_CINEMATIC_WRITER_TRACE_DIAGNOSTIC /DMATCHGAMEPLAY_DIAGNOSTIC /Iexternal\imgui\backends tests\plugin\runtime_native_adapter_harness.cpp tests\plugin\runtime_owner_binding_probe.cpp @build-artifacts\tests\runtime_adapter_sources.rsp /link user32.lib psapi.lib bcrypt.lib dxgi.lib d3d11.lib dcomp.lib d3dcompiler.lib build-artifacts\tests\localization_resources.res /OUT:build-artifacts\tests\runtime_native_adapter_harness.exe
+if errorlevel 1 goto :fail
+build-artifacts\tests\runtime_native_adapter_harness.exe
 if errorlevel 1 goto :fail
 
 popd

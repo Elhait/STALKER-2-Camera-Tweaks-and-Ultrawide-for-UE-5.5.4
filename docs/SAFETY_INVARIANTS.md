@@ -1,5 +1,17 @@
 # Production Safety Invariants
 
+- Project-wide semantic FOV tolerance is ±1.0 degree, defined once as
+  `camera::kSemanticFovToleranceDegrees` in `src/camera/fov_semantics.hpp`.
+  Finite FOV values within that inclusive difference are semantically
+  equivalent unless independent lifecycle/source evidence proves an intentional
+  transition. Numeric proximity alone never proves source identity, provenance,
+  lifecycle, ownership, or camera intent; source ownership must use explicit
+  source/lifecycle evidence. A difference greater than 1.0 degree warrants
+  investigation but does not itself prove a transition. This tolerance is not
+  a floating-point, projection, interpolation, recovery-endpoint,
+  sampling-stability, or output assertion epsilon; those retain their
+  purpose-specific thresholds and must not be replaced mechanically.
+
 - Ambiguous, incomplete or structurally invalid signature matches fail closed.
 - Resolver decode, fixed look-ahead, relative-call and byte-window validation
   are bounded by the validated executable section span.
@@ -12,6 +24,18 @@
   interventions, but a feature may require observation capabilities installed
   by another domain. Missing required observation capability fails the
   dependent intervention closed without invalidating unrelated features.
+- Runtime diagnostics are persistent infrastructure: useful bounded camera,
+  lifecycle, ownership, source and compatibility instrumentation remains in
+  the ordinary production ASI under Diagnostic Mode after the motivating issue
+  is resolved. Diagnostic Mode controls observation/log emission only; it
+  cannot change camera output, aspect, lifecycle, ownership, associations,
+  correction gates or state-machine timing. Prefer event/change-based output
+  and skip diagnostic-only reads, snapshots and formatting while disabled.
+  Remove or replace established instrumentation only for a documented reason:
+  safety/invasiveness, material measured performance cost, a stale or unsafe
+  runtime-layout dependency, or complete supersession by a safer/general
+  observation contract. Preserve the diagnostic capability when replacing its
+  implementation and validate that it remains behaviorally observational.
 - A failed configuration persistence operation does not truncate or replace
   the last-known-good INI.
 - Cinematic aspect-store failure skips the custom/native store path and
@@ -55,6 +79,18 @@
   stop event.
 - The player's selected FOV is preserved; aspect correction does not use a
   hard-coded FOV compensation multiplier.
+- In Gameplay `RuntimeCombine`, the correction target is a validated current
+  viewport aspect. Synchronize the Gameplay writer aspect only on a real
+  mismatch, then confirm aspect and flags by read-back before applying HorPlus
+  in that domain. Invalid viewport input or unconfirmed synchronization must
+  fail closed without applying HorPlus in the unconfirmed domain. This mode
+  does not synchronize native flags; existing `HorPlus` and
+  `AspectRecalculation` semantics remain independent.
+- For an owner- and writer-validated RuntimeCombine `CinematicExiting`
+  recovery, preserve the confirmed transformed cinematic output only across
+  the validated native interpolation segment, and resume normal RuntimeCombine
+  after the native endpoint is confirmed. Do not infer this behavior for
+  unrelated modes, sources or unvalidated samples.
 - In Gameplay HorPlus mode, cinematic EXIT keeps the camera coordinator in
   `CinematicExiting` until a readable gameplay writer sample with valid aspect
   and gameplay flags matches the saved native EXIT target for a validated source.

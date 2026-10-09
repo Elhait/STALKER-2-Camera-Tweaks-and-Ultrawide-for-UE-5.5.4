@@ -8,6 +8,9 @@ exact subset cmap, and the codepoints already supplied by the ProggyClean/
 ProggyVector base fonts. Offline tests check catalog strings in each active
 profile and every locale name in its profile-specific selector face.
 
+The common subset also pins U+0148 (Latin small letter n with caron, `ň`) as an
+explicit regression glyph because it is not currently present in catalog text.
+
 ## Runtime profiles
 
 All active profiles share the small Noto Sans Mono subset. Existing ImGui
@@ -20,16 +23,16 @@ another locale's catalog glyph set.
 
 | Font/profile asset | Source binary | Cmap points | Embedded subset |
 | --- | ---: | ---: | ---: |
-| Noto Sans Mono / common | 596,428 B | 25 | 3,452 B |
+| Noto Sans Mono / common | 596,428 B | 60 | 6,144 B |
 | Noto Sans Arabic / arabic | 142,140 B TTF (18,777,381 B upstream package) | 43 | 5,256 B |
-| Noto Sans CJK JP / japanese | 9,590,732 B | 288 | 68,600 B |
-| Noto Sans CJK KR / korean | 10,415,420 B | 236 | 36,060 B |
-| Noto Sans CJK SC / chinese-simplified | 17,773,132 B | 301 | 74,488 B |
-| Noto Sans CJK TC / chinese-traditional | 11,942,800 B | 296 | 86,740 B |
-| **Total embedded subsets** | — | **1,189** | **274,596 B** |
+| Noto Sans CJK JP / japanese | 9,590,732 B | 300 | 72,364 B |
+| Noto Sans CJK KR / korean | 10,415,420 B | 249 | 37,872 B |
+| Noto Sans CJK SC / chinese-simplified | 17,773,132 B | 320 | 80,768 B |
+| Noto Sans CJK TC / chinese-traditional | 11,942,800 B | 324 | 95,020 B |
+| **Total embedded subsets** | — | **1,296** | **297,424 B** |
 
-The locale catalogs contain 1,061 unique printable Unicode codepoints; adding
-registry display names expands the full contract to 1,067 unique codepoints.
+The locale catalogs contain 1,120 unique printable Unicode codepoints; adding
+registry display names expands the full contract to 1,126 unique codepoints.
 Regional CJK subsets intentionally retain duplicate codepoints with different
 locale-specific outlines. The regenerated contract and offline tests establish
 glyph availability only, not visual correctness or Arabic shaping/bidi/RTL.
@@ -46,11 +49,11 @@ includes every ImFont in the atlas. RGBA texture bytes are atlas width × height
 
 | Text size | All-loaded atlas | All-loaded glyphs | RGBA bytes | Active profile + selector labels | Glyphs | RGBA bytes |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 12 | 512×1024 | 5,336 | 2,097,152 | 512×512 | 2,050 | 1,048,576 |
-| 13 | 512×2048 | 7,343 | 4,194,304 | 512×512 | 2,295 | 1,048,576 |
-| 14–16 | 1024×1024 | 7,343 | 4,194,304 | 512×512 | 2,007 | 1,048,576 |
-| 17–19 | 1024×1024 | 7,343 | 4,194,304 | 512×1024 | 2,295 | 2,097,152 |
-| 20–24 | 1024×2048 | 7,343 | 8,388,608 | 512×1024 | 2,007 | 2,097,152 |
+| 12 | 512×1024 | 5,408 | 2,097,152 | 512×512 | 2,050 | 1,048,576 |
+| 13 | 512×2048 | 7,415 | 4,194,304 | 512×512 | 2,307 | 1,048,576 |
+| 14–16 | 1024×1024 | 7,415 | 4,194,304 | 512×512 | 2,007 | 1,048,576 |
+| 17–19 | 1024×1024 | 7,415 | 4,194,304 | 512×1024 | 2,307 | 2,097,152 |
+| 20–24 | 1024×2048 | 7,415 | 8,388,608 | 512×1024 | 2,007 | 2,097,152 |
 
 The all-loaded atlas retains 2–8 MiB versus 1–2 MiB for one active profile plus
 selector labels (2–4× less texture memory). This supports keeping the current

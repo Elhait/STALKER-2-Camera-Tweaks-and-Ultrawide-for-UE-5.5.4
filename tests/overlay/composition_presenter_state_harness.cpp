@@ -356,6 +356,32 @@ namespace
             "failed message posting releases the wake gate for a future redraw");
     }
 
+    void TestCameraStatePublicationSchedulesVisibleRefresh()
+    {
+        overlay::PresenterWakeGate wake;
+        Require(!overlay::TryScheduleVisibleCameraStateRedraw(false, wake) &&
+                !wake.pending(),
+            "camera publications do not wake an idle hidden Overlay");
+        Require(overlay::TryScheduleVisibleCameraStateRedraw(true, wake) &&
+                wake.pending(),
+            "a new camera snapshot schedules a visible Overlay refresh");
+        Require(!overlay::TryScheduleVisibleCameraStateRedraw(true, wake) &&
+                wake.pending(),
+            "writer-rate publications coalesce behind one pending owner wake");
+        Require(overlay::SelectPresenterFrameState(true, false, false,
+                    wake.pending(), true) ==
+                    overlay::PresenterFrameState::EventDrivenRedraw &&
+                overlay::NeedsCompositorClock(
+                    overlay::PresenterFrameState::EventDrivenRedraw),
+            "the camera refresh follows the existing event-driven presenter route");
+        wake.BeginHandling();
+        Require(overlay::TryScheduleVisibleCameraStateRedraw(true, wake),
+            "a publication during/after frame handling can schedule the next refresh");
+        wake.CancelFailedPost();
+        Require(!wake.pending(),
+            "failed posting releases camera refresh coalescing state");
+    }
+
     void TestToastLifetimeRequiresSubmittedVisibleGeneration()
     {
         constexpr std::uintptr_t toastDrawList = 0x1001;
@@ -514,6 +540,7 @@ int main()
     TestTimerIdentityDrivesAutonomousProgression();
     TestSemanticPresenterPacingStates();
     TestInputEventsScheduleOneOwnerWake();
+    TestCameraStatePublicationSchedulesVisibleRefresh();
     TestToastLifetimeRequiresSubmittedVisibleGeneration();
     TestDeviceRecoveryPreservesVisibleAndHiddenInputOwnership();
     TestDamageTrackingPreservesRetainedSurfacePixels();
