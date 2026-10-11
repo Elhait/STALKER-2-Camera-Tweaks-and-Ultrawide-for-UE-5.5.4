@@ -6,6 +6,7 @@ tasks. Historical research is archived under [`research/`](../research/).
 ## Active tasks
 
 - [Return to RUNTIME_CPP_DECOMPOSITION after v3.0](active/RUNTIME_CPP_DECOMPOSITION_POST_V3_0_RETURN.md) (deferred; resume only after v3.0 is published)
+- [Vortex override instructions in mod archive](active/VORTEX_OVERRIDE_INSTRUCTIONS_ARCHIVE_TASK.md) (deferred until RUNTIME_CPP_DECOMPOSITION is complete)
 - [18-locale overlay localization](active/LOCALIZATION_18_LOCALES_TASK_PLAN.md) (offline implementation/validation complete; closure pending user confirmation)
 - [Cinematic runtime state differential trace](active/CINEMATIC_RUNTIME_STATE_DIFFERENTIAL_TRACE_TASK_PLAN.md)
 - [Cutscene FOV downstream state](active/CUTSCENE_FOV_DOWNSTREAM_STATE_TASK_PLAN.md)

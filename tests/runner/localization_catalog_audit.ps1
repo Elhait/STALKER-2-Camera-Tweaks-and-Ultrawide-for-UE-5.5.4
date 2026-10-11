@@ -123,7 +123,7 @@ $canonicalEntry = @($loadedCatalogs | Where-Object { $_.Descriptor.Code -ceq $ca
 $catalog = if ($canonicalEntry) { $canonicalEntry.Catalog } else { [pscustomobject]@{} }
 $catalogKeys = if ($canonicalEntry) { $canonicalEntry.Keys } else { @() }
 
-$keySource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization_keys.hpp') -Raw
+$keySource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization\localization_keys.hpp') -Raw
 $typedKeys = @([regex]::Matches($keySource, '\{"([a-zA-Z0-9_.]+)"\}') |
     ForEach-Object { $_.Groups[1].Value } | Sort-Object)
 $missing = @($typedKeys | Where-Object { $_ -notin $catalogKeys })
@@ -173,8 +173,8 @@ $legacyReferences = [regex]::Matches($sourceText,
     'GetEnglishCatalog|EnglishCatalog|englishCatalog_|ukrainianCatalog_|englishResourceId|ukrainianResourceId|Locale::(English|Ukrainian)|OverlayLanguage::')
 $filesystemLocaleReferences = [regex]::Matches($sourceText,
     'LoadFile\s*\(|OverlayLocalePath|locales[\\/]en\.json')
-$resourceScript = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization_resources.rc') -Raw
-$resourceIds = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization_resource_ids.h') -Raw
+$resourceScript = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization\localization_resources.rc') -Raw
+$resourceIds = Get-Content -LiteralPath (Join-Path $projectRoot 'src\localization\localization_resource_ids.h') -Raw
 # Structural policy: each registry resource maps to the declared embedded file
 # and numeric resource ID; binary resource existence is also exercised by the
 # localization harness and production resource compilation.
@@ -207,8 +207,8 @@ $resourcePresent = $resourcePresent -and
     ($resourceIds -match '#define\s+IDR_NOTO_MONO_OFL\s+127') -and
     ($resourceIds -match '#define\s+IDR_NOTO_CJK_NOTICE\s+129') -and
     ($resourceIds -notmatch 'IDR_LOCALE_EN|IDR_LOCALE_UK|IDR_UI_FONT')
-$fontLoader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization_font.cpp') -Raw
-$fontLoaderHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization_font.hpp') -Raw
+$fontLoader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization\localization_font.cpp') -Raw
+$fontLoaderHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization\localization_font.hpp') -Raw
 # Intentional source policy: reject filesystem/system-font fallbacks and keep
 # script-profile/glyph-range wiring explicit. The localization harness checks
 # the resulting embedded glyph/profile behavior across all registered locales.
@@ -240,29 +240,29 @@ $embeddedFontLoading = $fontLoader -match 'AddFontDefault\s*\(' -and
     $fontLoader -match '0x3000,\s*0x30FF' -and
     $fontLoader -match '0xAC00,\s*0xD7AF' -and
     $fontLoader -notmatch '0x0020,\s*0x00FF'
-$renderer = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_runtime.cpp') -Raw
-$rendererRuntimeHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_runtime.hpp') -Raw
-$rendererState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_state.hpp') -Raw
-$rendererStateSource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_state.cpp') -Raw
-$inlineHotkeyLayout = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\inline_hotkey_layout.hpp') -Raw
+$renderer = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\renderer_runtime.cpp') -Raw
+$rendererRuntimeHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\renderer_runtime.hpp') -Raw
+$rendererState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\renderer_state.hpp') -Raw
+$rendererStateSource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\renderer_state.cpp') -Raw
+$inlineHotkeyLayout = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\inline_hotkey_layout.hpp') -Raw
 $hotkeyBindingBody = [regex]::Match($renderer,
     'void DrawHotkeyBinding\([\s\S]*?(?=\n\s*FeatureStatusTone CameraTransitionTone)').Value
-$cameraStateView = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\camera_state_view.cpp') -Raw
-$cameraStateViewHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\camera_state_view.hpp') -Raw
-$inputStateHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\input_state.hpp') -Raw
-$inputStateSource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\input_state.cpp') -Raw
-$compositionPolicy = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter_runtime_policy.hpp') -Raw
+$cameraStateView = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\camera_state_view.cpp') -Raw
+$cameraStateViewHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\camera_state_view.hpp') -Raw
+$inputStateHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\input\input_state.hpp') -Raw
+$inputStateSource = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\input\input_state.cpp') -Raw
+$compositionPolicy = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\presenter_runtime_policy.hpp') -Raw
 $compositionHarness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests\overlay\composition_presenter_state_harness.cpp') -Raw
 $inputHarness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests\overlay\input_state_harness.cpp') -Raw
-$selectorDocumentationView = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_documentation_view.cpp') -Raw
-$selectorDocumentationViewHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_documentation_view.hpp') -Raw
-$tooltipRowLayout = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\tooltip_row_layout.hpp') -Raw
-$placementSaveState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\placement_save_state.hpp') -Raw
-$selectorTooltipState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_tooltip_state.hpp') -Raw
+$selectorDocumentationView = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\selector_documentation_view.cpp') -Raw
+$selectorDocumentationViewHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\selector_documentation_view.hpp') -Raw
+$tooltipRowLayout = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\tooltip_row_layout.hpp') -Raw
+$placementSaveState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\placement_save_state.hpp') -Raw
+$selectorTooltipState = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\selector_tooltip_state.hpp') -Raw
 $imguiWidgets = Get-Content -LiteralPath (Join-Path $projectRoot 'external\imgui\imgui_widgets.cpp') -Raw
-$settingTooltipContent = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\setting_tooltip_content.hpp') -Raw
-$compositionRuntime = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\composition_runtime.cpp') -Raw
-$compositionRenderer = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\renderer_runtime.cpp') -Raw
+$settingTooltipContent = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\setting_tooltip_content.hpp') -Raw
+$compositionRuntime = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\composition\composition_runtime.cpp') -Raw
+$compositionRenderer = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presenter\renderer_runtime.cpp') -Raw
 $compositionIsolationBoundary = Test-CompositionIsolationBoundary ($compositionRuntime + $compositionRenderer)
 $compositionIsolationNegativeFixture = -not (Test-CompositionIsolationBoundary @'
 HRESULT STDMETHODCALLTYPE HookPresent() { return original(); }
@@ -274,12 +274,12 @@ $mutexExceptionBoundary = $inputStateHeader -match 'void Close\(\);' -and
     $inputStateSource -match 'void InputState::Close\(\)' -and
     $inputStateSource -match 'std::lock_guard lock\(rebindMutex_\)' -and
     $renderer -match 'GetInputState\(\)\.Close\(\);[\s\S]*?catch \(\.\.\.\)'
-$languageReader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\game_language_reader.cpp') -Raw
-$manager = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization_manager.cpp') -Raw
+$languageReader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization\game_language_reader.cpp') -Raw
+$manager = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\localization\localization_manager.cpp') -Raw
 $localizationHarness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests\overlay\localization_harness.cpp') -Raw
-$selectorGeometry = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\selector_examples_geometry.hpp') -Raw
-$featurePresentation = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\feature_presentation.cpp') -Raw
-$featurePresentationHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\feature_presentation.hpp') -Raw
+$selectorGeometry = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\selector_examples_geometry.hpp') -Raw
+$featurePresentation = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\feature_presentation.cpp') -Raw
+$featurePresentationHeader = Get-Content -LiteralPath (Join-Path $projectRoot 'src\overlay\presentation\feature_presentation.hpp') -Raw
 # The remaining UI source checks are narrowly scoped UI/source policies (typed
 # localization keys, no legacy catalogs, no raw UI literals, accepted tooltip
 # and notification presentation, and the restored layout contract). Semantic

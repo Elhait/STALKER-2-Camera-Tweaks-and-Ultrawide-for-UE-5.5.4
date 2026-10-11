@@ -1,4 +1,4 @@
-#include "../../src/diagnostics/language_state_transition.hpp"
+#include "../../src/diagnostics/language_state/language_state_transition.hpp"
 
 #include <cassert>
 #include <cstdint>

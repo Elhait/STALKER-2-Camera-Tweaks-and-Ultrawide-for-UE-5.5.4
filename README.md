@@ -1,6 +1,6 @@
 # STALKER 2 Camera Tweaks and Ultrawide for UE 5.5.4
 
-This repository contains `STALKER2CameraTweaks.asi`, a unified camera/FOV and ultrawide mod for **S.T.A.L.K.E.R. 2: Heart of Chornobyl**. The current potential v3.0 candidate is not released; its latest automated and in-game regression checks have passed.
+This repository contains `STALKER2CameraTweaks.asi`, a unified camera/FOV and ultrawide mod for **S.T.A.L.K.E.R. 2: Heart of Chornobyl**. Downloads and installation instructions are available on [Nexus Mods](https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416).
 
 Camera Tweaks are not limited to ultrawide: camera/FOV options and custom cinematic framing are also available on a standard 16:9 display.
 
@@ -18,6 +18,7 @@ The mod is especially useful if you play with a Gameplay FOV other than the game
 - Ships 18 embedded overlay languages with locale-specific font profiles; `Auto (Game Language)` follows the game's interface language.
 - Uses the configured Overlay Toggle (`Delete` by default); `Esc` dismisses the open overlay. Optional mode hotkeys are disabled by default.
 - `[Overlay] Enabled=false` disables the Overlay subsystem after a game restart without disabling Gameplay, Cinematics or Dialogue correction.
+- The standard ASI includes supported passive runtime diagnostics. Set `[Diagnostics] Enabled=true` and restart the game to enable bounded diagnostic observations and logs; when disabled, diagnostic-only work is skipped. No separate diagnostic ASI is needed for these diagnostics.
 - Creates and documents `STALKER2CameraTweaks.ini` automatically; overlay settings are saved there as well.
 - Resolves gameplay and cinematic hooks through guarded signatures and fails safely when validation is ambiguous or unsuccessful.
 
@@ -91,7 +92,7 @@ CinematicFovCycle=F11
 DialogueCycle=F12
 ```
 
-The generated INI documents each setting's available values and examples. You can edit it manually while the game is closed; restart the game after manual changes.
+The generated INI documents each setting's available values and examples. You can edit it manually while the game is closed; restart the game after manual changes. Diagnostics are startup-only and default to off.
 
 ## Screenshots
 
@@ -151,11 +152,11 @@ These recordings show additional runtime behavior of the unified ASI:
 
 ## Tested scope and limitations
 
-- The current candidate was runtime-tested on Steam game build `2.0.6` with Unreal Engine `5.5.4`. The maintainer reports the final regression matrix passed, covering Gameplay/Cinematic transitions and recovery, aspect-policy changes, Dialogue during cinematics, skip/continuation, and Overlay enabled/disabled.
-- Gameplay and cinematic framing were tested at standard, ultrawide and custom aspects. `RuntimeCombine` supports arbitrary valid Gameplay aspects; the 16:9, 21:9 and 32:9 cinematic choices are framing presets.
-- The latest offline test suite and production/diagnostic builds pass. Embedded catalog/font coverage passes for all 18 languages. These checks do not establish visual correctness for every glyph, Arabic shaping, bidirectional text or RTL layout.
-- Static resolver portability was checked against Steam builds `2.0.2`–`2.0.5`; these older builds do not have separate runtime validation for this release. Signature resolution does not guarantee compatibility with future game patches.
-- Detailed test results and runtime evidence are recorded in [TESTING_AND_RESEARCH.md](TESTING_AND_RESEARCH.md) and the [v2.1-to-potential-v3.0 change inventory](research/reports/V2_1_TO_POTENTIAL_V3_0_CHANGE_INVENTORY_2026-10-08.md).
+- In-game validation on Steam build `2.0.6` with Unreal Engine `5.5.4` covered Gameplay correction, cinematic transitions and recovery, Dialogue behavior, aspect changes, and Overlay operation with the Overlay enabled and disabled. See the [supported-build evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md) for the tested game-build boundary.
+- Gameplay supports arbitrary valid aspect ratios; `16:9`, `21:9` and `32:9` are cinematic framing presets, not Gameplay limits.
+- The Overlay includes 18 embedded languages. Arabic shaping, bidirectional text, RTL layout and runtime rendering of every glyph are not guaranteed.
+- Older Steam builds have static resolver research but no separate runtime validation. A future game patch may require updated signatures; successful resolution does not guarantee compatibility.
+- Detailed accumulated findings are summarized in [TESTING_AND_RESEARCH.md](TESTING_AND_RESEARCH.md).
 - The game retains its native post-cinematic FOV recovery; this mod does not force or rewrite that native transition.
 - Weapon/viewmodel FOV can remain incorrectly framed after a cinematic, load or gameplay-camera rebuild. This is a separate game-side issue and is not fixed by this mod.
 - In windowed mode, a custom resolution whose aspect is not represented by a native game aspect mode may be resized by the game's native `AspectRecalculation` return to `Auto`. This does not mean arbitrary-aspect HorPlus is unsupported.
@@ -164,14 +165,15 @@ These recordings show additional runtime behavior of the unified ASI:
 ## Build requirements
 
 - Visual Studio 2022 17.14 or newer with the Desktop development with C++ workload and the x64 MSVC tools component.
+- CMake 3.31 or newer and Ninja 1.12 or newer. `build.cmd` discovers the supported Visual Studio installation and uses its bundled CMake/Ninja tools.
 - The production source uses C++23-era language/library facilities. With the supported MSVC 17.14 toolset, `build.cmd` selects `/std:c++latest` because that compiler exposes the required C++23 feature set through that switch.
-- `build.cmd` creates the production `STALKER2CameraTweaks.asi`, including the combined overlay, embedded catalogs/font profiles, and bounded Auto language reader, without high-rate research instrumentation. Its `OVERLAY_PRODUCTION` definition selects the shipped overlay integration.
-- `tools/build/build-diagnostic.cmd` creates the separate `STALKER2CameraTweaksDiagnostic.asi` with supported diagnostic instrumentation; it is not intended for performance comparison.
+- `build.cmd` creates the production `STALKER2CameraTweaks.asi`, including the combined overlay, embedded catalogs/font profiles, bounded Auto language reader, and runtime-gated passive diagnostics. Its `OVERLAY_PRODUCTION` definition selects the shipped overlay integration.
+- `tools/build/build-diagnostic.cmd` remains a compatibility wrapper that produces the separate `STALKER2CameraTweaksDiagnostic.asi` name. It carries the same approved passive diagnostics as the ordinary ASI; experimental/forensic tools remain separate and are not promoted by `[Diagnostics] Enabled`.
 - `tools/build/build-overlay-settings.cmd` is a compatibility alias to `build.cmd`. `tools/build/build-overlay-poc.cmd` and `tools/build/build-overlay-discovery.cmd` are retired standalone research scripts, not supported ASI build profiles. The former still exercises the legacy `OVERLAY_RENDERING_POC` source gate.
 - [SafetyHook](https://github.com/cursey/safetyhook), including its bundled Zydis source.
 - [spdlog](https://github.com/gabime/spdlog).
 
-Place dependencies under `external/safetyhook`, `external/spdlog`, and `external/imgui`, then run `build.cmd` from this directory. The script discovers the supported Visual Studio installation with `vswhere`; it does not depend on the author's local drive path. Production compilation does not define research/test switches.
+Place dependencies under `external/safetyhook`, `external/spdlog`, and `external/imgui`, then run `build.cmd` from this directory. The script discovers the supported Visual Studio installation with `vswhere`; it does not depend on the author's local drive path. It also selects a UTF-8 console code page before CMake detects MSVC's localized `/showIncludes` prefix, so Ninja can track header dependencies correctly. Production compilation does not define research/test switches. Build objects, generated files and resources are isolated by profile/options under `build-artifacts/cm`; `CAMERA_TWEAKS_OBJECT_DIR`, when set, names the parent directory under which the isolated CMake tree is created. `CAMERA_TWEAKS_OUTPUT_NAME` still selects the published ASI path, and the prior output is retained if configuration, compilation or publication fails.
 
 ## Development and research tools
 
@@ -202,7 +204,7 @@ The following tools were used during development, reverse engineering and valida
 - UAssetGUI was considered for traditional `.uasset/.uexp` inspection, but the direct CUE4Parse path made it unnecessary.
 - FModel was considered for package discovery, but it was not used as the authoritative WVF analysis path.
 
-The research tools and probes are kept under `research/` and are not part of the production release package. A v3.0.0 package has been assembled locally for release review but has not been published; the download link above points to the latest published release.
+The research tools and probes are kept under `research/` and are not part of the production release package. Download available releases from the Nexus Mods page linked above.
 
 ## License and credits
 

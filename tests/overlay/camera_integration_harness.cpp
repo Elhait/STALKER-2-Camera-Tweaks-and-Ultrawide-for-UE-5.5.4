@@ -1,5 +1,5 @@
-#include "../../src/overlay/camera_integration.hpp"
-#include "../../src/overlay/aspect_ratio_format.hpp"
+#include "../../src/overlay/presentation/camera_integration.hpp"
+#include "../../src/overlay/presentation/aspect_ratio_format.hpp"
 
 #include <cmath>
 #include <iostream>

@@ -1,277 +1,44 @@
 # Project Summary
 
-## 1. Production mod
+S.T.A.L.K.E.R. 2 Camera Tweaks is a unified camera/FOV mod for *S.T.A.L.K.E.R. 2: Heart of Chornobyl*. Version **3.0.0 is published**; the scope and version of a future release have not yet been decided.
 
-The stable production mod now includes and validates:
+The distributed production plugin is `STALKER2CameraTweaks.asi`. Do not load it alongside the superseded `STALKER2UltrawideFix.asi` or `STALKER2GameplayAspectFix.asi`.
 
-- gameplay aspect-ratio correction;
-- cinematic aspect/FOV correction;
-- automatic cinematic aspect policy;
-- forced cinematic modes for `16:9`, `21:9` and `32:9`;
-- native cinematic mode;
-- dialogue zoom modes: `Native`, `Adaptive`, `Reduced` and `Disabled`;
-- dynamic signature resolution instead of fixed RVAs;
-- cinematic ENTER/EXIT lifecycle handling;
-- a unified gameplay/cinematic coordinator;
-- atomic post-cinematic handoff behavior;
-- protection against repeated application;
-- cross-patch checks covering Steam `2.0.2–2.0.5`;
-- production runtime validation on Steam `2.0.5`;
-- the unified `v0.6.0` release configuration.
+## Features
 
-The stable production artifact is `STALKER2CameraTweaks.asi`. The older
-`STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi` names are
-superseded release names.
+Gameplay, Cinematics, Dialogue and Overlay each have independent enable settings. Enabled camera features coordinate camera ownership during transitions; disabling one does not implicitly disable the others. The Overlay can be disabled at startup without disabling camera correction.
 
-The production configuration variants covered:
+### Gameplay
 
-```text
-5 cinematic/aspect policies
-  Auto, Native, forced 16:9, forced 21:9, forced 32:9
+- `RuntimeCombine` is the recommended default. It combines the earlier `AspectRecalculation` and `HorPlus` approaches: synchronizes the Gameplay camera aspect with the current viewport, confirms the read-back, and only then applies Hor+ FOV correction.
+- `HorPlus` adapts Gameplay FOV to the aspect observed at the camera writer. `AspectRecalculation` uses the game's native aspect transition while preserving the selected Gameplay FOV.
+- Aspect handling responds to runtime resolution changes and supports arbitrary valid ratios.
 
-4 dialogue zoom policies
-  Native, Adaptive, Reduced, Disabled
-```
+### Cinematics and Dialogue
 
-## 2. Weapon/viewmodel FOV behavior
+- Cinematic framing supports automatic/native selection and forced `16:9`, `21:9` and `32:9` presets, independently of the physical display aspect.
+- Cinematic FOV policies are `GameplayHorPlus` and `NativeHorPlus`; lifecycle handling coordinates ENTER, continuation, EXIT and Gameplay recovery.
+- Dialogue correction modes are `Adaptive`, `Reduced` and `Disabled`. There is no `Native` Dialogue mode. Disabling Dialogue correction leaves the game's camera behavior in control; its default dialogue zoom targets 70° FOV.
 
-The following behavior was repeatedly reproduced and is now treated as an
-established behavioral baseline:
+### Overlay and configuration
 
-```text
-Vanilla:
-  cinematic EXIT → broken weapon framing
-  ADS cycle      → correct framing
+- The settings Overlay includes localized controls, tooltips, hotkey rebinding, Camera Integration status and an expanded read-only Camera State view.
+- The Overlay embeds 18 interface locales and their required font resources.
+- `[Overlay] Enabled=false` disables the Overlay subsystem after restart; it does not disable Gameplay, Cinematics or Dialogue correction.
+- Configuration is stored in the main INI beside the ASI. Startup-only changes require a game restart; settings documented as live-applied take effect immediately.
 
-Weapon Viewmodel FOV - 0:
-  cinematic EXIT → correct framing
-```
+## Architecture
 
-The runtime investigation covered these states:
+- `src/plugin/runtime.cpp` is the single runtime owner/composition root for native callbacks, hooks, workers, lifecycle and cross-domain camera coordination.
+- Domain calculations and transaction helpers are separated where they form useful independent responsibilities. Runtime decomposition B1–B7 is complete with documented `Remain` decisions; further file splitting is not a goal by itself.
+- Overlay code is grouped by composition, input, localization, presentation and presenter responsibilities. Shared language-state diagnostics and localization resource IDs have their own source locations.
+- `build.cmd` is the production build entry point. CMake + Ninja provides the incremental build graph; `test.cmd` is the canonical test entry point and builds the registered harnesses before running them serially.
+- Generated build/test outputs are isolated from release contents. Passive runtime diagnostics are included in the ordinary ASI and controlled by `[Diagnostics] Enabled`; they observe runtime state without changing camera correction semantics.
 
-```text
-S0 — normal/correct gameplay
-S1 — cinematic
-S2 — immediately after EXIT
-S3 — weapon appeared
-S4 — ADS active
-S5 — ADS released
-```
+## Known boundaries
 
-The final research hotkey sequence was:
+- Weapon/viewmodel FOV behavior after some camera transitions is a separate game-side path. Its reference mechanism has been researched, but production repair is deferred because the mod has no validated, patch-resilient UE reflection/invocation bridge.
+- Subtitle horizontal centering is a vanilla UI issue; no production subtitle hook or heuristic offset is included.
+- Offline glyph/resource checks do not guarantee every runtime glyph, Arabic shaping or right-to-left layout. Graphics-wrapper compatibility and HDR color parity are not blanket guarantees.
 
-```text
-F7  — cinematic
-F8  — immediately after EXIT
-F9  — weapon appeared
-F10 — ADS
-F11 — ADS released
-```
-
-This provided six distinct runtime states and five primary snapshot points.
-
-## 3. Tested and rejected ownership hypotheses
-
-Approximately twelve independent ownership directions were checked:
-
-1. gameplay camera FOV;
-2. camera field `+0x234`;
-3. other camera and PCM fields;
-4. `CameraComponent` and `PlayerCameraManager` state;
-5. `F_99_P` curve paths;
-6. O-profile behavior;
-7. exposed `WVF_Actor_C` fields;
-8. `S2Dev_Event_Watcher_C` as the ADS owner;
-9. `AnimScriptInstance` and `AimingData`;
-10. the native ADS refresh path;
-11. `MPC_FOV.TanFOV`;
-12. a standalone ASI UE reflection bridge.
-
-The O-profile matrix tested three values:
-
-```text
-O0   → baseline
-O20  → farther framing
-O40  → farther still
-```
-
-This established monotonic O-dependent behavior and closed that branch. No
-additional O-profile matrix was justified afterward.
-
-## 4. AnimScriptInstance and ADS evidence
-
-Vanilla and `Weapon Viewmodel FOV - 0` post-EXIT snapshots had equivalent
-weapon and animation state:
-
-```text
-AnimBP class       = AnimBP_pm_fp_C
-bAiming            = false
-AimAlpha           = 0
-OffsetAimAlpha     = 0
-AimState           = 0
-```
-
-Therefore persistent `AnimScriptInstance`/`AimingData` state did not explain
-the visual difference:
-
-```text
-Vanilla S3  → BROKEN
-WVF_0 S3    → CORRECT
-```
-
-During vanilla ADS, the reflected state changed from `AimState=0` to
-`AimState=3`, then returned to baseline after ADS release while the corrected
-framing remained. Weapon mesh and animation instance recreation were not
-observed. This established a transient ADS refresh/recalculation effect, but
-not its exact native owner.
-
-## 5. UE4SS runtime probes
-
-Four bounded research probes were used:
-
-```text
-AnimScriptInstanceS0S4Capture
-WVFRuntimeDiscovery
-WVFApplicationTrace
-MPC_TanFOVCausalProbe
-```
-
-Runtime evidence confirmed:
-
-```text
-WVF_C                    live
-WVF_Actor_C              live
-S2Dev_Event_Watcher_C    owner of WVF_Actor_C
-```
-
-The `On Event Watcher` reflected aim state did not provide a useful ADS
-transition and was rejected as the primary ADS anchor.
-
-## 6. Static Blueprint/Kismet analysis
-
-Four toolchain paths were attempted:
-
-1. `repak` — blocked by an Oodle/hash mismatch;
-2. `retoc` — container-readable, but no usable legacy asset output;
-3. `UAssetToolRivals` — indexing worked, but extraction was blocked by its
-   Oodle integration;
-4. `CUE4Parse` — successful direct IoStore/Zen package inspection.
-
-`UAssetGUI` was not required after the direct CUE4Parse path succeeded.
-
-The recovered static bootstrap is:
-
-```text
-WVF_C::ExecuteUbergraph_WVF(15)
-  → spawn S2Dev_Event_Watcher_C
-  → spawn WVF_Actor_C
-```
-
-The recovered profile/application path is:
-
-```text
-all-0.wvf
-  → .wvf profile parsing
-  → string-to-double conversion
-  → profile map
-  → main-hand item lookup
-  → viewport/FOV math
-  → SetScalarParameterValue
-```
-
-The target was resolved statically as:
-
-```text
-Collection: /Game/_Stalker_2/Materials/MPC/MPC_FOV.MPC_FOV
-Parameter:  TanFOV
-```
-
-## 7. Causal `TanFOV` proof
-
-One controlled UE4SS intervention changed the active parameter:
-
-```text
-Before:   1.678197145462
-Requested: 2.0977464318275
-After:    2.0977463722229
-```
-
-Readback confirmed that the mutation reached the active parameter. At the
-same time:
-
-```text
-WeaponMesh identity       unchanged
-AnimInstance identity      unchanged
-TanFOV state               changed
-Visible framing            changed
-```
-
-This causally established:
-
-```text
-all-0.wvf
-  → profile/FOV math
-  → MPC_FOV.TanFOV
-  → visible weapon/viewmodel framing
-```
-
-The downstream shader/material reader was not recovered because the available
-cooked package metadata had no bounded reverse-reference index. A global
-material crawl was explicitly rejected as out of scope.
-
-## 8. Production boundary
-
-The reference mechanism is known. The production implementation remains
-deferred for one specific reason: the standalone ASI has no validated,
-patch-resilient UE reflection/invocation bridge.
-
-The following were not established in the current ASI architecture:
-
-```text
-UObject/UClass registry access
-UFunction resolution
-StaticFindObject bridge
-ProcessEvent ABI
-safe UE reflection invocation
-```
-
-Therefore:
-
-```text
-Reference WVF mechanism          CONFIRMED
-TanFOV causal ownership           CONFIRMED
-UE4SS independent MPC access     CONFIRMED
-Native ASI reflection bridge     DEFERRED
-Post-cinematic TanFOV repair     DEFERRED
-Custom Weapon FOV                DEFERRED
-Production changes               NONE
-```
-
-## 9. Overall counts
-
-The documented research covered approximately:
-
-```text
-Production policy variants        9
-  5 cinematic/aspect policies
-  4 dialogue zoom policies
-
-Weapon FOV runtime states         6
-Primary snapshot points           5
-O-profile values tested           3
-Ownership hypotheses              ≈12
-UE4SS research probes             4
-Asset/parser toolchain paths      4
-Major WVF research batches        5
-Controlled TanFOV interventions   1
-Reference lifecycle paths         2
-
-Production WVF changes            0
-Production ASI changes            0
-```
-
-The active Weapon Viewmodel FOV feature branch is closed. Reopening it is
-justified only by a new, independently grounded UE reflection/invocation
-anchor. The existing causal evidence should be reused directly rather than
-repeating the O-profile, Camera/PCM, AnimInstance, converter or TanFOV
-validation work.
+For accumulated testing and research conclusions, see [`TESTING_AND_RESEARCH.md`](TESTING_AND_RESEARCH.md). User-facing changes are summarized in [`RELEASE_NOTES_v3.0.0.md`](RELEASE_NOTES_v3.0.0.md); detailed technical evidence belongs in [`research/reports/`](research/reports/) and [`research/evidence/`](research/evidence/).

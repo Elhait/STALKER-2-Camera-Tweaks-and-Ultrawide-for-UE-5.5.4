@@ -6,6 +6,12 @@
 #include "../../src/gameplay/gameplay_camera.hpp"
 #include "../../src/plugin/camera_writer_transaction.hpp"
 #include <limits>
+namespace {
+    template <typename T>
+    bool RuntimeAdapterFixtureZoomSafeRead(std::uintptr_t address, T& value);
+    DWORD RuntimeAdapterFixtureInitializeThreadCall(void* parameter);
+    void RuntimeAdapterFixtureInitializationFailureCleanup();
+}
 namespace platform::win32 {
     float RuntimeAdapterFixtureViewport();
     float RuntimeAdapterFixtureAutoViewport();
@@ -19,9 +25,15 @@ namespace gameplay {
 #define ReadClientViewportAspect RuntimeAdapterFixtureAutoViewport
 #define NotifyOverlayCameraStatePublished RuntimeAdapterFixtureWake
 #define ReadMemory RuntimeAdapterFixtureReadMemory
+#define RUNTIME_ADAPTER_ZOOM_SAFE_READ(address, value) RuntimeAdapterFixtureZoomSafeRead((address), (value))
+#define RUNTIME_ADAPTER_INITIALIZE_THREAD_CALL(parameter) RuntimeAdapterFixtureInitializeThreadCall((parameter))
+#define RUNTIME_ADAPTER_INITIALIZATION_FAILURE_CLEANUP() RuntimeAdapterFixtureInitializationFailureCleanup()
 #define WriteAspectOnly RuntimeAdapterFixtureWriteAspectOnly
 #include "../../src/plugin/runtime.cpp"
 #undef WriteAspectOnly
+#undef RUNTIME_ADAPTER_ZOOM_SAFE_READ
+#undef RUNTIME_ADAPTER_INITIALIZE_THREAD_CALL
+#undef RUNTIME_ADAPTER_INITIALIZATION_FAILURE_CLEANUP
 #undef ReadMemory
 #undef NotifyOverlayCameraStatePublished
 #undef ReadClientViewportAspect
@@ -45,6 +57,7 @@ namespace {
     float xmmAtWake{};
     float xmm1AtWake{};
     bool diagnosticMode{};
+    std::vector<std::string> observedLogs;
     unsigned logCalls{};
     unsigned restorationLogCalls{};
     bool logHeldGate{};
@@ -53,9 +66,22 @@ namespace {
     std::vector<NativeEvent> nativeEvents;
     bool aspectWriteSucceeded{};
     bool refuseReadback{};
+    bool throwOnZoomSafeRead{};
+    unsigned safetyHookVirtualProtectCalls{};
+    unsigned safetyHookFailVirtualProtectAt{};
+    bool safetyHookFailAfterVirtualProtect{};
+    enum class StartupFault { Early, Partial };
+    StartupFault startupFault{StartupFault::Early};
+    bool startupCleanupThrows{};
+    unsigned startupCleanupCalls{};
+    HANDLE startupWorkerDone{};
+    std::atomic<bool> startupWorkerEntryReturned{};
+    struct SafetyHookAllocationRelease { void* address; std::size_t size; bool returned; };
+    std::vector<SafetyHookAllocationRelease> safetyHookAllocationReleases;
     std::uintptr_t fixtureSource{};
     class ObservingSink : public spdlog::sinks::base_sink<std::mutex> {
         void sink_it_(const spdlog::details::log_msg& message) override {
+            observedLogs.emplace_back(message.payload.data(), message.payload.size());
             ++logCalls;
             if (std::string_view(message.payload.data(), message.payload.size()).starts_with("RESTORATION_STATE "))
                 ++restorationLogCalls;
@@ -109,6 +135,9 @@ namespace {
     }
     void Setup(Memory& source) {
         diagnostics::SetEnabled(diagnosticMode);
+        InitializeCinematicContinuationDiagnostics(diagnosticMode);
+        Check((GetCinematicContinuationTrace() != nullptr) == diagnosticMode,
+            "Cinematic continuation trace allocation did not follow startup Diagnostics gate");
         nativeEvents.reserve(1024);
         fixtureSource = source.Address();
         g_logger = std::make_shared<spdlog::logger>("runtime-adapter-fixture", std::make_shared<ObservingSink>());
@@ -138,6 +167,85 @@ namespace {
         currentContext = &context;
         TraceDialogueBoundary(context);
         currentContext = nullptr;
+    }
+    template <typename T>
+    bool RuntimeAdapterFixtureZoomSafeRead(std::uintptr_t address, T& value) {
+        if (throwOnZoomSafeRead) {
+            throwOnZoomSafeRead = false;
+            throw std::runtime_error("injected Zoom memory-read exception");
+        }
+        return platform::win32::ReadMemory(address, &value, sizeof(value));
+    }
+    DWORD RuntimeAdapterFixtureInitializeThreadCall(void*) {
+        if (startupFault == StartupFault::Partial) {
+            g_runtimeInitializationComplete.store(true, std::memory_order_release);
+            g_cameraWriterHookGate.store(true, std::memory_order_release);
+            g_cinematicHookGate.store(true, std::memory_order_release);
+            g_runtime.overlayStartupSucceeded.store(true, std::memory_order_release);
+        }
+        throw std::runtime_error(startupFault == StartupFault::Partial
+            ? "injected partial startup failure" : "injected early startup failure");
+    }
+    void RuntimeAdapterFixtureInitializationFailureCleanup() {
+        ++startupCleanupCalls;
+        if (startupCleanupThrows)
+            throw std::runtime_error("injected secondary cleanup failure");
+        ResetAllRuntimeResources();
+    }
+    DWORD WINAPI RuntimeAdapterStartupFailureWorker(void*) {
+        plugin::InitializeThread(nullptr);
+        startupWorkerEntryReturned.store(true, std::memory_order_release);
+        if (startupWorkerDone) SetEvent(startupWorkerDone);
+        return 0;
+    }
+    void StartupFailure(const std::string& scenario) {
+        startupFault = scenario == "startup-fatal-early"
+            ? StartupFault::Early : StartupFault::Partial;
+        startupCleanupThrows = scenario == "startup-fatal-cleanup-throws";
+        startupCleanupCalls = 0;
+        startupWorkerEntryReturned.store(false, std::memory_order_release);
+        g_runtimeInitializationComplete.store(false, std::memory_order_release);
+        g_stopping.store(false, std::memory_order_release);
+        g_cameraWriterHookGate.store(false, std::memory_order_release);
+        g_cinematicHookGate.store(false, std::memory_order_release);
+        g_runtime.overlayStartupSucceeded.store(false, std::memory_order_release);
+
+        if (scenario == "startup-fatal-retained-worker") {
+            startupFault = StartupFault::Partial;
+            startupWorkerDone = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+            Check(startupWorkerDone && CreateWorkerStopEvent() &&
+                g_workers.Start(&RuntimeAdapterStartupFailureWorker),
+                "Retained startup-worker fixture setup failed");
+            Check(WaitForSingleObject(startupWorkerDone, 3000) == WAIT_OBJECT_0,
+                "Fatal initialization worker timed out");
+            Check(startupWorkerEntryReturned.load(std::memory_order_acquire) &&
+                g_workers.WorkerCount() == 1 && g_stopping &&
+                !g_runtimeInitializationComplete && !g_cameraWriterHookGate &&
+                !g_cinematicHookGate && !g_runtime.overlayStartupSucceeded &&
+                startupCleanupCalls == 1,
+                "Failed self-join lost worker ownership or repeated cleanup");
+            ResetAllRuntimeResources();
+            Check(g_workers.WorkerCount() == 0, "Retained startup worker was not joined");
+            CloseHandle(startupWorkerDone);
+            startupWorkerDone = nullptr;
+            return;
+        }
+
+        if (scenario == "startup-fatal-cleanup-throws") startupCleanupThrows = true;
+        const DWORD result = plugin::InitializeThread(nullptr);
+        Check(result == ERROR_UNHANDLED_EXCEPTION && startupCleanupCalls == 1 &&
+            g_stopping && !g_runtimeInitializationComplete && !g_cameraWriterHookGate &&
+            !g_cinematicHookGate && !g_runtime.overlayStartupSucceeded,
+            "Fatal thread exception escaped containment or left readiness open");
+        if (scenario == "startup-fatal-cleanup-throws")
+            Check(g_runtimeInitializationComplete == false,
+                "Secondary cleanup exception reopened initialization readiness");
+    }
+    void ZoomInCallback(SafetyHookContext& context) {
+        SafeMidHookEntry<&TraceZoomIn>(context);
+    }
+    void ZoomOutCallback(SafetyHookContext& context) {
+        SafeMidHookEntry<&TraceZoomOut>(context);
     }
     void Gameplay(const std::string& scenario) {
         Memory source, output; Setup(source);
@@ -598,12 +706,23 @@ namespace {
         Memory source, output; Setup(source);
         source.Put(0x4C, 70.0f); source.Put(0x50, 90.0f); source.Put(0x138, 1.0f); source.Put(0x13C, 2.0f);
         if (scenario == "zoom-unreadable") source.Protect(PAGE_NOACCESS);
+        const bool throwingIn = scenario == "zoom-in-throw";
+        const bool throwingOut = scenario == "zoom-out-throw";
+        throwOnZoomSafeRead = throwingIn;
         auto context = Context(source, output); auto before = context;
-        TraceZoomIn(context); UnchangedContext(before, context);
-        Check(g_snapshotZoomActive && g_snapshotZoomHold && g_zoomInHits == 1, "Zoom IN observation");
-        Check(g_runtime.snapshotZoomObservationValid == (scenario != "zoom-unreadable"), "Zoom read validity");
-        TraceZoomOut(context); UnchangedContext(before, context);
-        Check(!g_snapshotZoomActive && g_zoomOutHits == 1, "Zoom OUT observation");
+        ZoomInCallback(context); UnchangedContext(before, context);
+        Check(g_snapshotZoomActive && g_snapshotZoomHold &&
+            g_zoomInHits == (diagnosticMode ? 1u : 0u), "Zoom IN observation/diagnostic counter gate");
+        Check(g_runtime.snapshotZoomObservationValid ==
+            (scenario != "zoom-unreadable" && !throwingIn), "Zoom read validity");
+        if (throwingIn) Check(g_runtime.snapshotZoomSequence.load() == 0,
+            "Zoom exception unexpectedly published post-read sequence");
+        throwOnZoomSafeRead = throwingOut;
+        ZoomOutCallback(context); UnchangedContext(before, context);
+        Check(!g_snapshotZoomActive &&
+            g_zoomOutHits == (diagnosticMode ? 1u : 0u), "Zoom OUT observation/diagnostic counter gate");
+        if (throwingOut) Check(!g_runtime.snapshotZoomObservationValid,
+            "Zoom OUT exception unexpectedly validated its observation");
     }
     void SettingsAndWake() {
         Memory source, output; Setup(source);
@@ -845,6 +964,168 @@ namespace {
         Check(g_coordinator == CoordinatorState::Gameplay,
             "Dialogue lifecycle altered camera coordinator");
     }
+    void DiagnosticWork() {
+        Memory source, output;
+        Setup(source);
+        if (!diagnosticMode) {
+            std::unique_lock telemetryLock(g_horPlusFovTelemetryMutex);
+            plugin::CameraWriterGameplayResult diagnosticInput{};
+            TraceHorPlusFovState(diagnosticInput);
+        }
+        const auto readCount = [&] {
+            return static_cast<std::size_t>(std::count_if(nativeEvents.begin(),
+                nativeEvents.end(), [](const NativeEvent& event) {
+                    return event.effect == NativeEffect::Read;
+                }));
+        };
+
+        g_coordinator = CoordinatorState::CinematicActive;
+        auto writer = Context(source, output);
+        const auto beforeWriterReads = readCount();
+        TraceHorPlusCinematicWriterBefore(writer);
+        const auto writerReads = readCount() - beforeWriterReads;
+        Check(writerReads == (diagnosticMode ? 6u : 0u),
+            "Cinematic writer diagnostic memory reads escaped the OFF gate");
+        TraceHorPlusCinematicWriterAfter(writer, writer.xmm0.f32[0]);
+        if (diagnosticMode) {
+            Check(std::any_of(observedLogs.begin(), observedLogs.end(), [](const auto& line) {
+                return line.find("matchGameplayCandidateAvailable=") != std::string::npos;
+            }), "MatchGameplay prediction was absent from the ordinary adapter build");
+        }
+
+        g_coordinator = CoordinatorState::Gameplay;
+        if (diagnosticMode) {
+            plugin::CameraWriterGameplayResult diagnosticInput{};
+            diagnosticInput.inputFov = 90.0f;
+            diagnosticInput.aspect = fixtureViewport;
+            diagnosticInput.reason = "diagnostic-fixture";
+            TraceHorPlusFovState(diagnosticInput);
+            Check(std::any_of(observedLogs.begin(), observedLogs.end(), [](const auto& line) {
+                return line.find("HORPLUS_STATE") != std::string::npos;
+            }), "HorPlus FOV state trace was absent from the ordinary adapter build");
+        }
+        auto dialogue = Context(source, output);
+        dialogue.xmm6.f32[0] = 90.0f;
+        const auto beforeCallbacks = g_dialogueDiagnosticCallbacks.load(
+            std::memory_order_relaxed);
+        DialogueCallback(dialogue);
+        Check(g_dialogueDiagnosticCallbacks.load(std::memory_order_relaxed) ==
+                beforeCallbacks + (diagnosticMode ? 1u : 0u),
+            "Dialogue diagnostic callback counter did not follow runtime gate");
+
+        ArmDialogueRecoveryEndpointTrace(source.Address());
+        dialogue = Context(source, output);
+        dialogue.rsi = source.Address();
+        const auto beforeRecoveryReads = readCount();
+        ObserveDialogueRecoveryEndpointTrace(dialogue, DialoguePhase::RearmPending,
+            89.0f, 90.0f, 88.0f, 1, false);
+        const auto recoveryReads = readCount() - beforeRecoveryReads;
+        Check(recoveryReads == (diagnosticMode ? 3u : 0u),
+            "Dialogue recovery diagnostic reads escaped the OFF gate");
+        if (diagnosticMode) {
+            auto* trace = GetCinematicContinuationTrace();
+            trace->Begin(true, 1, source.Address(), 90.0f, 100.0f);
+            RecordCinematicContinuationTrace(true, true, source.Address(), true,
+                95.0f, 100.0f, 90.0f, 1);
+            const auto snapshot = trace->Finish(true, "adapter-gate-test");
+            Check(snapshot.storedSamples == 1 && snapshot.totalSamples == 1,
+                "Enabled continuation trace did not record the actual adapter sample");
+        }
+        std::cout << "diagnostic_work diagnostic=" << (diagnosticMode ? "on" : "off")
+            << " cinematic_writer_reads=" << writerReads
+            << " dialogue_callbacks=" << (diagnosticMode ? 1 : 0)
+            << " recovery_reads=" << recoveryReads << "\n";
+    }
+    void DiagnosticPerformance() {
+        Memory source, output;
+        diagnosticMode = true;
+        Setup(source);
+        constexpr std::size_t iterations = 4096;
+        constexpr std::size_t repetitions = 7;
+        const diagnostics::ContinuationTraceInput sample{
+            source.Address(), true, 95.0f, 100.0f, 90.0f, 100.0f,
+            static_cast<std::uint8_t>(cinematics::CinematicWriterAction::RetainContinuationTarget),
+            true, false};
+        diagnostics::CinematicContinuationTrace preservedBaseline;
+        std::vector<double> baselineNs, disabledNs, enabledNs;
+        baselineNs.reserve(repetitions);
+        disabledNs.reserve(repetitions);
+        enabledNs.reserve(repetitions);
+        for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {
+            auto start = std::chrono::steady_clock::now();
+            for (std::size_t i = 0; i < iterations; ++i) {
+                const auto lower = (std::min)(sample.continuationStartFov,
+                    sample.cinematicTargetFov);
+                const auto upper = (std::max)(sample.continuationStartFov,
+                    sample.cinematicTargetFov);
+                const bool finite = std::isfinite(sample.rawInputFov) &&
+                    std::isfinite(sample.continuationStartFov) &&
+                    std::isfinite(sample.cinematicTargetFov);
+                diagnostics::ContinuationTraceInput prepared = sample;
+                prepared.inProductionRange = finite && sample.rawInputFov >= lower &&
+                    sample.rawInputFov <= upper;
+                prepared.inSemanticTargetRegion = std::isfinite(sample.rawInputFov) &&
+                    std::isfinite(sample.cinematicTargetFov) &&
+                    camera::AreFovValuesSemanticallyEquivalent(sample.rawInputFov,
+                        sample.cinematicTargetFov);
+                static_cast<void>(preservedBaseline.Record(false, prepared));
+            }
+            baselineNs.push_back(std::chrono::duration<double, std::nano>(
+                std::chrono::steady_clock::now() - start).count() / iterations);
+
+            diagnostics::SetEnabled(false);
+            start = std::chrono::steady_clock::now();
+            for (std::size_t i = 0; i < iterations; ++i)
+                RecordCinematicContinuationTrace(false, true, source.Address(), true,
+                    95.0f, 100.0f, 90.0f, 1);
+            disabledNs.push_back(std::chrono::duration<double, std::nano>(
+                std::chrono::steady_clock::now() - start).count() / iterations);
+
+            diagnostics::SetEnabled(true);
+            auto* trace = GetCinematicContinuationTrace();
+            Check(trace != nullptr, "Enabled performance fixture lacks trace storage");
+            trace->Begin(true, repetition + 1, source.Address(), 90.0f, 100.0f);
+            start = std::chrono::steady_clock::now();
+            for (std::size_t i = 0; i < iterations; ++i)
+                RecordCinematicContinuationTrace(true, true, source.Address(), true,
+                    95.0f, 100.0f, 90.0f, 1);
+            enabledNs.push_back(std::chrono::duration<double, std::nano>(
+                std::chrono::steady_clock::now() - start).count() / iterations);
+            const auto snapshot = trace->Finish(true, "performance-fixture");
+            Check(snapshot.storedSamples == diagnostics::kContinuationTraceCapacity &&
+                snapshot.totalSamples == iterations && snapshot.overflow,
+                "Enabled continuation workload was not bounded at the sample capacity");
+        }
+        const auto median = [](std::vector<double>& values) {
+            std::sort(values.begin(), values.end());
+            return values[values.size() / 2];
+        };
+        std::cout << "continuation_trace_ns_per_sample baseline_off=" << median(baselineNs)
+            << " current_off=" << median(disabledNs)
+            << " current_on=" << median(enabledNs)
+            << " iterations_per_repetition=" << iterations
+            << " repetitions=" << repetitions
+            << " enabled_capacity=" << diagnostics::kContinuationTraceCapacity
+            << " off_trace_owner=" << (GetCinematicContinuationTrace() ? "allocated_for_on_fixture" : "null")
+            << "\n";
+    }
+#include "runtime_native_evidence_cases.hpp"
+}
+
+extern "C" BOOL WINAPI SafetyHookTestVirtualProtect(LPVOID address, SIZE_T size,
+    DWORD protection, PDWORD previous) {
+    const auto call = ++safetyHookVirtualProtectCalls;
+    if (call == safetyHookFailVirtualProtectAt && !safetyHookFailAfterVirtualProtect)
+        return FALSE;
+    const auto result = ::VirtualProtect(address, size, protection, previous);
+    if (call == safetyHookFailVirtualProtectAt && safetyHookFailAfterVirtualProtect && result)
+        return FALSE;
+    return result;
+}
+
+extern "C" void SafetyHookTestAllocationRelease(void* address, std::size_t size,
+    int returnedToAllocator) {
+    safetyHookAllocationReleases.push_back({address, size, returnedToAllocator != 0});
 }
 namespace platform::win32 {
     float RuntimeAdapterFixtureViewport() { return fixtureViewport; }
@@ -880,7 +1161,7 @@ int main(int argc, char** argv) {
             "writer-combine-invalid-viewport", "writer-aspect", "writer-off", "writer-gate-off", "writer-stopping",
             "writer-unreadable", "aspect-wide", "aspect-off", "aspect-readonly", "aspect-unreadable",
             "lifecycle", "lifecycle-off", "lifecycle-gate-off", "lifecycle-chain", "dialogue-active", "dialogue-off",
-            "dialogue-cinematic", "dialogue-unreadable", "zoom", "zoom-unreadable", "settings-wake", "serialization", "writer-invalid-fov",
+            "dialogue-cinematic", "dialogue-unreadable", "zoom", "zoom-unreadable", "zoom-in-throw", "zoom-out-throw", "settings-wake", "serialization", "writer-invalid-fov",
             "writer-combine-readback-failure", "historical-target", "serialization-dialogue", "serialization-enter", "serialization-exit",
             "serialization-aspect", "serialization-settings", "serialization-reader", "recovery",
             "settings-api", "dialogue-exiting", "dialogue-rearm-source-change", "dialogue-disabled-in-flight",
@@ -895,7 +1176,25 @@ int main(int argc, char** argv) {
             "cinematic-continuation-native-mode", "cinematic-continuation-target-change",
             "cinematic-continuation-outside-low", "cinematic-continuation-outside-high",
             "cinematic-continuation-correction-off", "cinematic-continuation-exit-departure",
-            "cinematic-continuation-no-validated-exit", "cinematic-continuation-policy-change"};
+            "cinematic-continuation-no-validated-exit", "cinematic-continuation-policy-change",
+            "evidence-dialogue-identities", "evidence-dialogue-invalid-fov",
+            "evidence-dialogue-invalid-target", "evidence-dialogue-source-change",
+            "evidence-dialogue-reset", "evidence-dialogue-policy-snapshot",
+            "evidence-dialogue-reenable", "evidence-dialogue-exclusion",
+            "evidence-writer-identities", "evidence-writer-invalid-fields",
+            "evidence-writer-ads", "evidence-runtime-resize",
+            "evidence-cinematic-invalid-enter", "evidence-cinematic-rejected-exit",
+            "evidence-cinematic-indexed-exit", "evidence-cinematic-cancel",
+            "evidence-cinematic-aspect-targets", "evidence-settings-kinds",
+            "evidence-settings-lock-order", "evidence-persistence-kinds",
+            "evidence-reset-empty", "evidence-exception-boundary",
+            "evidence-nested-deferral", "evidence-native-trampoline", "evidence-zoom-native-continuation",
+            "evidence-safetyhook-lifetime-faults", "evidence-safetyhook-failed-create",
+            "evidence-safetyhook-disable-postwrite", "evidence-reset-self-join",
+            "evidence-reset-native-hook", "evidence-install-transaction-order",
+            "diagnostic-work",
+            "startup-fatal-early", "startup-fatal-partial",
+            "startup-fatal-cleanup-throws", "startup-fatal-retained-worker"};
         wchar_t executable[MAX_PATH]{};
         const auto length = GetModuleFileNameW(nullptr, executable, MAX_PATH);
         if (!length || length >= MAX_PATH) return 1;
@@ -929,10 +1228,23 @@ int main(int argc, char** argv) {
             << " cases x Diagnostic Mode OFF/ON; " << std::size(cases) * 2
             << " fresh processes)\n"; return 0;
     }
+    if (argc == 3 && std::string(argv[1]) == "diagnostics-performance") {
+        try {
+            diagnosticMode = std::string(argv[2]) == "on";
+            DiagnosticPerformance();
+            return 0;
+        } catch (const std::exception& error) {
+            std::cerr << "diagnostics-performance: FAIL: " << error.what() << '\n';
+            return 1;
+        }
+    }
     try {
         const std::string scenario = argv[1];
         diagnosticMode = argc > 2 && std::string(argv[2]) == "on";
-        if (scenario == "restoration-logging") RestorationLogging();
+        if (scenario == "diagnostic-work") DiagnosticWork();
+        else if (scenario.starts_with("evidence-")) NativeEvidence(scenario);
+        else if (scenario.starts_with("startup-fatal-")) StartupFailure(scenario);
+        else if (scenario == "restoration-logging") RestorationLogging();
         else if (scenario.starts_with("writer-")) Gameplay(scenario);
         else if (scenario.starts_with("aspect-")) Aspect(scenario);
         else if (scenario.starts_with("lifecycle")) Lifecycle(scenario);

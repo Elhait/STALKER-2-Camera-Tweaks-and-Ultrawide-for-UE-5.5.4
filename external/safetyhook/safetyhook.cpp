@@ -17,6 +17,13 @@
 
 
 namespace safetyhook {
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+extern "C" void SafetyHookTestAllocationRelease(void* address, size_t size,
+    int returned_to_allocator);
+#endif
+
+static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len,
+    const std::function<void()>& run_fn, bool* write_attempted);
 Allocation::Allocation(Allocation&& other) noexcept {
     *this = std::move(other);
 }
@@ -28,9 +35,11 @@ Allocation& Allocation::operator=(Allocation&& other) noexcept {
         m_allocator = std::move(other.m_allocator);
         m_address = other.m_address;
         m_size = other.m_size;
+        m_retained = other.m_retained;
 
         other.m_address = nullptr;
         other.m_size = 0;
+        other.m_retained = false;
     }
 
     return *this;
@@ -42,11 +51,21 @@ Allocation::~Allocation() {
 
 void Allocation::free() {
     if (m_allocator && m_address != nullptr && m_size != 0) {
-        m_allocator->free(m_address, m_size);
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+        SafetyHookTestAllocationRelease(m_address, m_size, m_retained ? 0 : 1);
+#endif
+        if (!m_retained) m_allocator->free(m_address, m_size);
         m_address = nullptr;
         m_size = 0;
         m_allocator.reset();
+        m_retained = false;
     }
+}
+
+void Allocation::retain() noexcept {
+    if (!m_allocator || !m_address || m_size == 0 || m_retained) return;
+    m_allocator->retain();
+    m_retained = true;
 }
 
 Allocation::Allocation(std::shared_ptr<Allocator> allocator, uint8_t* address, size_t size) noexcept
@@ -72,6 +91,11 @@ std::shared_ptr<Allocator> Allocator::global() {
 
 std::shared_ptr<Allocator> Allocator::create() {
     return std::shared_ptr<Allocator>{new Allocator{}};
+}
+
+void Allocator::retain() noexcept {
+    if (!m_retained_self.load(std::memory_order_acquire))
+        m_retained_self.store(weak_from_this().lock(), std::memory_order_release);
 }
 
 std::expected<Allocation, Allocator::Error> Allocator::allocate(size_t size) {
@@ -468,13 +492,15 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
         m_trampoline = std::move(other.m_trampoline);
         m_trampoline_size = other.m_trampoline_size;
         m_original_bytes = std::move(other.m_original_bytes);
-        m_enabled = other.m_enabled;
+        m_patch_state = other.m_patch_state;
+        m_ever_patched = other.m_ever_patched;
         m_type = other.m_type;
 
         other.m_target = nullptr;
         other.m_destination = nullptr;
         other.m_trampoline_size = 0;
-        other.m_enabled = false;
+        other.m_patch_state = PatchState::Unpatched;
+        other.m_ever_patched = false;
         other.m_type = Type::Unset;
     }
 
@@ -689,14 +715,20 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
 std::expected<void, InlineHook::Error> InlineHook::enable() {
     std::scoped_lock lock{m_mutex};
 
-    if (m_enabled) {
+    if (m_patch_state == PatchState::Patched) {
         return {};
     }
+    if (m_patch_state == PatchState::Uncertain)
+        return std::unexpected{Error::failed_to_unprotect(m_target)};
 
     std::optional<Error> error;
+    bool write_attempted{};
+    bool write_succeeded{};
 
     // jmp from original to trampoline.
-    if (!trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &error] {
+    bool operation_succeeded{};
+    try {
+        operation_succeeded = trap_threads_result(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &error, &write_succeeded] {
         if (m_type == Type::E9) {
             auto trampoline_epilogue = reinterpret_cast<TrampolineEpilogueE9*>(
                 m_trampoline.address() + m_trampoline_size - sizeof(TrampolineEpilogueE9));
@@ -705,6 +737,8 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
                     reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination), m_original_bytes.size());
                 !result) {
                 error = result.error();
+            } else {
+                write_succeeded = true;
             }
         }
 
@@ -713,10 +747,27 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
             if (auto result = emit_jmp_ff(m_target, m_destination, m_target + sizeof(JmpFF), m_original_bytes.size());
                 !result) {
                 error = result.error();
+            } else {
+                write_succeeded = true;
             }
         }
 #endif
-    })) {
+        }, &write_attempted);
+    } catch (...) {
+        if (write_attempted) {
+            m_ever_patched = true;
+            m_trampoline.retain();
+            m_patch_state = PatchState::Uncertain;
+        }
+        return std::unexpected{Error::failed_to_unprotect(m_target)};
+    }
+
+    if (write_attempted) {
+        m_ever_patched = true;
+        m_trampoline.retain();
+        m_patch_state = write_succeeded ? PatchState::Patched : PatchState::Uncertain;
+    }
+    if (!operation_succeeded) {
         return std::unexpected{Error::failed_to_unprotect(m_target)};
     }
 
@@ -724,7 +775,8 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
         return std::unexpected{*error};
     }
 
-    m_enabled = true;
+    if (!write_succeeded)
+        return std::unexpected{Error::failed_to_unprotect(m_target)};
 
     return {};
 }
@@ -732,15 +784,30 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
 std::expected<void, InlineHook::Error> InlineHook::disable() {
     std::scoped_lock lock{m_mutex};
 
-    if (!m_enabled) {
+    if (m_patch_state == PatchState::Unpatched) {
         return {};
     }
 
-    if (!trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
-        [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); }))
+    bool write_attempted{};
+    bool write_succeeded{};
+    bool operation_succeeded{};
+    try {
+        operation_succeeded = trap_threads_result(m_trampoline.data(), m_target, m_original_bytes.size(),
+            [this, &write_succeeded] {
+                std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target);
+                write_succeeded = true;
+            }, &write_attempted);
+    } catch (...) {
+        if (write_attempted)
+            m_patch_state = write_succeeded ? PatchState::Unpatched : PatchState::Uncertain;
         return std::unexpected{Error::failed_to_unprotect(m_target)};
-
-    m_enabled = false;
+    }
+    if (write_attempted && !write_succeeded)
+        m_patch_state = PatchState::Uncertain;
+    else if (write_succeeded)
+        m_patch_state = PatchState::Unpatched;
+    if (!operation_succeeded || !write_succeeded)
+        return std::unexpected{Error::failed_to_unprotect(m_target)};
 
     return {};
 }
@@ -754,6 +821,8 @@ void InlineHook::destroy() {
         return;
     }
 
+    if (m_ever_patched || m_patch_state != PatchState::Unpatched || !disable_result)
+        m_trampoline.retain();
     m_trampoline.free();
 }
 } // namespace safetyhook
@@ -856,6 +925,8 @@ MidHook::MidHook(MidHook&& other) noexcept {
 
 MidHook& MidHook::operator=(MidHook&& other) noexcept {
     if (this != &other) {
+        if (m_hook.m_ever_patched || m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
+            m_stub.retain();
         m_hook = std::move(other.m_hook);
         m_target = other.m_target;
         m_stub = std::move(other.m_stub);
@@ -866,6 +937,11 @@ MidHook& MidHook::operator=(MidHook&& other) noexcept {
     }
 
     return *this;
+}
+
+MidHook::~MidHook() {
+    if (m_hook.m_ever_patched || m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
+        m_stub.retain();
 }
 
 void MidHook::reset() {
@@ -917,6 +993,8 @@ std::expected<void, MidHook::Error> MidHook::setup(
 
 std::expected<void, MidHook::Error> MidHook::enable() {
     if (auto enable_result = m_hook.enable(); !enable_result) {
+        if (m_hook.m_ever_patched || m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
+            m_stub.retain();
         return std::unexpected{Error::bad_inline_hook(enable_result.error())};
     }
 
@@ -1114,14 +1192,19 @@ SystemInfo system_info() {
     return info;
 }
 
-bool trap_threads([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
-    const std::function<void()>& run_fn) {
+static bool trap_threads_result([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
+    const std::function<void()>& run_fn, bool* write_attempted) {
     auto from_protect = vm_protect(from, len, VM_ACCESS_RWX).value_or(0);
     auto to_protect = vm_protect(to, len, VM_ACCESS_RWX).value_or(0);
+    if (write_attempted) *write_attempted = true;
     run_fn();
     vm_protect(to, len, to_protect);
     vm_protect(from, len, from_protect);
     return true;
+}
+
+bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
+    return trap_threads_result(from, to, len, run_fn, nullptr);
 }
 
 void fix_ip([[maybe_unused]] ThreadContext ctx, [[maybe_unused]] uint8_t* old_ip, [[maybe_unused]] uint8_t* new_ip) {
@@ -1149,6 +1232,14 @@ void fix_ip([[maybe_unused]] ThreadContext ctx, [[maybe_unused]] uint8_t* old_ip
 #include <windows.h>
 #else
 #error "Windows.h not found"
+#endif
+
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+extern "C" BOOL WINAPI SafetyHookTestVirtualProtect(LPVOID address, SIZE_T size,
+    DWORD protection, PDWORD previous);
+#define safetyhook_virtual_protect SafetyHookTestVirtualProtect
+#else
+#define safetyhook_virtual_protect VirtualProtect
 #endif
 
 
@@ -1403,7 +1494,9 @@ void find_me() {
 
 static std::mutex virtual_protect_mutex;
 
-bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
+static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn,
+    bool* write_attempted) {
+    if (write_attempted) *write_attempted = false;
     MEMORY_BASIC_INFORMATION find_me_mbi{};
     MEMORY_BASIC_INFORMATION from_mbi{};
     MEMORY_BASIC_INFORMATION to_mbi{};
@@ -1448,28 +1541,35 @@ bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     DWORD from_protect;
     DWORD to_protect;
 
-    const bool fromChanged = VirtualProtect(from, len, new_protect, &from_protect) != FALSE;
+    const bool fromChanged = safetyhook_virtual_protect(from, len, new_protect, &from_protect) != FALSE;
     const bool toChanged = fromChanged &&
-        VirtualProtect(to, len, new_protect, &to_protect) != FALSE;
+        safetyhook_virtual_protect(to, len, new_protect, &to_protect) != FALSE;
     if (!toChanged) {
-        if (fromChanged) VirtualProtect(from, len, from_protect, &from_protect);
+        if (fromChanged) safetyhook_virtual_protect(from, len, from_protect, &from_protect);
         std::scoped_lock lock{TrapManager::mutex};
         if (TrapManager::instance) TrapManager::instance->remove_trap(from);
         return false;
     }
 
+    if (write_attempted) *write_attempted = true;
     if (run_fn) {
         run_fn();
     }
 
-    const bool restored = VirtualProtect(to, len, to_protect, &to_protect) &&
-        VirtualProtect(from, len, from_protect, &from_protect);
+    const bool toRestored = safetyhook_virtual_protect(to, len, to_protect, &to_protect) != FALSE;
+    const bool fromRestored = safetyhook_virtual_protect(from, len, from_protect, &from_protect) != FALSE;
     {
         std::scoped_lock lock{TrapManager::mutex};
         if (TrapManager::instance) TrapManager::instance->remove_trap(from);
     }
-    return restored;
+    return toRestored && fromRestored;
 }
+
+bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
+    return trap_threads_result(from, to, len, run_fn, nullptr);
+}
+
+#undef safetyhook_virtual_protect
 
 void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {
     auto* ctx = reinterpret_cast<CONTEXT*>(thread_ctx);

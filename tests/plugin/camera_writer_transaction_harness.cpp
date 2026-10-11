@@ -1,10 +1,10 @@
 #include "../../src/plugin/camera_writer_transaction.hpp"
-#include "../../src/overlay/presenter_runtime_policy.hpp"
+#include "../../src/overlay/presenter/presenter_runtime_policy.hpp"
 #include "../../src/plugin/cinematic_lifecycle_transaction.hpp"
 #include "../../src/camera/camera_state_publication.hpp"
 #include "../../src/gameplay/horplus_gameplay.hpp"
 #include "../../src/gameplay/gameplay_state.hpp"
-#include "../../src/overlay/camera_integration.hpp"
+#include "../../src/overlay/presentation/camera_integration.hpp"
 
 #include <array>
 #include <cmath>

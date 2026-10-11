@@ -20,11 +20,11 @@ All RuntimeState fields retain one resident g_runtime owner. Relocating its defi
 | RecordDialogueSourceCallback | 644 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_coordinator | Always; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
 | RecordDialogueRecoverySource | 662 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_coordinator | Always; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
 | RecordDialogueSourceEnd | 673 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_coordinator | Always; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
-| GetDialogueBoundaryStateView | 686 | runtime_dialogue_callbacks.cpp | B4 | g_activeDialoguePolicy, g_activeDialogueSettingsEpoch, g_coordinator, g_dialogueBaseline, g_dialogueCandidate, g_dialogueCorrectionActivation, g_dialogueExitIncomingStart, g_dialogueMutex, g_dialoguePhase, g_dialoguePrevious, g_dialogueRecoveryRearm, g_dialogueSettingsEpoch, g_postCinematicDialogueExclusion, g_runtime, g_runtimeDialogueEnabled, g_runtimeDialoguePolicy | Always; Same owner; gate before dialogueMutex; explicit cross-calls |
-| ResetDialogueRuntimeState | 697 | runtime_dialogue_callbacks.cpp | B4 | g_activeDialoguePolicy | Always; Same owner; gate before dialogueMutex; explicit cross-calls |
-| ResetPostCinematicDialogueExclusion | 705 | runtime_dialogue_callbacks.cpp | B4 | g_postCinematicDialogueExclusion | Always; Same owner; gate before dialogueMutex; explicit cross-calls |
-| ArmPostCinematicDialogueExclusion | 711 | runtime_dialogue_callbacks.cpp | B4 | g_exitTargetFov, g_postCinematicDialogueExclusion | Always; Same owner; gate before dialogueMutex; explicit cross-calls |
-| ObservePostCinematicDialogueRecovery | 718 | runtime_dialogue_callbacks.cpp | B4 | g_postCinematicDialogueExclusion | Always; Same owner; gate before dialogueMutex; explicit cross-calls |
+| GetDialogueBoundaryStateView | 686 | Remain: runtime.cpp | B4 complete; approved Remain (2026-10-09) | g_activeDialoguePolicy, g_activeDialogueSettingsEpoch, g_coordinator, g_dialogueBaseline, g_dialogueCandidate, g_dialogueCorrectionActivation, g_dialogueExitIncomingStart, g_dialogueMutex, g_dialoguePhase, g_dialoguePrevious, g_dialogueRecoveryRearm, g_dialogueSettingsEpoch, g_postCinematicDialogueExclusion, g_runtime, g_runtimeDialogueEnabled, g_runtimeDialoguePolicy | References the single RuntimeState; exposing it across TUs would enlarge mutable owner API |
+| ResetDialogueRuntimeState | 697 | Remain: runtime.cpp | B4 complete; approved Remain (2026-10-09) | g_activeDialoguePolicy | Caller-owned gate/dialogueMutex and diagnostic-before-reset order must be preserved |
+| ResetPostCinematicDialogueExclusion | 705 | Remain: runtime.cpp | B4 complete; approved Remain (2026-10-09) | g_postCinematicDialogueExclusion | Owner-bound lifecycle wrapper |
+| ArmPostCinematicDialogueExclusion | 711 | Remain: runtime.cpp | B4 complete; approved Remain (2026-10-09) | g_exitTargetFov, g_postCinematicDialogueExclusion | Combines resident EXIT target and lifecycle operation |
+| ObservePostCinematicDialogueRecovery | 718 | Remain: runtime.cpp | B4 complete; approved Remain (2026-10-09) | g_postCinematicDialogueExclusion | Callback input/lifecycle/log ordering |
 | ResetAllRuntimeResources | 734 | Remain: runtime.cpp | No move in B1-B6 | g_cameraWriterHookGate, g_cinematicAspectComponentAvailable, g_cinematicEnterHook, g_cinematicExitHook, g_cinematicHookGate, g_cinematicLifecycleObservationAvailable, g_cinematicRecoveryOwner, g_cinematicSelectionValid, g_dialogueBoundaryHook, g_dialogueBoundaryHookAvailable, g_gameplayRecoveryObservationAvailable, g_hook, g_hotkeyRebindCaptureActive, g_hotkeyRebindConsumedKey, g_postExitConsumerHook, g_postExitGameplayObserverHook, g_postExitProducerStoreHook, g_postExitWriteOwnerHook, g_runtimeInitializationComplete, g_stopping, g_zoomInHits, g_zoomInHook, g_zoomLoggedEdges, g_zoomOutHits, g_zoomOutHook | Always; Facade/startup/worker or dormant experimental helper; no cleanup; B7 requires exact subset approval |
 | IsValidAspect | 822 | Remain: private runtime utility; shared private header only if required | B1/B6 reviewed |  | Always; No new owner; identical native checks/exception boundary |
 | TraceGameplayAspectRestorationState | 827 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch |  | Always; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
@@ -123,7 +123,7 @@ All RuntimeState fields retain one resident g_runtime owner. Relocating its defi
 | LogDialogueDiagnosticSummary | 3535 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_dialogueDiagnosticCallbacks, g_dialogueDiagnosticReturn1, g_dialogueDiagnosticReturn2, g_dialogueDiagnosticReturn3, g_dialogueDiagnosticReturn4, g_dialogueDiagnosticReturn5 | #ifdef DIALOGUE_BOUNDARY_DIAGNOSTIC; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
 | ArmDialogueRecoveryEndpointTrace | 3570 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_dialogueRecoveryEndpointTrace | #ifdef DIALOGUE_RECOVERY_ENDPOINT_DIAGNOSTIC; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
 | ObserveDialogueRecoveryEndpointTrace | 3579 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_dialogueRecoveryEndpointTrace | #ifdef DIALOGUE_RECOVERY_ENDPOINT_DIAGNOSTIC; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
-| TraceDialogueBoundary | 3646 | runtime_dialogue_callbacks.cpp | B4 | g_activeDialoguePolicy, g_cameraCorrectionGate, g_coordinator, g_dialogueBaseline, g_dialogueCorrectionActivation, g_dialogueDiagnosticCallbacks, g_dialogueMutex, g_dialoguePhase, g_dialoguePrevious, g_dialogueRecoveryRearm | Always; Same owner; gate before dialogueMutex; explicit cross-calls |
+| TraceDialogueBoundary | 3646 | Remain: runtime.cpp | B4 complete; approved Remain (2026-10-09) | g_activeDialoguePolicy, g_cameraCorrectionGate, g_coordinator, g_dialogueBaseline, g_dialogueCorrectionActivation, g_dialogueDiagnosticCallbacks, g_dialogueMutex, g_dialoguePhase, g_dialoguePrevious, g_dialogueRecoveryRearm | Native XMM6/RSI adapter ordering spans XMM1 write, snapshot publication/wake, diagnostics and gate release |
 | InstallDialogueBoundary | 3793 | runtime_hook_installation.cpp | B7 unapproved | g_dialogueBoundaryHook, g_dialogueBoundaryHookAvailable, g_executable, g_runtimeDialoguePolicy | Always; Same HookSet owner; disabled/commit/rollback order |
 | ReadHorPlusCinematicWriterState | 3843 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_cinematicEnterAspect, g_cinematicTransformedFov, g_coordinator | #ifdef HORPLUS_CINEMATIC_WRITER_TRACE_DIAGNOSTIC; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
 | HorPlusCinematicWriterSnapshotChanged | 3871 | runtime_diagnostics.cpp (coherent domain subsets if necessary) | B3 separate reviewed sub-batch | g_previousHorPlusCinematicWriter | #ifdef HORPLUS_CINEMATIC_WRITER_TRACE_DIAGNOSTIC; Original owner/TLS/lazy storage; existing guards; deferred emission after gate |
@@ -590,3 +590,209 @@ Alias bindings remain references to the original owner or HookSet submember, not
 | 6507 | constexpr bool dialogueRequested = true; | Always | Remain at original lifetime; bind same owner on approved consumer move |
 
 Inventory: 172 function/template definitions, 159 RuntimeState members. Full declarations and initializers, transitive calls and hook/member layout are preserved in the recoverable baseline source; alias lists above are direct references, not an exhaustive call graph.
+
+## B4 approved boundary disposition — 2026-10-09
+
+The user approved the review dispositions on 2026-10-09. B4 is **Complete —
+with documented Remain decisions**. This addendum supersedes the original B4
+destination proposals for the functions listed below without changing their
+baseline source or line inventory; no production code was moved or changed.
+
+| Responsibility / symbol | B4 disposition | Boundary note |
+|---|---|---|
+| `TraceDialogueBoundary` | `Remain` in `runtime.cpp` | Native XMM6/RSI capture, target read, gate/dialogue lock, XMM1 mutation, publication/wake and deferred logging order are integrated. |
+| `GetDialogueBoundaryStateView` | `Remain` in `runtime.cpp` | References the single RuntimeState's Dialogue/lifecycle fields; exporting the view would expose mutable owner state across TUs. |
+| `ResetDialogueRuntimeState` | `Remain` in `runtime.cpp` | Caller owns synchronization; diagnostic end/release precedes the already-extracted reset operation. Preserve each caller's lock and publication ordering. |
+| `ResetPostCinematicDialogueExclusion`, `ArmPostCinematicDialogueExclusion`, `ObservePostCinematicDialogueRecovery` | `Remain` in `runtime.cpp` | Lifecycle wrappers bind the owner-held exclusion state and EXIT/recovery call sites. |
+| `DialogueBoundaryStateView`, `ProcessDialogueBoundary`, `ResetDialogueBoundaryState`, `DialogueBoundaryIsActive` | `Already extracted` | Existing shared contract in `src/plugin/dialogue_boundary_transaction.hpp`; no further move. |
+| Dialogue phase/candidate/rearm/exclusion policy helpers | `Already extracted` | Existing domain state and transforms in `src/dialogue/dialogue_state.*` and `dialogue_fov.*`. |
+| `DialogueSourceProvenanceTrace` event/state model | `Already extracted` | Existing diagnostic-domain implementation in `src/diagnostics/dialogue_source_provenance.*`. |
+| `DialogueDiscoveryNowNs`, `LogDialogueDiscoveryEnd`, `LogDialogueDiscoveryChanges`, `TraceDialogueDiscovery` | `Remain` | Optional diagnostic observer uses runtime timer/state/logger and the production callback context; no independent B4 seam. |
+| `DialogueDiscoveryLoop` | `Remain` (B7) | Optional worker lifecycle is outside B4; no worker movement approved. |
+| `DialogueLifecycleCapabilityAvailable` | `Already extracted` | Existing feature-capability predicate in `src/plugin/feature_status.*`. |
+| `LogDialogueDiagnosticReturn`, `LogDialogueDiagnosticSummary`, `ArmDialogueRecoveryEndpointTrace`, `ObserveDialogueRecoveryEndpointTrace` | `Remain` | Compile-time diagnostic state/logging is owner- and callback-lifecycle-bound; reset summary remains with B7 orchestration. |
+| `InstallDialogueBoundary` and global reset/install orchestration | `Remain` (B7) | Outside B4; B7 remains unapproved. |
+
+V0-B evidence remains partial: named actual-adapter lifecycle, disabled-in-
+flight, source-cancellation, unreadable-target, XMM1/publication-wake and
+serialization cases are recorded in
+`research/reports/RUNTIME_CPP_DECOMPOSITION_B0_V0_RESULTS_2026-10-08.md`.
+Full native identity/invalid-input permutations, all reset call-site
+interleavings and live trampoline/game behavior are not proven by that suite.
+These gaps remain explicitly open and are not represented as completed tests
+or full Dialogue runtime validation. They do not block the approved B4
+`Remain` decision. B5 boundary review is the only authorized next step;
+B5–B7 implementation remains unapproved. If B5 finds no useful independent
+boundary, pause for the architecture checkpoint in the implementation plan
+before considering B6–B7.
+
+## B5 Cinematic boundary review — recommended dispositions (2026-10-10)
+
+Read-only review: see
+`B5_CINEMATIC_CALLBACK_BOUNDARY_REVIEW_2026-10-10.md`. This addendum records
+recommendations only; the user has not yet approved B5 closure. No production
+source was moved or changed.
+
+| Responsibility / symbol | Recommended disposition | Boundary note |
+|---|---|---|
+| `GetCinematicLifecycleStateView` | `Remain` | Factory binds the existing transaction view to the sole RuntimeState and its coordinator, generation, association, recovery, continuation, and Dialogue-exclusion state. |
+| `TraceCinematicEnter` / ENTER runtime adapter | `Remain` | Native low-XMM0 input/output, correction gate, accepted selection/generation, cross-domain owner state, publication and deferred diagnostics form one callback boundary. |
+| `TraceCinematicExit` / EXIT runtime adapter | `Remain` | Native legacy/indexed load context, accepted/rejected dispatch, recovery-owner capture, Dialogue reset, handoff, publication and deferred logging are ordered together. |
+| `ApplyCinematicAspectStore` | `Remain` | RAX target and exact RIP continuation, association/lifecycle observation, validated memory store and fail-closed behavior remain at the native hook boundary. |
+| `ResolveCinematicAspect` and viewport adapters | `Remain` (adapter); pure aspect policy `Already extracted` | Resolver uses runtime viewport and accepted selection; `cinematics::ResolveAspect` and store application helpers are already extracted. |
+| Selection capture/generation and baseline/transform decisions | `Already extracted` | Existing `cinematic_selection.*` and `cinematic_lifecycle_transaction.hpp`; generation is committed through the owner-bound state view. |
+| Accepted ENTER/EXIT lifecycle transactions and exit-authority decision | `Already extracted` | Existing `ProcessAcceptedCinematicEnter`, `ProcessAcceptedCinematicExit`, and `cinematic_exit_authority.*`; runtime callback integration remains in place. |
+| Source association, recovery-owner and continuation policy | `Already extracted` (domain); runtime wiring `Remain` | Cinematic domain stores/predicates are separate; lifecycle is jointly consumed by ENTER/EXIT and the Gameplay writer. |
+| Gameplay recovery, rapid-chain and generation-continuation orchestration | `Remain` | Crosses B5 callbacks, B6 Gameplay writer and settings/lifecycle paths; no duplicate coordinator or continuation store. |
+| Camera publication/freshness and Overlay wake | `Remain` | Preserve the approved B3 disposition and its shared lock/wake ordering. |
+| Continuation trace model | `Already extracted`; begin/record/flush adapters `Remain` | Trace state model is in diagnostics; runtime call sites share generation lifecycle and gate-aware logger ordering. |
+| `ResolveCinematicFovCallsites`, `InstallCinematicAspectComponent`, `InstallCinematicFovComponent`, `CommitCinematicComponents`, `RollbackCinematicAspectComponent`, `RollbackCinematicFovComponent` | `Remain` | Production installers share the resident HookSet, startup order and component gate; `cinematic_initialization.hpp` tests establish helper transaction behavior only, not these functions or full Initialize/install/reset orchestration. |
+| `cinematics::ResolveAspectStore`, `ResolveAspect`, `ApplyAspectStore` | `Already extracted` | Bounded resolver/aspect application helpers; live signature binding and target lifetime remain unverified. |
+
+Evidence limitations remain explicit and are not treated as completed checks:
+original legacy/indexed EXIT loads and CALL relocation at the actual game site;
+live aspect target binding/lifetime; complete production Initialize/install/
+partial rollback/reset; arbitrary engine callback quiescence; and replay
+provenance. N01/N02 are `Fixed` in the remediation report within the tested
+offline scope; N03 remains **Partially mitigated**. The preceding live smoke
+logs identify ASI `A7122D7439F9EDDE8601F234CB99673742992E1F7890FBE3786C71DB6F5C7771`,
+not the report's final production artifact, so they are not exact-artifact
+runtime evidence for that remediation. N04–N06 remain separate verification
+gates. No tests/builds were rerun for this documentary review.
+
+The B1–B5 architecture checkpoint finds that the reviewed remaining
+`runtime.cpp` cinematic/dialogue/publication code is predominantly composition
+root/native integration, while corresponding pure domain helpers are already
+separate. This conclusion does not pre-classify B6 or B7. B6 may merit a
+separately authorized boundary review of the shared Gameplay writer; B7 has no
+demonstrated review target yet and is not recommended absent a concrete
+maintenance need. Neither review nor implementation is authorized by this
+addendum. B5 closure remains pending user approval.
+
+## Superseding approval and B6 review addendum — 2026-10-10
+
+This dated addendum supersedes the earlier B5 paragraph immediately above
+that said closure was pending and B6 was unauthorized. The user approved B5
+closure as **Complete — with documented Remain decisions**. B5 native
+ENTER/EXIT/aspect adapters, cross-generation/source/recovery orchestration,
+publication/wake, and production installer commit/rollback remain with the
+runtime owner; cinematic domain selection/aspect/lifecycle/recovery helpers
+are already extracted. See
+`B5_CINEMATIC_CALLBACK_BOUNDARY_REVIEW_2026-10-10.md`.
+
+The user authorized only the B6 Gameplay Writer boundary review. The review
+report is `B6_GAMEPLAY_WRITER_BOUNDARY_REVIEW_2026-10-10.md`; classifications
+below are recommendations and do not close B6 without user disposition.
+
+| B6 responsibility | Recommended disposition | Boundary / evidence note |
+|---|---|---|
+| `ReplayManualTransition` native callback and displaced writer-store contract | `Remain` | Binds RSI/RBX/XMM0 context to the sole owner/gate and native trampoline; adapter tests do not execute the original `[RBX+0x30]` store. |
+| Gameplay/Cinematic/recovery RuntimeState view factories | `Remain` | Reference the single owner and cross B2–B5 state; moving widens mutable owner API. |
+| `GetCameraWriterEngineOperations` native memory/viewport adapters | `Remain` | Production safe-read/writeability/readback operations are native integration, not reusable policy. |
+| `ProcessCameraWriter` transaction routing | `Already extracted` | Existing transaction helper coordinates owner views and injected engine operations. |
+| HorPlus, AspectRecalculation, RuntimeCombine policy and readback-gated transform | `Already extracted` (policy); runtime input/I/O `Remain` | Existing transaction/domain helpers encode these decisions; viewport and actual memory operations remain bound to runtime. |
+| Cinematic recovery/continuation and generation/source policy | `Already extracted` (domain); cross-callback wiring `Remain` | Recovery owner is created by B5 and consumed by B6; do not split this lifecycle or duplicate coordinator state. |
+| RSI/RBX identity and ADS/source transition policy | `Already extracted` (domain); runtime observation/association `Remain` | Selected fixture coverage exists, not full live source churn. |
+| Dialogue reset/activity operations and mutex binding | `Remain` (adapter); Dialogue state/domain helpers `Already extracted` | Preserve `CameraCorrectionGate → dialogueMutex` ordering and B4 boundary. |
+| Publication/freshness/Overlay wake and deferred diagnostics | `Remain` (runtime adapters/call ordering); pure helpers/events `Already extracted` | Preserve B3 disposition and post-gate deferred logging. |
+| Hook resolver | `Already extracted` (resolver); installation is outside B6 | Installation remains outside this review; B7 is not approved or classified. |
+
+Recommendation: no B6 physical extraction. The remaining native callback is
+composition/orchestration over one runtime owner; moving it would add
+cross-TU dependencies without reducing conceptual coupling. B6 closure awaits
+user disposition; B6 implementation is not approved. B7 review and
+implementation remain unapproved and unreviewed.
+
+Evidence status is separate from decomposition: N01/N02 are `Fixed` within
+the remediation report's tested offline scope; N03 is `Partially mitigated`;
+N04–N06 remain open verification gates. The previous live-smoke loaded ASI
+SHA-256 `A7122D7439F9EDDE8601F234CB99673742992E1F7890FBE3786C71DB6F5C7771`
+does not match final remediation artifact
+`E349E29B855FC30C0093D2BE84882DF4F4C7C61977C35BB111EC266B1A37DC81`; exact-
+artifact live validation remains open. No tests, builds, source changes, or
+game runtime were performed for this review.
+
+## Final B6 approval and B1–B6 checkpoint — 2026-10-10
+
+The user approved the B6 classifications. B6 is now **Complete — with
+documented Remain decisions**. The detailed B6 table immediately above is
+final: native Gameplay writer callback, owner-bound state/engine-operation
+adapters, and publication/diagnostic call ordering are `Remain`;
+already-separated transaction, mode, synchronization, source/recovery policy
+helpers are `Already extracted`. No B6 production extraction was performed.
+
+**B1–B6 are complete according to their individual outcomes.** The concise
+architecture checkpoint is
+`RUNTIME_CPP_DECOMPOSITION_FINAL_ARCHITECTURE_CHECKPOINT_2026-10-10.md`.
+Approved `Remain` decisions are final scope dispositions, not pending move
+tasks. The single resident owner, correction gate, native callback contracts,
+lock ordering, and centralized startup/install orchestration are preserved.
+
+Independent evidence gates remain unchanged: N03 is `Partially mitigated`;
+N04–N06 remain open; live validation using the final remediation ASI
+`E349E29B855FC30C0093D2BE84882DF4F4C7C61977C35BB111EC266B1A37DC81` is
+pending because the earlier live-smoke logs used a different ASI hash.
+B7 closure and the B1–B7 campaign completion are recorded in the user-approved
+final closure addendum below. No production, vendor, test, build, release, or
+configuration files were changed; no tests, builds, or game runtime were run.
+
+## B7 final boundary review — 2026-10-10
+
+This addendum supersedes B7's earlier proposed destinations (for example,
+`runtime_hook_installation.cpp`) as current recommendations. They remain in
+the historical inventory; no such component was created. The full review is
+`B7_STARTUP_INSTALL_WORKER_RESET_BOUNDARY_REVIEW_2026-10-10.md`.
+
+| B7 responsibility / inventory | Final review classification | Ownership and ordering disposition |
+|---|---|---|
+| `DllMain` attach/detach entry | `Already extracted` | Already in `src/plugin/dll_entry.cpp`; starts initialization asynchronously and only signals stop on non-terminating detach. |
+| `InitializeThread`, `Initialize`, startup sequencing and exception boundary | `Remain` | RuntimeState, logger/config, hook set, gates, worker owner and Overlay readiness are coordinated in one initialization transaction. N03 remains partial. |
+| `CloseInitializationReadiness`, `TryInitializationFailureCleanup` | `Remain` | Bound to runtime flags, one-shot cleanup marker and reset routine; readiness closes before guarded cleanup. |
+| `ResetAllRuntimeResources`, `Shutdown`, `NotifyProcessDetach` | `Remain` | Preserve stop/readiness/gate closure → worker join → hook reset/patch restoration → capability reset; failed joins retain hook resources. Loader-lock detach remains signal-only. |
+| `WorkerLifecycle` implementation | `Already extracted` | Existing `worker_lifecycle.hpp/.cpp`; one instance remains owned by RuntimeState and lifecycle calls are externally serialized. |
+| Runtime worker wrappers and subsystem worker loops | `Remain` | Thin wrappers bind logging and the owner-held WorkerLifecycle; loops access hotkey, Dialogue, resolution and diagnostic owner state. Overlay owns its own discovery/presenter workers. |
+| `VerifyExecutableAndInstruction`, site validators, Gameplay/Cinematic resolvers | `Already extracted` (pure resolver rules); runtime image/HookSet binding `Remain` | Resolver/helper boundaries already exist; production scan and hook-site binding are not equivalent to helper tests. |
+| Gameplay, Cinematic, Dialogue, Zoom and optional diagnostic hook installers | `Remain` | Callback addresses, SafetyHook members, capability flags and hook gates share the runtime owner. No new installation TU is recommended. |
+| Cinematic interdependent install/commit/rollback (`InstallCinematic*Component`, `CommitCinematicComponents`, `Rollback*`, `RestoreCinematicAspect`) | `Remain` (installer adapters); `Already extracted` (transaction decision helper) | Keep hooks disabled until component commit and publish the gate only after success; failure/rollback order remains owner-bound. |
+| `SafeMidHookEntry` | `Remain` | Private wrapper remains beside local hook registrations; N02 Zoom containment is `Fixed`. Moving only this template would add no current boundary. |
+| SafetyHook executable patch-state/lifetime | `Already extracted` (existing vendor component; N01 remediation) | N01 `Fixed` within recorded offline tests; uncertain executable references are retained to process termination, which is not successful teardown. |
+| `HotkeyLoop` | `Remain` (loop/action orchestration); pure hotkey dispatch/mapping/persistence `Already extracted` | The loop mutates owner settings/state and shares rebind flags/mutex; preserve existing B2 decisions. |
+| `TryStartConfiguredOverlay` and Overlay discovery/presenter | `Already extracted` | Optional-start helper and Overlay subsystem already separate; plugin-owned readiness result and core-ready handshake remain in `Initialize`/`InitializeThread`. |
+| B7 diagnostic/experimental worker and hook call sites | `Remain` | Profile-gated call sites bind runtime owner state; no cleanup or behavior changes are included in this review. |
+
+Recommendation: B7 has no additional extraction slice with proven net
+architectural benefit. Close B7 as **Complete — with documented `Remain`
+decisions** and end the decomposition campaign at B1–B7 if approved. B7
+implementation is not authorized. The new
+`RUNTIME_CPP_DECOMPOSITION_FINAL_ARCHITECTURE_CHECKPOINT_B1_B7_2026-10-10.md`
+summarizes the overall architecture and independent verification gates.
+
+Open evidence is unchanged: N03 `Partially mitigated`; N04–N06 open; live
+validation of final remediation ASI
+`E349E29B855FC30C0093D2BE84882DF4F4C7C61977C35BB111EC266B1A37DC81` pending.
+Prior live-smoke ASI hash mismatch remains material. No code, tests, builds,
+release/configuration artifacts, ASI installation, or game runtime were
+changed or executed for this review.
+
+## User-approved B7 and campaign closure — 2026-10-10
+
+The user approved B7 as **Complete — with documented `Remain` decisions** and
+approved completion of `RUNTIME_CPP_DECOMPOSITION` across B1–B7. The B7
+responsibility table above records its final classifications; this addendum
+supersedes only the earlier recommendation/approval-pending wording. All
+individual B1–B6 dispositions and their historical evidence remain unchanged.
+
+The campaign is closed with no additional source splits. Approved `Remain`
+decisions are final scope dispositions, not unfinished move tasks. This
+architectural closure does not imply full runtime verification or change any
+remediation status:
+
+- N03 remains `Partially mitigated`.
+- N04–N06 remain open verification gates.
+- Live validation of final remediation ASI SHA-256
+  `E349E29B855FC30C0093D2BE84882DF4F4C7C61977C35BB111EC266B1A37DC81` remains
+  pending; prior live-smoke evidence used a different ASI hash.
+
+No production/vendor code, tests, configuration, release artifacts, or other
+non-documentation files were changed for this closure. No tests, builds, or
+game were run.

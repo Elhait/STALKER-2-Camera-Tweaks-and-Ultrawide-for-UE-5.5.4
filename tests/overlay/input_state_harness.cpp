@@ -1,5 +1,5 @@
-#include "../../src/overlay/input_state.hpp"
-#include "../../src/overlay/hotkey_binding_presentation.hpp"
+#include "../../src/overlay/input/input_state.hpp"
+#include "../../src/overlay/presentation/hotkey_binding_presentation.hpp"
 
 #include <iostream>
 

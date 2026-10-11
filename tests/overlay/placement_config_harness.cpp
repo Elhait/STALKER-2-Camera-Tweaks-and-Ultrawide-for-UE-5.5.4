@@ -1,6 +1,6 @@
 #include "../../src/config/config_repository.hpp"
-#include "../../src/overlay/placement_config.hpp"
-#include "../../src/overlay/placement_save_state.hpp"
+#include "../../src/overlay/presentation/placement_config.hpp"
+#include "../../src/overlay/presenter/placement_save_state.hpp"
 
 #include <Windows.h>
 

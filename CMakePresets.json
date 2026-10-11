@@ -1,0 +1,62 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 31,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "production",
+      "displayName": "Production ASI",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-artifacts/cm/production",
+      "cacheVariables": {
+        "CAMERA_TWEAKS_PROFILE": "production",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "diagnostic",
+      "displayName": "Diagnostic wrapper ASI",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-artifacts/cm/diagnostic",
+      "cacheVariables": {
+        "CAMERA_TWEAKS_PROFILE": "diagnostic",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "startup-timeline",
+      "displayName": "Production ASI with startup timeline",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-artifacts/cm/startup-timeline",
+      "cacheVariables": {
+        "CAMERA_TWEAKS_PROFILE": "production",
+        "CAMERA_TWEAKS_STARTUP_TIMELINE": "ON",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "diagnostic-discovery",
+      "displayName": "Diagnostic wrapper with Dialogue discovery",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-artifacts/cm/diagnostic-discovery",
+      "cacheVariables": {
+        "CAMERA_TWEAKS_PROFILE": "diagnostic",
+        "CAMERA_TWEAKS_DIALOGUE_DISCOVERY": "ON",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "production", "configurePreset": "production", "targets": ["STALKER2CameraTweaks"] },
+    { "name": "diagnostic", "configurePreset": "diagnostic", "targets": ["STALKER2CameraTweaks"] },
+    { "name": "startup-timeline", "configurePreset": "startup-timeline", "targets": ["STALKER2CameraTweaks"] },
+    { "name": "diagnostic-discovery", "configurePreset": "diagnostic-discovery", "targets": ["STALKER2CameraTweaks"] }
+  ]
+}

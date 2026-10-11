@@ -1,8 +1,14 @@
+param([string] $OutputPath)
+
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $catalogPath = Join-Path $projectRoot 'locales\en.json'
-$outputPath = Join-Path $projectRoot 'build-artifacts\generated\canonical_ini_documentation.hpp'
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $outputPath = Join-Path $projectRoot 'build-artifacts\generated\canonical_ini_documentation.hpp'
+} else {
+    $outputPath = [IO.Path]::GetFullPath($OutputPath)
+}
 $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $keys = @(
     'common.examples',
@@ -185,4 +191,7 @@ $($arrayLines -join "`n")
 
 $directory = Split-Path -Parent $outputPath
 [System.IO.Directory]::CreateDirectory($directory) | Out-Null
-[System.IO.File]::WriteAllText($outputPath, $source, [System.Text.UTF8Encoding]::new($false))
+if (-not (Test-Path -LiteralPath $outputPath) -or
+    [System.IO.File]::ReadAllText($outputPath) -cne $source) {
+    [System.IO.File]::WriteAllText($outputPath, $source, [System.Text.UTF8Encoding]::new($false))
+}

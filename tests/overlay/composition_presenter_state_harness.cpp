@@ -1,8 +1,8 @@
-#include "../../src/overlay/composition_presenter_state.hpp"
-#include "../../src/overlay/renderer_state.hpp"
-#include "../../src/overlay/presenter_runtime_policy.hpp"
-#include "../../src/overlay/input_state.hpp"
-#include "../../src/overlay/presentation_contracts.hpp"
+#include "../../src/overlay/presenter/composition_presenter_state.hpp"
+#include "../../src/overlay/presenter/renderer_state.hpp"
+#include "../../src/overlay/presenter/presenter_runtime_policy.hpp"
+#include "../../src/overlay/input/input_state.hpp"
+#include "../../src/overlay/presentation/presentation_contracts.hpp"
 
 #include <cstdlib>
 #include <iostream>

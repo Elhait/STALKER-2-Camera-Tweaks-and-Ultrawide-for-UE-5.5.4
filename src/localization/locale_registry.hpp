@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../overlay/localization_resource_ids.h"
+#include "localization_resource_ids.h"
 
 #include <array>
 #include <cstddef>

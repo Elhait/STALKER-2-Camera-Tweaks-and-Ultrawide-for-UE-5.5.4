@@ -19,6 +19,7 @@
 #pragma once
 
 #ifndef SAFETYHOOK_USE_CXXMODULES
+#include <atomic>
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -265,6 +266,8 @@ import std.compat;
 
 namespace safetyhook {
 class Allocator;
+class InlineHook;
+class MidHook;
 
 /// @brief A memory allocation.
 class SAFETYHOOK_API Allocation final {
@@ -305,6 +308,11 @@ private:
     std::shared_ptr<Allocator> m_allocator{};
     uint8_t* m_address{};
     size_t m_size{};
+    bool m_retained{};
+
+    friend class InlineHook;
+    friend class MidHook;
+    void retain() noexcept;
 };
 
 /// @brief Allocates memory near target addresses.
@@ -349,6 +357,9 @@ protected:
     void free(uint8_t* address, size_t size);
 
 private:
+    friend class Allocation;
+    void retain() noexcept;
+
     struct FreeNode {
         std::unique_ptr<FreeNode> next{};
         uint8_t* start{};
@@ -365,6 +376,7 @@ private:
 
     std::vector<std::unique_ptr<Memory>> m_memory{};
     std::mutex m_mutex{};
+    std::atomic<std::shared_ptr<Allocator>> m_retained_self{};
 
     Allocator() = default;
 
@@ -763,7 +775,7 @@ public:
     [[nodiscard]] std::expected<void, Error> disable();
 
     /// @brief Check if the hook is enabled.
-    [[nodiscard]] bool enabled() const { return m_enabled; }
+    [[nodiscard]] bool enabled() const { return m_patch_state != PatchState::Unpatched; }
 
 private:
     friend class MidHook;
@@ -774,13 +786,16 @@ private:
         FF,
     };
 
+    enum class PatchState : uint8_t { Unpatched, Patched, Uncertain };
+
     uint8_t* m_target{};
     uint8_t* m_destination{};
     Allocation m_trampoline{};
     std::vector<uint8_t> m_original_bytes{};
     uintptr_t m_trampoline_size{};
     std::recursive_mutex m_mutex{};
-    bool m_enabled{};
+    PatchState m_patch_state{PatchState::Unpatched};
+    bool m_ever_patched{};
     Type m_type{Type::Unset};
 
     std::expected<void, Error> setup(
@@ -983,7 +998,7 @@ public:
     MidHook(MidHook&& other) noexcept;
     MidHook& operator=(const MidHook&) = delete;
     MidHook& operator=(MidHook&& other) noexcept;
-    ~MidHook() = default;
+    ~MidHook();
 
     /// @brief Reset the hook.
     /// @details This will remove the hook and free the stub.

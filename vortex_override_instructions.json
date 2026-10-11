@@ -1,0 +1,16 @@
+[
+  {
+    "type": "setmodtype",
+    "value": "dinput"
+  },
+  {
+    "type": "copy",
+    "source": "STALKER2CameraTweaks.asi",
+    "destination": "Stalker2/Binaries/Win64/STALKER2CameraTweaks.asi"
+  },
+  {
+    "type": "copy",
+    "source": "STALKER2CameraTweaks.ini",
+    "destination": "Stalker2/Binaries/Win64/STALKER2CameraTweaks.ini"
+  }
+]

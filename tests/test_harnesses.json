@@ -1,0 +1,1898 @@
+{
+  "schema_version": 1,
+  "description": "Canonical CMake/Ninja test-harness build and serial runner registry; extracted from the reviewed legacy cl/run invocations.",
+  "compiler_contract": {
+    "compiler": "MSVC",
+    "common_flags": [
+      "/nologo",
+      "/std:c++latest",
+      "/O1",
+      "/MT",
+      "/EHsc",
+      "/W4",
+      "/utf-8"
+    ],
+    "runtime_library": "MultiThreaded",
+    "common_include_directories": [
+      "external/safetyhook",
+      "external/spdlog/include",
+      "external/imgui"
+    ],
+    "generated_include_directory": "build-artifacts/cm/test-suite/generated",
+    "resource_source": "src/overlay/localization/localization_resources.rc",
+    "resource_id_header": "src/localization/localization_resource_ids.h",
+    "resource_output": "build-artifacts/cm/test-suite/resources/localization_resources.res",
+    "output_directory": "build-artifacts/tests",
+    "build_directory": "build-artifacts/cm/test-suite",
+    "cmake_configuration": "Release"
+  },
+  "harnesses": [
+    {
+      "name": "runtime_native_adapter_harness",
+      "entry_source": "tests/plugin/runtime_native_adapter_harness.cpp",
+      "additional_sources": [
+        "tests/plugin/runtime_owner_binding_probe.cpp",
+        "src/plugin/runtime_settings.cpp",
+        "src/plugin/worker_lifecycle.cpp",
+        "src/plugin/feature_status.cpp",
+        "src/config/feature_config.cpp",
+        "src/config/config_repository.cpp",
+        "src/config/config_template.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp",
+        "src/diagnostics/cinematic_continuation_trace.cpp",
+        "src/diagnostics/dialogue_source_provenance.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/hooks/signature_scanner.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "src/hooks/hook_set.cpp",
+        "src/gameplay/gameplay_state.cpp",
+        "src/gameplay/gameplay_camera.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/cinematics/cinematic_selection.cpp",
+        "src/cinematics/cinematic_aspect.cpp",
+        "src/cinematics/cinematic_initialization.cpp",
+        "src/dialogue/dialogue_fov.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/camera/camera_state_snapshot.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/camera/presentation_state.cpp",
+        "src/camera/horplus.cpp",
+        "src/platform/win32/memory.cpp",
+        "src/platform/win32/sha256.cpp",
+        "src/platform/win32/window.cpp",
+        "src/platform/win32/viewport.cpp",
+        "src/overlay/presentation/camera_integration.cpp",
+        "src/overlay/presentation/feature_presentation.cpp",
+        "src/overlay/presentation/camera_state_view.cpp",
+        "src/overlay/presentation/selector_documentation_view.cpp",
+        "src/overlay/presentation/overlay_layout_metrics.cpp",
+        "src/overlay/presentation/placement_config.cpp",
+        "src/overlay/localization/localization_catalog.cpp",
+        "src/overlay/localization/localization_formatter.cpp",
+        "src/overlay/localization/localization_validator.cpp",
+        "src/overlay/localization/localization_manager.cpp",
+        "src/overlay/localization/localization_font.cpp",
+        "src/overlay/localization/localization_keys.cpp",
+        "src/overlay/localization/game_language_reader.cpp",
+        "src/overlay/composition/composition_runtime.cpp",
+        "src/overlay/presenter/composition_presenter_state.cpp",
+        "src/overlay/input/input_state.cpp",
+        "src/overlay/presenter/renderer_state.cpp",
+        "src/overlay/presenter/renderer_runtime.cpp",
+        "src/overlay/presenter/imgui_d3d11_renderer.cpp",
+        "external/safetyhook/safetyhook.cpp",
+        "external/safetyhook/Zydis.c",
+        "external/imgui/imgui.cpp",
+        "external/imgui/imgui_draw.cpp",
+        "external/imgui/imgui_tables.cpp",
+        "external/imgui/imgui_widgets.cpp",
+        "external/imgui/backends/imgui_impl_win32.cpp"
+      ],
+      "compile_definitions": [
+        "NDEBUG",
+        "SAFETYHOOK_TEST_VIRTUAL_PROTECT",
+        "OVERLAY_PRODUCTION",
+        "OVERLAY_SETTINGS_FRONTEND",
+        "OVERLAY_COMBINED",
+        "OVERLAY_STARTUP_JOURNAL"
+      ],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui",
+        "external/imgui/backends"
+      ],
+      "link_libraries": [
+        "user32.lib",
+        "psapi.lib",
+        "bcrypt.lib",
+        "dxgi.lib",
+        "d3d11.lib",
+        "dcomp.lib",
+        "d3dcompiler.lib"
+      ],
+      "embedded_localization_resource": true,
+      "observed_include_dependencies": [
+        "../../src/platform/win32/viewport.hpp",
+        "../../src/platform/win32/memory.hpp",
+        "../../src/gameplay/gameplay_camera.hpp",
+        "../../src/plugin/camera_writer_transaction.hpp",
+        "../../src/plugin/runtime.cpp",
+        "runtime_native_evidence_cases.hpp"
+      ]
+    },
+    {
+      "name": "n06_m01_zoom_game_derived_harness",
+      "entry_source": "tests/plugin/n06_m01_zoom_game_derived_harness.cpp",
+      "additional_sources": [
+        "tests/plugin/runtime_owner_binding_probe.cpp",
+        "src/plugin/runtime_settings.cpp",
+        "src/plugin/worker_lifecycle.cpp",
+        "src/plugin/feature_status.cpp",
+        "src/config/feature_config.cpp",
+        "src/config/config_repository.cpp",
+        "src/config/config_template.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp",
+        "src/diagnostics/cinematic_continuation_trace.cpp",
+        "src/diagnostics/dialogue_source_provenance.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/hooks/signature_scanner.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "src/hooks/hook_set.cpp",
+        "src/gameplay/gameplay_state.cpp",
+        "src/gameplay/gameplay_camera.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/cinematics/cinematic_selection.cpp",
+        "src/cinematics/cinematic_aspect.cpp",
+        "src/cinematics/cinematic_initialization.cpp",
+        "src/dialogue/dialogue_fov.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/camera/camera_state_snapshot.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/camera/presentation_state.cpp",
+        "src/camera/horplus.cpp",
+        "src/platform/win32/memory.cpp",
+        "src/platform/win32/sha256.cpp",
+        "src/platform/win32/window.cpp",
+        "src/platform/win32/viewport.cpp",
+        "src/overlay/presentation/camera_integration.cpp",
+        "src/overlay/presentation/feature_presentation.cpp",
+        "src/overlay/presentation/camera_state_view.cpp",
+        "src/overlay/presentation/selector_documentation_view.cpp",
+        "src/overlay/presentation/overlay_layout_metrics.cpp",
+        "src/overlay/presentation/placement_config.cpp",
+        "src/overlay/localization/localization_catalog.cpp",
+        "src/overlay/localization/localization_formatter.cpp",
+        "src/overlay/localization/localization_validator.cpp",
+        "src/overlay/localization/localization_manager.cpp",
+        "src/overlay/localization/localization_font.cpp",
+        "src/overlay/localization/localization_keys.cpp",
+        "src/overlay/localization/game_language_reader.cpp",
+        "src/overlay/composition/composition_runtime.cpp",
+        "src/overlay/presenter/composition_presenter_state.cpp",
+        "src/overlay/input/input_state.cpp",
+        "src/overlay/presenter/renderer_state.cpp",
+        "src/overlay/presenter/renderer_runtime.cpp",
+        "src/overlay/presenter/imgui_d3d11_renderer.cpp",
+        "external/safetyhook/safetyhook.cpp",
+        "external/safetyhook/Zydis.c",
+        "external/imgui/imgui.cpp",
+        "external/imgui/imgui_draw.cpp",
+        "external/imgui/imgui_tables.cpp",
+        "external/imgui/imgui_widgets.cpp",
+        "external/imgui/backends/imgui_impl_win32.cpp"
+      ],
+      "compile_definitions": [
+        "NDEBUG",
+        "SAFETYHOOK_TEST_VIRTUAL_PROTECT",
+        "OVERLAY_PRODUCTION",
+        "OVERLAY_SETTINGS_FRONTEND",
+        "OVERLAY_COMBINED",
+        "OVERLAY_STARTUP_JOURNAL"
+      ],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui",
+        "external/imgui/backends"
+      ],
+      "link_libraries": [
+        "user32.lib",
+        "psapi.lib",
+        "bcrypt.lib",
+        "dxgi.lib",
+        "d3d11.lib",
+        "dcomp.lib",
+        "d3dcompiler.lib"
+      ],
+      "embedded_localization_resource": true,
+      "observed_include_dependencies": [
+        "runtime_native_adapter_harness.cpp",
+        "n06_m01_zoom_game_derived_fixtures.hpp"
+      ]
+    },
+    {
+      "name": "worker_lifecycle_harness",
+      "entry_source": "tests/lifecycle/worker_lifecycle_harness.cpp",
+      "additional_sources": [
+        "src/plugin/worker_lifecycle.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/worker_lifecycle.hpp"
+      ]
+    },
+    {
+      "name": "feature_status_harness",
+      "entry_source": "tests/feature_status/feature_status_harness.cpp",
+      "additional_sources": [
+        "src/plugin/feature_status.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/feature_status.hpp"
+      ]
+    },
+    {
+      "name": "optional_overlay_startup_harness",
+      "entry_source": "tests/plugin/optional_overlay_startup_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/optional_overlay_startup.hpp"
+      ]
+    },
+    {
+      "name": "camera_correction_gate_harness",
+      "entry_source": "tests/plugin/camera_correction_gate_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/camera_correction_gate.hpp",
+        "../../src/dialogue/dialogue_state.hpp"
+      ]
+    },
+    {
+      "name": "camera_setting_transaction_harness",
+      "entry_source": "tests/plugin/camera_setting_transaction_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/camera_writer_transaction.hpp"
+      ]
+    },
+    {
+      "name": "dialogue_boundary_transaction_harness",
+      "entry_source": "tests/plugin/dialogue_boundary_transaction_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp",
+        "src/dialogue/dialogue_fov.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/dialogue_boundary_transaction.hpp",
+        "../../src/plugin/camera_writer_transaction.hpp"
+      ]
+    },
+    {
+      "name": "camera_writer_transaction_harness",
+      "entry_source": "tests/plugin/camera_writer_transaction_harness.cpp",
+      "additional_sources": [
+        "src/cinematics/cinematic_fov.cpp",
+        "src/cinematics/cinematic_selection.cpp",
+        "src/cinematics/cinematic_aspect.cpp",
+        "src/hooks/signature_scanner.cpp",
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/gameplay_state.cpp",
+        "src/gameplay/gameplay_camera.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c",
+        "src/gameplay/aspect_policy.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/overlay/presentation/camera_integration.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/camera_writer_transaction.hpp",
+        "../../src/overlay/presenter/presenter_runtime_policy.hpp",
+        "../../src/plugin/cinematic_lifecycle_transaction.hpp",
+        "../../src/camera/camera_state_publication.hpp",
+        "../../src/gameplay/horplus_gameplay.hpp",
+        "../../src/gameplay/gameplay_state.hpp",
+        "../../src/overlay/presentation/camera_integration.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_lifecycle_transaction_harness",
+      "entry_source": "tests/plugin/cinematic_lifecycle_transaction_harness.cpp",
+      "additional_sources": [
+        "src/cinematics/cinematic_selection.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/cinematics/cinematic_aspect.cpp",
+        "src/hooks/signature_scanner.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c",
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/gameplay_state.cpp",
+        "src/gameplay/gameplay_camera.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/dialogue/dialogue_fov.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/cinematic_lifecycle_transaction.hpp",
+        "../../src/plugin/dialogue_boundary_transaction.hpp",
+        "../../src/gameplay/horplus_gameplay.hpp",
+        "../../src/diagnostics/diagnostic_runtime.hpp"
+      ]
+    },
+    {
+      "name": "startup_timeline_harness",
+      "entry_source": "tests/overlay/startup_timeline_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "psapi.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/startup_timeline.hpp"
+      ]
+    },
+    {
+      "name": "startup_journal_harness",
+      "entry_source": "tests/diagnostics/startup_journal_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [
+        "OVERLAY_STARTUP_JOURNAL"
+      ],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/startup_journal.hpp"
+      ]
+    },
+    {
+      "name": "config_persistence_harness",
+      "entry_source": "tests/config/config_persistence_harness.cpp",
+      "additional_sources": [
+        "src/config/feature_config.cpp",
+        "src/config/config_repository.cpp",
+        "src/config/config_template.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/config/config_repository.hpp",
+        "../../src/config/config_template.hpp",
+        "canonical_ini_documentation.hpp"
+      ]
+    },
+    {
+      "name": "gameplay_mode_harness",
+      "entry_source": "tests/config/gameplay_mode_harness.cpp",
+      "additional_sources": [
+        "src/config/feature_config.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/config/feature_config.hpp"
+      ]
+    },
+    {
+      "name": "runtime_settings_api_harness",
+      "entry_source": "tests/config/runtime_settings_api_harness.cpp",
+      "additional_sources": [
+        "src/config/feature_config.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/runtime_settings.hpp"
+      ]
+    },
+    {
+      "name": "aspect_policy_harness",
+      "entry_source": "tests/gameplay/aspect_policy_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/aspect_policy.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../../src/gameplay/aspect_policy.hpp"
+      ]
+    },
+    {
+      "name": "horplus_gameplay_harness",
+      "entry_source": "tests/gameplay/horplus_gameplay_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/gameplay/horplus_gameplay.hpp",
+        "../../src/camera/horplus.hpp",
+        "../../src/cinematics/cinematic_fov.hpp"
+      ]
+    },
+    {
+      "name": "zoom_transition_harness",
+      "entry_source": "tests/gameplay/zoom_transition_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/gameplay/horplus_gameplay.hpp"
+      ]
+    },
+    {
+      "name": "gameplay_mode_transition_harness",
+      "entry_source": "tests/gameplay/gameplay_mode_transition_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/gameplay_state.cpp",
+        "src/cinematics/cinematic_selection.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/presentation_state.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/gameplay/gameplay_state.hpp",
+        "../../src/camera/horplus.hpp",
+        "../../src/cinematics/cinematic_selection.hpp",
+        "../../src/cinematics/cinematic_fov.hpp",
+        "../../src/camera/fov_semantics.hpp"
+      ]
+    },
+    {
+      "name": "module_ownership_harness",
+      "entry_source": "tests/regression/module_ownership_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/gameplay_state.cpp",
+        "src/cinematics/cinematic_selection.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/dialogue/dialogue_fov.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/camera/presentation_state.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/camera/horplus.hpp",
+        "../../src/camera/presentation_state.hpp",
+        "../../src/cinematics/cinematic_fov.hpp",
+        "../../src/cinematics/cinematic_selection.hpp",
+        "../../src/dialogue/dialogue_fov.hpp",
+        "../../src/dialogue/dialogue_state.hpp",
+        "../../src/gameplay/gameplay_state.hpp"
+      ]
+    },
+    {
+      "name": "gameplay_camera_safety_harness",
+      "entry_source": "tests/gameplay/gameplay_camera_safety_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/gameplay_camera.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/gameplay/gameplay_camera.hpp"
+      ]
+    },
+    {
+      "name": "memory_harness",
+      "entry_source": "tests/platform/memory_harness.cpp",
+      "additional_sources": [
+        "src/platform/win32/memory.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/platform/win32/memory.hpp"
+      ]
+    },
+    {
+      "name": "viewport_harness",
+      "entry_source": "tests/platform/viewport_harness.cpp",
+      "additional_sources": [
+        "src/platform/win32/viewport.cpp",
+        "src/platform/win32/window.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/platform/win32/viewport.hpp"
+      ]
+    },
+    {
+      "name": "signature_scanner_harness",
+      "entry_source": "tests/platform/signature_scanner_harness.cpp",
+      "additional_sources": [
+        "src/hooks/signature_scanner.cpp"
+      ],
+      "compile_definitions": [
+        "SIGNATURE_SCANNER_TEST"
+      ],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/hooks/signature_scanner.hpp",
+        "../../src/hooks/signatures/signature_definitions.hpp"
+      ]
+    },
+    {
+      "name": "instruction_validator_harness",
+      "entry_source": "tests/platform/instruction_validator_harness.cpp",
+      "additional_sources": [
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/hooks/instruction_validator.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_initialization_harness",
+      "entry_source": "tests/cinematics/cinematic_initialization_harness.cpp",
+      "additional_sources": [
+        "src/cinematics/cinematic_initialization.cpp",
+        "src/plugin/feature_status.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/cinematics/cinematic_initialization.hpp"
+      ]
+    },
+    {
+      "name": "coordinator_recovery_harness",
+      "entry_source": "tests/cinematics/coordinator_recovery_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/gameplay_state.cpp",
+        "src/camera/presentation_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/gameplay/gameplay_state.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_exit_authority_harness",
+      "entry_source": "tests/cinematics/cinematic_exit_authority_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/cinematics/cinematic_exit_authority.hpp",
+        "../../src/gameplay/horplus_gameplay.hpp"
+      ]
+    },
+    {
+      "name": "horplus_post_exit_recovery_harness",
+      "entry_source": "tests/cinematics/horplus_post_exit_recovery_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/gameplay_state.cpp",
+        "src/camera/presentation_state.cpp",
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/camera/gameplay_baseline.hpp",
+        "../../src/camera/horplus.hpp",
+        "../../src/cinematics/cinematic_fov.hpp",
+        "../../src/cinematics/cinematic_recovery_retirement.hpp",
+        "../../src/dialogue/dialogue_state.hpp",
+        "../../src/gameplay/gameplay_state.hpp",
+        "../../src/gameplay/horplus_gameplay.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_selection_harness",
+      "entry_source": "tests/cinematics/cinematic_selection_harness.cpp",
+      "additional_sources": [
+        "src/cinematics/cinematic_selection.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/cinematics/cinematic_selection.hpp"
+      ]
+    },
+    {
+      "name": "post_cinematic_exclusion_harness",
+      "entry_source": "tests/dialogue/post_cinematic_exclusion_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/dialogue/dialogue_state.hpp"
+      ]
+    },
+    {
+      "name": "recovery_rearm_harness",
+      "entry_source": "tests/dialogue/recovery_rearm_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/dialogue/dialogue_state.hpp",
+        "../../src/camera/fov_semantics.hpp"
+      ]
+    },
+    {
+      "name": "candidate_hardening_harness",
+      "entry_source": "tests/dialogue/candidate_hardening_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/dialogue/dialogue_state.hpp"
+      ]
+    },
+    {
+      "name": "policy_snapshot_harness",
+      "entry_source": "tests/dialogue/policy_snapshot_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/dialogue/dialogue_state.hpp"
+      ]
+    },
+    {
+      "name": "camera_state_snapshot_harness",
+      "entry_source": "tests/camera/camera_state_snapshot_harness.cpp",
+      "additional_sources": [
+        "src/camera/camera_state_snapshot.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/camera/camera_state_snapshot.hpp",
+        "../../src/camera/camera_state_publication.hpp",
+        "../../src/camera/gameplay_baseline.hpp"
+      ]
+    },
+    {
+      "name": "fov_observation_harness",
+      "entry_source": "tests/camera/fov_observation_harness.cpp",
+      "additional_sources": [
+        "src/camera/fov_observation.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/camera/fov_observation.hpp"
+      ]
+    },
+    {
+      "name": "gameplay_baseline_harness",
+      "entry_source": "tests/camera/gameplay_baseline_harness.cpp",
+      "additional_sources": [
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/camera/gameplay_baseline.hpp"
+      ]
+    },
+    {
+      "name": "gameplay_aspect_restoration_harness",
+      "entry_source": "tests/camera/gameplay_aspect_restoration_harness.cpp",
+      "additional_sources": [
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/camera/gameplay_aspect_restoration.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_fov_harness",
+      "entry_source": "tests/cinematics/cinematic_fov_harness.cpp",
+      "additional_sources": [
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp",
+        "src/diagnostics/cinematic_continuation_trace.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/cinematics/cinematic_fov.hpp",
+        "../../src/diagnostics/cinematic_continuation_trace.hpp",
+        "../../src/diagnostics/cinematic_baseline_provenance.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_aspect_harness",
+      "entry_source": "tests/cinematics/cinematic_aspect_harness.cpp",
+      "additional_sources": [
+        "src/cinematics/cinematic_aspect.cpp",
+        "src/hooks/signature_scanner.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/cinematics/cinematic_aspect.hpp"
+      ]
+    },
+    {
+      "name": "dialogue_fov_harness",
+      "entry_source": "tests/dialogue/dialogue_fov_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_fov.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/dialogue/dialogue_fov.hpp"
+      ]
+    },
+    {
+      "name": "diagnostics_gate_harness",
+      "entry_source": "tests/diagnostics/diagnostics_gate_harness.cpp",
+      "additional_sources": [
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/diagnostic_runtime.hpp",
+        "../../src/diagnostics/camera_log_probe.hpp"
+      ]
+    },
+    {
+      "name": "dialogue_source_provenance_harness",
+      "entry_source": "tests/diagnostics/dialogue_source_provenance_harness.cpp",
+      "additional_sources": [
+        "src/diagnostics/dialogue_source_provenance.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/dialogue_source_provenance.hpp"
+      ]
+    },
+    {
+      "name": "camera_writer_identity_harness",
+      "entry_source": "tests/diagnostics/camera_writer_identity_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/camera_writer_identity.hpp"
+      ]
+    },
+    {
+      "name": "cinematic_lifecycle_context_harness",
+      "entry_source": "tests/diagnostics/cinematic_lifecycle_context_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/cinematic_lifecycle_context.hpp",
+        "../../src/cinematics/cinematic_exit_authority.hpp"
+      ]
+    },
+    {
+      "name": "performance_telemetry_harness",
+      "entry_source": "tests/diagnostics/performance_telemetry_harness.cpp",
+      "additional_sources": [
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/diagnostic_runtime.hpp",
+        "../../src/diagnostics/performance_telemetry.hpp"
+      ]
+    },
+    {
+      "name": "language_state_transition_harness",
+      "entry_source": "tests/diagnostics/language_state_transition_harness.cpp",
+      "additional_sources": [
+        "src/diagnostics/language_state/language_state_transition.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/language_state/language_state_transition.hpp"
+      ]
+    },
+    {
+      "name": "matchgameplay_prediction_harness",
+      "entry_source": "tests/diagnostics/matchgameplay_prediction_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/matchgameplay_prediction.hpp"
+      ]
+    },
+    {
+      "name": "runtime_evidence_replay_harness",
+      "entry_source": "tests/regression/runtime_evidence_replay_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/gameplay/gameplay_state.cpp",
+        "src/camera/presentation_state.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/horplus.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/dialogue/dialogue_state.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../fixtures/runtime/gameplay/horplus_evidence.hpp",
+        "../fixtures/runtime/transitions/restoration_evidence.hpp",
+        "../fixtures/runtime/cinematics/cinematic_evidence.hpp",
+        "../fixtures/runtime/dialogue/candidate_evidence.hpp",
+        "../../src/camera/gameplay_aspect_restoration.hpp",
+        "../../src/camera/gameplay_baseline.hpp",
+        "../../src/cinematics/cinematic_fov.hpp",
+        "../../src/dialogue/dialogue_state.hpp",
+        "../../src/gameplay/horplus_gameplay.hpp",
+        "../../src/gameplay/gameplay_state.hpp"
+      ]
+    },
+    {
+      "name": "gameplay_camera_resolver_harness",
+      "entry_source": "tests/gameplay/gameplay_camera_resolver_harness.cpp",
+      "additional_sources": [
+        "src/gameplay/gameplay_camera.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/gameplay/gameplay_camera.hpp",
+        "../../src/hooks/signatures/signature_definitions.hpp"
+      ]
+    },
+    {
+      "name": "composition_presenter_state_harness",
+      "entry_source": "tests/overlay/composition_presenter_state_harness.cpp",
+      "additional_sources": [
+        "src/overlay/presenter/composition_presenter_state.cpp",
+        "src/overlay/presenter/renderer_state.cpp",
+        "src/overlay/input/input_state.cpp",
+        "src/config/feature_config.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/overlay/presenter/composition_presenter_state.hpp",
+        "../../src/overlay/presenter/renderer_state.hpp",
+        "../../src/overlay/presenter/presenter_runtime_policy.hpp",
+        "../../src/overlay/input/input_state.hpp",
+        "../../src/overlay/presentation/presentation_contracts.hpp"
+      ]
+    },
+    {
+      "name": "activation_trace_harness",
+      "entry_source": "tests/overlay/activation_trace_harness.cpp",
+      "additional_sources": [
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/diagnostics/diagnostic_runtime.hpp",
+        "../../src/diagnostics/overlay_activation_trace.hpp"
+      ]
+    },
+    {
+      "name": "overlay_layout_metrics_harness",
+      "entry_source": "tests/overlay/overlay_layout_metrics_harness.cpp",
+      "additional_sources": [
+        "src/overlay/presentation/overlay_layout_metrics.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/overlay/presentation/overlay_layout_metrics.hpp"
+      ]
+    },
+    {
+      "name": "selector_tooltip_state_harness",
+      "entry_source": "tests/overlay/selector_tooltip_state_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/overlay/presentation/selector_tooltip_state.hpp"
+      ]
+    },
+    {
+      "name": "input_state_harness",
+      "entry_source": "tests/overlay/input_state_harness.cpp",
+      "additional_sources": [
+        "src/overlay/input/input_state.cpp",
+        "src/config/feature_config.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/overlay/input/input_state.hpp",
+        "../../src/overlay/presentation/hotkey_binding_presentation.hpp"
+      ]
+    },
+    {
+      "name": "camera_integration_harness",
+      "entry_source": "tests/overlay/camera_integration_harness.cpp",
+      "additional_sources": [
+        "src/overlay/presentation/camera_integration.cpp",
+        "src/camera/horplus.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/overlay/presentation/camera_integration.hpp",
+        "../../src/overlay/presentation/aspect_ratio_format.hpp"
+      ]
+    },
+    {
+      "name": "placement_config_harness",
+      "entry_source": "tests/overlay/placement_config_harness.cpp",
+      "additional_sources": [
+        "src/overlay/presentation/placement_config.cpp",
+        "src/config/config_repository.cpp",
+        "src/config/feature_config.cpp",
+        "src/config/config_template.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/config/config_repository.hpp",
+        "../../src/overlay/presentation/placement_config.hpp",
+        "../../src/overlay/presenter/placement_save_state.hpp"
+      ]
+    },
+    {
+      "name": "feature_presentation_harness",
+      "entry_source": "tests/overlay/feature_presentation_harness.cpp",
+      "additional_sources": [
+        "src/overlay/presentation/feature_presentation.cpp",
+        "src/config/feature_config.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [
+        "user32.lib"
+      ],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/overlay/presentation/feature_presentation.hpp"
+      ]
+    },
+    {
+      "name": "semantic_snapshot_harness",
+      "entry_source": "tests/overlay/semantic_snapshot_harness.cpp",
+      "additional_sources": [],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/runtime_settings.hpp"
+      ]
+    },
+    {
+      "name": "localization_harness",
+      "entry_source": "tests/overlay/localization_harness.cpp",
+      "additional_sources": [
+        "src/overlay/localization/localization_catalog.cpp",
+        "src/overlay/localization/localization_formatter.cpp",
+        "src/overlay/localization/localization_validator.cpp",
+        "src/overlay/localization/localization_manager.cpp",
+        "src/overlay/localization/localization_font.cpp",
+        "src/overlay/localization/localization_keys.cpp",
+        "external/imgui/imgui.cpp",
+        "external/imgui/imgui_draw.cpp",
+        "external/imgui/imgui_tables.cpp",
+        "external/imgui/imgui_widgets.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [
+        "external/safetyhook",
+        "external/spdlog/include",
+        "external/imgui"
+      ],
+      "link_libraries": [],
+      "embedded_localization_resource": true,
+      "observed_include_dependencies": [
+        "../../src/overlay/localization/localization_catalog.hpp",
+        "../../src/overlay/localization/localization_formatter.hpp",
+        "../../src/overlay/localization/localization_manager.hpp",
+        "../../src/overlay/localization/localization_validator.hpp",
+        "../../src/overlay/localization/localization_font.hpp",
+        "../../src/overlay/presentation/inline_hotkey_layout.hpp",
+        "../../src/overlay/localization/game_language_reader.hpp",
+        "../../src/overlay/presentation/setting_tooltip_content.hpp",
+        "../../src/overlay/presentation/selector_examples_geometry.hpp",
+        "../../src/config/feature_config.hpp",
+        "canonical_ini_documentation.hpp"
+      ]
+    }
+  ],
+  "support_targets": [
+    {
+      "name": "test_cmd_exit_status_probe",
+      "source": "tests/runner/test_cmd_exit_status_probe.cpp",
+      "output": "build-artifacts/tests/test_cmd_exit_status_probe.exe"
+    }
+  ],
+  "runner": [
+    {
+      "harness": "worker_lifecycle_harness",
+      "arguments": []
+    },
+    {
+      "harness": "feature_status_harness",
+      "arguments": []
+    },
+    {
+      "harness": "optional_overlay_startup_harness",
+      "arguments": []
+    },
+    {
+      "harness": "camera_correction_gate_harness",
+      "arguments": []
+    },
+    {
+      "harness": "camera_setting_transaction_harness",
+      "arguments": []
+    },
+    {
+      "harness": "camera_writer_transaction_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_lifecycle_transaction_harness",
+      "arguments": []
+    },
+    {
+      "harness": "startup_timeline_harness",
+      "arguments": []
+    },
+    {
+      "harness": "startup_journal_harness",
+      "arguments": []
+    },
+    {
+      "harness": "config_persistence_harness",
+      "arguments": []
+    },
+    {
+      "harness": "gameplay_mode_harness",
+      "arguments": []
+    },
+    {
+      "harness": "runtime_settings_api_harness",
+      "arguments": []
+    },
+    {
+      "harness": "dialogue_boundary_transaction_harness",
+      "arguments": []
+    },
+    {
+      "harness": "aspect_policy_harness",
+      "arguments": []
+    },
+    {
+      "harness": "horplus_gameplay_harness",
+      "arguments": []
+    },
+    {
+      "harness": "zoom_transition_harness",
+      "arguments": []
+    },
+    {
+      "harness": "gameplay_mode_transition_harness",
+      "arguments": []
+    },
+    {
+      "harness": "module_ownership_harness",
+      "arguments": []
+    },
+    {
+      "harness": "gameplay_camera_safety_harness",
+      "arguments": []
+    },
+    {
+      "harness": "memory_harness",
+      "arguments": []
+    },
+    {
+      "harness": "viewport_harness",
+      "arguments": []
+    },
+    {
+      "harness": "signature_scanner_harness",
+      "arguments": []
+    },
+    {
+      "harness": "instruction_validator_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_initialization_harness",
+      "arguments": []
+    },
+    {
+      "harness": "coordinator_recovery_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_exit_authority_harness",
+      "arguments": []
+    },
+    {
+      "harness": "horplus_post_exit_recovery_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_selection_harness",
+      "arguments": []
+    },
+    {
+      "harness": "post_cinematic_exclusion_harness",
+      "arguments": []
+    },
+    {
+      "harness": "recovery_rearm_harness",
+      "arguments": []
+    },
+    {
+      "harness": "candidate_hardening_harness",
+      "arguments": []
+    },
+    {
+      "harness": "policy_snapshot_harness",
+      "arguments": []
+    },
+    {
+      "harness": "camera_state_snapshot_harness",
+      "arguments": []
+    },
+    {
+      "harness": "fov_observation_harness",
+      "arguments": []
+    },
+    {
+      "harness": "gameplay_baseline_harness",
+      "arguments": []
+    },
+    {
+      "harness": "gameplay_aspect_restoration_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_fov_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_aspect_harness",
+      "arguments": []
+    },
+    {
+      "harness": "dialogue_fov_harness",
+      "arguments": []
+    },
+    {
+      "harness": "diagnostics_gate_harness",
+      "arguments": []
+    },
+    {
+      "harness": "dialogue_source_provenance_harness",
+      "arguments": []
+    },
+    {
+      "harness": "camera_writer_identity_harness",
+      "arguments": []
+    },
+    {
+      "harness": "cinematic_lifecycle_context_harness",
+      "arguments": []
+    },
+    {
+      "harness": "performance_telemetry_harness",
+      "arguments": []
+    },
+    {
+      "harness": "language_state_transition_harness",
+      "arguments": []
+    },
+    {
+      "harness": "matchgameplay_prediction_harness",
+      "arguments": []
+    },
+    {
+      "harness": "runtime_evidence_replay_harness",
+      "arguments": []
+    },
+    {
+      "harness": "gameplay_camera_resolver_harness",
+      "arguments": []
+    },
+    {
+      "harness": "composition_presenter_state_harness",
+      "arguments": []
+    },
+    {
+      "harness": "activation_trace_harness",
+      "arguments": []
+    },
+    {
+      "harness": "overlay_layout_metrics_harness",
+      "arguments": []
+    },
+    {
+      "harness": "selector_tooltip_state_harness",
+      "arguments": []
+    },
+    {
+      "harness": "input_state_harness",
+      "arguments": []
+    },
+    {
+      "harness": "camera_integration_harness",
+      "arguments": []
+    },
+    {
+      "harness": "placement_config_harness",
+      "arguments": []
+    },
+    {
+      "harness": "feature_presentation_harness",
+      "arguments": []
+    },
+    {
+      "harness": "semantic_snapshot_harness",
+      "arguments": []
+    },
+    {
+      "harness": "localization_harness",
+      "arguments": []
+    },
+    {
+      "harness": "runtime_native_adapter_harness",
+      "arguments": []
+    },
+    {
+      "harness": "n06_m01_zoom_game_derived_harness",
+      "arguments": [
+        "zoom-in",
+        "off"
+      ]
+    },
+    {
+      "harness": "n06_m01_zoom_game_derived_harness",
+      "arguments": [
+        "zoom-in",
+        "on"
+      ]
+    },
+    {
+      "harness": "n06_m01_zoom_game_derived_harness",
+      "arguments": [
+        "zoom-out",
+        "off"
+      ]
+    },
+    {
+      "harness": "n06_m01_zoom_game_derived_harness",
+      "arguments": [
+        "zoom-out",
+        "on"
+      ]
+    }
+  ],
+  "native_adapter_contract": {
+    "harness": "runtime_native_adapter_harness",
+    "scenario_names": [
+      "writer-wide",
+      "writer-native",
+      "writer-combine",
+      "writer-combine-readonly",
+      "writer-combine-invalid-viewport",
+      "writer-aspect",
+      "writer-off",
+      "writer-gate-off",
+      "writer-stopping",
+      "writer-unreadable",
+      "aspect-wide",
+      "aspect-off",
+      "aspect-readonly",
+      "aspect-unreadable",
+      "lifecycle",
+      "lifecycle-off",
+      "lifecycle-gate-off",
+      "lifecycle-chain",
+      "dialogue-active",
+      "dialogue-off",
+      "dialogue-cinematic",
+      "dialogue-unreadable",
+      "zoom",
+      "zoom-unreadable",
+      "zoom-in-throw",
+      "zoom-out-throw",
+      "settings-wake",
+      "serialization",
+      "writer-invalid-fov",
+      "writer-combine-readback-failure",
+      "historical-target",
+      "serialization-dialogue",
+      "serialization-enter",
+      "serialization-exit",
+      "serialization-aspect",
+      "serialization-settings",
+      "serialization-reader",
+      "recovery",
+      "settings-api",
+      "dialogue-exiting",
+      "dialogue-rearm-source-change",
+      "dialogue-disabled-in-flight",
+      "lifecycle-foreign-association",
+      "recovery-foreign-source",
+      "cinematic-initial-gameplay-baseline",
+      "cinematic-initial-foreign-source",
+      "cinematic-initial-stale-generation",
+      "cinematic-initial-missing-baseline",
+      "cinematic-initial-invalid-baseline",
+      "restoration-logging",
+      "cinematic-continuation-baseline",
+      "cinematic-continuation-combine",
+      "cinematic-continuation-chain",
+      "cinematic-continuation-foreign-source",
+      "cinematic-continuation-foreign-writer",
+      "cinematic-continuation-stale-generation",
+      "cinematic-continuation-no-association",
+      "cinematic-continuation-invalid-baseline",
+      "cinematic-continuation-native-mode",
+      "cinematic-continuation-target-change",
+      "cinematic-continuation-outside-low",
+      "cinematic-continuation-outside-high",
+      "cinematic-continuation-correction-off",
+      "cinematic-continuation-exit-departure",
+      "cinematic-continuation-no-validated-exit",
+      "cinematic-continuation-policy-change",
+      "evidence-dialogue-identities",
+      "evidence-dialogue-invalid-fov",
+      "evidence-dialogue-invalid-target",
+      "evidence-dialogue-source-change",
+      "evidence-dialogue-reset",
+      "evidence-dialogue-policy-snapshot",
+      "evidence-dialogue-reenable",
+      "evidence-dialogue-exclusion",
+      "evidence-writer-identities",
+      "evidence-writer-invalid-fields",
+      "evidence-writer-ads",
+      "evidence-runtime-resize",
+      "evidence-cinematic-invalid-enter",
+      "evidence-cinematic-rejected-exit",
+      "evidence-cinematic-indexed-exit",
+      "evidence-cinematic-cancel",
+      "evidence-cinematic-aspect-targets",
+      "evidence-settings-kinds",
+      "evidence-settings-lock-order",
+      "evidence-persistence-kinds",
+      "evidence-reset-empty",
+      "evidence-exception-boundary",
+      "evidence-nested-deferral",
+      "evidence-native-trampoline",
+      "evidence-zoom-native-continuation",
+      "evidence-safetyhook-lifetime-faults",
+      "evidence-safetyhook-failed-create",
+      "evidence-safetyhook-disable-postwrite",
+      "evidence-reset-self-join",
+      "evidence-reset-native-hook",
+      "evidence-install-transaction-order",
+      "diagnostic-work",
+      "startup-fatal-early",
+      "startup-fatal-partial",
+      "startup-fatal-cleanup-throws",
+      "startup-fatal-retained-worker"
+    ],
+    "diagnostic_modes": [
+      "off",
+      "on"
+    ],
+    "child_process_count": 204
+  },
+  "n06_m01_contract": {
+    "harness": "n06_m01_zoom_game_derived_harness",
+    "runs": [
+      {
+        "arguments": [
+          "zoom-in",
+          "off"
+        ]
+      },
+      {
+        "arguments": [
+          "zoom-in",
+          "on"
+        ]
+      },
+      {
+        "arguments": [
+          "zoom-out",
+          "off"
+        ]
+      },
+      {
+        "arguments": [
+          "zoom-out",
+          "on"
+        ]
+      }
+    ]
+  }
+}
