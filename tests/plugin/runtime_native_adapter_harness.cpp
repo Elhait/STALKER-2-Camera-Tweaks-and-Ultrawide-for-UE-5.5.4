@@ -133,6 +133,8 @@ namespace {
 plugin::detail::RuntimeState* RuntimeOwnerFromSeparateTranslationUnit() noexcept;
 namespace safetyhook {
     extern "C" bool SafetyHookTestShutdownTrapBypass();
+    extern "C" bool SafetyHookTestVehAdmission();
+    extern "C" bool SafetyHookTestVehTransactionIsolation();
 }
 
 namespace {
@@ -156,7 +158,11 @@ namespace {
     bool throwOnZoomSafeRead{};
     unsigned safetyHookVirtualProtectCalls{};
     unsigned safetyHookFailVirtualProtectAt{};
+    unsigned safetyHookFailVirtualProtectAtSecond{};
     bool safetyHookFailAfterVirtualProtect{};
+    unsigned safetyHookFlushCalls{};
+    unsigned safetyHookFailFlushAt{};
+    bool safetyHookRefuseVeh{};
     enum class StartupFault { Early, Partial };
     StartupFault startupFault{StartupFault::Early};
     bool startupCleanupThrows{};
@@ -164,7 +170,52 @@ namespace {
     HANDLE startupWorkerDone{};
     std::atomic<bool> startupWorkerEntryReturned{};
     struct SafetyHookAllocationRelease { void* address; std::size_t size; bool returned; };
+    struct SafetyHookDelayedExecuteCall {
+        unsigned (*entry)();
+        HANDLE start;
+        unsigned result{};
+        DWORD error{};
+    };
+    DWORD WINAPI SafetyHookDelayedExecuteWorker(void* parameter);
     std::vector<SafetyHookAllocationRelease> safetyHookAllocationReleases;
+    bool safetyHookInjectOwnedAllocationBadAlloc{};
+    void* safetyHookInjectedAllocationAddress{};
+    std::size_t safetyHookInjectedAllocationSize{};
+    std::atomic<PVECTORED_EXCEPTION_HANDLER> safetyHookVehCallback{};
+    std::atomic<bool> safetyHookDelayExecuteFault{};
+    std::atomic<unsigned> safetyHookDelayedFaultCount{};
+    unsigned safetyHookExpectedDelayedFaults{};
+    std::atomic<std::uintptr_t> safetyHookDelayedFaultAddress{};
+    HANDLE safetyHookNxReadyEvent{};
+    HANDLE safetyHookFaultsEnteredEvent{};
+    HANDLE safetyHookReleaseFaultsEvent{};
+    HANDLE safetyHookRxRestoredEvent{};
+    std::atomic<bool> safetyHookDelayedFaultTimedOut{};
+    std::atomic<bool> safetyHookHoldPrewriteProtection{};
+    std::atomic<bool> safetyHookPrewriteProtectionTimedOut{};
+    std::uintptr_t safetyHookPrewriteTarget{};
+    HANDLE safetyHookPrewriteProtectionChangedEvent{};
+    HANDLE safetyHookContinuePrewriteProtectionEvent{};
+    HANDLE safetyHookRouteObservedEvent{};
+    HANDLE safetyHookReleaseRouteEvent{};
+    std::atomic<bool> safetyHookRouteCallbackTimedOut{};
+    struct SafetyHookRetryGenerationCall {
+        unsigned (*entry)();
+        HANDLE nxReady;
+        HANDLE firstCallDone;
+        HANDLE secondCallStart;
+        unsigned results[2]{};
+        DWORD errors[2]{};
+    };
+    struct SafetyHookEnableThreadCall {
+        safetyhook::MidHook* hook{};
+        HANDLE done{};
+        bool succeeded{};
+    };
+    DWORD WINAPI SafetyHookRetryGenerationWorker(void* parameter);
+    DWORD WINAPI SafetyHookEnableThread(void* parameter);
+    void SafetyHookNativeRouteBarrier();
+    void SafetyHookNoopMidCallback(SafetyHookContext&);
     std::uintptr_t fixtureSource{};
     class ObservingSink : public spdlog::sinks::base_sink<std::mutex> {
         void sink_it_(const spdlog::details::log_msg& message) override {
@@ -1342,20 +1393,130 @@ namespace {
 #include "runtime_native_evidence_cases.hpp"
 }
 
+namespace {
+    LONG CALLBACK SafetyHookTestVehProxy(PEXCEPTION_POINTERS exception) {
+        if (safetyHookDelayExecuteFault.load(std::memory_order_acquire) &&
+            exception && exception->ExceptionRecord &&
+            exception->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
+            exception->ExceptionRecord->NumberParameters >= 2 &&
+            exception->ExceptionRecord->ExceptionInformation[0] == 8 &&
+            exception->ExceptionRecord->ExceptionInformation[1] ==
+                safetyHookDelayedFaultAddress.load(std::memory_order_acquire)) {
+            const auto observed = safetyHookDelayedFaultCount.fetch_add(1,
+                std::memory_order_acq_rel) + 1;
+            if (observed >= safetyHookExpectedDelayedFaults && safetyHookFaultsEnteredEvent)
+                SetEvent(safetyHookFaultsEnteredEvent);
+            if (!safetyHookReleaseFaultsEvent ||
+                WaitForSingleObject(safetyHookReleaseFaultsEvent, 5000) != WAIT_OBJECT_0)
+                safetyHookDelayedFaultTimedOut.store(true, std::memory_order_release);
+        }
+        const auto callback = safetyHookVehCallback.load(std::memory_order_acquire);
+        return callback ? callback(exception) : EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    DWORD WINAPI SafetyHookDelayedExecuteWorker(void* parameter) {
+        auto& call = *static_cast<SafetyHookDelayedExecuteCall*>(parameter);
+        if (WaitForSingleObject(call.start, 5000) != WAIT_OBJECT_0) {
+            call.error = ERROR_TIMEOUT;
+            return 1;
+        }
+        call.result = call.entry();
+        return 0;
+    }
+
+    DWORD WINAPI SafetyHookRetryGenerationWorker(void* parameter) {
+        auto& call = *static_cast<SafetyHookRetryGenerationCall*>(parameter);
+        for (unsigned generation = 0; generation < 2; ++generation) {
+            if (WaitForSingleObject(call.nxReady, 5000) != WAIT_OBJECT_0) {
+                call.errors[generation] = ERROR_TIMEOUT;
+                return 1;
+            }
+            call.results[generation] = call.entry();
+            if (generation == 0) {
+                SetEvent(call.firstCallDone);
+                if (WaitForSingleObject(call.secondCallStart, 5000) != WAIT_OBJECT_0) {
+                    call.errors[generation] = ERROR_TIMEOUT;
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+
+    DWORD WINAPI SafetyHookEnableThread(void* parameter) {
+        auto& call = *static_cast<SafetyHookEnableThreadCall*>(parameter);
+        call.succeeded = call.hook->enable().has_value();
+        SetEvent(call.done);
+        return 0;
+    }
+
+    void SafetyHookNativeRouteBarrier() {
+        if (safetyHookRouteObservedEvent) SetEvent(safetyHookRouteObservedEvent);
+        if (!safetyHookReleaseRouteEvent ||
+            WaitForSingleObject(safetyHookReleaseRouteEvent, 5000) != WAIT_OBJECT_0)
+            safetyHookRouteCallbackTimedOut.store(true, std::memory_order_release);
+    }
+    void SafetyHookNoopMidCallback(SafetyHookContext&) {}
+}
+
 extern "C" BOOL WINAPI SafetyHookTestVirtualProtect(LPVOID address, SIZE_T size,
     DWORD protection, PDWORD previous) {
     const auto call = ++safetyHookVirtualProtectCalls;
-    if (call == safetyHookFailVirtualProtectAt && !safetyHookFailAfterVirtualProtect)
+    if ((call == safetyHookFailVirtualProtectAt && !safetyHookFailAfterVirtualProtect) ||
+        call == safetyHookFailVirtualProtectAtSecond)
         return FALSE;
     const auto result = ::VirtualProtect(address, size, protection, previous);
+    if (result && safetyHookHoldPrewriteProtection.load(std::memory_order_acquire) &&
+        protection == PAGE_READWRITE && reinterpret_cast<std::uintptr_t>(address) ==
+            safetyHookPrewriteTarget) {
+        if (safetyHookNxReadyEvent) SetEvent(safetyHookNxReadyEvent);
+        if (safetyHookPrewriteProtectionChangedEvent)
+            SetEvent(safetyHookPrewriteProtectionChangedEvent);
+        if (!safetyHookContinuePrewriteProtectionEvent ||
+            WaitForSingleObject(safetyHookContinuePrewriteProtectionEvent, 5000) != WAIT_OBJECT_0)
+            safetyHookPrewriteProtectionTimedOut.store(true, std::memory_order_release);
+    }
+    if (result && safetyHookDelayExecuteFault.load(std::memory_order_acquire) &&
+        reinterpret_cast<std::uintptr_t>(address) ==
+            safetyHookDelayedFaultAddress.load(std::memory_order_acquire)) {
+        if (protection == PAGE_READWRITE) {
+            if (safetyHookNxReadyEvent) SetEvent(safetyHookNxReadyEvent);
+            if (!safetyHookFaultsEnteredEvent ||
+                WaitForSingleObject(safetyHookFaultsEnteredEvent, 5000) != WAIT_OBJECT_0)
+                safetyHookDelayedFaultTimedOut.store(true, std::memory_order_release);
+        } else if (protection == PAGE_EXECUTE_READ) {
+            if (safetyHookRxRestoredEvent) SetEvent(safetyHookRxRestoredEvent);
+        }
+    }
     if (call == safetyHookFailVirtualProtectAt && safetyHookFailAfterVirtualProtect && result)
         return FALSE;
     return result;
 }
 
+extern "C" BOOL WINAPI SafetyHookTestFlushInstructionCache(HANDLE process,
+    LPCVOID address, SIZE_T size) {
+    Check(process == GetCurrentProcess() && address && size,
+        "Hook cache synchronization escaped its current-process byte range");
+    if (++safetyHookFlushCalls == safetyHookFailFlushAt) return FALSE;
+    return ::FlushInstructionCache(process, address, size);
+}
+
+extern "C" PVOID WINAPI SafetyHookTestAddVectoredExceptionHandler(ULONG first,
+    PVECTORED_EXCEPTION_HANDLER handler) {
+    if (safetyHookRefuseVeh) return nullptr;
+    safetyHookVehCallback.store(handler, std::memory_order_release);
+    return ::AddVectoredExceptionHandler(first, SafetyHookTestVehProxy);
+}
+
 extern "C" void SafetyHookTestAllocationRelease(void* address, std::size_t size,
     int returnedToAllocator) {
     safetyHookAllocationReleases.push_back({address, size, returnedToAllocator != 0});
+}
+extern "C" int SafetyHookTestAllocationOwnershipCheckpoint(void* address,
+    std::size_t size) {
+    safetyHookInjectedAllocationAddress = address;
+    safetyHookInjectedAllocationSize = size;
+    return safetyHookInjectOwnedAllocationBadAlloc ? 1 : 0;
 }
 namespace platform::win32 {
     float RuntimeAdapterFixtureViewport() { return fixtureViewport; }
@@ -1420,7 +1581,8 @@ int main(int argc, char** argv) {
             "evidence-settings-lock-order", "evidence-persistence-kinds",
             "evidence-reset-empty", "evidence-exception-boundary",
             "evidence-nested-deferral", "evidence-native-trampoline", "evidence-zoom-native-continuation",
-            "evidence-safetyhook-lifetime-faults", "evidence-safetyhook-failed-create",
+            "evidence-safetyhook-lifetime-faults", "evidence-safetyhook-protection-recovery", "evidence-safetyhook-veh-admission", "evidence-safetyhook-rx-publication", "evidence-safetyhook-failed-create",
+            "evidence-safetyhook-allocation-ownership", "evidence-safetyhook-delayed-execute",
             "evidence-safetyhook-disable-postwrite", "evidence-reset-self-join",
             "evidence-reset-native-hook", "evidence-install-transaction-order",
             "evidence-sha256-allocation-ownership", "evidence-native-callback-reset-drain",

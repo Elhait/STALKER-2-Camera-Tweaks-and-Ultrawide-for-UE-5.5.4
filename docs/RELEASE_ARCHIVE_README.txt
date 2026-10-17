@@ -1,4 +1,4 @@
-STALKER 2 CAMERA TWEAKS v3.2.0
+STALKER 2 CAMERA TWEAKS v3.2.1
 
 Gameplay, cinematic and dialogue camera/FOV adjustments for S.T.A.L.K.E.R. 2: Heart of Chornobyl (Unreal Engine 5.5.4).
 

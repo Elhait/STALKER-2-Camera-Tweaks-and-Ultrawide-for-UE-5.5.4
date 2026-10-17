@@ -1,0 +1,2754 @@
+{
+  "scope": "Static offline inspection; no ASI loading/execution",
+  "archives": {
+    "3.1.0": {
+      "size": 1444757,
+      "sha256": "5045b7b33c6492ce4ff1d316f47358a907b5db9f932509199203ef68815516c2",
+      "entries": [
+        {
+          "name": "LICENSE.md",
+          "size": 7669,
+          "sha256": "13fd6ad21b410f6e2bd2858db49f7719d6db6dbaf6c2682c6c8abbf01be4b04e",
+          "encrypted": false
+        },
+        {
+          "name": "README.txt",
+          "size": 2116,
+          "sha256": "ff107f2ebaa7d25f6f928a673602363dd36c5fa6ba9765bfc998f65f66127ff3",
+          "encrypted": false
+        },
+        {
+          "name": "STALKER2CameraTweaks.asi",
+          "size": 3555840,
+          "sha256": "ffb03f35d0c04a5a609fcb47b3a9024e2da268fa40bb431186903233498e545a",
+          "encrypted": false
+        },
+        {
+          "name": "STALKER2CameraTweaks.ini",
+          "size": 8129,
+          "sha256": "508f99b0d0ead161e93955c32909c56cfa33e4c15d875ec468b0e56444cafe4d",
+          "encrypted": false
+        },
+        {
+          "name": "THIRD_PARTY_NOTICES.md",
+          "size": 8118,
+          "sha256": "8066cf765fc332aa8fdbe32a24d89bfbd266f09329945af6e1c5bd51483f816f",
+          "encrypted": false
+        }
+      ]
+    },
+    "3.2.0": {
+      "size": 1448275,
+      "sha256": "7085ee28f93056e4c748904256a7c53d45ce5ce00d86617b162abf1d47928ef1",
+      "entries": [
+        {
+          "name": "STALKER2CameraTweaks.asi",
+          "size": 3568128,
+          "sha256": "97696dba3c40067f4f89d8c8f62d2d93c5ad2a97707860492e723a4e2016f5d4",
+          "encrypted": false
+        },
+        {
+          "name": "README.txt",
+          "size": 1847,
+          "sha256": "96d02efdd2c4e5954f5bb5f234f499d97a86098d2b344f781e7958a23a716ee3",
+          "encrypted": false
+        },
+        {
+          "name": "LICENSE.md",
+          "size": 7669,
+          "sha256": "13fd6ad21b410f6e2bd2858db49f7719d6db6dbaf6c2682c6c8abbf01be4b04e",
+          "encrypted": false
+        },
+        {
+          "name": "THIRD_PARTY_NOTICES.md",
+          "size": 8118,
+          "sha256": "8066cf765fc332aa8fdbe32a24d89bfbd266f09329945af6e1c5bd51483f816f",
+          "encrypted": false
+        }
+      ]
+    }
+  },
+  "binaries": {
+    "3.1.0": {
+      "size": 3555840,
+      "sha256": "ffb03f35d0c04a5a609fcb47b3a9024e2da268fa40bb431186903233498e545a",
+      "machine": "0x8664",
+      "timestamp_utc": "2026-10-11T16:00:49+00:00",
+      "characteristics": "0x2022",
+      "image_base": "0x180000000",
+      "entry_rva": "0x13cc68",
+      "dll_characteristics": "0x160",
+      "sections": [
+        {
+          "name": ".text",
+          "rva": 4096,
+          "virtual_size": 1526332,
+          "offset": 1024,
+          "size": 1526784,
+          "flags": "0x60000020",
+          "entropy": 6.332,
+          "execute": true,
+          "write": false,
+          "sha256": "8b5722f448f7dff16e801cb9f4035642f49ade11268a39c4566be0cb87a41061"
+        },
+        {
+          "name": ".rdata",
+          "rva": 1531904,
+          "virtual_size": 796414,
+          "offset": 1527808,
+          "size": 796672,
+          "flags": "0x40000040",
+          "entropy": 5.363,
+          "execute": false,
+          "write": false,
+          "sha256": "ecadb33cee3d4e9a5ad1fcb9ba168c783f39e560e8d129fade065c1001b44035"
+        },
+        {
+          "name": ".data",
+          "rva": 2330624,
+          "virtual_size": 152792,
+          "offset": 2324480,
+          "size": 119808,
+          "flags": "0xc0000040",
+          "entropy": 4.846,
+          "execute": false,
+          "write": true,
+          "sha256": "26e100d70d8181b0d75da1ea7850ad06109413b72dae66761e75700629e89d94"
+        },
+        {
+          "name": ".pdata",
+          "rva": 2486272,
+          "virtual_size": 50604,
+          "offset": 2444288,
+          "size": 50688,
+          "flags": "0x40000040",
+          "entropy": 6.154,
+          "execute": false,
+          "write": false,
+          "sha256": "8d9d29a16caac2cb1f3907f0117691062f8f15266a37fd9200dfa1f4e40ff678"
+        },
+        {
+          "name": ".fptable",
+          "rva": 2539520,
+          "virtual_size": 256,
+          "offset": 2494976,
+          "size": 512,
+          "flags": "0xc0000040",
+          "entropy": 0,
+          "execute": false,
+          "write": true,
+          "sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560"
+        },
+        {
+          "name": ".rsrc",
+          "rva": 2543616,
+          "virtual_size": 1044024,
+          "offset": 2495488,
+          "size": 1044480,
+          "flags": "0x40000040",
+          "entropy": 6.922,
+          "execute": false,
+          "write": false,
+          "sha256": "31fd3f525abe46180cc8209a480dc29f064a79bbb396c0c36531411f939ace05"
+        },
+        {
+          "name": ".reloc",
+          "rva": 3588096,
+          "virtual_size": 15376,
+          "offset": 3539968,
+          "size": 15872,
+          "flags": "0x42000040",
+          "entropy": 6.035,
+          "execute": false,
+          "write": false,
+          "sha256": "93c482c06032ef824e539dfe7ce98941dd9f83a27ba8010c56465645548d223c"
+        }
+      ],
+      "imports": {
+        "USER32.dll": [
+          "EnumWindows",
+          "GetWindowThreadProcessId",
+          "IsWindowVisible",
+          "SetClipboardData",
+          "GetWindow",
+          "GetForegroundWindow",
+          "GetClientRect",
+          "EnumDisplaySettingsA",
+          "PostMessageW",
+          "GetMessageW",
+          "TranslateMessage",
+          "DispatchMessageW",
+          "PeekMessageW",
+          "PostThreadMessageW",
+          "DefWindowProcW",
+          "CallWindowProcW",
+          "IsWindow",
+          "LoadCursorA",
+          "IsWindowUnicode",
+          "ReleaseCapture",
+          "SetCapture",
+          "GetCapture",
+          "GetKeyState",
+          "GetMessageExtraInfo",
+          "TrackMouseEvent",
+          "GetKeyboardLayout",
+          "EmptyClipboard",
+          "GetClipboardData",
+          "GetAsyncKeyState",
+          "CloseClipboard",
+          "OpenClipboard",
+          "GetRawInputData",
+          "GetDpiForWindow",
+          "SetThreadDpiAwarenessContext",
+          "UnhookWinEvent",
+          "SetWinEventHook",
+          "LoadCursorW",
+          "SetWindowLongPtrW",
+          "GetWindowLongPtrW",
+          "LogicalToPhysicalPointForPerMonitorDPI",
+          "ScreenToClient",
+          "GetCursorPos",
+          "SetCursor",
+          "KillTimer",
+          "SetTimer",
+          "IsIconic"
+        ],
+        "bcrypt.dll": [
+          "BCryptGetProperty",
+          "BCryptCloseAlgorithmProvider",
+          "BCryptCreateHash",
+          "BCryptHashData",
+          "BCryptFinishHash",
+          "BCryptDestroyHash",
+          "BCryptOpenAlgorithmProvider"
+        ],
+        "d3d11.dll": [
+          "D3D11CreateDevice"
+        ],
+        "dcomp.dll": [
+          "DCompositionCreateDevice2"
+        ],
+        "D3DCOMPILER_47.dll": [
+          "D3DCompile"
+        ],
+        "KERNEL32.dll": [
+          "GetOEMCP",
+          "GetACP",
+          "IsValidCodePage",
+          "HeapReAlloc",
+          "GetTimeZoneInformation",
+          "SetStdHandle",
+          "ReadConsoleW",
+          "SetFilePointerEx",
+          "GetFileSizeEx",
+          "GetConsoleOutputCP",
+          "FlushFileBuffers",
+          "EnumSystemLocalesW",
+          "GetUserDefaultLCID",
+          "IsValidLocale",
+          "GetLocaleInfoW",
+          "LCMapStringW",
+          "CompareStringW",
+          "GetTimeFormatW",
+          "GetDateFormatW",
+          "FlsFree",
+          "FlsSetValue",
+          "FlsGetValue",
+          "FlsAlloc",
+          "HeapFree",
+          "HeapAlloc",
+          "ExitProcess",
+          "FileTimeToSystemTime",
+          "SystemTimeToTzSpecificLocalTime",
+          "PeekNamedPipe",
+          "GetFileType",
+          "GetDriveTypeW",
+          "LoadLibraryExW",
+          "TlsFree",
+          "TlsSetValue",
+          "TlsGetValue",
+          "TlsAlloc",
+          "InitializeCriticalSectionAndSpinCount",
+          "InterlockedFlushSList",
+          "RtlUnwindEx",
+          "RaiseException",
+          "RtlPcToFileHeader",
+          "InitializeSListHead",
+          "TerminateProcess",
+          "IsProcessorFeaturePresent",
+          "GetStartupInfoW",
+          "SetUnhandledExceptionFilter",
+          "UnhandledExceptionFilter",
+          "IsDebuggerPresent",
+          "GetCommandLineA",
+          "GetCommandLineW",
+          "GetStdHandle",
+          "CreateFileW",
+          "WriteFile",
+          "OutputDebugStringA",
+          "GetEnvironmentStringsW",
+          "QueryPerformanceFrequency",
+          "ReleaseSRWLockExclusive",
+          "AcquireSRWLockExclusive",
+          "Sleep",
+          "GetCurrentProcessId",
+          "GetCurrentThreadId",
+          "GetSystemTimeAsFileTime",
+          "GetTickCount64",
+          "GetModuleFileNameW",
+          "GetModuleHandleA",
+          "GetConsoleMode",
+          "WriteConsoleA",
+          "GetConsoleScreenBufferInfo",
+          "SetConsoleTextAttribute",
+          "CloseHandle",
+          "SetEvent",
+          "WaitForSingleObject",
+          "CreateEventW",
+          "CreateThread",
+          "TerminateThread",
+          "ResumeThread",
+          "GetThreadId",
+          "DisableThreadLibraryCalls",
+          "DeleteFileW",
+          "GetLastError",
+          "MoveFileExW",
+          "VirtualQuery",
+          "ReadFile",
+          "LoadResource",
+          "LockResource",
+          "SizeofResource",
+          "FindResourceW",
+          "GetModuleHandleExW",
+          "GetCurrentProcess",
+          "ReadProcessMemory",
+          "GetModuleHandleW",
+          "K32GetModuleInformation",
+          "SetLastError",
+          "WaitForMultipleObjects",
+          "GetProcAddress",
+          "AddVectoredExceptionHandler",
+          "RemoveVectoredExceptionHandler",
+          "GetSystemInfo",
+          "VirtualAlloc",
+          "VirtualProtect",
+          "VirtualFree",
+          "GlobalAlloc",
+          "GlobalUnlock",
+          "GlobalLock",
+          "GlobalFree",
+          "MultiByteToWideChar",
+          "WideCharToMultiByte",
+          "FreeLibrary",
+          "LoadLibraryA",
+          "GetLocaleInfoA",
+          "LCMapStringEx",
+          "FreeEnvironmentStringsW",
+          "SetEnvironmentVariableW",
+          "GetProcessHeap",
+          "HeapSize",
+          "DecodePointer",
+          "RtlVirtualUnwind",
+          "WriteConsoleW",
+          "SetEndOfFile",
+          "QueryPerformanceCounter",
+          "RtlUnwind",
+          "RtlLookupFunctionEntry",
+          "RtlCaptureContext",
+          "GetCPInfo",
+          "LocalFree",
+          "FormatMessageA",
+          "GetLocaleInfoEx",
+          "WaitForSingleObjectEx",
+          "SwitchToThread",
+          "GetExitCodeThread",
+          "TryAcquireSRWLockExclusive",
+          "WakeConditionVariable",
+          "WakeAllConditionVariable",
+          "SleepConditionVariableSRW",
+          "GetCurrentDirectoryW",
+          "CreateDirectoryW",
+          "FindClose",
+          "FindFirstFileW",
+          "FindFirstFileExW",
+          "FindNextFileW",
+          "GetFileAttributesExW",
+          "GetFileInformationByHandle",
+          "GetFullPathNameW",
+          "AreFileApisANSI",
+          "GetFileInformationByHandleEx",
+          "EnterCriticalSection",
+          "LeaveCriticalSection",
+          "InitializeCriticalSectionEx",
+          "DeleteCriticalSection",
+          "EncodePointer",
+          "GetStringTypeW"
+        ],
+        "SHELL32.dll": [
+          "ShellExecuteW"
+        ],
+        "IMM32.dll": [
+          "ImmReleaseContext",
+          "ImmSetCandidateWindow",
+          "ImmSetCompositionWindow",
+          "ImmGetContext"
+        ]
+      },
+      "export_directory": [
+        0,
+        0
+      ],
+      "certificate_directory": [
+        0,
+        0
+      ],
+      "delay_import_directory": [
+        0,
+        0
+      ],
+      "tls_callbacks": [
+        "0x13c8ec",
+        "0x13c5e8"
+      ],
+      "resources": [
+        {
+          "path": [
+            10,
+            101,
+            1033
+          ],
+          "size": 15923,
+          "sha256": "509d9538fc0f145ff20904fc28a2e8812edf7eaf2eb3ef1ede034022d0fb835e"
+        },
+        {
+          "path": [
+            10,
+            102,
+            1033
+          ],
+          "size": 24015,
+          "sha256": "1347899760898860dd0e4ace7487bafab91536248cfc133b9dae922f88e728f9"
+        },
+        {
+          "path": [
+            10,
+            103,
+            1033
+          ],
+          "size": 399528,
+          "sha256": "dae80a9b9bb23a37f60465dd93de9365a8ddd43300adc304d96f91ce54c28dd5"
+        },
+        {
+          "path": [
+            10,
+            104,
+            1033
+          ],
+          "size": 5148,
+          "sha256": "35ed135e9153c51065adf4de71655b4e9943b75fdcd98779066d83439b49df93"
+        },
+        {
+          "path": [
+            10,
+            105,
+            1033
+          ],
+          "size": 20219,
+          "sha256": "e42001caa0ccfb726c04cbdbec23db1ceaaea29d20c8d9f06434435c4f11148d"
+        },
+        {
+          "path": [
+            10,
+            106,
+            1033
+          ],
+          "size": 16243,
+          "sha256": "3df50d36e8e2c856708d5056a1214cc5d7194ff8d28872e0a61dd51fc663f9ec"
+        },
+        {
+          "path": [
+            10,
+            107,
+            1033
+          ],
+          "size": 17404,
+          "sha256": "99dc442e66b7789689824b3e31958c060a4e0236a8d416756993366e4055ca3d"
+        },
+        {
+          "path": [
+            10,
+            108,
+            1033
+          ],
+          "size": 17227,
+          "sha256": "521e7912e93a512334c27e429d8d546807d12825f5ec3d8fad06118fc37c4738"
+        },
+        {
+          "path": [
+            10,
+            109,
+            1033
+          ],
+          "size": 17085,
+          "sha256": "801b0e1c5834efcb8740afa85c59b22c3670717dde46e89034437b6af860ef61"
+        },
+        {
+          "path": [
+            10,
+            110,
+            1033
+          ],
+          "size": 18186,
+          "sha256": "7d86a4a40c5a08a5feec8c8257a2b8cd2bc3691487bb6585aff72e1f63f5c08e"
+        },
+        {
+          "path": [
+            10,
+            111,
+            1033
+          ],
+          "size": 17389,
+          "sha256": "d90ab3f2fd4534cab447cdf6846fdec489a2037df8cda251bd7d2ce22627c364"
+        },
+        {
+          "path": [
+            10,
+            112,
+            1033
+          ],
+          "size": 16396,
+          "sha256": "a186c1b36c7aec62029d995558544ded6cbf9834e095a85957d909d5b60cbe65"
+        },
+        {
+          "path": [
+            10,
+            113,
+            1033
+          ],
+          "size": 17156,
+          "sha256": "7f9c680770f5f95ff9686af14ab9dbf692a73840d7a08cba477f4d65c26b19b0"
+        },
+        {
+          "path": [
+            10,
+            114,
+            1033
+          ],
+          "size": 24150,
+          "sha256": "3d6e75566578f8ef09419854c15e87ca20fbd9e7fd81c7128085b8bbb26dd383"
+        },
+        {
+          "path": [
+            10,
+            115,
+            1033
+          ],
+          "size": 22409,
+          "sha256": "d657e0440b9070641e82febd2b9ac899bdcd3f43a4dafc7b936838f1d7eb42d2"
+        },
+        {
+          "path": [
+            10,
+            116,
+            1033
+          ],
+          "size": 14582,
+          "sha256": "96ba45ee8915744e0bf47ec26c4d4422dbca562c789a5a9917517a757cbb5f91"
+        },
+        {
+          "path": [
+            10,
+            117,
+            1033
+          ],
+          "size": 17367,
+          "sha256": "320ef452fec9a9a730fc7016a19845d9dcd1ab9eb5566fc45bb33beabdb071a9"
+        },
+        {
+          "path": [
+            10,
+            118,
+            1033
+          ],
+          "size": 17312,
+          "sha256": "3b0ea6e602594aceac65f8b957ac17fd83506c0ec146003cb43b851f844885a5"
+        },
+        {
+          "path": [
+            10,
+            119,
+            1033
+          ],
+          "size": 14784,
+          "sha256": "f01ee2aace32a7cbb02e939854a698fdcd8eda0c5e9522ff437a80ae3a542e05"
+        },
+        {
+          "path": [
+            10,
+            120,
+            1033
+          ],
+          "size": 16699,
+          "sha256": "5e7ccebe6ff4181ef39fe9eeb9e76aea649996354f879874309a2dd198753aa5"
+        },
+        {
+          "path": [
+            10,
+            121,
+            1033
+          ],
+          "size": 6272,
+          "sha256": "a61dc8081eaf4afe6974cb799beb30759e828e8b23f03a3241785346d2f87d89"
+        },
+        {
+          "path": [
+            10,
+            122,
+            1033
+          ],
+          "size": 5252,
+          "sha256": "5052d03ee8aba1ca5a094a512cb67a9acf7b1e32d6dfec212035b5f75dc2c02c"
+        },
+        {
+          "path": [
+            10,
+            123,
+            1033
+          ],
+          "size": 74292,
+          "sha256": "698af4f47505e6e27f0682b632a56ea6577c65b5b589b87128a7c90dbcef6244"
+        },
+        {
+          "path": [
+            10,
+            124,
+            1033
+          ],
+          "size": 38984,
+          "sha256": "491f6233ac84e1e997b2c3a6686bc42cd822a439ee33c0114e28484052852469"
+        },
+        {
+          "path": [
+            10,
+            125,
+            1033
+          ],
+          "size": 82136,
+          "sha256": "95634a0ead7c6aeb51775f304a056a6e30d7d8aee78f8cfb4ea1fbf987b52101"
+        },
+        {
+          "path": [
+            10,
+            126,
+            1033
+          ],
+          "size": 97060,
+          "sha256": "55bbd0ddff7e54cda473a51ece91c855e0bdf0ba6244cb8f9bf3c229ed546d25"
+        },
+        {
+          "path": [
+            10,
+            127,
+            1033
+          ],
+          "size": 4396,
+          "sha256": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a"
+        },
+        {
+          "path": [
+            10,
+            128,
+            1033
+          ],
+          "size": 4382,
+          "sha256": "a7a5a25eb188bf1cd96982030d53e23c33485c69b1044a562254226857ee13af"
+        },
+        {
+          "path": [
+            10,
+            129,
+            1033
+          ],
+          "size": 503,
+          "sha256": "48adb9c98d35fa5b1d264aa6aa320c8eecdacbf33387bc9e86b52e2df7635b28"
+        }
+      ],
+      "selected_strings": [
+        "# GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4",
+        "# Nexus Mods: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+        "# Nexus: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+        "Copyright 2014-2024 Adobe (https://www.adobe.com/).",
+        "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)",
+        "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+        "ShellExecuteW",
+        "Upstream: https://github.com/notofonts/noto-cjk",
+        "XInputGetCapabilities",
+        "XInputGetState",
+        "https://github.com/bluescan/proggyfonts",
+        "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage",
+        "https://openfontlicense.org",
+        "https://opensource.org/licenses/MIT",
+        "https://scripts.sil.org/OFL",
+        "xinput1_1.dll",
+        "xinput1_2.dll",
+        "xinput1_3.dll",
+        "xinput1_4.dll",
+        "xinput9_1_0.dll"
+      ],
+      "overlay_bytes": 0,
+      "load_config": {
+        "size": 320,
+        "security_cookie_va": "0x18023c540",
+        "guard_flags": "0x100"
+      },
+      "resource_source_matches": [
+        {
+          "path": [
+            10,
+            101,
+            1033
+          ],
+          "source": "locales/en.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            102,
+            1033
+          ],
+          "source": "locales/uk.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            103,
+            1033
+          ],
+          "source": "assets/fonts/ProggyVector/ProggyVector-Regular.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            104,
+            1033
+          ],
+          "source": "assets/fonts/ProggyVector/ProggyVector_Licence.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            105,
+            1033
+          ],
+          "source": "locales/ar.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            106,
+            1033
+          ],
+          "source": "locales/cs.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            107,
+            1033
+          ],
+          "source": "locales/fr.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            108,
+            1033
+          ],
+          "source": "locales/de.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            109,
+            1033
+          ],
+          "source": "locales/it.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            110,
+            1033
+          ],
+          "source": "locales/ja.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            111,
+            1033
+          ],
+          "source": "locales/ko.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            112,
+            1033
+          ],
+          "source": "locales/pl.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            113,
+            1033
+          ],
+          "source": "locales/pt-BR.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            114,
+            1033
+          ],
+          "source": "locales/ru.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            115,
+            1033
+          ],
+          "source": "locales/sr-Cyrl.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            116,
+            1033
+          ],
+          "source": "locales/zh-Hans.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            117,
+            1033
+          ],
+          "source": "locales/es-419.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            118,
+            1033
+          ],
+          "source": "locales/es-ES.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            119,
+            1033
+          ],
+          "source": "locales/zh-Hant.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            120,
+            1033
+          ],
+          "source": "locales/tr.json",
+          "identical": false
+        },
+        {
+          "path": [
+            10,
+            121,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansMono-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            122,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansArabic-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            123,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansJP-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            124,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansKR-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            125,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansSC-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            126,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansTC-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            127,
+            1033
+          ],
+          "source": "assets/fonts/NotoSansMono/OFL.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            128,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/OFL-Arabic.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            129,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/CJK-Copyright.txt",
+          "identical": true
+        }
+      ]
+    },
+    "3.2.0": {
+      "size": 3568128,
+      "sha256": "97696dba3c40067f4f89d8c8f62d2d93c5ad2a97707860492e723a4e2016f5d4",
+      "machine": "0x8664",
+      "timestamp_utc": "2026-10-16T22:59:29+00:00",
+      "characteristics": "0x2022",
+      "image_base": "0x180000000",
+      "entry_rva": "0x13dd08",
+      "dll_characteristics": "0x160",
+      "sections": [
+        {
+          "name": ".text",
+          "rva": 4096,
+          "virtual_size": 1532168,
+          "offset": 1024,
+          "size": 1532416,
+          "flags": "0x60000020",
+          "entropy": 6.336,
+          "execute": true,
+          "write": false,
+          "sha256": "7f2fd5184fd43b5f6938538efcbdf02042e6f78b7712eb9fd875df4dbe561dcf"
+        },
+        {
+          "name": ".rdata",
+          "rva": 1540096,
+          "virtual_size": 800786,
+          "offset": 1533440,
+          "size": 801280,
+          "flags": "0x40000040",
+          "entropy": 5.371,
+          "execute": false,
+          "write": false,
+          "sha256": "6a223453d598bb5420b3b4ead82c93fbb141a89b15c73da3d26bc6408df44ebe"
+        },
+        {
+          "name": ".data",
+          "rva": 2342912,
+          "virtual_size": 186136,
+          "offset": 2334720,
+          "size": 118784,
+          "flags": "0xc0000040",
+          "entropy": 4.843,
+          "execute": false,
+          "write": true,
+          "sha256": "d03e4be64a3f0f29d89c75adcc0c5379883c69d07cf0f3fd76bc199b11377e7d"
+        },
+        {
+          "name": ".pdata",
+          "rva": 2531328,
+          "virtual_size": 50136,
+          "offset": 2453504,
+          "size": 50176,
+          "flags": "0x40000040",
+          "entropy": 6.172,
+          "execute": false,
+          "write": false,
+          "sha256": "a88b90d2f09092cc11219b60d569b0075ae6c82c247b4951a66bc6683b88467d"
+        },
+        {
+          "name": ".fptable",
+          "rva": 2584576,
+          "virtual_size": 256,
+          "offset": 2503680,
+          "size": 512,
+          "flags": "0xc0000040",
+          "entropy": 0,
+          "execute": false,
+          "write": true,
+          "sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560"
+        },
+        {
+          "name": ".rsrc",
+          "rva": 2588672,
+          "virtual_size": 1048424,
+          "offset": 2504192,
+          "size": 1048576,
+          "flags": "0x40000040",
+          "entropy": 6.923,
+          "execute": false,
+          "write": false,
+          "sha256": "7df5935e09357fb27d6e9d5a9640321e905cc1035961e207b81ec3be8ddcdbac"
+        },
+        {
+          "name": ".reloc",
+          "rva": 3637248,
+          "virtual_size": 15240,
+          "offset": 3552768,
+          "size": 15360,
+          "flags": "0x42000040",
+          "entropy": 6.085,
+          "execute": false,
+          "write": false,
+          "sha256": "10567bb1bec85e9ea5b0b1bcb1c56f73b78fc403b99c4b619acd54b6611efe44"
+        }
+      ],
+      "imports": {
+        "USER32.dll": [
+          "GetWindowLongPtrW",
+          "GetClientRect",
+          "IsWindowVisible",
+          "SetThreadDpiAwarenessContext",
+          "EnumWindows",
+          "GetClassNameW",
+          "GetWindowThreadProcessId",
+          "GetWindow",
+          "GetForegroundWindow",
+          "EnumDisplaySettingsA",
+          "PostMessageW",
+          "TranslateMessage",
+          "DispatchMessageW",
+          "PeekMessageW",
+          "PostThreadMessageW",
+          "DefWindowProcW",
+          "CallWindowProcW",
+          "LoadCursorA",
+          "IsWindowUnicode",
+          "ReleaseCapture",
+          "SetCapture",
+          "GetCapture",
+          "GetKeyState",
+          "GetMessageExtraInfo",
+          "TrackMouseEvent",
+          "GetKeyboardLayout",
+          "EmptyClipboard",
+          "GetClipboardData",
+          "SetClipboardData",
+          "CloseClipboard",
+          "OpenClipboard",
+          "ClientToScreen",
+          "SetWindowPos",
+          "GetRawInputData",
+          "GetDpiForWindow",
+          "GetAsyncKeyState",
+          "UnhookWinEvent",
+          "SetWinEventHook",
+          "LoadCursorW",
+          "CallNextHookEx",
+          "UnhookWindowsHookEx",
+          "SetWindowsHookExW",
+          "SetWindowLongPtrW",
+          "LogicalToPhysicalPointForPerMonitorDPI",
+          "ScreenToClient",
+          "GetCursorPos",
+          "SetCursor",
+          "RemovePropW",
+          "GetPropW",
+          "SetPropW",
+          "KillTimer",
+          "SetTimer",
+          "MsgWaitForMultipleObjectsEx",
+          "IsIconic",
+          "ShowWindow",
+          "DestroyWindow",
+          "IsWindow",
+          "CreateWindowExW",
+          "GetClassInfoExW",
+          "RegisterClassExW",
+          "UnregisterClassW"
+        ],
+        "bcrypt.dll": [
+          "BCryptGetProperty",
+          "BCryptCloseAlgorithmProvider",
+          "BCryptCreateHash",
+          "BCryptHashData",
+          "BCryptFinishHash",
+          "BCryptDestroyHash",
+          "BCryptOpenAlgorithmProvider"
+        ],
+        "d3d11.dll": [
+          "D3D11CreateDevice"
+        ],
+        "dcomp.dll": [
+          "DCompositionCreateDevice2"
+        ],
+        "D3DCOMPILER_47.dll": [
+          "D3DCompile"
+        ],
+        "KERNEL32.dll": [
+          "GetCommandLineA",
+          "GetOEMCP",
+          "GetACP",
+          "IsValidCodePage",
+          "HeapReAlloc",
+          "GetFileSizeEx",
+          "SetFilePointerEx",
+          "ReadConsoleW",
+          "GetConsoleMode",
+          "GetConsoleOutputCP",
+          "GetTimeZoneInformation",
+          "GetFileType",
+          "GetStdHandle",
+          "EnumSystemLocalesW",
+          "GetUserDefaultLCID",
+          "IsValidLocale",
+          "GetLocaleInfoW",
+          "LCMapStringW",
+          "CompareStringW",
+          "GetTimeFormatW",
+          "GetDateFormatW",
+          "FlsFree",
+          "FlsSetValue",
+          "FlsGetValue",
+          "FlsAlloc",
+          "HeapFree",
+          "HeapAlloc",
+          "ExitProcess",
+          "LoadLibraryExW",
+          "TlsFree",
+          "TlsSetValue",
+          "TlsGetValue",
+          "TlsAlloc",
+          "InitializeCriticalSectionAndSpinCount",
+          "InterlockedFlushSList",
+          "RtlUnwindEx",
+          "RaiseException",
+          "RtlPcToFileHeader",
+          "GetStartupInfoW",
+          "IsDebuggerPresent",
+          "InitializeSListHead",
+          "IsProcessorFeaturePresent",
+          "TerminateProcess",
+          "SetUnhandledExceptionFilter",
+          "UnhandledExceptionFilter",
+          "RtlVirtualUnwind",
+          "RtlLookupFunctionEntry",
+          "RtlCaptureContext",
+          "GetCPInfo",
+          "GetStringTypeW",
+          "LCMapStringEx",
+          "DecodePointer",
+          "EncodePointer",
+          "GetCommandLineW",
+          "GetEnvironmentStringsW",
+          "FreeEnvironmentStringsW",
+          "CreateFileW",
+          "WriteFile",
+          "OutputDebugStringA",
+          "CloseHandle",
+          "GetLastError",
+          "SetLastError",
+          "QueryPerformanceCounter",
+          "QueryPerformanceFrequency",
+          "ReleaseSRWLockExclusive",
+          "AcquireSRWLockExclusive",
+          "GetCurrentProcessId",
+          "GetCurrentThreadId",
+          "GetSystemTimeAsFileTime",
+          "GetTickCount64",
+          "GetModuleFileNameW",
+          "GetModuleHandleA",
+          "GetModuleHandleExW",
+          "SetEvent",
+          "WaitForSingleObject",
+          "CreateEventW",
+          "CreateThread",
+          "TerminateThread",
+          "ResumeThread",
+          "GetThreadId",
+          "DisableThreadLibraryCalls",
+          "DeleteFileW",
+          "FlushFileBuffers",
+          "ReadFile",
+          "MoveFileExW",
+          "GetSystemTime",
+          "CopyFileW",
+          "VirtualQuery",
+          "lstrcmpW",
+          "LoadResource",
+          "LockResource",
+          "SizeofResource",
+          "FindResourceW",
+          "GetCurrentProcess",
+          "ReadProcessMemory",
+          "GetModuleHandleW",
+          "K32GetModuleInformation",
+          "WaitForMultipleObjects",
+          "GetProcAddress",
+          "AddVectoredExceptionHandler",
+          "GetSystemInfo",
+          "VirtualAlloc",
+          "VirtualProtect",
+          "VirtualFree",
+          "GlobalAlloc",
+          "GlobalUnlock",
+          "GlobalLock",
+          "GlobalFree",
+          "MultiByteToWideChar",
+          "WideCharToMultiByte",
+          "FreeLibrary",
+          "LoadLibraryA",
+          "GetLocaleInfoA",
+          "InitializeCriticalSectionEx",
+          "SetEnvironmentVariableW",
+          "GetProcessHeap",
+          "SetStdHandle",
+          "HeapSize",
+          "SetEndOfFile",
+          "WriteConsoleW",
+          "LocalFree",
+          "FormatMessageA",
+          "GetLocaleInfoEx",
+          "TryAcquireSRWLockExclusive",
+          "SleepConditionVariableSRW",
+          "Sleep",
+          "FindClose",
+          "FindFirstFileW",
+          "FindFirstFileExW",
+          "FindNextFileW",
+          "GetFileAttributesExW",
+          "AreFileApisANSI",
+          "GetFileInformationByHandleEx",
+          "WakeAllConditionVariable",
+          "SwitchToThread",
+          "EnterCriticalSection",
+          "LeaveCriticalSection",
+          "DeleteCriticalSection"
+        ],
+        "SHELL32.dll": [
+          "ShellExecuteW"
+        ],
+        "IMM32.dll": [
+          "ImmReleaseContext",
+          "ImmSetCompositionWindow",
+          "ImmSetCandidateWindow",
+          "ImmGetContext"
+        ]
+      },
+      "export_directory": [
+        0,
+        0
+      ],
+      "certificate_directory": [
+        0,
+        0
+      ],
+      "delay_import_directory": [
+        0,
+        0
+      ],
+      "tls_callbacks": [
+        "0x13d98c",
+        "0x13d688"
+      ],
+      "resources": [
+        {
+          "path": [
+            10,
+            101,
+            1033
+          ],
+          "size": 16137,
+          "sha256": "fb6f03dab3f50f06fccfa40e1bca06a50e47c80c8c2a1ea1ddd34554fe974ab2"
+        },
+        {
+          "path": [
+            10,
+            102,
+            1033
+          ],
+          "size": 24334,
+          "sha256": "49b5c5fa42682868453fee9978d1d0edb50ce247d5d089411d44ef8c12130839"
+        },
+        {
+          "path": [
+            10,
+            103,
+            1033
+          ],
+          "size": 399528,
+          "sha256": "dae80a9b9bb23a37f60465dd93de9365a8ddd43300adc304d96f91ce54c28dd5"
+        },
+        {
+          "path": [
+            10,
+            104,
+            1033
+          ],
+          "size": 5148,
+          "sha256": "35ed135e9153c51065adf4de71655b4e9943b75fdcd98779066d83439b49df93"
+        },
+        {
+          "path": [
+            10,
+            105,
+            1033
+          ],
+          "size": 20495,
+          "sha256": "4fb4e0b0a830bf05b7306d1f1e833b3f58fa754eba5950186edcb31e44b23a2a"
+        },
+        {
+          "path": [
+            10,
+            106,
+            1033
+          ],
+          "size": 16463,
+          "sha256": "753044555b76409a891c95b9be286fc5b2ae05d7d721638a7d0185548a99005b"
+        },
+        {
+          "path": [
+            10,
+            107,
+            1033
+          ],
+          "size": 17656,
+          "sha256": "efd297de51102597ad84569f2a47e655b9a57425d7b8e6d47c031f4fbbdb6efd"
+        },
+        {
+          "path": [
+            10,
+            108,
+            1033
+          ],
+          "size": 17471,
+          "sha256": "58a7e369604816de1be06d53d629a81d17417fa3e87c9e233fa8b5df77868ad5"
+        },
+        {
+          "path": [
+            10,
+            109,
+            1033
+          ],
+          "size": 17326,
+          "sha256": "ea249f6700da0c662c307bf826e2cf53dfcc795db8d217e9cab4d871892feb2b"
+        },
+        {
+          "path": [
+            10,
+            110,
+            1033
+          ],
+          "size": 18433,
+          "sha256": "860b91dd76cd1b118d38681c1d9b6e2cd90a42a3182a45915814b2a4af3b00c3"
+        },
+        {
+          "path": [
+            10,
+            111,
+            1033
+          ],
+          "size": 17637,
+          "sha256": "21d84cba584a958af40ae5feb8b3f6c0c65fd82f61718c56390b5507e3f9dec5"
+        },
+        {
+          "path": [
+            10,
+            112,
+            1033
+          ],
+          "size": 16630,
+          "sha256": "02d2b8d194f3c6323d2e512e90c473674327dd50b1658e213796240632e2ce08"
+        },
+        {
+          "path": [
+            10,
+            113,
+            1033
+          ],
+          "size": 17384,
+          "sha256": "7982c98f36a4a81605a828acd6056c098852ced434f137f627dddc727bc6f3d7"
+        },
+        {
+          "path": [
+            10,
+            114,
+            1033
+          ],
+          "size": 24461,
+          "sha256": "736191664ab13b597c66af909cbb3cf6cf32ca2c5912f95e43646b933206ad4f"
+        },
+        {
+          "path": [
+            10,
+            115,
+            1033
+          ],
+          "size": 22744,
+          "sha256": "cb50053d96618b9cd3f17a2db1adb84c21894d6e21e7de6f16de4a8da4fb962b"
+        },
+        {
+          "path": [
+            10,
+            116,
+            1033
+          ],
+          "size": 14763,
+          "sha256": "53e684400b8df4d9cd043b336e3c8976351883be009533b2facf16e5bd503de3"
+        },
+        {
+          "path": [
+            10,
+            117,
+            1033
+          ],
+          "size": 17587,
+          "sha256": "fd57fd027c317379221165439dcfaed318d3be748ae12cb4aea8eb43c4f6ca1a"
+        },
+        {
+          "path": [
+            10,
+            118,
+            1033
+          ],
+          "size": 17542,
+          "sha256": "ce6fc1fd5a7d802b19d80c41202a2577ca2312072cb7d3bb1c8ae6d268c60904"
+        },
+        {
+          "path": [
+            10,
+            119,
+            1033
+          ],
+          "size": 14965,
+          "sha256": "140efd8af8ce3d533e992b993026768ad338ba159ed930105ef05bd72881b39f"
+        },
+        {
+          "path": [
+            10,
+            120,
+            1033
+          ],
+          "size": 16930,
+          "sha256": "a3c4201eb5a0afc3c28a8327e00641bcb0fb34b8368d2c9be14e90bb1da3bd87"
+        },
+        {
+          "path": [
+            10,
+            121,
+            1033
+          ],
+          "size": 6272,
+          "sha256": "a61dc8081eaf4afe6974cb799beb30759e828e8b23f03a3241785346d2f87d89"
+        },
+        {
+          "path": [
+            10,
+            122,
+            1033
+          ],
+          "size": 5252,
+          "sha256": "5052d03ee8aba1ca5a094a512cb67a9acf7b1e32d6dfec212035b5f75dc2c02c"
+        },
+        {
+          "path": [
+            10,
+            123,
+            1033
+          ],
+          "size": 74292,
+          "sha256": "698af4f47505e6e27f0682b632a56ea6577c65b5b589b87128a7c90dbcef6244"
+        },
+        {
+          "path": [
+            10,
+            124,
+            1033
+          ],
+          "size": 38984,
+          "sha256": "491f6233ac84e1e997b2c3a6686bc42cd822a439ee33c0114e28484052852469"
+        },
+        {
+          "path": [
+            10,
+            125,
+            1033
+          ],
+          "size": 82136,
+          "sha256": "95634a0ead7c6aeb51775f304a056a6e30d7d8aee78f8cfb4ea1fbf987b52101"
+        },
+        {
+          "path": [
+            10,
+            126,
+            1033
+          ],
+          "size": 97060,
+          "sha256": "55bbd0ddff7e54cda473a51ece91c855e0bdf0ba6244cb8f9bf3c229ed546d25"
+        },
+        {
+          "path": [
+            10,
+            127,
+            1033
+          ],
+          "size": 4396,
+          "sha256": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a"
+        },
+        {
+          "path": [
+            10,
+            128,
+            1033
+          ],
+          "size": 4382,
+          "sha256": "a7a5a25eb188bf1cd96982030d53e23c33485c69b1044a562254226857ee13af"
+        },
+        {
+          "path": [
+            10,
+            129,
+            1033
+          ],
+          "size": 503,
+          "sha256": "48adb9c98d35fa5b1d264aa6aa320c8eecdacbf33387bc9e86b52e2df7635b28"
+        }
+      ],
+      "selected_strings": [
+        "# GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4",
+        "# Nexus Mods: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+        "# Nexus: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+        "Copyright 2014-2024 Adobe (https://www.adobe.com/).",
+        "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)",
+        "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+        "RtlDllShutdownInProgress",
+        "ShellExecuteW",
+        "Upstream: https://github.com/notofonts/noto-cjk",
+        "XInputGetCapabilities",
+        "XInputGetState",
+        "https://github.com/bluescan/proggyfonts",
+        "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage",
+        "https://openfontlicense.org",
+        "https://opensource.org/licenses/MIT",
+        "https://scripts.sil.org/OFL",
+        "xinput1_1.dll",
+        "xinput1_2.dll",
+        "xinput1_3.dll",
+        "xinput1_4.dll",
+        "xinput9_1_0.dll"
+      ],
+      "overlay_bytes": 0,
+      "load_config": {
+        "size": 320,
+        "security_cookie_va": "0x18023f440",
+        "guard_flags": "0x100"
+      },
+      "resource_source_matches": [
+        {
+          "path": [
+            10,
+            101,
+            1033
+          ],
+          "source": "locales/en.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            102,
+            1033
+          ],
+          "source": "locales/uk.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            103,
+            1033
+          ],
+          "source": "assets/fonts/ProggyVector/ProggyVector-Regular.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            104,
+            1033
+          ],
+          "source": "assets/fonts/ProggyVector/ProggyVector_Licence.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            105,
+            1033
+          ],
+          "source": "locales/ar.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            106,
+            1033
+          ],
+          "source": "locales/cs.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            107,
+            1033
+          ],
+          "source": "locales/fr.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            108,
+            1033
+          ],
+          "source": "locales/de.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            109,
+            1033
+          ],
+          "source": "locales/it.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            110,
+            1033
+          ],
+          "source": "locales/ja.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            111,
+            1033
+          ],
+          "source": "locales/ko.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            112,
+            1033
+          ],
+          "source": "locales/pl.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            113,
+            1033
+          ],
+          "source": "locales/pt-BR.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            114,
+            1033
+          ],
+          "source": "locales/ru.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            115,
+            1033
+          ],
+          "source": "locales/sr-Cyrl.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            116,
+            1033
+          ],
+          "source": "locales/zh-Hans.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            117,
+            1033
+          ],
+          "source": "locales/es-419.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            118,
+            1033
+          ],
+          "source": "locales/es-ES.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            119,
+            1033
+          ],
+          "source": "locales/zh-Hant.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            120,
+            1033
+          ],
+          "source": "locales/tr.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            121,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansMono-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            122,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansArabic-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            123,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansJP-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            124,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansKR-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            125,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansSC-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            126,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansTC-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            127,
+            1033
+          ],
+          "source": "assets/fonts/NotoSansMono/OFL.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            128,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/OFL-Arabic.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            129,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/CJK-Copyright.txt",
+          "identical": true
+        }
+      ]
+    },
+    "build-artifacts/security-hardening/release/production-tOFF-dOFF/bin/STALKER2CameraTweaks.asi": {
+      "size": 3551744,
+      "sha256": "86c234bbb04b3597ea77f7f16413a99dc7b025cad960ae17d44f1c23104248dd",
+      "machine": "0x8664",
+      "timestamp_utc": "2026-10-17T12:21:39+00:00",
+      "characteristics": "0x2022",
+      "image_base": "0x180000000",
+      "entry_rva": "0x13d758",
+      "dll_characteristics": "0x160",
+      "sections": [
+        {
+          "name": ".text",
+          "rva": 4096,
+          "virtual_size": 1517128,
+          "offset": 1024,
+          "size": 1517568,
+          "flags": "0x60000020",
+          "entropy": 6.332,
+          "execute": true,
+          "write": false,
+          "sha256": "8b3fd9524065154a1fd52df5480986eebe1bede8d69f6e5c65b4294dc24d3d42"
+        },
+        {
+          "name": ".rdata",
+          "rva": 1523712,
+          "virtual_size": 799786,
+          "offset": 1518592,
+          "size": 800256,
+          "flags": "0x40000040",
+          "entropy": 5.373,
+          "execute": false,
+          "write": false,
+          "sha256": "09a16dcb312b2e9741d7f85acc218bce710c75f493ae06d97e932af00d0b54ba"
+        },
+        {
+          "name": ".data",
+          "rva": 2326528,
+          "virtual_size": 186124,
+          "offset": 2318848,
+          "size": 118784,
+          "flags": "0xc0000040",
+          "entropy": 4.84,
+          "execute": false,
+          "write": true,
+          "sha256": "3f47d587fa4aa8a78fbf2cd98c048dd3d761478a418bf8dce63f639f984d2092"
+        },
+        {
+          "name": ".pdata",
+          "rva": 2514944,
+          "virtual_size": 49476,
+          "offset": 2437632,
+          "size": 49664,
+          "flags": "0x40000040",
+          "entropy": 6.144,
+          "execute": false,
+          "write": false,
+          "sha256": "710541caf02d5d8a7900cf8abcfd24904b7e9607b9127028332851a28c576652"
+        },
+        {
+          "name": ".fptable",
+          "rva": 2568192,
+          "virtual_size": 256,
+          "offset": 2487296,
+          "size": 512,
+          "flags": "0xc0000040",
+          "entropy": 0,
+          "execute": false,
+          "write": true,
+          "sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560"
+        },
+        {
+          "name": ".rsrc",
+          "rva": 2572288,
+          "virtual_size": 1048424,
+          "offset": 2487808,
+          "size": 1048576,
+          "flags": "0x40000040",
+          "entropy": 6.923,
+          "execute": false,
+          "write": false,
+          "sha256": "17260aa6ce52590a424837fc7035b04d3697624a5b833e91dd984ed28d9cf4ab"
+        },
+        {
+          "name": ".reloc",
+          "rva": 3620864,
+          "virtual_size": 15236,
+          "offset": 3536384,
+          "size": 15360,
+          "flags": "0x42000040",
+          "entropy": 6.087,
+          "execute": false,
+          "write": false,
+          "sha256": "1a1de9666ae891eaf3cd327b2544fc7e61b7428fda24fd3cc52bda4a3e4c99f7"
+        }
+      ],
+      "imports": {
+        "USER32.dll": [
+          "GetWindowThreadProcessId",
+          "IsWindowVisible",
+          "GetForegroundWindow",
+          "UnhookWinEvent",
+          "GetClientRect",
+          "GetWindowLongPtrW",
+          "EnumWindows",
+          "GetClassNameW",
+          "GetWindow",
+          "EnumDisplaySettingsA",
+          "PostMessageW",
+          "TranslateMessage",
+          "DispatchMessageW",
+          "PeekMessageW",
+          "PostThreadMessageW",
+          "DefWindowProcW",
+          "CallWindowProcW",
+          "LoadCursorA",
+          "IsWindowUnicode",
+          "ReleaseCapture",
+          "SetCapture",
+          "GetCapture",
+          "GetKeyState",
+          "GetMessageExtraInfo",
+          "TrackMouseEvent",
+          "GetKeyboardLayout",
+          "EmptyClipboard",
+          "GetClipboardData",
+          "SetClipboardData",
+          "CloseClipboard",
+          "OpenClipboard",
+          "ClientToScreen",
+          "SetWindowPos",
+          "GetRawInputData",
+          "GetDpiForWindow",
+          "SetThreadDpiAwarenessContext",
+          "GetAsyncKeyState",
+          "SetWinEventHook",
+          "LoadCursorW",
+          "CallNextHookEx",
+          "UnhookWindowsHookEx",
+          "SetWindowsHookExW",
+          "SetWindowLongPtrW",
+          "LogicalToPhysicalPointForPerMonitorDPI",
+          "ScreenToClient",
+          "GetCursorPos",
+          "SetCursor",
+          "RemovePropW",
+          "GetPropW",
+          "SetPropW",
+          "KillTimer",
+          "SetTimer",
+          "MsgWaitForMultipleObjectsEx",
+          "IsIconic",
+          "ShowWindow",
+          "DestroyWindow",
+          "IsWindow",
+          "CreateWindowExW",
+          "GetClassInfoExW",
+          "RegisterClassExW",
+          "UnregisterClassW"
+        ],
+        "bcrypt.dll": [
+          "BCryptGetProperty",
+          "BCryptCloseAlgorithmProvider",
+          "BCryptCreateHash",
+          "BCryptHashData",
+          "BCryptFinishHash",
+          "BCryptDestroyHash",
+          "BCryptOpenAlgorithmProvider"
+        ],
+        "d3d11.dll": [
+          "D3D11CreateDevice"
+        ],
+        "dcomp.dll": [
+          "DCompositionCreateDevice2"
+        ],
+        "D3DCOMPILER_47.dll": [
+          "D3DCompile"
+        ],
+        "KERNEL32.dll": [
+          "GetEnvironmentStringsW",
+          "GetCommandLineW",
+          "GetCommandLineA",
+          "GetOEMCP",
+          "GetACP",
+          "IsValidCodePage",
+          "HeapReAlloc",
+          "SetFilePointerEx",
+          "GetTimeZoneInformation",
+          "GetStdHandle",
+          "EnumSystemLocalesW",
+          "GetUserDefaultLCID",
+          "IsValidLocale",
+          "GetLocaleInfoW",
+          "LCMapStringW",
+          "CompareStringW",
+          "GetTimeFormatW",
+          "GetDateFormatW",
+          "FlsFree",
+          "FlsSetValue",
+          "FlsGetValue",
+          "FlsAlloc",
+          "HeapFree",
+          "HeapAlloc",
+          "ExitProcess",
+          "LoadLibraryExW",
+          "FreeLibrary",
+          "TlsFree",
+          "TlsSetValue",
+          "TlsGetValue",
+          "TlsAlloc",
+          "InitializeCriticalSectionAndSpinCount",
+          "InterlockedFlushSList",
+          "RtlUnwindEx",
+          "RaiseException",
+          "RtlPcToFileHeader",
+          "GetStartupInfoW",
+          "IsDebuggerPresent",
+          "InitializeSListHead",
+          "IsProcessorFeaturePresent",
+          "TerminateProcess",
+          "SetUnhandledExceptionFilter",
+          "UnhandledExceptionFilter",
+          "RtlVirtualUnwind",
+          "RtlLookupFunctionEntry",
+          "RtlCaptureContext",
+          "GetCPInfo",
+          "GetStringTypeW",
+          "LCMapStringEx",
+          "DecodePointer",
+          "EncodePointer",
+          "FreeEnvironmentStringsW",
+          "SetEnvironmentVariableW",
+          "GetProcessHeap",
+          "CreateFileW",
+          "GetFileInformationByHandle",
+          "GetFileType",
+          "SetEndOfFile",
+          "WriteFile",
+          "OutputDebugStringA",
+          "CloseHandle",
+          "GetLastError",
+          "SetLastError",
+          "QueryPerformanceCounter",
+          "QueryPerformanceFrequency",
+          "ReleaseSRWLockExclusive",
+          "AcquireSRWLockExclusive",
+          "GetCurrentProcessId",
+          "GetCurrentThreadId",
+          "GetSystemTimeAsFileTime",
+          "GetTickCount64",
+          "GetModuleFileNameW",
+          "GetModuleHandleA",
+          "GetModuleHandleExW",
+          "SetEvent",
+          "WaitForSingleObject",
+          "CreateEventW",
+          "CreateThread",
+          "GetThreadId",
+          "DisableThreadLibraryCalls",
+          "DeleteFileW",
+          "FlushFileBuffers",
+          "GetFileSizeEx",
+          "ReadFile",
+          "MoveFileExW",
+          "GetSystemTime",
+          "CopyFileW",
+          "VirtualQuery",
+          "lstrcmpW",
+          "LoadResource",
+          "LockResource",
+          "SizeofResource",
+          "FindResourceW",
+          "GetCurrentProcess",
+          "ReadProcessMemory",
+          "GetModuleHandleW",
+          "K32GetModuleInformation",
+          "WaitForMultipleObjects",
+          "GetProcAddress",
+          "AddVectoredExceptionHandler",
+          "FlushInstructionCache",
+          "GetSystemInfo",
+          "VirtualAlloc",
+          "VirtualProtect",
+          "VirtualFree",
+          "GlobalAlloc",
+          "GlobalUnlock",
+          "GlobalLock",
+          "GlobalFree",
+          "MultiByteToWideChar",
+          "WideCharToMultiByte",
+          "GetLocaleInfoA",
+          "GetConsoleOutputCP",
+          "GetConsoleMode",
+          "SetStdHandle",
+          "HeapSize",
+          "WriteConsoleW",
+          "LocalFree",
+          "FormatMessageA",
+          "GetLocaleInfoEx",
+          "TryAcquireSRWLockExclusive",
+          "SleepConditionVariableSRW",
+          "Sleep",
+          "FindClose",
+          "FindFirstFileW",
+          "FindFirstFileExW",
+          "FindNextFileW",
+          "GetFileAttributesExW",
+          "AreFileApisANSI",
+          "GetFileInformationByHandleEx",
+          "WakeAllConditionVariable",
+          "SwitchToThread",
+          "EnterCriticalSection",
+          "LeaveCriticalSection",
+          "InitializeCriticalSectionEx",
+          "DeleteCriticalSection"
+        ],
+        "IMM32.dll": [
+          "ImmReleaseContext",
+          "ImmSetCompositionWindow",
+          "ImmSetCandidateWindow",
+          "ImmGetContext"
+        ]
+      },
+      "export_directory": [
+        0,
+        0
+      ],
+      "certificate_directory": [
+        0,
+        0
+      ],
+      "delay_import_directory": [
+        0,
+        0
+      ],
+      "tls_callbacks": [
+        "0x13d3dc",
+        "0x13d0d8"
+      ],
+      "resources": [
+        {
+          "path": [
+            10,
+            101,
+            1033
+          ],
+          "size": 16137,
+          "sha256": "fb6f03dab3f50f06fccfa40e1bca06a50e47c80c8c2a1ea1ddd34554fe974ab2"
+        },
+        {
+          "path": [
+            10,
+            102,
+            1033
+          ],
+          "size": 24334,
+          "sha256": "49b5c5fa42682868453fee9978d1d0edb50ce247d5d089411d44ef8c12130839"
+        },
+        {
+          "path": [
+            10,
+            103,
+            1033
+          ],
+          "size": 399528,
+          "sha256": "dae80a9b9bb23a37f60465dd93de9365a8ddd43300adc304d96f91ce54c28dd5"
+        },
+        {
+          "path": [
+            10,
+            104,
+            1033
+          ],
+          "size": 5148,
+          "sha256": "35ed135e9153c51065adf4de71655b4e9943b75fdcd98779066d83439b49df93"
+        },
+        {
+          "path": [
+            10,
+            105,
+            1033
+          ],
+          "size": 20495,
+          "sha256": "4fb4e0b0a830bf05b7306d1f1e833b3f58fa754eba5950186edcb31e44b23a2a"
+        },
+        {
+          "path": [
+            10,
+            106,
+            1033
+          ],
+          "size": 16463,
+          "sha256": "753044555b76409a891c95b9be286fc5b2ae05d7d721638a7d0185548a99005b"
+        },
+        {
+          "path": [
+            10,
+            107,
+            1033
+          ],
+          "size": 17656,
+          "sha256": "efd297de51102597ad84569f2a47e655b9a57425d7b8e6d47c031f4fbbdb6efd"
+        },
+        {
+          "path": [
+            10,
+            108,
+            1033
+          ],
+          "size": 17471,
+          "sha256": "58a7e369604816de1be06d53d629a81d17417fa3e87c9e233fa8b5df77868ad5"
+        },
+        {
+          "path": [
+            10,
+            109,
+            1033
+          ],
+          "size": 17326,
+          "sha256": "ea249f6700da0c662c307bf826e2cf53dfcc795db8d217e9cab4d871892feb2b"
+        },
+        {
+          "path": [
+            10,
+            110,
+            1033
+          ],
+          "size": 18433,
+          "sha256": "860b91dd76cd1b118d38681c1d9b6e2cd90a42a3182a45915814b2a4af3b00c3"
+        },
+        {
+          "path": [
+            10,
+            111,
+            1033
+          ],
+          "size": 17637,
+          "sha256": "21d84cba584a958af40ae5feb8b3f6c0c65fd82f61718c56390b5507e3f9dec5"
+        },
+        {
+          "path": [
+            10,
+            112,
+            1033
+          ],
+          "size": 16630,
+          "sha256": "02d2b8d194f3c6323d2e512e90c473674327dd50b1658e213796240632e2ce08"
+        },
+        {
+          "path": [
+            10,
+            113,
+            1033
+          ],
+          "size": 17384,
+          "sha256": "7982c98f36a4a81605a828acd6056c098852ced434f137f627dddc727bc6f3d7"
+        },
+        {
+          "path": [
+            10,
+            114,
+            1033
+          ],
+          "size": 24461,
+          "sha256": "736191664ab13b597c66af909cbb3cf6cf32ca2c5912f95e43646b933206ad4f"
+        },
+        {
+          "path": [
+            10,
+            115,
+            1033
+          ],
+          "size": 22744,
+          "sha256": "cb50053d96618b9cd3f17a2db1adb84c21894d6e21e7de6f16de4a8da4fb962b"
+        },
+        {
+          "path": [
+            10,
+            116,
+            1033
+          ],
+          "size": 14763,
+          "sha256": "53e684400b8df4d9cd043b336e3c8976351883be009533b2facf16e5bd503de3"
+        },
+        {
+          "path": [
+            10,
+            117,
+            1033
+          ],
+          "size": 17587,
+          "sha256": "fd57fd027c317379221165439dcfaed318d3be748ae12cb4aea8eb43c4f6ca1a"
+        },
+        {
+          "path": [
+            10,
+            118,
+            1033
+          ],
+          "size": 17542,
+          "sha256": "ce6fc1fd5a7d802b19d80c41202a2577ca2312072cb7d3bb1c8ae6d268c60904"
+        },
+        {
+          "path": [
+            10,
+            119,
+            1033
+          ],
+          "size": 14965,
+          "sha256": "140efd8af8ce3d533e992b993026768ad338ba159ed930105ef05bd72881b39f"
+        },
+        {
+          "path": [
+            10,
+            120,
+            1033
+          ],
+          "size": 16930,
+          "sha256": "a3c4201eb5a0afc3c28a8327e00641bcb0fb34b8368d2c9be14e90bb1da3bd87"
+        },
+        {
+          "path": [
+            10,
+            121,
+            1033
+          ],
+          "size": 6272,
+          "sha256": "a61dc8081eaf4afe6974cb799beb30759e828e8b23f03a3241785346d2f87d89"
+        },
+        {
+          "path": [
+            10,
+            122,
+            1033
+          ],
+          "size": 5252,
+          "sha256": "5052d03ee8aba1ca5a094a512cb67a9acf7b1e32d6dfec212035b5f75dc2c02c"
+        },
+        {
+          "path": [
+            10,
+            123,
+            1033
+          ],
+          "size": 74292,
+          "sha256": "698af4f47505e6e27f0682b632a56ea6577c65b5b589b87128a7c90dbcef6244"
+        },
+        {
+          "path": [
+            10,
+            124,
+            1033
+          ],
+          "size": 38984,
+          "sha256": "491f6233ac84e1e997b2c3a6686bc42cd822a439ee33c0114e28484052852469"
+        },
+        {
+          "path": [
+            10,
+            125,
+            1033
+          ],
+          "size": 82136,
+          "sha256": "95634a0ead7c6aeb51775f304a056a6e30d7d8aee78f8cfb4ea1fbf987b52101"
+        },
+        {
+          "path": [
+            10,
+            126,
+            1033
+          ],
+          "size": 97060,
+          "sha256": "55bbd0ddff7e54cda473a51ece91c855e0bdf0ba6244cb8f9bf3c229ed546d25"
+        },
+        {
+          "path": [
+            10,
+            127,
+            1033
+          ],
+          "size": 4396,
+          "sha256": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a"
+        },
+        {
+          "path": [
+            10,
+            128,
+            1033
+          ],
+          "size": 4382,
+          "sha256": "a7a5a25eb188bf1cd96982030d53e23c33485c69b1044a562254226857ee13af"
+        },
+        {
+          "path": [
+            10,
+            129,
+            1033
+          ],
+          "size": 503,
+          "sha256": "48adb9c98d35fa5b1d264aa6aa320c8eecdacbf33387bc9e86b52e2df7635b28"
+        }
+      ],
+      "selected_strings": [
+        "# GitHub: https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4",
+        "# Nexus Mods: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+        "# Nexus: https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416",
+        "Copyright 2014-2024 Adobe (https://www.adobe.com/).",
+        "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)",
+        "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+        "RtlDllShutdownInProgress",
+        "Upstream: https://github.com/notofonts/noto-cjk",
+        "https://github.com/bluescan/proggyfonts",
+        "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage",
+        "https://openfontlicense.org",
+        "https://opensource.org/licenses/MIT",
+        "https://scripts.sil.org/OFL"
+      ],
+      "overlay_bytes": 0,
+      "load_config": {
+        "size": 320,
+        "security_cookie_va": "0x18023b440",
+        "guard_flags": "0x100"
+      },
+      "resource_source_matches": [
+        {
+          "path": [
+            10,
+            101,
+            1033
+          ],
+          "source": "locales/en.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            102,
+            1033
+          ],
+          "source": "locales/uk.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            103,
+            1033
+          ],
+          "source": "assets/fonts/ProggyVector/ProggyVector-Regular.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            104,
+            1033
+          ],
+          "source": "assets/fonts/ProggyVector/ProggyVector_Licence.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            105,
+            1033
+          ],
+          "source": "locales/ar.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            106,
+            1033
+          ],
+          "source": "locales/cs.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            107,
+            1033
+          ],
+          "source": "locales/fr.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            108,
+            1033
+          ],
+          "source": "locales/de.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            109,
+            1033
+          ],
+          "source": "locales/it.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            110,
+            1033
+          ],
+          "source": "locales/ja.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            111,
+            1033
+          ],
+          "source": "locales/ko.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            112,
+            1033
+          ],
+          "source": "locales/pl.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            113,
+            1033
+          ],
+          "source": "locales/pt-BR.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            114,
+            1033
+          ],
+          "source": "locales/ru.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            115,
+            1033
+          ],
+          "source": "locales/sr-Cyrl.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            116,
+            1033
+          ],
+          "source": "locales/zh-Hans.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            117,
+            1033
+          ],
+          "source": "locales/es-419.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            118,
+            1033
+          ],
+          "source": "locales/es-ES.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            119,
+            1033
+          ],
+          "source": "locales/zh-Hant.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            120,
+            1033
+          ],
+          "source": "locales/tr.json",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            121,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansMono-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            122,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansArabic-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            123,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansJP-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            124,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansKR-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            125,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansSC-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            126,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/NotoSansTC-Catalog.ttf",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            127,
+            1033
+          ],
+          "source": "assets/fonts/NotoSansMono/OFL.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            128,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/OFL-Arabic.txt",
+          "identical": true
+        },
+        {
+          "path": [
+            10,
+            129,
+            1033
+          ],
+          "source": "assets/fonts/CatalogSubsets/CJK-Copyright.txt",
+          "identical": true
+        }
+      ]
+    }
+  }
+}

@@ -15,7 +15,7 @@
 #include "../../plugin/runtime.hpp"
 #include "../../config/feature_config.hpp"
 #include "../../platform/win32/window.hpp"
-#include "../../platform/win32/native_file.hpp"
+#include "../../platform/win32/native_log_file.hpp"
 #include "../../platform/process_lifetime.hpp"
 
 #include <algorithm>
@@ -32,7 +32,6 @@
 namespace
 {
     constexpr UINT WakeMessage = WM_APP + 0x5A1;
-    constexpr UINT RefreshMessage = WM_APP + 0x5A2;
     constexpr UINT FrameClockMessage = WM_APP + 0x5A3;
     constexpr UINT FrameClockUnavailableMessage = WM_APP + 0x5A4;
     constexpr UINT InstallInputBindingMessage = WM_APP + 0x5A5;
@@ -61,7 +60,7 @@ namespace
     struct OverlayLogState
     {
         std::mutex mutex;
-        platform::win32::NativeFile file;
+        platform::win32::NativeLogFile file;
     };
     platform::ProcessLifetime<OverlayLogState> g_logStorage;
     auto& g_log = g_logStorage.get().file;
@@ -69,8 +68,17 @@ namespace
     HMODULE g_module{};
     DWORD g_processId{};
     std::atomic<DWORD> g_uiThreadId{};
+    std::atomic<bool> g_messageQueueReady{};
     std::atomic<bool> g_cameraCoreReady{};
     std::atomic<bool> g_workerStarted{};
+    overlay::PresenterRefreshSignal g_presenterRefreshPending;
+    std::atomic<std::uint32_t> g_windowScanLogBudget{8};
+    std::atomic<std::uint32_t> g_refreshRequestLogBudget{16};
+    std::atomic<std::uint32_t> g_refreshDispatchLogBudget{16};
+    std::atomic<std::uint32_t> g_refreshStateLogBudget{32};
+    std::atomic<std::uint32_t> g_ownerPostSuccessLogBudget{8};
+    std::atomic<std::uint32_t> g_ownerPostFailureLogBudget{32};
+    const char* g_lastRefreshTransition{}; // owner-thread only
     std::atomic<HWND> g_overlayDisplayWindow{};
     bool g_overlayDisplayClassRegistered{};
     std::atomic<bool> g_ownerFinalizing{};
@@ -109,6 +117,84 @@ namespace
     std::atomic<const char*> g_terminalReason{};
     void Log(const std::string& message) noexcept;
     void Log(const char* message) noexcept;
+
+    bool ConsumeDiagnosticBudget(std::atomic<std::uint32_t>& budget) noexcept
+    {
+        auto remaining = budget.load(std::memory_order_relaxed);
+        while (remaining) {
+            if (budget.compare_exchange_weak(remaining, remaining - 1,
+                    std::memory_order_relaxed, std::memory_order_relaxed))
+                return true;
+        }
+        return false;
+    }
+
+    void LogDiscoveryDiagnostic(const std::string& message) noexcept
+    {
+        if (!diagnostics::Enabled()) return;
+        Log(message);
+    }
+
+    void LogDiscoveryDiagnostic(const char* message) noexcept
+    {
+        if (!diagnostics::Enabled()) return;
+        Log(message);
+    }
+
+    void LogRefreshTransition(const char* state, HWND window = nullptr,
+        UINT width = 0, UINT height = 0) noexcept
+    {
+        if (!diagnostics::Enabled() || g_lastRefreshTransition == state ||
+            !ConsumeDiagnosticBudget(g_refreshStateLogBudget)) return;
+        g_lastRefreshTransition = state;
+        try {
+            Log("OVERLAY_REFRESH_STATE state=" + std::string(state) +
+                " hwnd=" + std::to_string(reinterpret_cast<std::uintptr_t>(window)) +
+                " client=" + std::to_string(width) + "x" +
+                std::to_string(height) + " queue_ready=" +
+                std::to_string(g_messageQueueReady.load(std::memory_order_acquire)) +
+                " refresh_pending=" + std::to_string(
+                    g_presenterRefreshPending.pending()));
+        } catch (...) {}
+    }
+
+    void RequestPresenterRefresh(HWND observedWindow, DWORD event) noexcept
+    {
+        g_presenterRefreshPending.Request();
+        const HANDLE wakeEvent = g_ownerCommandWakeEvent;
+        const BOOL signaled = wakeEvent ? SetEvent(wakeEvent) : FALSE;
+        const DWORD signalError = signaled ? ERROR_SUCCESS
+            : wakeEvent ? GetLastError() : ERROR_INVALID_HANDLE;
+        if (diagnostics::Enabled() &&
+            ConsumeDiagnosticBudget(g_refreshRequestLogBudget)) {
+            try {
+                LogDiscoveryDiagnostic("OVERLAY_REFRESH_REQUEST source=window_event hwnd=" +
+                    std::to_string(reinterpret_cast<std::uintptr_t>(observedWindow)) +
+                    " event=" + std::to_string(event) + " queue_ready=" +
+                    std::to_string(g_messageQueueReady.load(std::memory_order_acquire)) +
+                    " pending=1 owner_event_signaled=" + std::to_string(signaled != FALSE) +
+                    " win32_error=" + std::to_string(signalError));
+            } catch (...) {}
+        }
+        if (!signaled) {
+            const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
+            if (threadId && g_messageQueueReady.load(std::memory_order_acquire)) {
+                SetLastError(ERROR_SUCCESS);
+                const BOOL posted = PostThreadMessageW(threadId, WakeMessage, 0, 0);
+                const DWORD postError = posted ? ERROR_SUCCESS : GetLastError();
+                auto& budget = posted ? g_ownerPostSuccessLogBudget
+                                      : g_ownerPostFailureLogBudget;
+                if (diagnostics::Enabled() && ConsumeDiagnosticBudget(budget)) {
+                    try {
+                        LogDiscoveryDiagnostic("OVERLAY_REFRESH_FALLBACK_POST result=" +
+                            std::string(posted ? "ok" : "failed") + " thread=" +
+                            std::to_string(threadId) + " win32_error=" +
+                            std::to_string(postError));
+                    } catch (...) {}
+                }
+            }
+        }
+    }
 
     void RequestOverlayTerminal() noexcept
     {
@@ -271,7 +357,7 @@ namespace
     {
         std::scoped_lock lock{g_logMutex};
         if (g_log.isOpen()) {
-            if (g_log.Write(message)) g_log.Write("\r\n");
+            g_log.Write(message + "\r\n");
         }
     }
 
@@ -396,35 +482,153 @@ namespace
     {
         HWND window{};
         std::uint64_t area{};
+        UINT width{};
+        UINT height{};
+    };
+
+    struct WindowScanSummary
+    {
+        WindowCandidate best{};
+        std::uint32_t processWindows{};
+        std::uint32_t overlayWindows{};
+        std::uint32_t invisible{};
+        std::uint32_t owned{};
+        std::uint32_t child{};
+        std::uint32_t clientRectFailed{};
+        std::uint32_t undersized{};
+        std::uint32_t eligible{};
+        HWND sampleInvisible{};
+        HWND sampleOwned{};
+        HWND sampleChild{};
+        HWND sampleClientRectFailed{};
+        HWND sampleUndersized{};
+        UINT sampleInvisibleWidth{};
+        UINT sampleInvisibleHeight{};
+        UINT sampleOwnedWidth{};
+        UINT sampleOwnedHeight{};
+        UINT sampleChildWidth{};
+        UINT sampleChildHeight{};
+        UINT sampleUndersizedWidth{};
+        UINT sampleUndersizedHeight{};
     };
 
     BOOL CALLBACK InspectWindow(HWND window, LPARAM parameter)
     {
-        auto& best = *reinterpret_cast<WindowCandidate*>(parameter);
+        auto& summary = *reinterpret_cast<WindowScanSummary*>(parameter);
         DWORD ownerProcess{};
         GetWindowThreadProcessId(window, &ownerProcess);
-        if (window == g_overlayDisplayWindow.load(std::memory_order_acquire) ||
-            platform::win32::IsOverlayDisplayWindow(window) ||
-            ownerProcess != g_processId || !IsWindowVisible(window) ||
-            GetWindow(window, GW_OWNER) ||
-            (GetWindowLongPtrW(window, GWL_STYLE) & WS_CHILD))
+        if (ownerProcess != g_processId)
             return TRUE;
+        ++summary.processWindows;
+        if (window == g_overlayDisplayWindow.load(std::memory_order_acquire) ||
+            platform::win32::IsOverlayDisplayWindow(window)) {
+            ++summary.overlayWindows;
+            return TRUE;
+        }
+
         RECT client{};
-        if (!GetClientRect(window, &client)) return TRUE;
+        const bool hasClientRect = GetClientRect(window, &client) != FALSE;
         const auto width = std::max<LONG>(0, client.right - client.left);
         const auto height = std::max<LONG>(0, client.bottom - client.top);
-        if (width < 320 || height < 200) return TRUE;
+        const UINT clientWidth = static_cast<UINT>(width);
+        const UINT clientHeight = static_cast<UINT>(height);
+        if (!IsWindowVisible(window)) {
+            ++summary.invisible;
+            if (!summary.sampleInvisible) {
+                summary.sampleInvisible = window;
+                summary.sampleInvisibleWidth = clientWidth;
+                summary.sampleInvisibleHeight = clientHeight;
+            }
+            return TRUE;
+        }
+        if (GetWindow(window, GW_OWNER)) {
+            ++summary.owned;
+            if (!summary.sampleOwned) {
+                summary.sampleOwned = window;
+                summary.sampleOwnedWidth = clientWidth;
+                summary.sampleOwnedHeight = clientHeight;
+            }
+            return TRUE;
+        }
+        if (GetWindowLongPtrW(window, GWL_STYLE) & WS_CHILD) {
+            ++summary.child;
+            if (!summary.sampleChild) {
+                summary.sampleChild = window;
+                summary.sampleChildWidth = clientWidth;
+                summary.sampleChildHeight = clientHeight;
+            }
+            return TRUE;
+        }
+        if (!hasClientRect) {
+            ++summary.clientRectFailed;
+            if (!summary.sampleClientRectFailed)
+                summary.sampleClientRectFailed = window;
+            return TRUE;
+        }
+        if (width < 320 || height < 200) {
+            ++summary.undersized;
+            if (!summary.sampleUndersized) {
+                summary.sampleUndersized = window;
+                summary.sampleUndersizedWidth = clientWidth;
+                summary.sampleUndersizedHeight = clientHeight;
+            }
+            return TRUE;
+        }
+        ++summary.eligible;
         const auto area = static_cast<std::uint64_t>(width) *
             static_cast<std::uint64_t>(height);
-        if (area > best.area) best = {window, area};
+        if (area > summary.best.area)
+            summary.best = {window, area, clientWidth, clientHeight};
         return TRUE;
     }
 
     HWND FindGameWindow() noexcept
     {
-        WindowCandidate best{};
-        EnumWindows(&InspectWindow, reinterpret_cast<LPARAM>(&best));
-        return best.window;
+        WindowScanSummary summary{};
+        const BOOL enumerated = EnumWindows(&InspectWindow,
+            reinterpret_cast<LPARAM>(&summary));
+        if (diagnostics::Enabled() && ConsumeDiagnosticBudget(g_windowScanLogBudget)) {
+            try {
+                LogDiscoveryDiagnostic("OVERLAY_DISCOVERY_SCAN result=" +
+                    std::string(enumerated ? "complete" : "interrupted") +
+                    " process_windows=" + std::to_string(summary.processWindows) +
+                    " overlay=" + std::to_string(summary.overlayWindows) +
+                    " invisible=" + std::to_string(summary.invisible) +
+                    " owned=" + std::to_string(summary.owned) +
+                    " child=" + std::to_string(summary.child) +
+                    " client_rect_failed=" + std::to_string(summary.clientRectFailed) +
+                    " undersized=" + std::to_string(summary.undersized) +
+                    " eligible=" + std::to_string(summary.eligible) +
+                    " selected=" + std::to_string(reinterpret_cast<std::uintptr_t>(
+                        summary.best.window)) + " selected_client=" +
+                    std::to_string(summary.best.width) + "x" +
+                    std::to_string(summary.best.height));
+                if (summary.sampleInvisible)
+                    LogDiscoveryDiagnostic("OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=" +
+                        std::to_string(reinterpret_cast<std::uintptr_t>(summary.sampleInvisible)) +
+                        " client=" + std::to_string(summary.sampleInvisibleWidth) + "x" +
+                        std::to_string(summary.sampleInvisibleHeight));
+                if (summary.sampleOwned)
+                    LogDiscoveryDiagnostic("OVERLAY_DISCOVERY_REJECT reason=owned hwnd=" +
+                        std::to_string(reinterpret_cast<std::uintptr_t>(summary.sampleOwned)) +
+                        " client=" + std::to_string(summary.sampleOwnedWidth) + "x" +
+                        std::to_string(summary.sampleOwnedHeight));
+                if (summary.sampleChild)
+                    LogDiscoveryDiagnostic("OVERLAY_DISCOVERY_REJECT reason=child hwnd=" +
+                        std::to_string(reinterpret_cast<std::uintptr_t>(summary.sampleChild)) +
+                        " client=" + std::to_string(summary.sampleChildWidth) + "x" +
+                        std::to_string(summary.sampleChildHeight));
+                if (summary.sampleClientRectFailed)
+                    LogDiscoveryDiagnostic("OVERLAY_DISCOVERY_REJECT reason=client_rect_failed hwnd=" +
+                        std::to_string(reinterpret_cast<std::uintptr_t>(summary.sampleClientRectFailed)));
+                if (summary.sampleUndersized)
+                    LogDiscoveryDiagnostic("OVERLAY_DISCOVERY_REJECT reason=undersized hwnd=" +
+                        std::to_string(reinterpret_cast<std::uintptr_t>(summary.sampleUndersized)) +
+                        " client=" + std::to_string(summary.sampleUndersizedWidth) + "x" +
+                        std::to_string(summary.sampleUndersizedHeight));
+            } catch (...) {}
+        }
+        return summary.best.window;
     }
 
     void CALLBACK OnWindowEvent(HWINEVENTHOOK, DWORD event, HWND window,
@@ -438,8 +642,7 @@ namespace
             platform::win32::IsOverlayDisplayWindow(window)) return;
         if (event == EVENT_OBJECT_CREATE || event == EVENT_OBJECT_SHOW ||
             event == EVENT_OBJECT_DESTROY || event == EVENT_OBJECT_LOCATIONCHANGE)
-        PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire), RefreshMessage,
-                reinterpret_cast<WPARAM>(window), static_cast<LPARAM>(event));
+            RequestPresenterRefresh(window, event);
     }
 
     bool IsInputWindowMessage(UINT message) noexcept
@@ -717,8 +920,7 @@ namespace
             Log(std::string("OVERLAY_VISIBILITY=") +
                 (input.visible() ? "VISIBLE" : "HIDDEN"));
             decision.handled = true;
-            PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire),
-                WakeMessage, 0, 0);
+            RequestOverlayRedraw();
             return decision;
         }
         if (input.ShouldOwnInput()) {
@@ -892,15 +1094,11 @@ namespace
                 g_currentInputBinding.load(std::memory_order_acquire));
             if (binding && binding->window == window)
                 g_currentInputBinding.store(nullptr, std::memory_order_release);
-            PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire),
-                RefreshMessage, 0,
-                EVENT_OBJECT_DESTROY);
+            RequestPresenterRefresh(window, EVENT_OBJECT_DESTROY);
         } else if (message == WM_SIZE || message == WM_MOVE ||
             message == WM_DISPLAYCHANGE || message == WM_DPICHANGED ||
             message == WM_WINDOWPOSCHANGED) {
-            PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire), RefreshMessage,
-                reinterpret_cast<WPARAM>(window),
-                EVENT_OBJECT_LOCATIONCHANGE);
+            RequestPresenterRefresh(window, EVENT_OBJECT_LOCATIONCHANGE);
         }
     }
 
@@ -1251,28 +1449,39 @@ namespace
         RemoveInputHook();
     }
 
-    void RefreshPresenter(HWND observedWindow, DWORD event)
+    void RefreshPresenter(HWND observedWindow, DWORD event,
+        HWND scannedCandidate = nullptr, bool candidateWasScanned = false)
     {
         (void)event;
-        if (!g_cameraCoreReady.load(std::memory_order_acquire)) return;
-        const HWND candidate = FindGameWindow();
+        if (!g_cameraCoreReady.load(std::memory_order_acquire)) {
+            LogRefreshTransition("camera_core_not_ready", observedWindow);
+            return;
+        }
+        const HWND candidate = candidateWasScanned
+            ? scannedCandidate : FindGameWindow();
         if (!candidate) {
+            LogRefreshTransition("no_eligible_game_window", observedWindow);
             const HWND activeWindow = g_inputWindow.load(std::memory_order_acquire);
             if (activeWindow && !IsWindow(activeWindow)) RemoveInputHook();
             return;
         }
         RECT client{};
-        if (!GetClientRect(candidate, &client)) return;
+        if (!GetClientRect(candidate, &client)) {
+            LogRefreshTransition("selected_window_client_rect_failed", candidate);
+            return;
+        }
         const UINT width = static_cast<UINT>(std::max<LONG>(0,
             client.right - client.left));
         const UINT height = static_cast<UINT>(std::max<LONG>(0,
             client.bottom - client.top));
+        LogRefreshTransition("eligible_game_window", candidate, width, height);
         const UINT dpi = GetDpiForWindow(candidate);
         const bool minimized = IsIconic(candidate) || !width || !height;
         g_presenterMinimized.store(minimized, std::memory_order_release);
 
         std::scoped_lock lock{g_rendererMutex};
         if (RendererInstance().disabled()) {
+            LogRefreshTransition("renderer_disabled", candidate, width, height);
             overlay::GetInputEventBridge().Deactivate();
             RemoveInputHook();
             return;
@@ -1281,10 +1490,13 @@ namespace
             RendererInstance().hasSurfaceGeneration(), RendererInstance().OwnsWindow(candidate),
             minimized, observedWindow == candidate);
         if (route == overlay::PresenterRoute::WaitForWindow) {
+            LogRefreshTransition("waiting_for_non_minimized_window", candidate,
+                width, height);
             UpdateRenderTimer();
             return;
         }
         if (route == overlay::PresenterRoute::Initialize) {
+            LogRefreshTransition("initializing_presenter", candidate, width, height);
 #if defined(OVERLAY_STARTUP_JOURNAL)
             diagnostics::startup_journal::MarkOnce(4, "GAME_WINDOW_SELECTED",
                 "visible_process_top_level_window",
@@ -1293,13 +1505,19 @@ namespace
 #endif
             const HWND overlayWindow = g_overlayDisplayWindow.load(
                 std::memory_order_acquire);
-            if (overlayWindow && RendererInstance().Initialize(candidate,
+            if (!overlayWindow) {
+                LogRefreshTransition("display_window_missing", candidate,
+                    width, height);
+            } else if (RendererInstance().Initialize(candidate,
                     overlayWindow, width, height, dpi)) {
                 if (InstallInputHook(candidate))
                     Log("OVERLAY_PRESENTER_ATTACHED hwnd=" +
                         std::to_string(reinterpret_cast<std::uintptr_t>(candidate)));
                 else
                     Log("OVERLAY_INPUT_ATTACH_UNAVAILABLE");
+            } else {
+                LogRefreshTransition("renderer_initialize_failed", candidate,
+                    width, height);
             }
         } else if (route == overlay::PresenterRoute::RebindWindow) {
             if (g_pendingInputBinding.load(std::memory_order_acquire)) {
@@ -1332,15 +1550,19 @@ namespace
         const DPI_AWARENESS_CONTEXT previousDpiContext =
             SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         overlay::RunOptionalOverlayWork([&]() {
-        g_uiThreadId = GetCurrentThreadId();
         g_processId = GetCurrentProcessId();
         MSG message{};
         PeekMessageW(&message, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
+        g_messageQueueReady.store(true, std::memory_order_release);
+        g_uiThreadId.store(GetCurrentThreadId(), std::memory_order_release);
         OpenLog();
+        Log("OVERLAY_MESSAGE_QUEUE_READY owner_thread=" +
+            std::to_string(g_uiThreadId.load(std::memory_order_acquire)));
         auto* renderer = new (std::nothrow) overlay::Renderer{};
         if (!renderer) {
             Log("OVERLAY_RENDERER_ALLOCATION_FAILED");
             CloseLog();
+            g_messageQueueReady.store(false, std::memory_order_release);
             g_workerStarted.store(false, std::memory_order_release);
             g_uiThreadId.store(0, std::memory_order_release);
             return;
@@ -1365,11 +1587,23 @@ namespace
         diagnostics::startup_journal::Flush();
 #endif
         if (displayWindowReady) {
+            SetLastError(ERROR_SUCCESS);
             g_windowEvents = SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
                 nullptr, &OnWindowEvent, g_processId, 0, WINEVENT_OUTOFCONTEXT);
+            const DWORD windowEventsError = g_windowEvents
+                ? ERROR_SUCCESS : GetLastError();
+            SetLastError(ERROR_SUCCESS);
             g_locationEvents = SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE,
                 EVENT_OBJECT_LOCATIONCHANGE, nullptr, &OnWindowEvent,
                 g_processId, 0, WINEVENT_OUTOFCONTEXT);
+            const DWORD locationEventsError = g_locationEvents
+                ? ERROR_SUCCESS : GetLastError();
+            Log("OVERLAY_WINDOW_EVENT_HOOK kind=create_show result=" +
+                std::string(g_windowEvents ? "ok" : "failed") +
+                " win32_error=" + std::to_string(windowEventsError));
+            Log("OVERLAY_WINDOW_EVENT_HOOK kind=location_change result=" +
+                std::string(g_locationEvents ? "ok" : "failed") +
+                " win32_error=" + std::to_string(locationEventsError));
             Log(g_windowEvents && g_locationEvents ? "OVERLAY_WINDOW_EVENTS_ARMED"
                 : "OVERLAY_WINDOW_EVENTS_PARTIAL");
             if (g_cameraCoreReady.load(std::memory_order_acquire))
@@ -1419,12 +1653,14 @@ namespace
                 ProcessOwnerInputCommands();
                 if (g_inputCallbackAdmission.closed()) break;
                 overlay::RunOptionalOverlayWork([&]() {
+                    const bool refreshRequested =
+                        g_presenterRefreshPending.Take();
                     bool discoveryNeeded{};
+                    const HWND candidate = FindGameWindow();
                     {
                         std::scoped_lock lock{g_rendererMutex};
                         if (g_renderer.load(std::memory_order_acquire)) {
                             RendererInstance().RequestRedraw();
-                            HWND candidate = FindGameWindow();
                             discoveryNeeded =
                                 !RendererInstance().hasSurfaceGeneration() ||
                                 (candidate && !RendererInstance().OwnsWindow(candidate));
@@ -1435,8 +1671,14 @@ namespace
                             if (!discoveryNeeded) UpdateRenderTimer();
                         }
                     }
-                    if (discoveryNeeded)
-                        RefreshPresenter(FindGameWindow(), EVENT_OBJECT_SHOW);
+                    if (refreshRequested || discoveryNeeded)
+                        RefreshPresenter(candidate, refreshRequested
+                            ? EVENT_OBJECT_LOCATIONCHANGE : EVENT_OBJECT_SHOW,
+                            candidate, true);
+                    if (refreshRequested && diagnostics::Enabled() &&
+                        ConsumeDiagnosticBudget(g_refreshDispatchLogBudget))
+                        LogDiscoveryDiagnostic("OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=" +
+                            std::to_string(reinterpret_cast<std::uintptr_t>(candidate)));
                 }, &DisableAfterOverlayException);
                 ReconcileOverlayInputReadiness();
             }
@@ -1449,14 +1691,11 @@ namespace
                     terminalRequested = true;
                     break;
                 }
-            if (message.message == RefreshMessage) {
-                overlay::RunOptionalOverlayWork([&]() {
-                    RefreshPresenter(reinterpret_cast<HWND>(message.wParam),
-                        static_cast<DWORD>(message.lParam));
-                }, &DisableAfterOverlayException);
-            } else if (message.message == WakeMessage) {
+            if (message.message == WakeMessage) {
                 g_redrawWakePending.BeginHandling();
                 overlay::RunOptionalOverlayWork([&]() {
+                    const bool refreshRequested =
+                        g_presenterRefreshPending.Take();
                     HWND candidate = FindGameWindow();
                     bool discoveryNeeded{};
                     {
@@ -1470,8 +1709,14 @@ namespace
                             RendererInstance().Render();
                         if (!discoveryNeeded) UpdateRenderTimer();
                     }
-                    if (discoveryNeeded)
-                        RefreshPresenter(candidate, EVENT_OBJECT_SHOW);
+                    if (refreshRequested || discoveryNeeded)
+                        RefreshPresenter(candidate, refreshRequested
+                            ? EVENT_OBJECT_LOCATIONCHANGE : EVENT_OBJECT_SHOW,
+                            candidate, true);
+                    if (refreshRequested && diagnostics::Enabled() &&
+                        ConsumeDiagnosticBudget(g_refreshDispatchLogBudget))
+                        LogDiscoveryDiagnostic("OVERLAY_REFRESH_DISPATCH source=thread_message pending_consumed=1 hwnd=" +
+                            std::to_string(reinterpret_cast<std::uintptr_t>(candidate)));
                 }, &DisableAfterOverlayException);
                 ReconcileOverlayInputReadiness();
             } else if (message.message == FrameClockMessage) {
@@ -1683,6 +1928,7 @@ namespace
         }
         CloseLog();
         if (previousDpiContext) SetThreadDpiAwarenessContext(previousDpiContext);
+        g_messageQueueReady.store(false, std::memory_order_release);
         g_uiThreadId.store(0, std::memory_order_release);
         return 0;
     }
@@ -1756,17 +2002,45 @@ extern "C" void NotifyOverlayCameraStatePublished() noexcept
     if (!renderer || !overlay::TryScheduleVisibleCameraStateRedraw(
             renderer->visible(), g_redrawWakePending))
         return;
-    const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
-    if (!threadId || !PostThreadMessageW(threadId, WakeMessage, 0, 0))
-        g_redrawWakePending.CancelFailedPost();
+    RequestOverlayRedraw();
 }
 
 extern "C" void RequestOverlayRedraw()
 {
-    if (g_ownerCommandWakeEvent) SetEvent(g_ownerCommandWakeEvent);
+    const HANDLE wakeEvent = g_ownerCommandWakeEvent;
+    const BOOL signaled = wakeEvent ? SetEvent(wakeEvent) : FALSE;
+    const DWORD signalError = signaled ? ERROR_SUCCESS
+        : wakeEvent ? GetLastError() : ERROR_INVALID_HANDLE;
     const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
-    if (!threadId) return;
+    const bool queueReady = g_messageQueueReady.load(std::memory_order_acquire);
+    if (!threadId || !queueReady) {
+        if (diagnostics::Enabled() &&
+            ConsumeDiagnosticBudget(g_refreshRequestLogBudget)) {
+            try {
+                LogDiscoveryDiagnostic("OVERLAY_REDRAW_REQUEST owner_event_signaled=" +
+                    std::to_string(signaled != FALSE) + " queue_ready=" +
+                    std::to_string(queueReady) + " thread=" +
+                    std::to_string(threadId) + " win32_error=" +
+                    std::to_string(signalError));
+            } catch (...) {}
+        }
+        return;
+    }
     if (!g_redrawWakePending.TrySchedule()) return;
-    if (!PostThreadMessageW(threadId, WakeMessage, 0, 0))
+    SetLastError(ERROR_SUCCESS);
+    const BOOL posted = PostThreadMessageW(threadId, WakeMessage, 0, 0);
+    const DWORD postError = posted ? ERROR_SUCCESS : GetLastError();
+    auto& postBudget = posted ? g_ownerPostSuccessLogBudget
+                              : g_ownerPostFailureLogBudget;
+    if (diagnostics::Enabled() && ConsumeDiagnosticBudget(postBudget)) {
+        try {
+            LogDiscoveryDiagnostic("OVERLAY_REDRAW_POST result=" +
+                std::string(posted ? "ok" : "failed") + " thread=" +
+                std::to_string(threadId) + " owner_event_signaled=" +
+                std::to_string(signaled != FALSE) + " win32_error=" +
+                std::to_string(postError));
+        } catch (...) {}
+    }
+    if (!posted)
         g_redrawWakePending.CancelFailedPost();
 }

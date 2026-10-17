@@ -592,6 +592,8 @@
         }
     }
     void EvidenceNativeTrampoline() {
+        safetyHookFlushCalls = 0;
+        safetyHookFailFlushAt = 0;
         static_assert(sizeof(SafetyHookContext) == 0x198);
         static_assert(offsetof(SafetyHookContext, rsp) == 0x180);
         static_assert(offsetof(SafetyHookContext, trampoline_rsp) == 0x188);
@@ -605,13 +607,16 @@
         Check(result.has_value(), "Local native hook creation failed");
         auto hook = std::move(*result);
         const auto original = hook.original_bytes();
-        Check(!original.empty() && !hook.enabled(), "Native hook not created disabled");
+        Check(!original.empty() && !hook.enabled() && safetyHookFlushCalls == 3,
+            "Native stub/trampoline were not synchronized before publication");
         bool passed = true;
         passed &= entry(4.0f) == 11.0f && nativeLeafCalls == 0;
         EvidenceRequireHookOperation(hook.enable().has_value());
+        Check(safetyHookFlushCalls == 5, "Enable did not synchronize both executable ranges");
         const float enabledResult = entry(4.0f);
         passed &= hook.enabled() && enabledResult == 13.0f && nativeLeafCalls == 1;
         EvidenceRequireHookOperation(hook.disable().has_value());
+        Check(safetyHookFlushCalls == 7, "Disable did not synchronize restored executable bytes");
         const float disabledResult = entry(4.0f);
         const bool restoredBytes = std::memcmp(hook.target(), original.data(),
             original.size()) == 0;
@@ -629,6 +634,29 @@
         const float resetResult = entry(4.0f);
         passed &= resetResult == 11.0f && nativeLeafCalls == 2 && nativeLeafContract;
         Check(passed, "Local trampoline context/continuation/enable/disable/exception contract failed");
+
+        safetyHookFailFlushAt = safetyHookFlushCalls + 1;
+        auto rejected = safetyhook::MidHook::create(&EvidenceNativeLeaf,
+            SafeMidHookEntry<&EvidenceNativeObserver>, safetyhook::MidHook::StartDisabled);
+        Check(!rejected && entry(4.0f) == 11.0f,
+            "Failed stub synchronization did not refuse publication");
+        safetyHookFailFlushAt = 0;
+        auto retry = safetyhook::MidHook::create(&EvidenceNativeLeaf,
+            SafeMidHookEntry<&EvidenceNativeObserver>, safetyhook::MidHook::StartDisabled);
+        Check(retry.has_value(), "Cache-failure retry setup failed");
+        safetyHookFailFlushAt = safetyHookFlushCalls + 1;
+        Check(!retry->enable() && retry->enabled(),
+            "Failed patch synchronization reported success or lost uncertain ownership");
+        safetyHookFailFlushAt = 0;
+        EvidenceRequireHookOperation(retry->disable().has_value());
+        EvidenceRequireHookOperation(retry->enable().has_value());
+        safetyHookFailFlushAt = safetyHookFlushCalls + 1;
+        Check(!retry->disable() && retry->enabled(),
+            "Failed restore synchronization discarded uncertain ownership");
+        safetyHookFailFlushAt = 0;
+        EvidenceRequireHookOperation(retry->disable().has_value());
+        Check(!retry->enabled() && entry(4.0f) == 11.0f,
+            "Retry after restore synchronization failure did not recover native execution");
     }
 
     void EvidenceZoomNativeContinuation() {
@@ -699,7 +727,7 @@
         safetyHookFailAfterVirtualProtect = true;
         const auto enableResult = hook.enable();
         const auto postWriteEnableWasSafe = !enableResult && hook.enabled() &&
-            safetyHookVirtualProtectCalls == 4 && entry(reinterpret_cast<void*>(source.Address())) == 0;
+            safetyHookVirtualProtectCalls >= 3 && entry(reinterpret_cast<void*>(source.Address())) == 0;
         if (!postWriteEnableWasSafe) {
             std::cerr << "N01 failed-enable post-write state was not retained\n";
             ExitProcess(1);
@@ -740,8 +768,471 @@
         ExitProcess(0); // The target remains patched; child termination is the safe terminal state.
     }
 
+    void EvidenceSafetyHookProtectionRecovery() {
+        auto* code = static_cast<std::uint8_t*>(VirtualAlloc(nullptr, 4096,
+            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+        Check(code != nullptr, "Protection recovery fixture allocation failed");
+        std::memset(code, 0x90, 32);
+        constexpr std::uint8_t leaf[] = {0xB8, 0x07, 0, 0, 0, 0xC3};
+        std::memcpy(code, leaf, sizeof(leaf));
+        DWORD previous{};
+        Check(VirtualProtect(code, 4096, PAGE_EXECUTE_READ, &previous) != FALSE,
+            "Protection recovery fixture could not publish RX code");
+        const auto entry = reinterpret_cast<int(*)()>(code);
+        Check(entry() == 7, "Protection recovery fixture did not execute");
+        const auto protection = [&] {
+            MEMORY_BASIC_INFORMATION mbi{};
+            Check(VirtualQuery(code, &mbi, sizeof(mbi)) != 0,
+                "Protection recovery target query failed");
+            return mbi.Protect;
+        };
+        auto created = safetyhook::MidHook::create(code,
+            +[](safetyhook::Context&) {}, safetyhook::MidHook::StartDisabled);
+        Check(created.has_value(), "Protection recovery hook creation failed");
+        auto hook = std::move(*created);
+
+        safetyHookVirtualProtectCalls = 0;
+        safetyHookFailVirtualProtectAt = 2;
+        safetyHookFailVirtualProtectAtSecond = 3;
+        safetyHookFailAfterVirtualProtect = false;
+        const auto failedEnable = hook.enable();
+        safetyHookFailVirtualProtectAt = 0;
+        safetyHookFailVirtualProtectAtSecond = 0;
+        Check(!failedEnable && safetyHookVirtualProtectCalls == 4 &&
+            protection() == PAGE_EXECUTE_READ && entry() == 7,
+            "Real pre-write failures did not restore RX target after partial rollback");
+
+        safetyHookVirtualProtectCalls = 0;
+        safetyHookFailVirtualProtectAt = 3;
+        const auto failedRestore = hook.enable();
+        safetyHookFailVirtualProtectAt = 0;
+        Check(!failedRestore && safetyHookVirtualProtectCalls == 5 &&
+            protection() == PAGE_EXECUTE_READ && entry() == 7 && hook.enabled(),
+            "Real restore failure did not recover page permissions and uncertain hook state");
+        Check(hook.disable().has_value() && protection() == PAGE_EXECUTE_READ && entry() == 7,
+            "Hook did not recover after a protection restore retry");
+        hook.reset();
+        VirtualFree(code, 0, MEM_RELEASE);
+    }
+    void EvidenceSafetyHookVehAdmission() {
+        Check(safetyhook::SafetyHookTestVehAdmission(),
+            "VEH admitted unrelated read/write AV or rejected an owned execute trap");
+        Check(safetyhook::SafetyHookTestVehTransactionIsolation(),
+            "VEH reused a completed route or retry ticket across a new transaction/address generation");
+    }
+    void EvidenceSafetyHookAllocationOwnership() {
+        auto allocator = safetyhook::Allocator::create();
+        safetyHookInjectedAllocationAddress = nullptr;
+        safetyHookInjectedAllocationSize = 0;
+        safetyHookInjectOwnedAllocationBadAlloc = true;
+        bool threw = false;
+        try {
+            (void)allocator->allocate(0x180);
+        } catch (const std::bad_alloc&) {
+            threw = true;
+        }
+        safetyHookInjectOwnedAllocationBadAlloc = false;
+        Check(threw && safetyHookInjectedAllocationAddress &&
+            safetyHookInjectedAllocationSize >= 0x180,
+            "Allocation fault injection did not occur after the region had an RAII owner");
+        MEMORY_BASIC_INFORMATION released{};
+        Check(VirtualQuery(safetyHookInjectedAllocationAddress, &released, sizeof(released)) != 0 &&
+            released.State == MEM_FREE,
+            "bad_alloc after VirtualAlloc left its reservation committed/reserved");
+
+        auto successful = allocator->allocate(0x180);
+        Check(successful.has_value(), "Allocator failed after recovering from injected bad_alloc");
+        MEMORY_BASIC_INFORMATION owned{};
+        Check(VirtualQuery(successful->data(), &owned, sizeof(owned)) != 0 &&
+            owned.State == MEM_COMMIT && owned.Protect == PAGE_READWRITE,
+            "Successful reservation was not retained by allocator metadata");
+    }
+    void EvidenceSafetyHookDelayedExecute() {
+        auto* code = static_cast<std::uint8_t*>(VirtualAlloc(nullptr, 4096,
+            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+        Check(code != nullptr, "Delayed execute fixture allocation failed");
+        constexpr std::uint8_t leaf[] = {0xB8, 0x07, 0, 0, 0, 0xC3};
+        std::memcpy(code, leaf, sizeof(leaf));
+        DWORD previous{};
+        Check(VirtualProtect(code, 4096, PAGE_EXECUTE_READ, &previous) != FALSE,
+            "Delayed execute fixture could not publish its leaf");
+        auto entry = reinterpret_cast<unsigned(*)()>(code);
+        auto created = safetyhook::MidHook::create(code,
+            +[](SafetyHookContext&) {}, safetyhook::MidHook::StartDisabled);
+        Check(created.has_value(), "Delayed execute hook creation failed");
+        auto hook = std::move(*created);
+
+        safetyHookNxReadyEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookFaultsEnteredEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookReleaseFaultsEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookRxRestoredEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!safetyHookNxReadyEvent || !safetyHookFaultsEnteredEvent ||
+            !safetyHookReleaseFaultsEvent || !safetyHookRxRestoredEvent) {
+            hook.reset();
+            VirtualFree(code, 0, MEM_RELEASE);
+            throw std::runtime_error("Delayed execute barrier creation failed");
+        }
+        safetyHookDelayedFaultAddress.store(reinterpret_cast<std::uintptr_t>(code),
+            std::memory_order_release);
+        safetyHookDelayedFaultCount.store(0, std::memory_order_release);
+        safetyHookDelayedFaultTimedOut.store(false, std::memory_order_release);
+        safetyHookExpectedDelayedFaults = 2;
+        safetyHookDelayExecuteFault.store(true, std::memory_order_release);
+
+        SafetyHookDelayedExecuteCall calls[2]{{entry, safetyHookNxReadyEvent},
+            {entry, safetyHookNxReadyEvent}};
+        HANDLE workers[2]{
+            CreateThread(nullptr, 0, SafetyHookDelayedExecuteWorker, &calls[0], 0, nullptr),
+            CreateThread(nullptr, 0, SafetyHookDelayedExecuteWorker, &calls[1], 0, nullptr)};
+        bool workersCreated = workers[0] && workers[1];
+        if (!workersCreated) {
+            SetEvent(safetyHookNxReadyEvent);
+            SetEvent(safetyHookReleaseFaultsEvent);
+            for (auto worker : workers) if (worker) {
+                WaitForSingleObject(worker, 3000);
+                CloseHandle(worker);
+            }
+            safetyHookDelayExecuteFault.store(false, std::memory_order_release);
+            hook.reset();
+            VirtualFree(code, 0, MEM_RELEASE);
+            CloseHandle(safetyHookNxReadyEvent);
+            CloseHandle(safetyHookFaultsEnteredEvent);
+            CloseHandle(safetyHookReleaseFaultsEvent);
+            CloseHandle(safetyHookRxRestoredEvent);
+            safetyHookNxReadyEvent = safetyHookFaultsEnteredEvent =
+                safetyHookReleaseFaultsEvent = safetyHookRxRestoredEvent = nullptr;
+            throw std::runtime_error("Delayed execute worker creation failed");
+        }
+
+        const auto enabled = hook.enable();
+        const bool restored = WaitForSingleObject(safetyHookRxRestoredEvent, 1000) == WAIT_OBJECT_0;
+        SetEvent(safetyHookReleaseFaultsEvent);
+        const bool workersExited = WaitForMultipleObjects(2, workers, TRUE, 5000) == WAIT_OBJECT_0;
+        if (!workersExited)
+            ExitProcess(2); // The process-tree supervisor owns this isolated fixture process.
+        DWORD workerCodes[2]{1, 1};
+        if (workersExited) {
+            GetExitCodeThread(workers[0], &workerCodes[0]);
+            GetExitCodeThread(workers[1], &workerCodes[1]);
+        }
+        for (auto worker : workers) CloseHandle(worker);
+        const auto faultCount = safetyHookDelayedFaultCount.load(std::memory_order_acquire);
+        const bool timedOut = safetyHookDelayedFaultTimedOut.load(std::memory_order_acquire);
+        safetyHookDelayExecuteFault.store(false, std::memory_order_release);
+        hook.reset();
+        const auto originalResult = entry();
+        VirtualFree(code, 0, MEM_RELEASE);
+        CloseHandle(safetyHookNxReadyEvent);
+        CloseHandle(safetyHookFaultsEnteredEvent);
+        CloseHandle(safetyHookReleaseFaultsEvent);
+        CloseHandle(safetyHookRxRestoredEvent);
+        safetyHookNxReadyEvent = safetyHookFaultsEnteredEvent =
+            safetyHookReleaseFaultsEvent = safetyHookRxRestoredEvent = nullptr;
+        Check(enabled.has_value() && restored && workersExited && !timedOut &&
+            faultCount == 2 && workerCodes[0] == 0 && workerCodes[1] == 0 &&
+            calls[0].result == 7 && calls[1].result == 7 &&
+            originalResult == 7,
+            "Two execute faults held before VEH admission were not safely retried after RX restoration/retirement");
+    }
+
+    void EvidenceSafetyHookRetryGenerations() {
+        auto* code = static_cast<std::uint8_t*>(VirtualAlloc(nullptr, 4096,
+            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+        Check(code != nullptr, "Retry generation fixture allocation failed");
+        constexpr std::uint8_t leaf[] = {0xB8, 0x07, 0, 0, 0, 0xC3};
+        std::memcpy(code, leaf, sizeof(leaf));
+        DWORD previous{};
+        Check(VirtualProtect(code, 4096, PAGE_EXECUTE_READ, &previous) != FALSE,
+            "Retry generation fixture could not publish RX code");
+        auto entry = reinterpret_cast<unsigned(*)()>(code);
+        auto created = safetyhook::MidHook::create(code,
+            +[](SafetyHookContext&) {}, safetyhook::MidHook::StartDisabled);
+        Check(created.has_value(), "Retry generation hook creation failed");
+        auto hook = std::move(*created);
+
+        safetyHookNxReadyEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookFaultsEnteredEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookReleaseFaultsEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookRxRestoredEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        HANDLE firstCallDone = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        HANDLE secondCallStart = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!safetyHookNxReadyEvent || !safetyHookFaultsEnteredEvent ||
+            !safetyHookReleaseFaultsEvent || !safetyHookRxRestoredEvent ||
+            !firstCallDone || !secondCallStart)
+            throw std::runtime_error("Retry generation barrier creation failed");
+
+        SafetyHookRetryGenerationCall call{entry, safetyHookNxReadyEvent,
+            firstCallDone, secondCallStart};
+        HANDLE worker = CreateThread(nullptr, 0, SafetyHookRetryGenerationWorker,
+            &call, 0, nullptr);
+        if (!worker) throw std::runtime_error("Retry generation worker creation failed");
+
+        safetyHookDelayedFaultAddress.store(reinterpret_cast<std::uintptr_t>(code),
+            std::memory_order_release);
+        safetyHookDelayedFaultCount.store(0, std::memory_order_release);
+        safetyHookExpectedDelayedFaults = 1;
+        safetyHookDelayedFaultTimedOut.store(false, std::memory_order_release);
+        safetyHookVirtualProtectCalls = 0;
+        safetyHookFailVirtualProtectAt = 0;
+        safetyHookDelayExecuteFault.store(true, std::memory_order_release);
+
+        const auto firstEnable = hook.enable();
+        const bool firstRestored = WaitForSingleObject(safetyHookRxRestoredEvent, 1000) == WAIT_OBJECT_0;
+        SetEvent(safetyHookReleaseFaultsEvent);
+        const bool firstCompleted = WaitForSingleObject(firstCallDone, 5000) == WAIT_OBJECT_0;
+        const auto firstFaults = safetyHookDelayedFaultCount.load(std::memory_order_acquire);
+        safetyHookDelayExecuteFault.store(false, std::memory_order_release);
+        const auto firstDisable = hook.disable();
+        if (!firstCompleted) ExitProcess(3);
+
+        ResetEvent(safetyHookNxReadyEvent);
+        ResetEvent(safetyHookFaultsEnteredEvent);
+        ResetEvent(safetyHookReleaseFaultsEvent);
+        ResetEvent(safetyHookRxRestoredEvent);
+        safetyHookDelayedFaultCount.store(0, std::memory_order_release);
+        safetyHookExpectedDelayedFaults = 1;
+        safetyHookDelayExecuteFault.store(true, std::memory_order_release);
+        SetEvent(secondCallStart);
+
+        const auto secondEnable = hook.enable();
+        const bool secondRestored = WaitForSingleObject(safetyHookRxRestoredEvent, 1000) == WAIT_OBJECT_0;
+        SetEvent(safetyHookReleaseFaultsEvent);
+        const bool workerExited = WaitForSingleObject(worker, 5000) == WAIT_OBJECT_0;
+        if (!workerExited) ExitProcess(4);
+        DWORD workerCode{1};
+        GetExitCodeThread(worker, &workerCode);
+        const auto secondFaults = safetyHookDelayedFaultCount.load(std::memory_order_acquire);
+        const bool timedOut = safetyHookDelayedFaultTimedOut.load(std::memory_order_acquire);
+
+        safetyHookDelayExecuteFault.store(false, std::memory_order_release);
+        const auto secondDisable = hook.disable();
+        hook.reset();
+        CloseHandle(worker);
+        for (auto event : {safetyHookNxReadyEvent, safetyHookFaultsEnteredEvent,
+                 safetyHookReleaseFaultsEvent, safetyHookRxRestoredEvent,
+                 firstCallDone, secondCallStart}) CloseHandle(event);
+        safetyHookNxReadyEvent = safetyHookFaultsEnteredEvent =
+            safetyHookReleaseFaultsEvent = safetyHookRxRestoredEvent = nullptr;
+        VirtualFree(code, 0, MEM_RELEASE);
+
+        Check(firstEnable && firstDisable && secondEnable && secondDisable &&
+            firstRestored && secondRestored && firstCompleted && workerCode == 0 &&
+            call.results[0] == 7 && call.results[1] == 7 &&
+            firstFaults == 1 && secondFaults == 1 && !timedOut,
+            "A persistent worker's retry ticket suppressed the same-address execute fault in a later transaction");
+    }
+
+    void EvidenceSafetyHookPrewriteRouteLifetime() {
+        SYSTEM_INFO allocationInfo{};
+        GetSystemInfo(&allocationInfo);
+        constexpr std::uintptr_t maxRelativeDistance = 0x7fff0000;
+        const auto granularity = static_cast<std::uintptr_t>(allocationInfo.dwAllocationGranularity);
+        const auto anchor = reinterpret_cast<std::uintptr_t>(&SafetyHookNativeRouteBarrier);
+        const auto alignedAnchor = anchor & ~(granularity - 1);
+        std::uint8_t* code{};
+        for (std::uintptr_t distance = granularity; distance < maxRelativeDistance && !code;
+            distance += granularity) {
+            const std::uintptr_t candidates[] = {alignedAnchor - distance, alignedAnchor + distance};
+            for (const auto candidate : candidates) {
+                const auto delta = static_cast<std::int64_t>(anchor) -
+                    static_cast<std::int64_t>(candidate + 9);
+                if (delta < INT32_MIN || delta > INT32_MAX) continue;
+                code = static_cast<std::uint8_t*>(VirtualAlloc(reinterpret_cast<void*>(candidate),
+                    4096, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+                if (code) break;
+            }
+        }
+        Check(code != nullptr, "Pre-write lifetime fixture allocation failed");
+        std::uint8_t leaf[] = {0x48, 0x83, 0xEC, 0x28, 0xE8, 0, 0, 0, 0,
+            0x48, 0x83, 0xC4, 0x28, 0xB8, 0x07, 0, 0, 0, 0xC3};
+        std::memcpy(code, leaf, sizeof(leaf));
+        const auto callNext = reinterpret_cast<std::uintptr_t>(code + 9);
+        const auto callDelta = static_cast<std::int32_t>(
+            static_cast<std::int64_t>(reinterpret_cast<std::uintptr_t>(&SafetyHookNativeRouteBarrier)) -
+            static_cast<std::int64_t>(callNext));
+        std::memcpy(code + 5, &callDelta, sizeof(callDelta));
+        std::memcpy(leaf + 5, &callDelta, sizeof(callDelta));
+        DWORD previous{};
+        Check(VirtualProtect(code, 4096, PAGE_EXECUTE_READ, &previous) != FALSE,
+            "Pre-write lifetime fixture could not publish RX code");
+        auto entry = reinterpret_cast<unsigned(*)()>(code);
+        auto created = safetyhook::MidHook::create(code,
+            SafeMidHookEntry<&SafetyHookNoopMidCallback>,
+            safetyhook::MidHook::StartDisabled);
+        Check(created.has_value(), "Pre-write lifetime hook creation failed");
+        auto hook = std::move(*created);
+        auto* const trampoline = hook.test_trampoline();
+        auto* const stub = hook.test_stub();
+
+        safetyHookNxReadyEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookPrewriteProtectionChangedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookContinuePrewriteProtectionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookRouteObservedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        safetyHookReleaseRouteEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        HANDLE enableDone = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!safetyHookNxReadyEvent || !safetyHookPrewriteProtectionChangedEvent ||
+            !safetyHookContinuePrewriteProtectionEvent || !safetyHookRouteObservedEvent ||
+            !safetyHookReleaseRouteEvent || !enableDone)
+            throw std::runtime_error("Pre-write lifetime barrier creation failed");
+
+        SafetyHookDelayedExecuteCall workerCall{entry, safetyHookNxReadyEvent};
+        safetyHookAllocationReleases.clear();
+        safetyHookVirtualProtectCalls = 0;
+        safetyHookFailVirtualProtectAt = 2; // The trampoline page fails before its first change/write.
+        safetyHookFailVirtualProtectAtSecond = 0;
+        safetyHookFailAfterVirtualProtect = false;
+        safetyHookPrewriteTarget = reinterpret_cast<std::uintptr_t>(code);
+        safetyHookPrewriteProtectionTimedOut.store(false, std::memory_order_release);
+        safetyHookRouteCallbackTimedOut.store(false, std::memory_order_release);
+        safetyHookHoldPrewriteProtection.store(true, std::memory_order_release);
+        HANDLE worker = CreateThread(nullptr, 0, SafetyHookDelayedExecuteWorker,
+            &workerCall, 0, nullptr);
+        if (!worker) throw std::runtime_error("Pre-write lifetime worker creation failed");
+        SafetyHookEnableThreadCall enableCall{&hook, enableDone};
+        HANDLE transaction = CreateThread(nullptr, 0, SafetyHookEnableThread,
+            &enableCall, 0, nullptr);
+        if (!transaction) ExitProcess(5);
+
+        const bool sourceBecameNx = WaitForSingleObject(
+            safetyHookPrewriteProtectionChangedEvent, 5000) == WAIT_OBJECT_0;
+        const bool workerWasRedirected = sourceBecameNx &&
+            WaitForSingleObject(safetyHookRouteObservedEvent, 5000) == WAIT_OBJECT_0;
+        if (!workerWasRedirected) ExitProcess(6);
+        SetEvent(safetyHookContinuePrewriteProtectionEvent);
+        if (WaitForSingleObject(transaction, 5000) != WAIT_OBJECT_0) ExitProcess(7);
+        CloseHandle(transaction);
+        safetyHookHoldPrewriteProtection.store(false, std::memory_order_release);
+        safetyHookFailVirtualProtectAt = 0;
+
+        MEMORY_BASIC_INFORMATION sourceProtection{}, trampolineBefore{}, stubBefore{};
+        const bool sourceQueryable = VirtualQuery(code, &sourceProtection, sizeof(sourceProtection)) != 0;
+        const bool sourceProtectionRestored = sourceQueryable && sourceProtection.State == MEM_COMMIT &&
+            sourceProtection.Protect == PAGE_EXECUTE_READ;
+        const bool sourceBytesRestored = std::memcmp(code, leaf, sizeof(leaf)) == 0;
+        const bool enableRejected = !enableCall.succeeded;
+        const bool rolledBack = sourceProtectionRestored && sourceBytesRestored && enableRejected;
+        const bool retainedBeforeReset = VirtualQuery(trampoline, &trampolineBefore,
+            sizeof(trampolineBefore)) != 0 && VirtualQuery(stub, &stubBefore, sizeof(stubBefore)) != 0 &&
+            trampolineBefore.State == MEM_COMMIT && trampolineBefore.Protect == PAGE_EXECUTE_READ &&
+            stubBefore.State == MEM_COMMIT && stubBefore.Protect == PAGE_EXECUTE_READ;
+        hook.reset();
+        MEMORY_BASIC_INFORMATION trampolineAfter{}, stubAfter{};
+        const bool retainedAfterDestroy = VirtualQuery(trampoline, &trampolineAfter,
+            sizeof(trampolineAfter)) != 0 && VirtualQuery(stub, &stubAfter, sizeof(stubAfter)) != 0 &&
+            trampolineAfter.State == MEM_COMMIT && trampolineAfter.Protect == PAGE_EXECUTE_READ &&
+            stubAfter.State == MEM_COMMIT && stubAfter.Protect == PAGE_EXECUTE_READ;
+        const auto retainedAllocations = std::count_if(safetyHookAllocationReleases.begin(),
+            safetyHookAllocationReleases.end(), [](const auto& release) { return !release.returned; });
+
+        SetEvent(safetyHookReleaseRouteEvent);
+        const bool workerExited = WaitForSingleObject(worker, 5000) == WAIT_OBJECT_0;
+        if (!workerExited) ExitProcess(8);
+        DWORD workerCode{1};
+        GetExitCodeThread(worker, &workerCode);
+        CloseHandle(worker);
+        safetyHookRouteObservedEvent = safetyHookReleaseRouteEvent = nullptr;
+        safetyHookPrewriteProtectionChangedEvent =
+            safetyHookContinuePrewriteProtectionEvent = nullptr;
+        CloseHandle(enableDone);
+        CloseHandle(safetyHookNxReadyEvent);
+        safetyHookNxReadyEvent = nullptr;
+        safetyHookPrewriteTarget = 0;
+        VirtualFree(code, 0, MEM_RELEASE);
+
+        Check(sourceBecameNx && workerWasRedirected && rolledBack && retainedBeforeReset &&
+            retainedAfterDestroy && retainedAllocations >= 2 && workerCode == 0 &&
+            workerCall.result == 7 && !safetyHookPrewriteProtectionTimedOut.load(
+                std::memory_order_acquire) && !safetyHookRouteCallbackTimedOut.load(
+                std::memory_order_acquire),
+            "Pre-write rollback/destruction released a continuation while a redirected worker was using it");
+    }
+    void EvidenceSafetyHookRxPublication() {
+        auto makeLeaf = [](unsigned result) {
+            auto* code = static_cast<std::uint8_t*>(VirtualAlloc(nullptr, 4096,
+                MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+            Check(code != nullptr, "RX publication fixture allocation failed");
+            std::memset(code, 0x90, 32);
+            code[0] = 0xB8;
+            std::memcpy(code + 1, &result, sizeof(result));
+            code[5] = 0xC3;
+            Check(FlushInstructionCache(GetCurrentProcess(), code, 32) != FALSE,
+                "RX publication fixture code sync failed");
+            DWORD previous{};
+            Check(VirtualProtect(code, 4096, PAGE_EXECUTE_READ, &previous) != FALSE,
+                "RX publication fixture code protection failed");
+            return code;
+        };
+        auto* first = makeLeaf(7);
+        auto* second = makeLeaf(9);
+        auto permission = [](const void* address) {
+            MEMORY_BASIC_INFORMATION mbi{};
+            Check(VirtualQuery(address, &mbi, sizeof(mbi)) != 0 && mbi.State == MEM_COMMIT,
+                "Published allocation is no longer committed");
+            return mbi.Protect;
+        };
+        auto firstHook = safetyhook::MidHook::create(first,
+            +[](safetyhook::Context&) {}, safetyhook::MidHook::StartDisabled);
+        auto secondHook = safetyhook::MidHook::create(second,
+            +[](safetyhook::Context&) {}, safetyhook::MidHook::StartDisabled);
+        Check(firstHook && secondHook, "Two independent hooks could not be created");
+        const auto firstStub = firstHook->test_stub();
+        const auto firstTrampoline = firstHook->test_trampoline();
+        const auto secondStub = secondHook->test_stub();
+        const auto secondTrampoline = secondHook->test_trampoline();
+        SYSTEM_INFO info{};
+        GetSystemInfo(&info);
+        MEMORY_BASIC_INFORMATION stubRegion{}, trampolineRegion{};
+        Check(VirtualQuery(firstStub, &stubRegion, sizeof(stubRegion)) != 0 &&
+            VirtualQuery(firstTrampoline, &trampolineRegion, sizeof(trampolineRegion)) != 0 &&
+            stubRegion.RegionSize == info.dwPageSize &&
+            trampolineRegion.RegionSize == info.dwPageSize,
+            "Private executable allocations committed more than one page per small hook");
+        Check(firstStub != secondStub && firstTrampoline != secondTrampoline &&
+            permission(firstStub) == PAGE_EXECUTE_READ &&
+            permission(firstTrampoline) == PAGE_EXECUTE_READ &&
+            permission(secondStub) == PAGE_EXECUTE_READ &&
+            permission(secondTrampoline) == PAGE_EXECUTE_READ,
+            "Stub/trampoline allocations were shared or remained writable after publication");
+        Check(firstHook->enable() && secondHook->enable(),
+            "Two RX hooks could not be enabled together");
+        Check(reinterpret_cast<unsigned(*)()>(first)() == 7 &&
+            reinterpret_cast<unsigned(*)()>(second)() == 9 &&
+            permission(firstStub) == PAGE_EXECUTE_READ &&
+            permission(firstTrampoline) == PAGE_EXECUTE_READ &&
+            permission(secondStub) == PAGE_EXECUTE_READ &&
+            permission(secondTrampoline) == PAGE_EXECUTE_READ,
+            "Enabled hook execution or RX permissions changed");
+        Check(firstHook->disable() && secondHook->disable() &&
+            permission(firstStub) == PAGE_EXECUTE_READ &&
+            permission(firstTrampoline) == PAGE_EXECUTE_READ,
+            "Disabling the hooks left a trampoline writable");
+        firstHook->reset();
+        secondHook->reset();
+        Check(permission(firstStub) == PAGE_EXECUTE_READ &&
+            permission(firstTrampoline) == PAGE_EXECUTE_READ,
+            "Retained continuation lost RX protection after reset");
+        auto recreated = safetyhook::MidHook::create(first,
+            +[](safetyhook::Context&) {}, safetyhook::MidHook::StartDisabled);
+        Check(recreated && recreated->test_stub() != firstStub &&
+            permission(recreated->test_stub()) == PAGE_EXECUTE_READ &&
+            permission(recreated->test_trampoline()) == PAGE_EXECUTE_READ,
+            "Recreated hook reused published RX storage");
+        Check(recreated->enable() && reinterpret_cast<unsigned(*)()>(first)() == 7 &&
+            recreated->disable(), "Recreated RX hook failed execution or teardown");
+        recreated->reset();
+        VirtualFree(first, 0, MEM_RELEASE);
+        VirtualFree(second, 0, MEM_RELEASE);
+    }
+
     void EvidenceSafetyHookFailedCreate() {
         Memory source, output; Setup(source);
+        safetyHookRefuseVeh = true;
+        safetyHookVirtualProtectCalls = 0;
+        const auto missingHandler = safetyhook::MidHook::create(&EvidenceNativeLeaf,
+            SafeMidHookEntry<&EvidenceNativeObserver>);
+        Check(!missingHandler && safetyHookVirtualProtectCalls == 0,
+            "Missing VEH did not refuse patching before protection changes");
+        safetyHookRefuseVeh = false;
         safetyHookAllocationReleases.clear();
         safetyHookVirtualProtectCalls = 0;
         safetyHookFailVirtualProtectAt = 3;
@@ -751,7 +1242,12 @@
         safetyHookFailVirtualProtectAt = 0;
         const auto retained = std::count_if(safetyHookAllocationReleases.begin(),
             safetyHookAllocationReleases.end(), [](const auto& event) { return !event.returned; });
-        Check(!result && EvidenceNativeLeaf(4.0f) == 11.0f && retained >= 2,
+        const auto postCreateValue = EvidenceNativeLeaf(4.0f);
+        if (result || postCreateValue != 11.0f || retained < 2)
+            std::cerr << "failed-create state: result=" << static_cast<bool>(result)
+                << " value=" << postCreateValue << " retained=" << retained
+                << " protects=" << safetyHookVirtualProtectCalls << '\n';
+        Check(!result && postCreateValue == 11.0f && retained >= 2,
             "Failed default-enabled create lost executable ownership or failed to restore target");
 
         safetyHookAllocationReleases.clear();
@@ -904,6 +1400,13 @@
         else if (scenario == "evidence-native-trampoline") EvidenceNativeTrampoline();
         else if (scenario == "evidence-zoom-native-continuation") EvidenceZoomNativeContinuation();
         else if (scenario == "evidence-safetyhook-lifetime-faults") EvidenceSafetyHookLifetimeFaults();
+        else if (scenario == "evidence-safetyhook-protection-recovery") EvidenceSafetyHookProtectionRecovery();
+        else if (scenario == "evidence-safetyhook-veh-admission") EvidenceSafetyHookVehAdmission();
+        else if (scenario == "evidence-safetyhook-allocation-ownership") EvidenceSafetyHookAllocationOwnership();
+        else if (scenario == "evidence-safetyhook-delayed-execute") EvidenceSafetyHookDelayedExecute();
+        else if (scenario == "evidence-safetyhook-retry-generations") EvidenceSafetyHookRetryGenerations();
+        else if (scenario == "evidence-safetyhook-prewrite-route-lifetime") EvidenceSafetyHookPrewriteRouteLifetime();
+        else if (scenario == "evidence-safetyhook-rx-publication") EvidenceSafetyHookRxPublication();
         else if (scenario == "evidence-safetyhook-failed-create") EvidenceSafetyHookFailedCreate();
         else if (scenario == "evidence-safetyhook-disable-postwrite") EvidenceSafetyHookDisablePostWriteFailure();
         else if (scenario == "evidence-reset-self-join") EvidenceResetFailedSelfJoin();

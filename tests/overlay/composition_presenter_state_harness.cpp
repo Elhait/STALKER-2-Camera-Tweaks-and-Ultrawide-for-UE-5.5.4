@@ -568,6 +568,34 @@ namespace
             "failed message posting releases the wake gate for a future redraw");
     }
 
+    void TestPresenterRefreshSignalSurvivesEarlyAndCoalescedRequests()
+    {
+        overlay::PresenterRefreshSignal refresh;
+        bool eligibleWindowExists{};
+        unsigned scans{};
+        const auto ownerWake = [&]() {
+            if (!refresh.Take()) return;
+            ++scans;
+            eligibleWindowExists = true;
+        };
+
+        Require(!refresh.Take() && scans == 0,
+            "an owner wake without a presenter refresh does not invent a scan");
+        refresh.Request(); // the earlier scan ran before the game HWND was eligible
+        refresh.Request(); // repeated WinEvents coalesce behind the owner event
+        Require(refresh.pending(),
+            "a WinEvent refresh remains pending independently of thread-message delivery");
+        ownerWake();
+        Require(scans == 1 && eligibleWindowExists && !refresh.pending(),
+            "the next durable owner wake rescans and observes the newly eligible HWND");
+
+        refresh.Request();
+        Require(refresh.Take(), "the owner claims one refresh request");
+        refresh.Request(); // arrives while the owner is processing the claimed scan
+        Require(refresh.pending() && refresh.Take() && !refresh.pending(),
+            "a concurrent later refresh is not erased when the current request is consumed");
+    }
+
     void TestCameraStatePublicationSchedulesVisibleRefresh()
     {
         overlay::PresenterWakeGate wake;
@@ -829,6 +857,7 @@ int main()
     TestTimerIdentityDrivesAutonomousProgression();
     TestSemanticPresenterPacingStates();
     TestInputEventsScheduleOneOwnerWake();
+    TestPresenterRefreshSignalSurvivesEarlyAndCoalescedRequests();
     TestCameraStatePublicationSchedulesVisibleRefresh();
     TestToastLifetimeRequiresSubmittedVisibleGeneration();
     TestDeviceRecoveryPreservesVisibleAndHiddenInputOwnership();

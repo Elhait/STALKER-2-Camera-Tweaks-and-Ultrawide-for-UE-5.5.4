@@ -28,7 +28,7 @@ namespace config
             const auto temporary = path.wstring() + L".tmp";
             {
                 platform::win32::NativeFile output;
-                if (!output.Open(temporary.c_str(), true)) return false;
+                if (!output.CreateExclusive(temporary.c_str())) return false;
                 bool written = true;
                 for (std::size_t index = 0; index < lines.size(); ++index) {
                     written = written && output.Write(lines[index]);

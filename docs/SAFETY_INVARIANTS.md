@@ -38,6 +38,14 @@
   implementation and validate that it remains behaviorally observational.
 - A failed configuration persistence operation does not truncate or replace
   the last-known-good INI.
+- Configuration staging uses exclusive file creation and never removes a
+  pre-existing staging pathname after an open failure. Native log writers
+  validate final-component reparse/link state before truncation, and INI reads
+  and runtime/Overlay log writes have explicit size budgets.
+- Newly generated native stubs/trampolines are cache-synchronized before
+  publication. Patch/restoration synchronization failures are reported and
+  uncertain executable ownership is retained. A failed VEH registration cannot
+  proceed to the patch's execute-protection transition.
 - Cinematic aspect-store failure skips the custom/native store path and
   resumes after the replaced instruction; this is intentional fail-closed
   behavior.

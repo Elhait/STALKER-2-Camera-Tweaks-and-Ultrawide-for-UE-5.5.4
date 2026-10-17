@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
-project(STALKER2CameraTweaks LANGUAGES C CXX)
+project(STALKER2CameraTweaks VERSION 3.2.1 LANGUAGES C CXX)
 
 # CMake's MSVC defaults inject WIN32/_WINDOWS. The legacy cl invocation did
 # not; keep only the explicitly reviewed project flags and definitions.
@@ -25,6 +25,11 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+
+# The settings UI uses embedded fonts and owned config/log transport. Do not
+# ship upstream shell/file helpers or optional bare-name XInput DLL searches.
+add_compile_definitions(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
+    IMGUI_DISABLE_FILE_FUNCTIONS IMGUI_IMPL_WIN32_DISABLE_GAMEPAD)
 
 set(CAMERA_TWEAKS_PROFILE "production" CACHE STRING "production or diagnostic compatibility wrapper")
 set_property(CACHE CAMERA_TWEAKS_PROFILE PROPERTY STRINGS production diagnostic)
@@ -109,6 +114,10 @@ add_custom_command(
     COMMENT "Generating canonical INI documentation header")
 
 set(resource_file "${CMAKE_CURRENT_SOURCE_DIR}/src/overlay/localization/localization_resources.rc")
+set(version_resource_template "${CMAKE_CURRENT_SOURCE_DIR}/src/overlay/version_info.rc.in")
+set(version_resource_file "${CMAKE_CURRENT_BINARY_DIR}/resources/version_info.rc")
+set(version_resource_output "${CMAKE_CURRENT_BINARY_DIR}/resources/version_info.res")
+configure_file("${version_resource_template}" "${version_resource_file}" @ONLY)
 set(resource_ids "${CMAKE_CURRENT_SOURCE_DIR}/src/localization/localization_resource_ids.h")
 set(resource_output "${CMAKE_CURRENT_BINARY_DIR}/resources/localization_resources.res")
 set(locale_catalogs
@@ -154,6 +163,17 @@ add_custom_command(
 set_source_files_properties("${generated_ini_header}" PROPERTIES GENERATED TRUE)
 set_source_files_properties("${resource_output}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
 add_custom_target(localization_resources DEPENDS "${resource_output}")
+add_custom_command(
+    OUTPUT "${version_resource_output}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/resources"
+    COMMAND "${CMAKE_RC_COMPILER}" /nologo /I "${CMAKE_CURRENT_SOURCE_DIR}"
+            /fo "${version_resource_output}" "${version_resource_file}"
+    DEPENDS "${version_resource_file}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    VERBATIM
+    COMMENT "Compiling ASI version information")
+add_custom_target(version_resource DEPENDS "${version_resource_output}")
+set_source_files_properties("${version_resource_output}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
 
 add_custom_target(locale_preflight
     COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
@@ -164,8 +184,9 @@ add_custom_target(locale_preflight
 
 add_library(STALKER2CameraTweaks MODULE ${CAMERA_TWEAKS_ALL_SOURCES}
     "${generated_ini_header}"
-    "${resource_output}")
-add_dependencies(STALKER2CameraTweaks locale_preflight localization_resources)
+    "${resource_output}"
+    "${version_resource_output}")
+add_dependencies(STALKER2CameraTweaks locale_preflight localization_resources version_resource)
 set_target_properties(STALKER2CameraTweaks PROPERTIES
     PREFIX ""
     SUFFIX ".asi"

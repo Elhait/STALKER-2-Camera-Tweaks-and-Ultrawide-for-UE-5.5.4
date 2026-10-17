@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <new>
 
 
 
@@ -20,10 +21,13 @@ namespace safetyhook {
 #ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
 extern "C" void SafetyHookTestAllocationRelease(void* address, size_t size,
     int returned_to_allocator);
+extern "C" int SafetyHookTestAllocationOwnershipCheckpoint(void* address, size_t size);
 #endif
 
 static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len,
-    const std::function<void()>& run_fn, bool* write_attempted);
+    const std::function<void()>& run_fn, bool* write_attempted,
+    bool* code_synchronized = nullptr, bool* route_exposed = nullptr);
+static bool synchronize_code(uint8_t* address, size_t size);
 Allocation::Allocation(Allocation&& other) noexcept {
     *this = std::move(other);
 }
@@ -60,6 +64,10 @@ void Allocation::free() {
         m_allocator.reset();
         m_retained = false;
     }
+}
+
+bool Allocation::seal_executable() {
+    return m_allocator && m_address && m_size && m_allocator->seal_executable(m_address);
 }
 
 void Allocation::retain() noexcept {
@@ -120,111 +128,59 @@ void Allocator::free(uint8_t* address, size_t size) {
     return internal_free(address, size);
 }
 
+bool Allocator::seal_executable(uint8_t* address) {
+    std::scoped_lock lock{m_mutex};
+    const auto it = std::find_if(m_memory.begin(), m_memory.end(),
+        [address](const auto& block) { return block->address == address; });
+    if (it == m_memory.end()) return false;
+    if ((*it)->sealed) return true;
+    if (!vm_protect((*it)->address, (*it)->size, VM_ACCESS_RX)) return false;
+    (*it)->sealed = true;
+    return true;
+}
+
 std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
-    // Align to 2 bytes to pass MFP virtual method check
-    // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#member-function-pointers
-    size_t aligned_size = align_up(size, 2);
-
-    // First search through our list of allocations for a free block that is large
-    // enough.
-    for (const auto& allocation : m_memory) {
-        if (allocation->size < aligned_size) {
-            continue;
-        }
-
-        for (auto node = allocation->freelist.get(); node != nullptr; node = node->next.get()) {
-            // Enough room?
-            if (static_cast<size_t>(node->end - node->start) < aligned_size) {
-                continue;
-            }
-
-            const auto address = node->start;
-
-            // Close enough?
-            if (!in_range(address, desired_addresses, max_distance)) {
-                continue;
-            }
-
-            node->start += aligned_size;
-
-            return Allocation{shared_from_this(), address, size};
-        }
-    }
-
-    // If we didn't find a free block, we need to allocate a new one.
-    auto allocation_size = align_up(aligned_size, system_info().allocation_granularity);
+    // Each code allocation has a private reservation: a later allocation
+    // must never write into a page containing a published RX trampoline.
+    if (size == 0) return std::unexpected{Error::BAD_VIRTUAL_ALLOC};
+    // Candidate addresses still follow allocation granularity, but each
+    // private reservation only commits the pages needed by this one hook.
+    auto allocation_size = align_up(size, system_info().page_size);
+    // Prepare every potentially-throwing owner/container allocation before
+    // VirtualAlloc. Once the OS returns a region, Memory owns it immediately.
+    m_memory.reserve(m_memory.size() + 1);
+    auto allocation = std::make_unique<Memory>();
     auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
 
     if (!allocation_address) {
         return std::unexpected{allocation_address.error()};
     }
 
-    auto& allocation = m_memory.emplace_back(new Memory);
-
     allocation->address = *allocation_address;
     allocation->size = allocation_size;
-    allocation->freelist = std::make_unique<FreeNode>();
-    allocation->freelist->start = *allocation_address + aligned_size;
-    allocation->freelist->end = *allocation_address + allocation_size;
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+    if (SafetyHookTestAllocationOwnershipCheckpoint(*allocation_address, allocation_size))
+        throw std::bad_alloc{};
+#endif
+    // Capacity was reserved before obtaining the region; moving unique_ptr is
+    // noexcept, so there is no unowned allocation window here.
+    m_memory.push_back(std::move(allocation));
 
     return Allocation{shared_from_this(), *allocation_address, size};
 }
 
 void Allocator::internal_free(uint8_t* address, size_t size) {
-    // See internal_allocate_near
-    size = align_up(size, 2);
-
-    for (const auto& allocation : m_memory) {
-        if (allocation->address > address || allocation->address + allocation->size < address) {
-            continue;
-        }
-
-        // Find the right place for our new freenode.
-        FreeNode* prev{};
-
-        for (auto node = allocation->freelist.get(); node != nullptr; prev = node, node = node->next.get()) {
-            if (node->start > address) {
-                break;
-            }
-        }
-
-        // Add new freenode.
-        auto free_node = std::make_unique<FreeNode>();
-
-        free_node->start = address;
-        free_node->end = address + size;
-
-        if (prev == nullptr) {
-            free_node->next.swap(allocation->freelist);
-            allocation->freelist.swap(free_node);
-        } else {
-            free_node->next.swap(prev->next);
-            prev->next.swap(free_node);
-        }
-
-        combine_adjacent_freenodes(*allocation);
-        break;
-    }
-}
-
-void Allocator::combine_adjacent_freenodes(Memory& memory) {
-    for (auto prev = memory.freelist.get(), node = prev; node != nullptr; node = node->next.get()) {
-        if (prev->end == node->start) {
-            prev->end = node->end;
-            prev->next.swap(node->next);
-            node->next.reset();
-            node = prev;
-        } else {
-            prev = node;
-        }
-    }
+    (void)size;
+    const auto it = std::find_if(m_memory.begin(), m_memory.end(),
+        [address](const auto& block) { return block->address == address; });
+    if (it != m_memory.end()) m_memory.erase(it);
 }
 
 std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
     if (desired_addresses.empty()) {
-        if (auto result = vm_allocate(nullptr, size, VM_ACCESS_RWX)) {
+        if (auto result = vm_allocate(nullptr, size, VM_ACCESS_RW)) {
             return result.value();
         }
 
@@ -236,7 +192,7 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
             return nullptr;
         }
 
-        if (auto result = vm_allocate(p, size, VM_ACCESS_RWX)) {
+        if (auto result = vm_allocate(p, size, VM_ACCESS_RW)) {
             return result.value();
         }
 
@@ -501,6 +457,7 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
         m_original_bytes = std::move(other.m_original_bytes);
         m_patch_state = other.m_patch_state;
         m_ever_patched = other.m_ever_patched;
+        m_route_exposed = other.m_route_exposed;
         m_type = other.m_type;
 
         other.m_target = nullptr;
@@ -508,6 +465,7 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
         other.m_trampoline_size = 0;
         other.m_patch_state = PatchState::Unpatched;
         other.m_ever_patched = false;
+        other.m_route_exposed = false;
         other.m_type = Type::Unset;
     }
 
@@ -537,6 +495,10 @@ std::expected<void, InlineHook::Error> InlineHook::setup(
 #endif
     }
 
+    if (!synchronize_code(m_trampoline.data(), m_trampoline_size))
+        return std::unexpected{Error::failed_to_unprotect(m_trampoline.data())};
+    if (!m_trampoline.seal_executable())
+        return std::unexpected{Error::failed_to_unprotect(m_trampoline.data())};
     return {};
 }
 
@@ -731,6 +693,11 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
     std::optional<Error> error;
     bool write_attempted{};
     bool write_succeeded{};
+    bool route_exposed{};
+    // Keep the route target alive before any page can become NX and admit a
+    // VEH redirect. It is returned to ordinary ownership if no route/write
+    // was published by this attempt.
+    m_trampoline.retain();
 
     // jmp from original to trampoline.
     bool operation_succeeded{};
@@ -759,21 +726,26 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
             }
         }
 #endif
-        }, &write_attempted);
+        }, &write_attempted, nullptr, &route_exposed);
     } catch (...) {
+        m_route_exposed |= route_exposed;
         if (write_attempted) {
             m_ever_patched = true;
             m_trampoline.retain();
             m_patch_state = PatchState::Uncertain;
         }
+        if (!m_ever_patched && !m_route_exposed) m_trampoline.unretain();
         return std::unexpected{Error::failed_to_unprotect(m_target)};
     }
 
+    m_route_exposed |= route_exposed;
     if (write_attempted) {
         m_ever_patched = true;
         m_trampoline.retain();
-        m_patch_state = write_succeeded ? PatchState::Patched : PatchState::Uncertain;
+        m_patch_state = write_succeeded && operation_succeeded
+            ? PatchState::Patched : PatchState::Uncertain;
     }
+    if (!m_ever_patched && !m_route_exposed) m_trampoline.unretain();
     if (!operation_succeeded) {
         return std::unexpected{Error::failed_to_unprotect(m_target)};
     }
@@ -797,13 +769,14 @@ std::expected<void, InlineHook::Error> InlineHook::disable() {
 
     bool write_attempted{};
     bool write_succeeded{};
+    bool code_synchronized{};
     bool operation_succeeded{};
     try {
         operation_succeeded = trap_threads_result(m_trampoline.data(), m_target, m_original_bytes.size(),
             [this, &write_succeeded] {
                 std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target);
                 write_succeeded = true;
-            }, &write_attempted);
+            }, &write_attempted, &code_synchronized);
     } catch (...) {
         if (write_attempted)
             m_patch_state = write_succeeded ? PatchState::Unpatched : PatchState::Uncertain;
@@ -812,7 +785,7 @@ std::expected<void, InlineHook::Error> InlineHook::disable() {
     if (write_attempted && !write_succeeded)
         m_patch_state = PatchState::Uncertain;
     else if (write_succeeded)
-        m_patch_state = PatchState::Unpatched;
+        m_patch_state = code_synchronized ? PatchState::Unpatched : PatchState::Uncertain;
     if (!operation_succeeded || !write_succeeded)
         return std::unexpected{Error::failed_to_unprotect(m_target)};
 
@@ -828,7 +801,7 @@ void InlineHook::destroy() {
         return;
     }
 
-    if (m_ever_patched || m_patch_state != PatchState::Unpatched || !disable_result)
+    if (m_ever_patched || m_route_exposed || m_patch_state != PatchState::Unpatched || !disable_result)
         m_trampoline.retain();
     m_trampoline.free();
 }
@@ -932,7 +905,8 @@ MidHook::MidHook(MidHook&& other) noexcept {
 
 MidHook& MidHook::operator=(MidHook&& other) noexcept {
     if (this != &other) {
-        if (m_hook.m_ever_patched || m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
+        if (m_hook.m_ever_patched || m_hook.m_route_exposed ||
+            m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
             m_stub.retain();
         m_hook = std::move(other.m_hook);
         m_target = other.m_target;
@@ -947,7 +921,8 @@ MidHook& MidHook::operator=(MidHook&& other) noexcept {
 }
 
 MidHook::~MidHook() {
-    if (m_hook.m_ever_patched || m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
+    if (m_hook.m_ever_patched || m_hook.m_route_exposed ||
+        m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
         m_stub.retain();
 }
 
@@ -980,6 +955,9 @@ std::expected<void, MidHook::Error> MidHook::setup(
     store(m_stub.data() + 0x59, m_stub.data() + m_stub.size() - 8);
 #endif
 
+    if (!synchronize_code(m_stub.data(), m_stub.size()))
+        return std::unexpected{Error::bad_inline_hook(
+            InlineHook::Error::failed_to_unprotect(m_stub.data()))};
     auto hook_result = InlineHook::create(allocator, m_target, m_stub.data(), InlineHook::StartDisabled);
 
     if (!hook_result) {
@@ -995,13 +973,25 @@ std::expected<void, MidHook::Error> MidHook::setup(
     store(m_stub.data() + sizeof(asm_data) - 4, m_hook.trampoline().data());
 #endif
 
+    // The continuation pointer is the last mutable field. Publish the full
+    // stub only after that store, while the inline hook is still disabled.
+    if (!synchronize_code(m_stub.data(), m_stub.size()) || !m_stub.seal_executable())
+        return std::unexpected{Error::bad_inline_hook(
+            InlineHook::Error::failed_to_unprotect(m_stub.data()))};
+
     return {};
 }
 
 std::expected<void, MidHook::Error> MidHook::enable() {
+    // A trap can redirect another thread as soon as the source page becomes
+    // non-executable. Retain every owned continuation before that transition.
+    m_stub.retain();
     if (auto enable_result = m_hook.enable(); !enable_result) {
-        if (m_hook.m_ever_patched || m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
+        if (m_hook.m_ever_patched || m_hook.m_route_exposed ||
+            m_hook.m_patch_state != InlineHook::PatchState::Unpatched)
             m_stub.retain();
+        else
+            m_stub.unretain();
         return std::unexpected{Error::bad_inline_hook(enable_result.error())};
     }
 
@@ -1032,6 +1022,12 @@ std::expected<void, MidHook::Error> MidHook::disable() {
 
 
 namespace safetyhook {
+static bool synchronize_code(uint8_t* address, size_t size) {
+    if (!address || !size) return false;
+    __builtin___clear_cache(reinterpret_cast<char*>(address),
+        reinterpret_cast<char*>(address + size));
+    return true;
+}
 std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAccess access) {
     int prot = 0;
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -1200,14 +1196,19 @@ SystemInfo system_info() {
 }
 
 static bool trap_threads_result([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
-    const std::function<void()>& run_fn, bool* write_attempted) {
+    const std::function<void()>& run_fn, bool* write_attempted, bool* code_synchronized,
+    bool* route_exposed) {
+    if (code_synchronized) *code_synchronized = false;
+    if (route_exposed) *route_exposed = false;
     auto from_protect = vm_protect(from, len, VM_ACCESS_RWX).value_or(0);
     auto to_protect = vm_protect(to, len, VM_ACCESS_RWX).value_or(0);
     if (write_attempted) *write_attempted = true;
     run_fn();
+    const bool synchronized = synchronize_code(from, len) && synchronize_code(to, len);
+    if (code_synchronized) *code_synchronized = synchronized;
     vm_protect(to, len, to_protect);
     vm_protect(from, len, from_protect);
-    return true;
+    return synchronized;
 }
 
 bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
@@ -1249,8 +1250,28 @@ extern "C" BOOL WINAPI SafetyHookTestVirtualProtect(LPVOID address, SIZE_T size,
 #define safetyhook_virtual_protect VirtualProtect
 #endif
 
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+extern "C" BOOL WINAPI SafetyHookTestFlushInstructionCache(HANDLE process,
+    LPCVOID address, SIZE_T size);
+#define safetyhook_flush_instruction_cache SafetyHookTestFlushInstructionCache
+#else
+#define safetyhook_flush_instruction_cache FlushInstructionCache
+#endif
+
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+extern "C" PVOID WINAPI SafetyHookTestAddVectoredExceptionHandler(ULONG first,
+    PVECTORED_EXCEPTION_HANDLER handler);
+#define safetyhook_add_vectored_handler SafetyHookTestAddVectoredExceptionHandler
+#else
+#define safetyhook_add_vectored_handler AddVectoredExceptionHandler
+#endif
+
 
 namespace safetyhook {
+static bool synchronize_code(uint8_t* address, size_t size) {
+    return address && size && safetyhook_flush_instruction_cache(
+        GetCurrentProcess(), address, size) != FALSE;
+}
 std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAccess access) {
     DWORD protect = 0;
 
@@ -1386,6 +1407,15 @@ SystemInfo system_info() {
     return info;
 }
 
+struct ProtectionPage {
+    uint8_t* address;
+    DWORD original;
+    DWORD temporary;
+    void* allocation_base;
+    DWORD type;
+    bool changed{};
+};
+
 struct TrapInfo {
     uint8_t* from_page_start;
     uint8_t* from_page_end;
@@ -1394,7 +1424,23 @@ struct TrapInfo {
     uint8_t* to_page_end;
     uint8_t* to;
     size_t len;
+    struct Page {
+        uint8_t* address;
+        void* allocation_base;
+        DWORD type;
+        DWORD original_protection;
+        DWORD temporary_protection;
+        bool changed;
+        bool transition_started;
+    };
+    enum class Phase : uint8_t { Armed, Committed, Completed };
+    std::vector<Page> pages;
+    Phase phase{Phase::Armed};
+    uint64_t generation{};
+    bool route_exposed{};
 };
+
+static bool query_page_protection(uint8_t* address, DWORD& protection);
 
 class TrapManager final {
 public:
@@ -1405,73 +1451,112 @@ public:
     // until Windows removes the process; CRT detach must not traverse a map
     // interrupted during hook installation or remove its handler under loader lock.
     static TrapManager* instance;
-    static bool is_destructed;
 
-    TrapManager() { m_trap_veh = AddVectoredExceptionHandler(1, trap_handler); }
-    ~TrapManager() {
-        if (m_trap_veh != nullptr) {
-            RemoveVectoredExceptionHandler(m_trap_veh);
-        }
-        is_destructed = true;
+    bool ensure_handler() {
+        if (!m_trap_veh)
+            m_trap_veh = safetyhook_add_vectored_handler(1, trap_handler);
+        return m_trap_veh != nullptr;
+    }
+    static bool contains_source(const TrapInfo& trap, const uint8_t* address) {
+        const auto source = reinterpret_cast<uintptr_t>(trap.from);
+        const auto candidate = reinterpret_cast<uintptr_t>(address);
+        return candidate >= source && candidate - source < trap.len;
     }
 
-    TrapInfo* find_trap(uint8_t* address) {
-        auto search = std::find_if(m_traps.begin(), m_traps.end(), [address](auto& trap) {
-            return address >= trap.second.from && address < trap.second.from + trap.second.len;
-        });
-
-        if (search == m_traps.end()) {
-            return nullptr;
+    TrapInfo* find_trap_page(uint8_t* address, TrapInfo::Page*& page) {
+        const auto page_address = align_down(address, system_info().page_size);
+        TrapInfo* completed_candidate{};
+        TrapInfo::Page* completed_page{};
+        for (auto& [_, trap] : m_traps) {
+            const auto found = std::find_if(trap.pages.begin(), trap.pages.end(),
+                [page_address](const TrapInfo::Page& candidate) {
+                    return candidate.address == page_address;
+                });
+            if (found == trap.pages.end()) continue;
+            if (trap.phase != TrapInfo::Phase::Completed &&
+                (found->changed || found->transition_started)) {
+                page = &*found;
+                return &trap;
+            }
+            if (found->changed && (!completed_candidate ||
+                trap.generation > completed_candidate->generation)) {
+                completed_candidate = &trap;
+                completed_page = &*found;
+            }
         }
-
-        return &search->second;
+        page = completed_page;
+        return completed_candidate;
     }
 
-    TrapInfo* find_trap_page(uint8_t* address) {
-        auto search = std::find_if(m_traps.begin(), m_traps.end(), [address](auto& trap) {
-            return address >= trap.second.from_page_start && address < trap.second.from_page_end;
-        });
-
-        if (search != m_traps.end()) {
-            return &search->second;
-        }
-
-        search = std::find_if(m_traps.begin(), m_traps.end(), [address](auto& trap) {
-            return address >= trap.second.to_page_start && address < trap.second.to_page_end;
-        });
-
-        if (search != m_traps.end()) {
-            return &search->second;
-        }
-
-        return nullptr;
-    }
-
-    void add_trap(uint8_t* from, uint8_t* to, size_t len) {
+    void add_trap(uint8_t* from, uint8_t* to, size_t len,
+        const std::vector<ProtectionPage>& protection_pages) {
         TrapInfo info{};
-        info.from_page_start = align_down(from, 0x1000);
-        info.from_page_end = align_up(from + len, 0x1000);
+        const auto page_size = system_info().page_size;
+        info.from_page_start = align_down(from, page_size);
+        info.from_page_end = align_up(from + len, page_size);
         info.from = from;
-        info.to_page_start = align_down(to, 0x1000);
-        info.to_page_end = align_up(to + len, 0x1000);
+        info.to_page_start = align_down(to, page_size);
+        info.to_page_end = align_up(to + len, page_size);
         info.to = to;
         info.len = len;
-
+        info.pages.reserve(protection_pages.size());
+        for (const auto& page : protection_pages) {
+            info.pages.push_back({page.address, page.allocation_base, page.type,
+                page.original, page.temporary, page.changed, false});
+        }
+        info.generation = ++m_generation;
         m_traps.insert_or_assign(from, std::move(info));
     }
 
-    void remove_trap(uint8_t* from) {
-        m_traps.erase(from);
+    void mark_page_transition(uint8_t* from, uint8_t* page_address,
+        bool transition_started, bool changed) {
+        const auto found = m_traps.find(from);
+        if (found == m_traps.end()) return;
+        const auto page = std::find_if(found->second.pages.begin(), found->second.pages.end(),
+            [page_address](const TrapInfo::Page& item) { return item.address == page_address; });
+        if (page != found->second.pages.end()) {
+            page->transition_started = transition_started;
+            page->changed |= changed;
+        }
+    }
+
+    void set_phase(uint8_t* from, TrapInfo::Phase phase) {
+        const auto found = m_traps.find(from);
+        if (found != m_traps.end()) found->second.phase = phase;
+    }
+
+    void mark_route_exposed(uint8_t* from) {
+        const auto found = m_traps.find(from);
+        if (found != m_traps.end()) found->second.route_exposed = true;
+    }
+
+    bool route_was_exposed(uint8_t* from) const {
+        const auto found = m_traps.find(from);
+        return found != m_traps.end() && found->second.route_exposed;
     }
 
 private:
     std::map<uint8_t*, TrapInfo> m_traps;
     PVOID m_trap_veh{};
+    uint64_t m_generation{};
+
+    struct DelayedRetryTicket {
+        uint8_t* address{};
+        uint8_t* page_address{};
+        void* allocation_base{};
+        DWORD type{};
+        uint64_t generation{};
+    };
+    static thread_local DelayedRetryTicket delayed_retry_ticket;
 
     static LONG CALLBACK trap_handler(PEXCEPTION_POINTERS exp) {
-        auto exception_code = exp->ExceptionRecord->ExceptionCode;
-
-        if (exception_code != EXCEPTION_ACCESS_VIOLATION) {
+        auto* ctx = exp ? exp->ContextRecord : nullptr;
+        const auto previous_ticket = delayed_retry_ticket;
+        delayed_retry_ticket = {};
+        if (!exp || !exp->ExceptionRecord || !exp->ContextRecord ||
+            exp->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION ||
+            exp->ExceptionRecord->NumberParameters < 2 ||
+            exp->ExceptionRecord->ExceptionInformation[0] != 8) {
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
@@ -1481,25 +1566,100 @@ private:
         const auto shutdown = shutdown_probe.load(std::memory_order_acquire);
         if (shutdown && shutdown()) return EXCEPTION_CONTINUE_SEARCH;
 
-        std::scoped_lock lock{mutex};
         auto* faulting_address = reinterpret_cast<uint8_t*>(exp->ExceptionRecord->ExceptionInformation[1]);
-        auto* trap = instance->find_trap(faulting_address);
+#if SAFETYHOOK_ARCH_X86_64
+        const auto* instruction = reinterpret_cast<uint8_t*>(ctx->Rip);
+#elif SAFETYHOOK_ARCH_X86_32
+        const auto* instruction = reinterpret_cast<uint8_t*>(ctx->Eip);
+#endif
+        if ((ctx->ContextFlags & CONTEXT_CONTROL) != CONTEXT_CONTROL ||
+            faulting_address != instruction ||
+            exp->ExceptionRecord->ExceptionAddress != faulting_address)
+            return EXCEPTION_CONTINUE_SEARCH;
 
-        if (trap == nullptr) {
-            if (instance->find_trap_page(faulting_address) != nullptr) {
-                return EXCEPTION_CONTINUE_EXECUTION;
-            } else {
-                return EXCEPTION_CONTINUE_SEARCH;
+        std::scoped_lock lock{mutex};
+        if (!instance) return EXCEPTION_CONTINUE_SEARCH;
+        TrapInfo::Page* page{};
+        auto* trap = instance->find_trap_page(faulting_address, page);
+        if (!trap || !page) return EXCEPTION_CONTINUE_SEARCH;
+
+        MEMORY_BASIC_INFORMATION current{};
+        if (!VirtualQuery(faulting_address, &current, sizeof(current)) ||
+            current.State != MEM_COMMIT || current.AllocationBase != page->allocation_base ||
+            current.Type != page->type)
+            return EXCEPTION_CONTINUE_SEARCH;
+
+        const bool same_generation_retry = previous_ticket.address == faulting_address &&
+            previous_ticket.generation == trap->generation &&
+            previous_ticket.page_address == page->address &&
+            previous_ticket.allocation_base == page->allocation_base &&
+            previous_ticket.type == page->type;
+        if (same_generation_retry)
+            return EXCEPTION_CONTINUE_SEARCH; // One retry in this generation did not resolve the fault.
+
+        const DWORD base_protection = current.Protect & 0xff;
+        const bool currently_non_executable = base_protection == PAGE_READWRITE ||
+            base_protection == PAGE_WRITECOPY;
+        const DWORD original_base = page->original_protection & 0xff;
+        const DWORD temporary_base = page->temporary_protection & 0xff;
+        const bool originally_executable = original_base == PAGE_EXECUTE ||
+            original_base == PAGE_EXECUTE_READ || original_base == PAGE_EXECUTE_READWRITE ||
+            original_base == PAGE_EXECUTE_WRITECOPY;
+        const bool currently_executable = base_protection == PAGE_EXECUTE ||
+            base_protection == PAGE_EXECUTE_READ || base_protection == PAGE_EXECUTE_READWRITE ||
+            base_protection == PAGE_EXECUTE_WRITECOPY;
+        const bool currently_in_transaction_protection =
+            (temporary_base == PAGE_READWRITE && (base_protection == PAGE_READWRITE ||
+                base_protection == PAGE_WRITECOPY)) ||
+            (temporary_base == PAGE_EXECUTE_READWRITE &&
+                (base_protection == PAGE_EXECUTE_READWRITE ||
+                    base_protection == PAGE_EXECUTE_WRITECOPY));
+
+        if (trap->phase != TrapInfo::Phase::Completed && originally_executable &&
+            (page->transition_started || page->changed) &&
+            currently_in_transaction_protection &&
+            currently_non_executable) {
+            if (TrapManager::contains_source(*trap, faulting_address)) {
+                const auto offset = reinterpret_cast<uintptr_t>(faulting_address) -
+                    reinterpret_cast<uintptr_t>(trap->from);
+                auto* continuation = trap->to + offset;
+                const auto continuation_page = align_down(continuation, system_info().page_size);
+                const auto target_page = std::find_if(trap->pages.begin(), trap->pages.end(),
+                    [continuation_page](const TrapInfo::Page& candidate) {
+                        return candidate.address == continuation_page;
+                    });
+                MEMORY_BASIC_INFORMATION continuation_mbi{};
+                if (target_page != trap->pages.end() &&
+                    VirtualQuery(continuation, &continuation_mbi, sizeof(continuation_mbi)) &&
+                    continuation_mbi.State == MEM_COMMIT &&
+                    continuation_mbi.AllocationBase == target_page->allocation_base &&
+                    continuation_mbi.Type == target_page->type) {
+                    const auto continuation_protection = continuation_mbi.Protect & 0xff;
+                    const bool continuation_executable = continuation_protection == PAGE_EXECUTE ||
+                        continuation_protection == PAGE_EXECUTE_READ ||
+                        continuation_protection == PAGE_EXECUTE_READWRITE ||
+                        continuation_protection == PAGE_EXECUTE_WRITECOPY;
+                    if (continuation_executable) {
+                        instance->mark_route_exposed(trap->from);
+                        fix_ip(ctx, faulting_address, continuation);
+                    }
+                }
             }
+            return EXCEPTION_CONTINUE_EXECUTION;
         }
 
-        auto* ctx = exp->ContextRecord;
-
-        for (size_t i = 0; i < trap->len; i++) {
-            fix_ip(ctx, trap->from + i, trap->to + i);
+        // The page was made non-executable by this transaction and its complete
+        // bytes/cache state are committed. A delayed AV may arrive after RX was
+        // restored or after the transaction returned. Require the same committed
+        // allocation and refuse a second retry if the transient fault repeats.
+        if ((trap->phase == TrapInfo::Phase::Committed ||
+                trap->phase == TrapInfo::Phase::Completed) &&
+            page->changed && originally_executable && currently_executable) {
+            delayed_retry_ticket = {faulting_address, page->address,
+                page->allocation_base, page->type, trap->generation};
+            return EXCEPTION_CONTINUE_EXECUTION;
         }
-
-        return EXCEPTION_CONTINUE_EXECUTION;
+        return EXCEPTION_CONTINUE_SEARCH;
     }
 #ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
 public:
@@ -1509,11 +1669,235 @@ public:
             std::memory_order_acq_rel);
         EXCEPTION_RECORD record{};
         record.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
-        EXCEPTION_POINTERS exception{&record, nullptr};
+        record.NumberParameters = 2;
+        record.ExceptionInformation[0] = 8;
+        CONTEXT context{};
+        EXCEPTION_POINTERS exception{&record, &context};
         std::scoped_lock lock{mutex};
         const auto result = trap_handler(&exception);
         shutdown_probe.store(previous, std::memory_order_release);
         return result == EXCEPTION_CONTINUE_SEARCH;
+    }
+    static bool TestVehAdmission() {
+        auto* source = static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000,
+            MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READ));
+        auto* destination = static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000,
+            MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READ));
+        if (!source || !destination) {
+            if (source) VirtualFree(source, 0, MEM_RELEASE);
+            if (destination) VirtualFree(destination, 0, MEM_RELEASE);
+            return false;
+        }
+        {
+            std::scoped_lock lock{mutex};
+            if (!instance) instance = new TrapManager{};
+            MEMORY_BASIC_INFORMATION mbi{};
+            if (!VirtualQuery(source, &mbi, sizeof(mbi))) {
+                VirtualFree(source, 0, MEM_RELEASE);
+                return false;
+            }
+            MEMORY_BASIC_INFORMATION destination_mbi{};
+            if (!VirtualQuery(destination, &destination_mbi, sizeof(destination_mbi))) {
+                VirtualFree(source, 0, MEM_RELEASE);
+                VirtualFree(destination, 0, MEM_RELEASE);
+                return false;
+            }
+            const std::vector<ProtectionPage> pages{
+                {source, mbi.Protect, PAGE_READWRITE, mbi.AllocationBase, mbi.Type, false},
+                {destination, destination_mbi.Protect, PAGE_READWRITE,
+                    destination_mbi.AllocationBase, destination_mbi.Type, false}};
+            instance->add_trap(source, destination, 4, pages);
+            instance->set_phase(source, TrapInfo::Phase::Armed);
+            instance->mark_page_transition(source, source, true, false);
+            DWORD previous{};
+            if (!VirtualProtect(source, 0x1000, PAGE_READWRITE, &previous)) {
+                instance->set_phase(source, TrapInfo::Phase::Completed);
+                VirtualFree(source, 0, MEM_RELEASE);
+                VirtualFree(destination, 0, MEM_RELEASE);
+                return false;
+            }
+            instance->mark_page_transition(source, source, false, true);
+        }
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
+        record.NumberParameters = 2;
+        record.ExceptionInformation[1] = reinterpret_cast<ULONG_PTR>(source);
+        record.ExceptionAddress = source;
+        CONTEXT context{};
+        context.ContextFlags = CONTEXT_CONTROL;
+#if SAFETYHOOK_ARCH_X86_64
+        context.Rip = reinterpret_cast<DWORD64>(source);
+#elif SAFETYHOOK_ARCH_X86_32
+        context.Eip = reinterpret_cast<DWORD>(source);
+#endif
+        EXCEPTION_POINTERS exception{&record, &context};
+        auto invoke = [&](ULONG_PTR access) {
+            record.ExceptionInformation[0] = access;
+            return trap_handler(&exception);
+        };
+        bool valid = invoke(0) == EXCEPTION_CONTINUE_SEARCH &&
+            invoke(1) == EXCEPTION_CONTINUE_SEARCH;
+        record.NumberParameters = 1;
+        valid &= invoke(8) == EXCEPTION_CONTINUE_SEARCH;
+        record.NumberParameters = 2;
+        record.ExceptionAddress = source + 1;
+        valid &= invoke(8) == EXCEPTION_CONTINUE_SEARCH;
+        record.ExceptionAddress = source;
+#if SAFETYHOOK_ARCH_X86_64
+        context.Rip = reinterpret_cast<DWORD64>(source + 1);
+#elif SAFETYHOOK_ARCH_X86_32
+        context.Eip = reinterpret_cast<DWORD>(source + 1);
+#endif
+        valid &= invoke(8) == EXCEPTION_CONTINUE_SEARCH;
+#if SAFETYHOOK_ARCH_X86_64
+        context.Rip = reinterpret_cast<DWORD64>(source);
+#elif SAFETYHOOK_ARCH_X86_32
+        context.Eip = reinterpret_cast<DWORD>(source);
+#endif
+        valid &= invoke(8) == EXCEPTION_CONTINUE_EXECUTION;
+#if SAFETYHOOK_ARCH_X86_64
+        valid &= context.Rip == reinterpret_cast<DWORD64>(destination);
+#elif SAFETYHOOK_ARCH_X86_32
+        valid &= context.Eip == reinterpret_cast<DWORD>(destination);
+#endif
+        DWORD previous{};
+        valid &= VirtualProtect(source, 0x1000, PAGE_EXECUTE_READ, &previous) != FALSE;
+        {
+            std::scoped_lock lock{mutex};
+            instance->set_phase(source, TrapInfo::Phase::Completed);
+        }
+        record.ExceptionInformation[1] = reinterpret_cast<ULONG_PTR>(source);
+        record.ExceptionAddress = source;
+#if SAFETYHOOK_ARCH_X86_64
+        context.Rip = reinterpret_cast<DWORD64>(source);
+#elif SAFETYHOOK_ARCH_X86_32
+        context.Eip = reinterpret_cast<DWORD>(source);
+#endif
+        valid &= invoke(8) == EXCEPTION_CONTINUE_EXECUTION;
+#if SAFETYHOOK_ARCH_X86_64
+        valid &= context.Rip == reinterpret_cast<DWORD64>(source);
+#elif SAFETYHOOK_ARCH_X86_32
+        valid &= context.Eip == reinterpret_cast<DWORD>(source);
+#endif
+        valid &= invoke(8) == EXCEPTION_CONTINUE_SEARCH;
+        VirtualFree(source, 0, MEM_RELEASE);
+        VirtualFree(destination, 0, MEM_RELEASE);
+        return valid;
+    }
+    static bool TestVehTransactionIsolation() {
+        auto* source = static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000,
+            MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READ));
+        auto* first_destination = static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000,
+            MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READ));
+        auto* reused_destination = static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000,
+            MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READ));
+        if (!source || !first_destination || !reused_destination) return false;
+
+        auto page_info = [](uint8_t* address) {
+            MEMORY_BASIC_INFORMATION mbi{};
+            if (!VirtualQuery(address, &mbi, sizeof(mbi))) return TrapInfo::Page{};
+            return TrapInfo::Page{align_down(address, system_info().page_size),
+                mbi.AllocationBase, mbi.Type, mbi.Protect, PAGE_READWRITE, false, false};
+        };
+        const auto source_page = page_info(source);
+        const auto destination_page = page_info(reused_destination);
+        if (!source_page.allocation_base || !destination_page.allocation_base) return false;
+
+        uint64_t first_generation{};
+        {
+            std::scoped_lock lock{mutex};
+            if (!instance) instance = new TrapManager{};
+            const std::vector<ProtectionPage> pages{
+                {source_page.address, source_page.original_protection, PAGE_READWRITE,
+                    source_page.allocation_base, source_page.type, true},
+                {align_down(first_destination, system_info().page_size), PAGE_EXECUTE_READ,
+                    PAGE_READWRITE, reinterpret_cast<void*>(first_destination), MEM_PRIVATE, false}};
+            instance->add_trap(source, first_destination, 8, pages);
+            first_generation = instance->m_traps.find(source)->second.generation;
+            instance->set_phase(source, TrapInfo::Phase::Completed);
+            instance->mark_page_transition(source, source_page.address, false, true);
+            instance->add_trap(source + 0x20, first_destination, 8, pages);
+            instance->set_phase(source + 0x20, TrapInfo::Phase::Armed);
+            instance->mark_page_transition(source + 0x20, source_page.address, true, true);
+        }
+
+        DWORD previous{};
+        if (!VirtualProtect(source, 0x1000, PAGE_READWRITE, &previous)) return false;
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
+        record.NumberParameters = 2;
+        record.ExceptionInformation[0] = 8;
+        record.ExceptionInformation[1] = reinterpret_cast<ULONG_PTR>(source);
+        record.ExceptionAddress = source;
+        CONTEXT context{};
+        context.ContextFlags = CONTEXT_CONTROL;
+#if SAFETYHOOK_ARCH_X86_64
+        context.Rip = reinterpret_cast<DWORD64>(source);
+#elif SAFETYHOOK_ARCH_X86_32
+        context.Eip = reinterpret_cast<DWORD>(source);
+#endif
+        EXCEPTION_POINTERS exception{&record, &context};
+        const auto stale_route_result = trap_handler(&exception);
+#if SAFETYHOOK_ARCH_X86_64
+        bool isolated = context.Rip == reinterpret_cast<DWORD64>(source);
+#elif SAFETYHOOK_ARCH_X86_32
+        bool isolated = context.Eip == reinterpret_cast<DWORD>(source);
+#endif
+        isolated &= stale_route_result == EXCEPTION_CONTINUE_EXECUTION;
+        {
+            std::scoped_lock lock{mutex};
+            instance->set_phase(source + 0x20, TrapInfo::Phase::Completed);
+        }
+
+        // Reuse the exact source address with a new transaction generation.
+        // AllocationBase/Type can be identical after reuse, so the old thread
+        // retry ticket must not suppress the new route.
+        DWORD ignored{};
+        if (!VirtualProtect(source, 0x1000, PAGE_EXECUTE_READ, &ignored) ||
+            !VirtualFree(source, 0, MEM_RELEASE)) return false;
+        auto* reused_source = static_cast<uint8_t*>(VirtualAlloc(source, 0x1000,
+            MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READ));
+        if (reused_source != source) return false;
+        if (!VirtualProtect(reused_source, 0x1000, PAGE_READWRITE, &ignored)) return false;
+        MEMORY_BASIC_INFORMATION reused_mbi{};
+        if (!VirtualQuery(reused_source, &reused_mbi, sizeof(reused_mbi))) return false;
+        const auto reused_page = align_down(reused_source, system_info().page_size);
+        uint64_t reused_generation{};
+        {
+            std::scoped_lock lock{mutex};
+            const std::vector<ProtectionPage> pages{
+                {reused_page, PAGE_EXECUTE_READ, PAGE_READWRITE,
+                    reused_mbi.AllocationBase, reused_mbi.Type, true},
+                {align_down(reused_destination, system_info().page_size), PAGE_EXECUTE_READ,
+                    PAGE_READWRITE, reinterpret_cast<void*>(reused_destination), MEM_PRIVATE, false}};
+            instance->add_trap(reused_source, reused_destination, 8, pages);
+            reused_generation = instance->m_traps.find(reused_source)->second.generation;
+            instance->set_phase(reused_source, TrapInfo::Phase::Armed);
+            instance->mark_page_transition(reused_source, reused_page, true, true);
+            delayed_retry_ticket = {reused_source, reused_page, reused_mbi.AllocationBase,
+                reused_mbi.Type, first_generation};
+        }
+        record.ExceptionInformation[1] = reinterpret_cast<ULONG_PTR>(reused_source);
+        record.ExceptionAddress = reused_source;
+#if SAFETYHOOK_ARCH_X86_64
+        context.Rip = reinterpret_cast<DWORD64>(reused_source);
+#elif SAFETYHOOK_ARCH_X86_32
+        context.Eip = reinterpret_cast<DWORD>(reused_source);
+#endif
+        const auto new_generation_result = trap_handler(&exception);
+#if SAFETYHOOK_ARCH_X86_64
+        isolated &= context.Rip == reinterpret_cast<DWORD64>(reused_destination);
+#elif SAFETYHOOK_ARCH_X86_32
+        isolated &= context.Eip == reinterpret_cast<DWORD>(reused_destination);
+#endif
+        isolated &= new_generation_result == EXCEPTION_CONTINUE_EXECUTION &&
+            reused_generation != first_generation;
+
+        VirtualProtect(reused_source, 0x1000, PAGE_EXECUTE_READ, &ignored);
+        VirtualFree(reused_source, 0, MEM_RELEASE);
+        VirtualFree(first_destination, 0, MEM_RELEASE);
+        VirtualFree(reused_destination, 0, MEM_RELEASE);
+        return isolated;
     }
 #endif
 };
@@ -1522,11 +1906,17 @@ std::mutex TrapManager::mutex;
 std::atomic<TrapManager::ShutdownProbe> TrapManager::shutdown_probe{};
 static_assert(std::atomic<TrapManager::ShutdownProbe>::is_always_lock_free);
 TrapManager* TrapManager::instance{};
-bool TrapManager::is_destructed = false;
+thread_local TrapManager::DelayedRetryTicket TrapManager::delayed_retry_ticket{};
 
 #ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
 extern "C" bool SafetyHookTestShutdownTrapBypass() {
     return TrapManager::TestShutdownBypass();
+}
+extern "C" bool SafetyHookTestVehAdmission() {
+    return TrapManager::TestVehAdmission();
+}
+extern "C" bool SafetyHookTestVehTransactionIsolation() {
+    return TrapManager::TestVehTransactionIsolation();
 }
 #endif
 
@@ -1535,9 +1925,65 @@ void find_me() {
 
 static std::mutex virtual_protect_mutex;
 
+static bool query_page_protection(uint8_t* address, DWORD& protection) {
+    MEMORY_BASIC_INFORMATION mbi{};
+    if (!VirtualQuery(address, &mbi, sizeof(mbi)) || mbi.State != MEM_COMMIT)
+        return false;
+    protection = mbi.Protect;
+    return protection != 0;
+}
+
+static bool protection_matches(DWORD actual, DWORD requested) {
+    // SEC_IMAGE pages are copy-on-write: Windows reports WRITECOPY even when
+    // VirtualProtect accepted READWRITE. Both variants preserve the required
+    // read/write/execute capability for this short patch transaction.
+    return actual == requested ||
+        (requested == PAGE_READWRITE && actual == PAGE_WRITECOPY) ||
+        (requested == PAGE_EXECUTE_READWRITE && actual == PAGE_EXECUTE_WRITECOPY);
+}
+
+// A wrapper may report failure after VirtualProtect has changed the page.
+// Always inspect the effective state before deciding whether rollback is needed.
+static bool change_page_protection(const ProtectionPage& page, DWORD protection) {
+    DWORD previous{};
+    const bool reported = safetyhook_virtual_protect(page.address, system_info().page_size,
+        protection, &previous) != FALSE;
+    DWORD actual{};
+    return reported && query_page_protection(page.address, actual) &&
+        protection_matches(actual, protection);
+}
+
+static bool restore_pages(const std::vector<ProtectionPage>& pages, bool& reported_failure) {
+    // Two bounded attempts cover a transient VirtualProtect failure. If either
+    // page remains in an unexpected state, the caller must not retire its trap.
+    for (auto it = pages.rbegin(); it != pages.rend(); ++it) {
+        DWORD actual{};
+        if (!query_page_protection(it->address, actual)) return false;
+        if (actual == it->original) continue;
+        bool restored = false;
+        for (unsigned attempt = 0; attempt < 2 && !restored; ++attempt) {
+            const bool reported = change_page_protection(*it, it->original);
+            if (!reported) reported_failure = true;
+            if (!query_page_protection(it->address, actual)) return false;
+            restored = actual == it->original;
+        }
+        if (!restored) return false;
+    }
+    return true;
+}
+
+[[noreturn]] static void unrecoverable_protection_failure() {
+    // Continuing after an execute page is left NX (or after a patch remains
+    // writable) is unsafe. Fail fast while the trap metadata is still live.
+    RaiseFailFastException(nullptr, nullptr, 0);
+    std::terminate();
+}
+
 static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn,
-    bool* write_attempted) {
+    bool* write_attempted, bool* code_synchronized, bool* route_exposed) {
     if (write_attempted) *write_attempted = false;
+    if (code_synchronized) *code_synchronized = false;
+    if (route_exposed) *route_exposed = false;
     // Resolve outside our mutex: GetModuleHandle may take loader lock. No
     // module loading or symbol resolution occurs in the exception handler.
     if (!TrapManager::shutdown_probe.load(std::memory_order_acquire)) {
@@ -1559,7 +2005,7 @@ static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len, const st
         return false;
     }
 
-    auto new_protect = PAGE_READWRITE;
+    DWORD new_protect = PAGE_READWRITE;
 
     if (from_mbi.AllocationBase == find_me_mbi.AllocationBase || to_mbi.AllocationBase == find_me_mbi.AllocationBase) {
         new_protect = PAGE_EXECUTE_READWRITE;
@@ -1575,44 +2021,90 @@ static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len, const st
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
-    if (!TrapManager::is_destructed) {
-        std::scoped_lock lock{TrapManager::mutex};
-
-        if (TrapManager::instance == nullptr) {
-            TrapManager::instance = new TrapManager{};
-        }
-
-        TrapManager::instance->add_trap(from, to, len);
-    }
-
     // Make sure we aren't working on a different address in the same memory page on a different thread.
     std::scoped_lock vp_lock{virtual_protect_mutex};
 
-    DWORD from_protect;
-    DWORD to_protect;
+    std::vector<ProtectionPage> pages;
+    auto collect_pages = [&](uint8_t* address) {
+        const auto start = align_down(address, si.page_size);
+        const auto end = align_up(address + len, si.page_size);
+        for (auto* page = start; page < end; page += si.page_size) {
+            const auto existing = std::find_if(pages.begin(), pages.end(),
+                [page](const ProtectionPage& entry) { return entry.address == page; });
+            if (existing != pages.end()) continue;
+            DWORD original{};
+            if (!query_page_protection(page, original)) return false;
+            MEMORY_BASIC_INFORMATION mbi{};
+            if (!VirtualQuery(page, &mbi, sizeof(mbi)) || mbi.State != MEM_COMMIT)
+                return false;
+            pages.push_back({page, original, new_protect, mbi.AllocationBase,
+                mbi.Type, false});
+        }
+        return true;
+    };
+    if (!collect_pages(from) || !collect_pages(to)) return false;
 
-    const bool fromChanged = safetyhook_virtual_protect(from, len, new_protect, &from_protect) != FALSE;
-    const bool toChanged = fromChanged &&
-        safetyhook_virtual_protect(to, len, new_protect, &to_protect) != FALSE;
-    if (!toChanged) {
-        if (fromChanged) safetyhook_virtual_protect(from, len, from_protect, &from_protect);
+    {
         std::scoped_lock lock{TrapManager::mutex};
-        if (TrapManager::instance) TrapManager::instance->remove_trap(from);
-        return false;
+        if (TrapManager::instance == nullptr) TrapManager::instance = new TrapManager{};
+        // Register only after serialization, so a concurrent transaction
+        // cannot replace a live trap for the same source address.
+        if (!TrapManager::instance->ensure_handler()) return false;
+        TrapManager::instance->add_trap(from, to, len, pages);
+    }
+
+    auto update_page_state = [&](const ProtectionPage& page) {
+        DWORD actual{};
+        const bool changed = query_page_protection(page.address, actual) &&
+            actual != page.original;
+        std::scoped_lock lock{TrapManager::mutex};
+        TrapManager::instance->mark_page_transition(from, page.address, false, changed);
+        return changed;
+    };
+    auto set_trap_phase = [&](TrapInfo::Phase phase) {
+        std::scoped_lock lock{TrapManager::mutex};
+        TrapManager::instance->set_phase(from, phase);
+    };
+    auto publish_route_exposure = [&] {
+        if (!route_exposed) return;
+        std::scoped_lock lock{TrapManager::mutex};
+        *route_exposed = TrapManager::instance->route_was_exposed(from);
+    };
+    bool reported_failure = false;
+    for (const auto& page : pages) {
+        {
+            std::scoped_lock lock{TrapManager::mutex};
+            TrapManager::instance->mark_page_transition(from, page.address, true, false);
+        }
+        if (!change_page_protection(page, page.temporary)) {
+            reported_failure = true;
+            update_page_state(page); // Handles failure reported after the OS changed protection.
+            set_trap_phase(TrapInfo::Phase::Committed); // No patch callback has run yet.
+            if (!restore_pages(pages, reported_failure)) unrecoverable_protection_failure();
+            set_trap_phase(TrapInfo::Phase::Completed);
+            publish_route_exposure();
+            return false;
+        }
+        update_page_state(page);
     }
 
     if (write_attempted) *write_attempted = true;
+    bool callback_failed = false;
     if (run_fn) {
-        run_fn();
+        try { run_fn(); } catch (...) { callback_failed = true; }
     }
+    if (callback_failed) unrecoverable_protection_failure();
 
-    const bool toRestored = safetyhook_virtual_protect(to, len, to_protect, &to_protect) != FALSE;
-    const bool fromRestored = safetyhook_virtual_protect(from, len, from_protect, &from_protect) != FALSE;
-    {
-        std::scoped_lock lock{TrapManager::mutex};
-        if (TrapManager::instance) TrapManager::instance->remove_trap(from);
-    }
-    return toRestored && fromRestored;
+    // Keep execution trapped until both changed ranges have been synchronized.
+    // The full newly emitted stub/trampoline is flushed before hook publication.
+    const bool fromFlushed = synchronize_code(from, len);
+    const bool toFlushed = synchronize_code(to, len);
+    if (code_synchronized) *code_synchronized = fromFlushed && toFlushed;
+    set_trap_phase(TrapInfo::Phase::Committed);
+    if (!restore_pages(pages, reported_failure)) unrecoverable_protection_failure();
+    set_trap_phase(TrapInfo::Phase::Completed);
+    publish_route_exposure();
+    return fromFlushed && toFlushed && !reported_failure && !callback_failed;
 }
 
 bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
@@ -1620,6 +2112,8 @@ bool trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
 }
 
 #undef safetyhook_virtual_protect
+#undef safetyhook_flush_instruction_cache
+#undef safetyhook_add_vectored_handler
 
 void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {
     auto* ctx = reinterpret_cast<CONTEXT*>(thread_ctx);

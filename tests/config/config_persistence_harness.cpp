@@ -294,6 +294,54 @@ namespace
             [](std::string) {});
     }
 
+    bool TestStagingNameOwnership(const std::filesystem::path& directory)
+    {
+        const auto path = directory / L"owned-staging.ini";
+        const auto staging = std::filesystem::path(path.wstring() + L".tmp");
+        const auto victim = directory / L"unrelated.txt";
+        const std::string original = "[Gameplay]\nEnabled=true\n";
+        const std::string sentinel = "unrelated data must survive";
+        if (!WriteText(path, original) || !WriteText(staging, sentinel)) return false;
+        const bool occupied = !Persist(path, "false") && !Synchronize(path) &&
+            ReadText(path) == original && ReadText(staging) == sentinel;
+        if (!DeleteFileW(staging.c_str()) || !WriteText(victim, sentinel) ||
+            !CreateHardLinkW(staging.c_str(), victim.c_str(), nullptr)) {
+            std::printf("hardlink_fixture_setup_error=%lu occupied=%d\n", GetLastError(), occupied);
+            return false;
+        }
+        const bool linked = !Persist(path, "false") && !Synchronize(path) &&
+            ReadText(path) == original && ReadText(victim) == sentinel &&
+            ReadText(staging) == sentinel;
+        // The normal log-open path must also refuse to truncate a hard link.
+        platform::win32::NativeFile log;
+        const bool writeRefused = !log.Open(staging.c_str(), true) &&
+            ReadText(victim) == sentinel;
+        std::printf("staging_ownership_details occupied=%d linked=%d write_refused=%d\n",
+            occupied, linked, writeRefused);
+        return occupied && linked && writeRefused;
+    }
+
+    bool TestOversizedConfigIsNotReadOrRewritten(const std::filesystem::path& directory)
+    {
+        const auto path = directory / L"oversized.ini";
+        const HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr,
+            CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE) return false;
+        LARGE_INTEGER size{};
+        size.QuadPart = 4u * 1024u * 1024u + 1u;
+        const bool created = SetFilePointerEx(file, size, nullptr, FILE_BEGIN) &&
+            SetEndOfFile(file);
+        CloseHandle(file);
+        FileIdentityAndTime before{}, after{};
+        std::string retained = "unchanged";
+        const bool refused = created && ReadFileIdentityAndTime(path, before) &&
+            !platform::win32::ReadNativeFile(path.c_str(), retained) &&
+            retained == "unchanged" && !Synchronize(path) &&
+            !Persist(path, "false") && ReadFileIdentityAndTime(path, after) &&
+            SameFileIdentityAndTime(before, after);
+        return refused;
+    }
+
     bool TestCanonicalInitialConfigDocumentation(const std::filesystem::path& path)
     {
         config::FeatureConfig configuration{};
@@ -1743,6 +1791,10 @@ int main()
     }
 
     const auto path = directory / "config.ini";
+    const bool secureStaging = TestStagingNameOwnership(directory);
+    const bool boundedRead = TestOversizedConfigIsNotReadOrRewritten(directory);
+    std::printf("staging_name_ownership_and_hardlinks=%s oversized_config_refused=%s\n",
+        secureStaging ? "PASS" : "FAIL", boundedRead ? "PASS" : "FAIL");
     const auto initialPath = directory / "initial.ini";
     const auto readOnlyPath = directory / "read-only.ini";
     const auto noOpPath = directory / "no-op.ini";
@@ -1823,7 +1875,7 @@ int main()
         userCommentsRemoved ? "PASS" : "FAIL",
         modifiedLegacyReplaced ? "PASS" : "FAIL",
         styleNormalization ? "PASS" : "FAIL");
-    return normal && midReadFailure && duplicateOverlayPlacement && logicalSettings && multiValueAtomic && staging && replacement && readOnly && templateNormal && templateStaging &&
+    return secureStaging && boundedRead && normal && midReadFailure && duplicateOverlayPlacement && logicalSettings && multiValueAtomic && staging && replacement && readOnly && templateNormal && templateStaging &&
         templateReplacement && templateRepair && unknownRecovery && bomMigration && diagnostics && overlayLanguage &&
         overlayEnabled && overlayFontSize && cinematicFovMode && cinematicMigrationRoundTrips &&
         dialogueMigrationRoundTrips &&

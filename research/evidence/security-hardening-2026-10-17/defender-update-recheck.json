@@ -1,0 +1,54 @@
+{
+  "request": "Recheck after the user reported updating local Windows Defender",
+  "date": "2026-10-17",
+  "platform": "4.18.26090.9",
+  "engine_before_and_after_all_scans": "1.1.26090.9",
+  "signatures_before_and_after_all_scans": "1.461.74.0",
+  "signature_last_updated_utc": "2026-10-17T11:07:43Z",
+  "mode": "SxS Passive Mode",
+  "SubmitSamplesConsent": 2,
+  "MAPSReporting": 2,
+  "scanner_options": [
+    "-Scan",
+    "-ScanType",
+    "3",
+    "-File",
+    "<exact preserved ASI>",
+    "-DisableRemediation",
+    "-ReturnHR"
+  ],
+  "samples": [
+    {
+      "started_utc": "2026-10-17T18:28:50.7019628Z",
+      "sha256_before": "5124A197A036BFF5C630CA0E48250C3520745D508CC7E66465071ED75BA8E654",
+      "sha256_after": "5124A197A036BFF5C630CA0E48250C3520745D508CC7E66465071ED75BA8E654",
+      "exit_code": 0,
+      "timed_out": false,
+      "cleanup_verified": true,
+      "output_truncated": false,
+      "console_result": "Scan starting... / Scan finished. / Scanning <exact preserved ASI path> found no threats."
+    },
+    {
+      "started_utc": "2026-10-17T18:28:50.9499743Z",
+      "sha256_before": "CC40B287F5C72A5AD7DE154241C0630094F0D49CA7523564F637327EC23F67CB",
+      "sha256_after": "CC40B287F5C72A5AD7DE154241C0630094F0D49CA7523564F637327EC23F67CB",
+      "exit_code": 0,
+      "timed_out": false,
+      "cleanup_verified": true,
+      "output_truncated": false,
+      "console_result": "Scan starting... / Scan finished. / Scanning <exact preserved ASI path> found no threats."
+    },
+    {
+      "started_utc": "2026-10-17T18:28:51.1951432Z",
+      "sha256_before": "492A5884528ED8BA7C6401D15FF178B9EF2AFA77DD1903F8A687A342D7591298",
+      "sha256_after": "492A5884528ED8BA7C6401D15FF178B9EF2AFA77DD1903F8A687A342D7591298",
+      "exit_code": 0,
+      "timed_out": false,
+      "cleanup_verified": true,
+      "output_truncated": false,
+      "console_result": "Scan starting... / Scan finished. / Scanning <exact preserved ASI path> found no threats."
+    }
+  ],
+  "remaining_scanner_processes": 0,
+  "interpretation": "The repeated scan requests completed without detection. Installed active engine/signatures and the signature update time were unchanged from the previous run; this is not evidence of scanning with newer signatures. Scanner cache use was not determined."
+}

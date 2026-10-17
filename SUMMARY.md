@@ -26,6 +26,7 @@ Gameplay, Cinematics, Dialogue and Overlay have independent enable settings. Cam
 
 - The settings Overlay has localized controls, tooltips, hotkey rebinding, Camera Integration status and a read-only Camera State inspector. Camera State can expand into a separately scrollable third column; its toggle is localized across the 18 embedded locales.
 - The Overlay uses its own unowned top-level `OverlayHwnd` and persistent DirectComposition target. `GameHwnd` remains the host/input/language/geometry boundary. The display HWND is click-through; the existing owner thread owns ImGui, D3D11, DirectComposition and display-window teardown.
+- Startup discovery is event-driven: the Overlay worker creates its message queue before publishing its thread ID, coalesces refresh requests, and can wait for a suitable visible game HWND before initializing the presenter. A live run confirmed that discovery can remain pending for tens of seconds and later initialize successfully without restarting the worker; this does not establish identical timing on every launch.
 - The startup welcome toast is gated on runtime/Overlay readiness and observed game data (or the defined safe fallback); its one-shot lifetime remains draw/commit-gated at 10 seconds. User observation confirmed one visible startup run; visibility has not been established as universal across runs.
 - `[Overlay] Enabled=false` disables the Overlay subsystem after restart; it does not disable Gameplay, Cinematics or Dialogue correction. Passive runtime diagnostics are part of the ordinary ASI and controlled by `[Diagnostics] Enabled` in the INI.
 - The INI is a user-owned runtime file generated beside the ASI and excluded from the release ZIP. Known older layouts are rebuilt while preserving compatible values; malformed input is backed up before supported recovery. A canonical unchanged file is not rewritten. User-authored comments are not preserved; canonical documentation is regenerated.
@@ -33,15 +34,17 @@ Gameplay, Cinematics, Dialogue and Overlay have independent enable settings. Cam
 ## Architecture and workflow
 
 - `src/plugin/runtime.cpp` is the single runtime composition root for native callbacks, hooks, workers, lifecycle and cross-domain camera coordination.
+- SafetyHook validates and intercepts authored game-image sites in-process. Its patch transactions track page-protection recovery and trap generations; emitted trampoline/stub code is published RX, and continuations exposed to concurrent execution retain process-lifetime storage when required. These are selected-path safety guarantees, not proof against every OS failure or thread schedule.
 - Domain calculations and transaction helpers are separated where they have useful independent responsibilities. Runtime decomposition B1–B7 is complete with documented `Remain` decisions; further file splitting is not a goal by itself.
 - Overlay code is divided among composition, input, localization, presentation and presenter responsibilities. Game callbacks use nonblocking admission/command paths; the Overlay owner performs graphics teardown.
 - `build.cmd` is the production build entry point. CMake + Ninja provides the incremental build graph; `test.cmd` is the canonical sequential test entry point. Build/test outputs are isolated from release contents.
-- The identified SL01/SL02 CRT teardown paths have been hardened and ordinary game exit was observed. This is not a blanket guarantee for crashes, explicit DLL unload, third-party teardown, or graphics-driver completion.
+- The specifically identified SL01/SL02 CRT teardown paths have been hardened, and ordinary game exit was observed. WB01/WB02 retry-generation and continuation-lifetime findings also have targeted offline fixes and regression evidence. This is not a blanket guarantee for crashes, explicit DLL unload, third-party teardown, or graphics-driver completion.
 
 ## Known operational boundaries
 
 - The Overlay-owned HWND architecture separates display from the game window and uses a persistent DirectComposition target. Its user-observed compatibility with NVIDIA's on-screen HUD is positive; the G-SYNC Indicator disappearing while the menu is open is accepted behavior and does not establish whether VRR itself changes.
 - A startup-area presenting-thread pause has been observed. Available traces show long `UserRequest` waits but do not identify the waited object or cause; it is not established as an Overlay defect.
+- Automatic startup-toast visibility has been observed in a live run, but not proven reliable across all launches. Internal draw/commit and TTL evidence does not itself prove physical display presentation.
 - The identified shutdown paths involving CRT file streams and selected global-container destructors have been hardened. This is not a blanket guarantee for crashes, explicit DLL unload, third-party teardown or graphics-driver completion.
 
 ## Known boundaries

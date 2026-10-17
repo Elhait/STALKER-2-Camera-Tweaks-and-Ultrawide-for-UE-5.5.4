@@ -213,6 +213,30 @@ namespace overlay
         std::atomic<bool> pending_{};
     };
 
+    // Coalesces owner-thread presenter reconciliation requests independently
+    // from the message queue; the owner event remains the durable wake source.
+    class PresenterRefreshSignal
+    {
+    public:
+        void Request() noexcept
+        {
+            pending_.store(true, std::memory_order_release);
+        }
+
+        bool Take() noexcept
+        {
+            return pending_.exchange(false, std::memory_order_acq_rel);
+        }
+
+        bool pending() const noexcept
+        {
+            return pending_.load(std::memory_order_acquire);
+        }
+
+    private:
+        std::atomic<bool> pending_{};
+    };
+
     inline bool TryScheduleVisibleCameraStateRedraw(bool overlayVisible,
         PresenterWakeGate& wakeGate) noexcept
     {

@@ -1831,6 +1831,13 @@
       "evidence-native-trampoline",
       "evidence-zoom-native-continuation",
       "evidence-safetyhook-lifetime-faults",
+      "evidence-safetyhook-protection-recovery",
+      "evidence-safetyhook-veh-admission",
+      "evidence-safetyhook-allocation-ownership",
+      "evidence-safetyhook-delayed-execute",
+      "evidence-safetyhook-retry-generations",
+      "evidence-safetyhook-prewrite-route-lifetime",
+      "evidence-safetyhook-rx-publication",
       "evidence-safetyhook-failed-create",
       "evidence-safetyhook-disable-postwrite",
       "evidence-reset-self-join",
@@ -1849,7 +1856,7 @@
       "off",
       "on"
     ],
-    "child_process_count": 210
+    "child_process_count": 224
   },
   "n06_m01_contract": {
     "harness": "n06_m01_zoom_game_derived_harness",

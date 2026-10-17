@@ -283,6 +283,9 @@ public:
     /// @note This is called automatically when the Allocation object is destroyed.
     void free();
 
+    /// @brief Publishes emitted code as read/execute; no later writes are allowed.
+    [[nodiscard]] bool seal_executable();
+
     /// @brief Returns a pointer to the data of the allocation.
     /// @return Pointer to the data of the allocation.
     [[nodiscard]] uint8_t* data() const noexcept { return m_address; }
@@ -313,6 +316,7 @@ private:
     friend class InlineHook;
     friend class MidHook;
     void retain() noexcept;
+    void unretain() noexcept { m_retained = false; }
 };
 
 /// @brief Allocates memory near target addresses.
@@ -355,21 +359,16 @@ protected:
     friend Allocation;
 
     void free(uint8_t* address, size_t size);
+    [[nodiscard]] bool seal_executable(uint8_t* address);
 
 private:
     friend class Allocation;
     void retain() noexcept;
 
-    struct FreeNode {
-        std::unique_ptr<FreeNode> next{};
-        uint8_t* start{};
-        uint8_t* end{};
-    };
-
     struct Memory {
         uint8_t* address{};
         size_t size{};
-        std::unique_ptr<FreeNode> freelist{};
+        bool sealed{};
 
         ~Memory();
     };
@@ -384,7 +383,6 @@ private:
         const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
     void internal_free(uint8_t* address, size_t size);
 
-    static void combine_adjacent_freenodes(Memory& memory);
     [[nodiscard]] static std::expected<uint8_t*, Error> allocate_nearby_memory(
         const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance);
     [[nodiscard]] static bool in_range(
@@ -796,6 +794,7 @@ private:
     std::recursive_mutex m_mutex{};
     PatchState m_patch_state{PatchState::Unpatched};
     bool m_ever_patched{};
+    bool m_route_exposed{};
     Type m_type{Type::Unset};
 
     std::expected<void, Error> setup(
@@ -1033,6 +1032,11 @@ public:
 
     /// @brief Check if the hook is enabled.
     [[nodiscard]] bool enabled() const { return m_hook.enabled(); }
+
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+    [[nodiscard]] uint8_t* test_stub() const { return m_stub.data(); }
+    [[nodiscard]] uint8_t* test_trampoline() const { return m_hook.trampoline().data(); }
+#endif
 
 private:
     InlineHook m_hook{};

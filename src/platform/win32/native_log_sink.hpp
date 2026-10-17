@@ -1,6 +1,6 @@
 #pragma once
 
-#include "native_file.hpp"
+#include "native_log_file.hpp"
 
 #include <spdlog/sinks/base_sink.h>
 #include <mutex>
@@ -31,6 +31,6 @@ namespace platform::win32
         void flush_() override {}
 
     private:
-        NativeFile file_;
+        NativeLogFile file_;
     };
 }
