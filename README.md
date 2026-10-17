@@ -44,6 +44,10 @@ The overlay brings the mod's settings and runtime status into the game. It inclu
 
 <p align="center"><img src="screens/Locales.gif" alt="Switching between embedded in-game overlay language catalogs" width="850"></p>
 
+**Camera State panel:** expand Camera Details to view the read-only diagnostic panel beside the main settings and current-state columns.
+
+<p align="center"><img src="screens/Overlay%20camera%20state.jpg" alt="In-game overlay with the Camera State diagnostic panel expanded" width="850"></p>
+
 ## Download and installation
 
 Prebuilt releases and installation instructions are available on [Nexus Mods](https://www.nexusmods.com/stalker2heartofchornobyl/mods/2416).
