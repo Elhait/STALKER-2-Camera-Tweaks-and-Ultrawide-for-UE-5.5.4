@@ -5,11 +5,19 @@
 #include <filesystem>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace config
 {
     using LogFunction = std::function<void(std::string)>;
     using TemplateSynchronizer = std::function<bool(const std::filesystem::path&)>;
+
+    struct ConfigValueUpdate
+    {
+        std::string section;
+        std::string key;
+        std::string value;
+    };
 
     bool RunSerializedConfigUpdate(const std::filesystem::path& path,
         const std::function<bool()>& update);
@@ -22,6 +30,8 @@ namespace config
     bool PersistConfigValue(const std::filesystem::path& path,
         const char* targetSection, const char* targetKey,
         const std::string& value, const LogFunction& log);
+    bool PersistConfigValues(const std::filesystem::path& path,
+        const std::vector<ConfigValueUpdate>& updates, const LogFunction& log);
 
     bool LoadOverlayPlacement(const std::filesystem::path& path,
         const std::filesystem::path& legacyPath, int& positionX, int& positionY,

@@ -1,0 +1,69 @@
+OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2
+OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0
+OVERLAY_DISPLAY_WINDOW_CREATED owner_thread=1 unowned=1
+OVERLAY_COMPOSITOR_CLOCK_READY
+OVERLAY_WINDOW_EVENTS_ARMED
+OVERLAY_DPI_CHANGED dpi=120 scale=1.250000 coordinate_contract=physical_client_pixels
+OVERLAY_DCOMP_INIT_BEGIN
+OVERLAY_DCOMP_DEVICE_READY featureLevel=45312
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_DCOMP_SURFACE_READY generation=1 width=5138 height=1487
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_FIRST_FRAME
+OVERLAY_INPUT_HOOK_OK key=Delete
+OVERLAY_PRESENTER_ATTACHED hwnd=131658
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_DCOMP_SURFACE_RESIZED generation=2 width=5120 height=1440
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1
+OVERLAY_FONT_ATLAS_REBUILT size=19 profile=base
+OVERLAY_ACTIVATION_TRACE request=1 event=toggle_requested qpc=2300408127 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=visibility_requested qpc=2300408354 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=presenter_readiness qpc=2300408406 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ACTIVATION_TRACE request=1 event=frame_begin qpc=2300452369 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=semantic_read_begin qpc=2300452631 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=semantic_read_end qpc=2300452695 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=render_submitted qpc=2300454279 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=first_visible_frame qpc=2300455172 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=2 event=toggle_requested qpc=2332075550 qpcFrequency=10000000 tid=24948 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=2 event=visibility_requested qpc=2332075722 qpcFrequency=10000000 tid=24948 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=2 event=presenter_readiness qpc=2332075766 qpcFrequency=10000000 tid=24948 visible=0 presenterReady=1 result=1
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_ACTIVATION_TRACE request=3 event=toggle_requested qpc=2361576412 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=visibility_requested qpc=2361576599 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=presenter_readiness qpc=2361576645 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ACTIVATION_TRACE request=3 event=frame_begin qpc=2361701739 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=semantic_read_begin qpc=2361702020 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=semantic_read_end qpc=2361702100 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=render_submitted qpc=2361704560 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=first_visible_frame qpc=2361705064 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=4 event=toggle_requested qpc=2363076437 qpcFrequency=10000000 tid=24948 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=4 event=visibility_requested qpc=2363076581 qpcFrequency=10000000 tid=24948 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=4 event=presenter_readiness qpc=2363076625 qpcFrequency=10000000 tid=24948 visible=0 presenterReady=1 result=1
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_ACTIVATION_TRACE request=5 event=toggle_requested qpc=2364910321 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=5 event=visibility_requested qpc=2364910486 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=5 event=presenter_readiness qpc=2364911149 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ACTIVATION_TRACE request=5 event=frame_begin qpc=2364952630 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=5 event=semantic_read_begin qpc=2364952900 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=5 event=semantic_read_end qpc=2364952973 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=5 event=render_submitted qpc=2364955322 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=5 event=first_visible_frame qpc=2364955432 qpcFrequency=10000000 tid=24948 visible=1 presenterReady=1 result=1
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_CURSOR_RESTORE=WINDOW_DESTROY_ARROW

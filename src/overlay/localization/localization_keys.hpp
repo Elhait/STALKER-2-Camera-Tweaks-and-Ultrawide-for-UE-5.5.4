@@ -198,6 +198,9 @@ namespace overlay::loc
         }
     }
     namespace camera_state {
+        inline constexpr Key DetailsToggleLabel{"camera_state_toggle.label"};
+        inline constexpr Key DetailsToggleOpen{"camera_state_toggle.open"};
+        inline constexpr Key DetailsToggleClose{"camera_state_toggle.close"};
         inline constexpr Key Waiting{"camera_state.waiting"};
         inline constexpr Key State{"camera_state.field.state"};
         inline constexpr Key LastPublication{"camera_state.field.last_publication"};
@@ -245,6 +248,7 @@ namespace overlay::loc
         inline constexpr Key BindingValue{"notification.binding_value"};
         inline constexpr Key ConflictValue{"notification.conflict_value"};
         inline constexpr Key SettingChanged{"notification.setting_changed"};
+        inline constexpr Key PersistenceFailed{"notification.persistence_failed"};
         inline constexpr Key OpenOverlayHint{"notification.open_overlay_hint"};
     }
 

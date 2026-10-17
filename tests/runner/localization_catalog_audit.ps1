@@ -298,7 +298,7 @@ $cameraStateViewBoundary = (Test-CameraStateReadOnlyBoundary $cameraStateViewHea
     $cameraStateView -match 'Current Output FOV' -and
     $cameraStateView -match 'Readback Valid' -and
     $cameraStateView -notmatch '\b(?:Tr|Format)\s*\(|LocalizationManager|loc::|SetTooltip|BeginTooltip' -and
-    $renderer -match 'ImGui::TreeNodeEx\("Camera State"' -and
+    $renderer -match 'DrawCameraStateToggle\(localization_, cameraStateExpanded_\)' -and
     $renderer -match 'DrawCameraStateView\(semantic, integration\)' -and
     $renderer -notmatch 'void DrawCameraState\('
 $rightTooltipPaths = @(
@@ -363,18 +363,22 @@ $rendererInitializeBody = [regex]::Match($renderer,
 $localizationFailClosed = $buildImGuiBody -match 'if\s*\(!localization_\.Initialize\([\s\S]*?return false;' -and
     $rendererInitializeBody -match 'BuildImGui\(\)' -and
     $rendererInitializeBody -match 'Disable\("composition_initialization_failed"\)' -and
-    $compositionRuntime -match 'RendererInstance\(\)\.Initialize\(candidate, width, height, dpi\)' -and
+    $compositionRuntime -match 'RendererInstance\(\)\.Initialize\(candidate,\s*overlayWindow,\s*width,\s*height,\s*dpi\)' -and
     $compositionRuntime -match 'InstallInputHook\(candidate\)'
 $registryDrivenSelector = $renderer -match 'for\s*\(const auto& locale : localization_\.locales\(\)\)' -and
     $renderer -match 'ImGui::Selectable\(locale\.displayName\.data\(\)' -and
     $renderer -match 'LocalizationSelectorFont\(locale\.fontProfileCode\)' -and
     $renderer -match 'AddLocalizationSelectorFonts\(fontSizePixels\)'
 $autoSelectionSync = $renderer -match 'RuntimeSettingMutation::AutoLocale\(true\)' -and
-    $renderer -match 'RequestAutoLanguageSynchronization\(window_\)' -and
+    $renderer -match 'RequestAutoLanguageSynchronization\(gameWindow_\)' -and
     $compositionRuntime -match 'message == overlay::AutoLanguageSyncMessage' -and
-    $compositionRuntime -match 'SynchronizeAutoLanguageIfConfigured\(\)' -and
+    $compositionRuntime -match 'ReadGameLanguageLocale\(' -and
+    $compositionRuntime -match 'EnqueueOwnerLanguageResult\(' -and
+    $compositionRuntime -match 'ApplyDetectedGameLanguageLocale\(' -and
     $languageReader -match 'PostMessageW\(window, AutoLanguageSyncMessage' -and
-    $languageReader -match 'ShouldSynchronizeAutoLanguage\(overlayVisible,'
+    $languageReader -match 'PostMessageW\(window, StartupGameDataProbeMessage' -and
+    $languageReader -match 'ShouldSynchronizeAutoLanguage\(overlayVisible,' -and
+    $languageReader -match 'SynchronizeAutoLanguageOnOverlayOpen\(HWND window,'
 $startupHintQueueIndex = $renderer.IndexOf('notifications_.push_back({std::move(hint), {}});')
 $startupHintDrainIndex = if ($startupHintQueueIndex -ge 0) {
     $renderer.IndexOf('UpdateNotifications();', $startupHintQueueIndex)
@@ -384,8 +388,13 @@ $startupNotificationLifecycle = $startupHintQueueIndex -ge 0 -and
     $renderer -match 'startupNotification_\.ShouldWakePresenter' -and
     $renderer -match 'startupNotification_\.MarkCreated\(ready\(\), true\)' -and
     $renderer -match 'StartupHintMustWaitForAutoLocale\(' -and
-    $rendererRuntimeHeader -match '!startupAutoLanguageSyncRequested_' -and
-    $renderer -match 'PrepareStartupNotification\(\);[\s\S]*?return rendered;' -and
+    $renderer -match 'RequestStartupGameDataProbe\(' -and
+    $rendererRuntimeHeader -match 'startupReadiness_\.probeStarted\(\)' -and
+    $rendererState -match 'class StartupToastReadinessGate' -and
+    $compositionRuntime -match 'StartupGameDataProbeWaitMilliseconds\(' -and
+    $compositionHarness -match 'TestStartupToastReadinessGate' -and
+    $renderer -match 'PrepareStartupNotification\(\);[\s\S]*?return rendered && StartPendingNotificationLifetimes\(\);' -and
+    $renderer -match 'if \(!ReconcileCompositionAttachment\(\)\) return false;' -and
     $renderer -match 'StartPendingNotificationLifetimes\(\)' -and
     $renderer -match 'StartNotificationLifetimeAfterCommit\(active\.lifetime' -and
     $renderer -match 'NotificationDrawListWasSubmitted\(' -and
@@ -415,7 +424,7 @@ $presenterFramePacing = $compositionRuntime -match 'DCompositionWaitForComposito
     $compositionHarness -match 'TestSemanticPresenterPacingStates' -and
     $rendererRuntimeHeader -notmatch 'surfaceDirty_\s*\|\|\s*visible\(\)'
 $inputRedrawScheduling = $compositionRuntime -match 'bridge\.PushRelativeMouseMotion[\s\S]*?RequestOverlayRedraw\(\)' -and
-    $compositionRuntime -match 'PushMouseButton\(message, wParam\)\) RequestOverlayRedraw\(\)' -and
+    $compositionRuntime -match 'PushMouseButton\(message, wParam\)\) return false;[\s\S]*?RequestOverlayRedraw\(\)' -and
     $compositionRuntime -match 'PushKeyboardMessage\([\s\S]*?RequestOverlayRedraw\(\)' -and
     $compositionRuntime -match 'class PresenterWakeGate|g_redrawWakePending\.TrySchedule\(\)' -and
     $compositionHarness -match 'TestInputEventsScheduleOneOwnerWake'
@@ -442,13 +451,21 @@ $keyboardFocusLifecycle = $inputStateHeader -match 'NativeKeyboardMessage,\s*Foc
 $inputOwnerBoundary = $compositionRuntime -match 'bridge\.PushRelativeMouseMotion' -and
     $compositionRuntime -match 'GetInputEventBridge\(\)\.PushKeyboardMessage' -and
     $compositionRuntime -notmatch 'ImGui_ImplWin32_WndProcHandler' -and
-    $renderer -match 'ImGui_ImplWin32_WndProcHandler\(window_' -and
+    $renderer -match 'ImGui_ImplWin32_WndProcHandler\(gameWindow_' -and
     $renderer -match 'ApplyInputEvents\(width, height\)' -and
     $renderer -match 'BeginImGuiFrame\(width, height\)' -and
     $renderer -notmatch 'ImGui_ImplWin32_NewFrame\(' -and
     $renderer -notmatch 'GetCursorPos\(' -and
     $inputStateSource -match 'if \(!active\(\) \|\| \(x == 0 && y == 0\)\) return false;' -and
     $compositionRuntime -notmatch 'ClipCursor\('
+$overlayWindowIsolation = $renderer -match 'CreateCompositionTarget\(overlayWindow_\)' -and
+    $renderer -match 'ImGui_ImplWin32_Init\(gameWindow_\)' -and
+    $renderer -match 'ImGui_ImplWin32_WndProcHandler\(gameWindow_,' -and
+    $rendererRuntimeHeader -match 'return gameWindow_ == window' -and
+    $compositionRuntime -match 'CreateWindowExW\(WS_EX_NOACTIVATE \| WS_EX_TOOLWINDOW \|' -and
+    $compositionRuntime -match 'WS_EX_LAYERED \| WS_EX_TRANSPARENT' -and
+    $compositionRuntime -match 'window == g_overlayDisplayWindow\.load' -and
+    $compositionRuntime -match 'RendererInstance\(\)\.Initialize\(candidate,\s*overlayWindow,'
 $inlineHotkeyRenderBody = [regex]::Match($renderer,
     'void DrawInlineHotkeyMessage\([\s\S]*?(?=\n\s*void DrawNotificationHeader)').Value
 $notificationInlineWrap = $inlineHotkeyRenderBody -match 'LeadingPunctuationBytes\s*\(afterKey\)' -and
@@ -542,7 +559,7 @@ $namedVisualContracts = $tooltipRowLayout -match 'WrapWidthInFontUnits' -and
     $selectorDocumentationView -match 'NextOptionGapAtBaseScale' -and
     $renderer -match 'FeatureStatusColor\(statusTone\)'
 $placementSaveContract = $renderer -match 'placementSaveState_\.PositionChanged\(\)' -and
-    $renderer -match 'placementSaveState_\.ShouldAttemptSave\(leftMouseButtonDown\)' -and
+    $renderer -match '!expandedLayout && placementSaveState_\.ShouldAttemptSave\(\s*leftMouseButtonDown\s*\)' -and
     $renderer -match 'placementSaveState_\.CompleteAttempt\(saved\)' -and
     $placementSaveState -match 'FailedUntilNextMovement' -and
     $placementSaveState -match 'PendingAfterMovement'
@@ -559,7 +576,7 @@ $statusPresentation = $renderer -notmatch 'void ShowStatusTooltip\(' -and
     $renderer -match 'SeparatorText\(transitionHeader\.c_str\(\)\)' -and
     $renderer -match 'CameraTransitionDetail\(integration\.potential\.overall\)'
 $runtimeTelemetryBlock = [regex]::Match($renderer,
-    'ImGui::SeparatorText\("Current State"\);[\s\S]*?(?=ImGui::TreeNodeEx\("Camera State")').Value
+    'ImGui::SeparatorText\("Current State"\);[\s\S]*?(?=if \(DrawCameraStateToggle\(localization_, cameraStateExpanded_\)\))').Value
 $fullRowTooltipHitbox = $renderer -match 'bounds\.max\.x\s*=\s*valueCursor\.x\s*\+\s*ImGui::GetContentRegionAvail\(\)\.x' -and
     $renderer -match 'IsMouseHoveringRect\(bounds\.min,\s*bounds\.max,\s*false\)' -and
     $renderer -match 'ImGui::IsWindowHovered\(\)' -and
@@ -574,12 +591,43 @@ $runtimeSubheadingStyle = $runtimeSubheadingBody -match 'TableNextRow\(ImGuiTabl
     $runtimeSubheadingBody -match 'headingRect\.x\s*\+\s*ImGui::GetStyle\(\)\.ItemSpacing\.x' -and
     $runtimeSubheadingBody -match 'PushClipRect\(contentMin,\s*contentMax,\s*false\)' -and
     $runtimeSubheadingBody -notmatch 'TextDisabled|Show.*Tooltip|IsItemHovered'
+$compactRestoreBlock = [regex]::Match($renderer,
+    'if \(restoreCompactLayout\) \{[\s\S]*?\n\s*\} else \{').Value
+$compactRestoreContract = $compactRestoreBlock -match 'SetNextWindowSize\(ImVec2\(expandedLayoutMetrics\.windowWidth,\s*expandedLayoutMetrics\.windowHeight\),\s*ImGuiCond_Always\)' -and
+    $compactRestoreBlock -match 'SetNextWindowSizeConstraints\(' -and
+    $renderer -match '\(\(expandedLayout \|\| restoreCompactLayout\) \? ImGuiWindowFlags_NoResize'
+$cameraStateToggleBody = [regex]::Match($renderer,
+    'bool DrawCameraStateToggle\([\s\S]*?(?=\n\s*float IntrinsicOptionWidth)').Value
+$cameraStateToggleContract = $cameraStateToggleBody -match 'ImGui::InvisibleButton\("camera_state_details_toggle",\s*size\)' -and
+    $cameraStateToggleBody -match 'const float height = ImGui::GetFrameHeight\(\)' -and
+    $cameraStateToggleBody -match 'GetContentRegionAvail\(\)\.x' -and
+    $cameraStateToggleBody -match 'ImGui::IsItemHovered\(\)' -and
+    $cameraStateToggleBody -match 'ImGui::IsItemActive\(\)' -and
+    $cameraStateToggleBody -match 'loc::camera_state::DetailsToggleLabel' -and
+    $cameraStateToggleBody -match 'DetailsToggleClose' -and
+    $cameraStateToggleBody -match 'DetailsToggleOpen' -and
+    $cameraStateToggleBody -match 'drawList->AddRectFilled' -and
+    $cameraStateToggleBody -match 'drawList->AddRect\(' -and
+    $cameraStateToggleBody -match 'drawList->AddLine' -and
+    $cameraStateToggleBody -match 'ImVec4\(0\.70f, 0\.82f, 0\.96f, 1\.0f\)' -and
+    $cameraStateToggleBody -notmatch 'ImGuiCol_TextDisabled' -and
+    $cameraStateToggleBody -notmatch 'TreeNode|AddText\([^\n]*"[^"%]*[\p{L}]' -and
+    $renderer -match 'if \(DrawCameraStateToggle\(localization_, cameraStateExpanded_\)\)'
 $rightDashboardLayout = $renderer -notmatch 'DrawSectionHeading|LocalizedLabelWidth|controlWidthLimit|hotkeyKeyColumn|minOverlayWidth' -and
-    $renderer -match 'ImGuiTableFlags_SizingStretchProp \|\s*ImGuiTableFlags_BordersInnerV' -and
+    $renderer -match 'expandedLayout \? ImGuiTableFlags_SizingFixedFit\s*:\s*ImGuiTableFlags_SizingStretchProp' -and
+    $renderer -match 'expandedLayout \? 3 : 2' -and
     $renderer -match 'TableSetupColumn\("settings", ImGuiTableColumnFlags_WidthStretch,\s*0\.44f\)' -and
     $renderer -match 'TableSetupColumn\("runtime", ImGuiTableColumnFlags_WidthStretch,\s*0\.56f\)' -and
     $renderer -match 'preferredOverlayWidth = 1024\.0f \* dpiScale_' -and
     $renderer -match 'SetNextWindowSizeConstraints\(' -and
+    $renderer -match 'ComputeCameraStatePanelLayout' -and
+    $renderer -match 'WindowPadding\.x, expandedLayout, dpiScale_\)' -and
+    $compactRestoreContract -and
+    $renderer -match 'ImGui::BeginChild\("camera_state_panel_scroll"' -and
+    $renderer -match 'expandedLayoutMetrics\.windowHeight' -and
+    $renderer -match 'cameraStateExpanded_' -and
+    $renderer -match 'restoreCameraStateCompactPosition_' -and
+    $renderer -match '!expandedLayout && placementSaveState_\.ShouldAttemptSave' -and
     $renderer -match 'SetNextItemWidth\(commonSelectWidth\)' -and
     $renderer -match 'SeparatorText\("Current State"\)' -and
     $renderer -match 'SeparatorText\("Camera Integration"\)' -and
@@ -661,6 +709,7 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
     -not $minimizeRestoreRouting -or -not $deviceRecoveryInputOwnership -or
     -not $keyboardFocusLifecycle -or
     -not $inputOwnerBoundary -or
+    -not $overlayWindowIsolation -or
     -not $dialogueModeIdentifiers -or
     -not $canonicalSettingOptionNames -or -not $selectorTooltipColumns -or
     -not $examplesGeometryContract -or -not $selectorTooltipSpacingScope -or
@@ -671,7 +720,7 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
     -not $mutexExceptionBoundary -or
     -not $localizationFailClosed -or
     -not $namedVisualContracts -or
-    -not $placementSaveContract -or
+    -not $placementSaveContract -or -not $cameraStateToggleContract -or
     -not $conditionalExamplesOptionGap -or
     -not $tooltipContentOwnership -or -not $statusPresentation -or
     -not $rightDashboardLayout -or -not $rightTooltipSourceCoverage -or
@@ -699,6 +748,7 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
         ' device_recovery_input_ownership=' + $deviceRecoveryInputOwnership +
         ' keyboard_focus_lifecycle=' + $keyboardFocusLifecycle +
         ' input_owner_boundary=' + $inputOwnerBoundary +
+        ' overlay_window_isolation=' + $overlayWindowIsolation +
         ' dialogue_ids=' + $dialogueModeIdentifiers +
         ' canonical_setting_option_names=' + $canonicalSettingOptionNames +
         ' selector_tooltip_columns=' + $selectorTooltipColumns +
@@ -709,6 +759,7 @@ if (-not $registryValid -or $catalogReadErrors.Count -or $missing.Count -or $ext
         ' localization_fail_closed=' + $localizationFailClosed +
         ' named_visual_contracts=' + $namedVisualContracts +
         ' placement_save_contract=' + $placementSaveContract +
+        ' camera_state_toggle=' + $cameraStateToggleContract +
         ' selector_tooltip_spacing=' + $selectorTooltipSpacingScope +
         ' selector_tooltip_interaction=' + $selectorTooltipInteraction +
         ' selector_capture_negative_fixture=' + $selectorCaptureNegativeFixture +
@@ -740,6 +791,7 @@ Write-Output ('locales=' + $descriptors.Count + ' canonical=' + $canonicalCode +
     'embedded_resources=PASS generic_manager=PASS registry_selector=PASS single_asi=PASS ' +
     'embedded_font_profiles=PASS locale_metadata_glyphs=PASS selector_font_faces=PASS ' +
     'camera_state_view_boundary=PASS right_tooltip_coverage_18_locales=PASS full_row_tooltip_hitbox=PASS ' +
+    'camera_state_toggle=PASS ' +
     'proggyclean_merge=PASS integer_font_sizes=PASS')
 Write-Output ('font_rendering_scope=offline embedded glyph coverage; ' +
     'Arabic shaping/bidi/RTL and runtime visual rendering not established')

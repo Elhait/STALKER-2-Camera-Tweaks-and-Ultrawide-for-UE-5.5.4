@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "normal=PASS partial=PASS startup_stop_observation=PASS stop_before_start=PASS worker_capacity=PASS\r\nnative_logs_and_storage=PASS real_dll_exit=PASS files_removed=PASS\r\n",
+  "ProcessId": 33164
+}

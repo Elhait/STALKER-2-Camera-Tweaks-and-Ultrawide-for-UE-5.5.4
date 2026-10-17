@@ -157,6 +157,7 @@
       "cinematic_status": "Aktuální prezentační stav integrace cinematic kamery."
     }
   },
+  "camera_state_toggle": { "label": "Podrobnosti kamery", "open": "Otevřít", "close": "Zavřít" },
   "camera_state": {
     "waiting": "Čekání na první úplnou aktualizaci kamery.",
     "field": {
@@ -179,6 +180,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "Klávesa {key} je již přiřazena k akci {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Stisknutím {key} otevřete překryvné okno"
+    "open_overlay_hint": "Stisknutím {key} otevřete překryvné okno",
+    "persistence_failed": "Změna je aktivní, ale nebyla uložena. Po restartu hry se obnoví předchozí hodnota."
   }
 }

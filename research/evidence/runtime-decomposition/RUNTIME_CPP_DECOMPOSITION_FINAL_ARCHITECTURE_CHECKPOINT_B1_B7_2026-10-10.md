@@ -49,7 +49,7 @@ imply full runtime verification or close the separate N03–N06 gates.
   and reset orchestration remains with the runtime owner.
 
 Per-batch decisions are in the
-[implementation plan](../../backlog/active/RUNTIME_CPP_DECOMPOSITION_IMPLEMENTATION_PLAN_2026-10-08.md),
+[implementation plan](../../completed/RUNTIME_CPP_DECOMPOSITION_IMPLEMENTATION_PLAN_2026-10-08.md),
 [move ledger](MOVE_LEDGER_2026-10-08.md), and B5–B7 boundary reports.
 
 ## B7 ownership decisions recommended

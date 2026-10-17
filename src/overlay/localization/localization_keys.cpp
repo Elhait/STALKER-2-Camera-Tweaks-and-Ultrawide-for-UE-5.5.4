@@ -103,6 +103,8 @@ namespace overlay::loc
             tooltip::runtime::CinematicEnterFov, tooltip::runtime::FovDelta,
             tooltip::runtime::FovMatch, tooltip::runtime::CameraTransition,
             tooltip::runtime::GameplayStatus, tooltip::runtime::CinematicStatus,
+            camera_state::DetailsToggleLabel, camera_state::DetailsToggleOpen,
+            camera_state::DetailsToggleClose,
             camera_state::Waiting, camera_state::State, camera_state::LastPublication,
             camera_state::Coordinator, camera_state::AspectPreview,
             camera_state::GameplayFov, camera_state::Provenance,
@@ -126,7 +128,8 @@ namespace overlay::loc
             camera_state::UnavailableCounter,
             notification::HotkeyConflict, notification::HotkeyTitle,
             notification::BindingValue, notification::ConflictValue,
-            notification::SettingChanged, notification::OpenOverlayHint,
+            notification::SettingChanged, notification::PersistenceFailed,
+            notification::OpenOverlayHint,
         };
         return keys;
     }

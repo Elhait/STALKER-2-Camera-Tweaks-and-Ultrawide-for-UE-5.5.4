@@ -4,6 +4,12 @@
 
 namespace plugin
 {
+inline bool ShouldPublishCameraCoreReady(bool initializationSucceeded,
+    bool initializationComplete, bool stopping) noexcept
+{
+    return initializationSucceeded && initializationComplete && !stopping;
+}
+
 template <typename OverlayStartup>
 bool TryStartConfiguredOverlay(bool enabled, OverlayStartup&& startOverlay) noexcept
     {

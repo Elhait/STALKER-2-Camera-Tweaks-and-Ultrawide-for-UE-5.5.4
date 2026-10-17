@@ -16,9 +16,6 @@ namespace plugin::detail
 
     bool RuntimeHotkeyBinding(RuntimeSettingKind kind,
         config::HotkeyBindingId& binding) noexcept;
-    bool PersistHotkeyActionValue(const std::filesystem::path& configPath,
-        const char* section, const char* key, const char* value,
-        const config::LogFunction& log);
     bool PersistRuntimeSetting(const RuntimeSettingMutation& mutation,
         const std::filesystem::path& configPath, std::string_view currentLocaleCode,
         const config::LogFunction& log);

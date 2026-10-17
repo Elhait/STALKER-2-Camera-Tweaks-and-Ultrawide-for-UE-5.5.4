@@ -1,0 +1,4 @@
+HINT posted=1 error=0
+CLEANUP secondary_exception resource=event retained=1
+CHECK cleanup_failure retained=1 secondary=1 released=5 created=6
+RESULT mode=cleanup-failure outcome=Retained created=6 released=5 retained=1 cleanup_count=1 mutations=0 continuations=0 secondary=1 PASS

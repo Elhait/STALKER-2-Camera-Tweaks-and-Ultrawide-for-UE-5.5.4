@@ -118,8 +118,8 @@ foreach ($entry in $runnerEntries) {
         if ($argument -match '\s') { $runErrors.Add("argument_must_be_separate_token:$($entry.harness):$argument") }
     }
 }
-if ($harnesses.Count -ne 60 -or $harnessNames.Count -ne 60 -or $duplicateHarnessNames.Count -ne 0 -or
-    $duplicateOutputs.Count -ne 0 -or $runnerEntries.Count -ne 63 -or
+if ($harnesses.Count -ne 59 -or $harnessNames.Count -ne 59 -or $duplicateHarnessNames.Count -ne 0 -or
+    $duplicateOutputs.Count -ne 0 -or $runnerEntries.Count -ne 62 -or
     $missingHarnesses.Count -ne 0 -or $unknownHarnesses.Count -ne 0 -or $runErrors.Count -ne 0) {
     $missingInputs.Add('canonical_harness_or_runner_inventory_mismatch')
 }
@@ -132,9 +132,9 @@ if ($adapterRuns.Count -ne 1 -or $zoomRuns.Count -ne 4 -or
     $missingInputs.Add('native_adapter_or_N06_run_contract_mismatch')
 }
 $scenarioNames = @($registry.native_adapter_contract.scenario_names)
-if ($scenarioNames.Count -ne 102 -or @($scenarioNames | Sort-Object -Unique).Count -ne 102 -or
+if ($scenarioNames.Count -ne 105 -or @($scenarioNames | Sort-Object -Unique).Count -ne 105 -or
     @($registry.native_adapter_contract.diagnostic_modes).Count -ne 2 -or
-    $registry.native_adapter_contract.child_process_count -ne 204) {
+    $registry.native_adapter_contract.child_process_count -ne 210) {
     $missingInputs.Add('native_adapter_scenario_mode_inventory_mismatch')
 }
 
@@ -148,7 +148,7 @@ if ($legacyCompileLines.Count -gt 0) {
     $legacyCompileNames = @($legacyCompileLines | ForEach-Object {
         [regex]::Match($_, '/OUT:build-artifacts\\tests\\([^\\]+)\.exe').Groups[1].Value
     })
-    if ($legacyCompileNames.Count -ne 60 -or @(Compare-Object ($legacyCompileNames | Sort-Object) ($harnessNames | Sort-Object)).Count -ne 0) {
+    if ($legacyCompileNames.Count -ne 59 -or @(Compare-Object ($legacyCompileNames | Sort-Object) ($harnessNames | Sort-Object)).Count -ne 0) {
         $missingInputs.Add('legacy_compile_contract_parity')
     }
     foreach ($compileLine in $legacyCompileLines) {
@@ -199,17 +199,43 @@ if ($legacyCompileLines.Count -gt 0) {
         }
     }
 } else {
-    if ($testCmdText -notmatch 'cmake\.exe"?\s+--build' -or
-        $testCmdText -notmatch '--target\s+test_harnesses' -or
-        $testCmdText -notmatch 'test_harness_runner\.ps1') {
+    if ($testCmdText -notmatch 'test_cmd_orchestrator\.ps1') {
         $missingInputs.Add('canonical_entry_point_not_using_hybrid_targets_and_runner')
     }
+    $orchestratorScript = Get-Content -LiteralPath (Join-Path $projectRoot 'tests/runner/test_cmd_orchestrator.ps1') -Raw
     $runnerScript = Get-Content -LiteralPath (Join-Path $projectRoot 'tests/runner/test_harness_runner.ps1') -Raw
+    $supervisorScript = Get-Content -LiteralPath (Join-Path $projectRoot 'tests/runner/process_tree_supervisor.psm1') -Raw
+    $exitContractScript = Get-Content -LiteralPath (Join-Path $projectRoot 'tests/runner/test_cmd_exit_code_contract.ps1') -Raw
+    $adapterHarness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests/plugin/runtime_native_adapter_harness.cpp') -Raw
     if ($runnerScript -notmatch '\.runner' -or
-        $runnerScript -notmatch '\$process\.ExitCode' -or
+        $runnerScript -notmatch '\$OutputDirectory' -or
+        $runnerScript -notmatch 'Invoke-TestProcessTree' -or
+        $runnerScript -notmatch '\$result\.ExitCode' -or
         $runnerScript -notmatch '\$exitCode\s*-ne\s*0' -or
-        $runnerScript -notmatch 'WaitForExit\(\$timeoutMilliseconds\)' -or
-        $runnerScript -notmatch 'exit 124') {
+        $runnerScript -notmatch 'exit 124' -or
+        $runnerScript -notmatch 'CAMERA_TWEAKS_TEST_SUITE_TIMEOUT_MS' -or
+        $runnerScript -notmatch 'StreamOutput' -or
+        $runnerScript -match '\.Kill\s*\(' -or
+        $orchestratorScript -notmatch 'Invoke-TestProcessTree' -or
+        $orchestratorScript -notmatch "'-C'" -or
+        $orchestratorScript -notmatch "buildDirectory, 'test_harnesses', '-j', '1'" -or
+        $orchestratorScript -notmatch '\-OutputDirectory' -or
+        $orchestratorScript -notmatch '\$ninjaExecutable' -or
+        $orchestratorScript -notmatch 'test_harness_runner\.ps1' -or
+        $supervisorScript -notmatch 'CreateJobObject' -or
+        $supervisorScript -notmatch 'CreateSuspended' -or
+        $supervisorScript -notmatch 'CreateProcess' -or
+        $supervisorScript -notmatch 'AssignProcessToJobObject' -or
+        $supervisorScript -notmatch 'JobObjectLimitKillOnJobClose' -or
+        $supervisorScript -notmatch 'TerminateJobObject' -or
+        $supervisorScript -notmatch 'WaitForTreeEmpty' -or
+        $supervisorScript -notmatch 'CleanupVerified' -or
+        $exitContractScript -match 'WaitForExit\(\)' -or
+        $exitContractScript -match '\.Kill\s*\(' -or
+        $exitContractScript -notmatch 'parent_child_grandchild_timeout' -or
+        $exitContractScript -notmatch 'IsProcessRunning' -or
+        $adapterHarness -notmatch 'cleanupWait\s*!=\s*WAIT_OBJECT_0' -or
+        $adapterHarness -notmatch 'child cleanup unverified') {
         $missingInputs.Add('serial_registry_runner_contract_missing')
     }
 }

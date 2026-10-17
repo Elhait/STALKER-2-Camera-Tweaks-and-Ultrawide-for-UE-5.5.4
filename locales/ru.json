@@ -158,6 +158,7 @@
       "cinematic_status": "Текущий статус отображения интеграции cinematic-камеры."
     }
   },
+  "camera_state_toggle": { "label": "Детали камеры", "open": "Открыть", "close": "Закрыть" },
   "camera_state": {
     "waiting": "Ожидание первого полного обновления камеры.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "Клавиша {key} уже назначена для {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Нажмите {key}, чтобы открыть оверлей"
+    "open_overlay_hint": "Нажмите {key}, чтобы открыть оверлей",
+    "persistence_failed": "Изменение действует, но не сохранено. После перезапуска игры вернётся прежнее значение."
   }
 }

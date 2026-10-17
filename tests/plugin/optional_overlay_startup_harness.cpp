@@ -1,10 +1,40 @@
 #include "../../src/plugin/optional_overlay_startup.hpp"
+#include "../../src/overlay/optional_overlay_boundary.hpp"
 
 #include <iostream>
 #include <stdexcept>
 
 int main()
 {
+    const bool readinessPolicyIsFailClosed =
+        plugin::ShouldPublishCameraCoreReady(true, true, false) &&
+        !plugin::ShouldPublishCameraCoreReady(false, true, false) &&
+        !plugin::ShouldPublishCameraCoreReady(true, false, false) &&
+        !plugin::ShouldPublishCameraCoreReady(true, true, true);
+    bool loggerThrowContained = false;
+    bool loggerMessagePreserved = false;
+    const bool throwingLoggerWasContained = !overlay::TryOptionalOverlayLog(
+        [](const std::string&) { throw std::runtime_error("logger"); },
+        "overlay failure report") &&
+        overlay::TryOptionalOverlayLog([&](const std::string& message) {
+            loggerMessagePreserved = message == "overlay failure report";
+        }, "overlay failure report");
+    loggerThrowContained = throwingLoggerWasContained && loggerMessagePreserved;
+
+    bool workerFailureTransitionRequested = false;
+    bool workerBoundaryEscaped = false;
+    auto workerBoundaryResult = overlay::OptionalOverlayWorkResult::Completed;
+    try {
+        workerBoundaryResult = overlay::RunOptionalOverlayWork(
+            [] { throw std::runtime_error("owner worker"); },
+            [&]() noexcept { workerFailureTransitionRequested = true; });
+    } catch (...) {
+        workerBoundaryEscaped = true;
+    }
+    const bool workerBoundaryContained = !workerBoundaryEscaped &&
+        workerBoundaryResult == overlay::OptionalOverlayWorkResult::Failed &&
+        workerFailureTransitionRequested;
+
     bool disabledStartCallbackInvoked = false;
     const bool disabledSkipsInitialization = !plugin::TryStartConfiguredOverlay(false,
         [&]() { disabledStartCallbackInvoked = true; return true; }) &&
@@ -80,6 +110,14 @@ int main()
         << " enabled_starts_overlay=" << (enabledStarts ? "PASS" : "FAIL")
         << " configured_start_exception_isolated="
         << (startupExceptionIsolated ? "PASS" : "FAIL") << '\n';
+    std::cout << "throwing_overlay_logger_contained="
+        << (loggerThrowContained ? "PASS" : "FAIL")
+        << " worker_exception_requests_terminal_transition="
+        << (workerBoundaryContained ? "PASS" : "FAIL") << '\n';
+    std::cout << "camera_core_readiness_requires_success_complete_and_not_stopping="
+        << (readinessPolicyIsFailClosed ? "PASS" : "FAIL") << '\n';
     return passed && exceptionIsolated && readinessIsolated &&
-        disabledSkipsInitialization && enabledStarts && startupExceptionIsolated ? 0 : 1;
+        disabledSkipsInitialization && enabledStarts && startupExceptionIsolated &&
+        loggerThrowContained && workerBoundaryContained &&
+        readinessPolicyIsFailClosed ? 0 : 1;
 }

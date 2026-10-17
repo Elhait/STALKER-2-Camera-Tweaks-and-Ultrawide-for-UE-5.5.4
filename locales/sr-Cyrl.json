@@ -158,6 +158,7 @@
       "cinematic_status": "Тренутни приказни статус интеграције cinematic камере."
     }
   },
+  "camera_state_toggle": { "label": "Детаљи камере", "open": "Отвори", "close": "Затвори" },
   "camera_state": {
     "waiting": "Чекање на прво потпуно ажурирање камере.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} је већ додељен за {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Притисните {key} да отворите преклапање"
+    "open_overlay_hint": "Притисните {key} да отворите преклапање",
+    "persistence_failed": "Промена је активна, али није сачувана. Претходна вредност ће се вратити након поновног покретања игре."
   }
 }

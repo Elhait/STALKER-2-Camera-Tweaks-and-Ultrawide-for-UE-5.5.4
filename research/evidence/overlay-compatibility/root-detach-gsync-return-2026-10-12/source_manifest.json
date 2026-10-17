@@ -1,0 +1,1614 @@
+{
+  "revision": "e756442bcf9942923b4531fb513af893f6aecae7",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "5E5D7C5DE0A642BFFCD6079C71967DDBABA099068B8FFE43A1D2B0B157BAB4B1"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "92F29A0C6E92C823E62D5377E0B390196397AA82B072A936163DFE9DF31D3DEE"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "E67A9B91FA7BEA508B629DE9794B6ADCA31ED479FE29DE3C96F8B8904AF56D18"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8E6FEFE55965DEE102CE722BCC3084D402CFBAB2CCED264C044CD3A75A457A01"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/CJK-Copyright.txt",
+      "sha256": "48ADB9C98D35FA5B1D264AA6AA320C8EECDACBF33387BC9E86B52E2DF7635B28"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/NotoSansArabic-Catalog.ttf",
+      "sha256": "5052D03EE8ABA1CA5A094A512CB67A9ACF7B1E32D6DFEC212035B5F75DC2C02C"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/NotoSansJP-Catalog.ttf",
+      "sha256": "698AF4F47505E6E27F0682B632A56EA6577C65B5B589B87128A7C90DBCEF6244"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/NotoSansKR-Catalog.ttf",
+      "sha256": "491F6233AC84E1E997B2C3A6686BC42CD822A439EE33C0114E28484052852469"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/NotoSansMono-Catalog.ttf",
+      "sha256": "A61DC8081EAF4AFE6974CB799BEB30759E828E8B23F03A3241785346D2F87D89"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/NotoSansSC-Catalog.ttf",
+      "sha256": "95634A0EAD7C6AEB51775F304A056A6E30D7D8AEE78F8CFB4EA1FBF987B52101"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/NotoSansTC-Catalog.ttf",
+      "sha256": "55BBD0DDFF7E54CDA473A51ECE91C855E0BDF0BA6244CB8F9BF3C229ED546D25"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/OFL-Arabic.txt",
+      "sha256": "A7A5A25EB188BF1CD96982030D53E23C33485C69B1044A562254226857EE13AF"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/README.md",
+      "sha256": "40756889B3D159259A0B0BE1D604F076D9BDBE23037918D1EC4ED9619AD5F5DA"
+    },
+    {
+      "path": "assets/fonts/CatalogSubsets/glyph-contract.json",
+      "sha256": "F4D71EB3C972831C633238319DA04FC16964EAB017094D05A3EB0D5E2C716726"
+    },
+    {
+      "path": "assets/fonts/NotoSansMono/NotoSansMono-Regular.ttf",
+      "sha256": "74FD536351D0F30A73410E1BD223A0EBF763DD4808EB844AA2AED18C0D6E3C84"
+    },
+    {
+      "path": "assets/fonts/NotoSansMono/OFL.txt",
+      "sha256": "CEE9892F9F0CC8FE882C9E9537EE6A89621D86EE7CEAF70B02E2B2B1C25C061A"
+    },
+    {
+      "path": "assets/fonts/NotoSansMono/README.md",
+      "sha256": "E20D64C50E9022CDFFA21196191A0754052567E97E3FC5B1F77AF8C016EF473E"
+    },
+    {
+      "path": "assets/fonts/ProggyVector/ProggyVector-Regular.ttf",
+      "sha256": "DAE80A9B9BB23A37F60465DD93DE9365A8DDD43300ADC304D96F91CE54C28DD5"
+    },
+    {
+      "path": "assets/fonts/ProggyVector/ProggyVector_Licence.txt",
+      "sha256": "35ED135E9153C51065ADF4DE71655B4E9943B75FDCD98779066D83439B49DF93"
+    },
+    {
+      "path": "build.cmd",
+      "sha256": "BA3BC8DFB4EF2CF73A79246C52CB8FA4804A710F643A747B183895ADDCDF045F"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "79B7D56C7BAFC02DBFBD06B3FBA091C32D89E6FDEC2855B168D9B64DE3404946"
+    },
+    {
+      "path": "docs/RELEASE_ARCHIVE_README.txt",
+      "sha256": "9AAB19713FE9FCAF88F001089515FAA0C4CE925B99680ED777F417A0D144C8BD"
+    },
+    {
+      "path": "docs/SAFETY_INVARIANTS.md",
+      "sha256": "140F328477C4E7F98967379BE87794319BF1AC4316D082822809BB21511CB863"
+    },
+    {
+      "path": "docs/SUPPORTED_BUILD_MANIFEST.md",
+      "sha256": "07B2ABD4E4FBE27BF3096C2E0CC0FC12AF451ABDA07D7335D97D3B9DEC0AEDCA"
+    },
+    {
+      "path": "external/imgui/LICENSE.txt",
+      "sha256": "1F4B59F7B96DB3AE9D68312BDD5F820E600CD0E4BC4EC64D48E653D486C87B44"
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_dx12.cpp",
+      "sha256": "AE922E92B4FFC65B190A758CE5D7E45CFB8AA9330DBF48151B414F6A067DBB47"
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_dx12.h",
+      "sha256": "FCB830D757AFB130782CE53D7DA21D4D68D4F7BE6D10A4C98D8735A1271B6CDA"
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_dx12_safety.h",
+      "sha256": "5714C816F75D7D88575E41499CC49FC3231B256ECD2CAEB5F265C6AA021860E2"
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_win32.cpp",
+      "sha256": "E572DE10045298BBF833AA7A15E28D2777DF57603B4E50B9C8AA4C878F1E4CFA"
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_win32.h",
+      "sha256": "606DF46DB972371AC6B5F5AD94BBA75A09657DA47B259105C4845C1F8638FA0C"
+    },
+    {
+      "path": "external/imgui/imconfig.h",
+      "sha256": "0884061CC43E27E1D346FE18DCD1425792EB2532D3D16610A82EB5AC751F7594"
+    },
+    {
+      "path": "external/imgui/imgui.cpp",
+      "sha256": "AF1CC31255FBF58D57ECC9D727CBD39A84E44FA8F11BE7FD419FA0100C5255D8"
+    },
+    {
+      "path": "external/imgui/imgui.h",
+      "sha256": "2D0180859FF85E7FE66ED9999B0F05F2FC45176773046A8F86B3B6BD190B0765"
+    },
+    {
+      "path": "external/imgui/imgui_draw.cpp",
+      "sha256": "9D2D9EE6745D9B98D7F39A16DA8FFCF783F90BB8C9E931038FC8E9A15CBE3D84"
+    },
+    {
+      "path": "external/imgui/imgui_internal.h",
+      "sha256": "1363C617A743957F367AFE1C6C88345870B7AA25EE339809FB915466E4FB9575"
+    },
+    {
+      "path": "external/imgui/imgui_tables.cpp",
+      "sha256": "4EA380FA9D49CAC6CBFBC8B969969F9B0705518EC9CA340681D8C70E3EEFBC28"
+    },
+    {
+      "path": "external/imgui/imgui_widgets.cpp",
+      "sha256": "54AC29DBCBE70091F5E5FC2CB4099E6D0B9D1C939E5158F2BE983CB508714414"
+    },
+    {
+      "path": "external/imgui/imstb_rectpack.h",
+      "sha256": "2EFA3D5F7D003C19743B15155DAD9F46D9F9FC783A18893D703B431D3C990972"
+    },
+    {
+      "path": "external/imgui/imstb_textedit.h",
+      "sha256": "77010E494CAF72C178B573569612AEC409D24380409676325A31D02DE0EC64B7"
+    },
+    {
+      "path": "external/imgui/imstb_truetype.h",
+      "sha256": "87F08919AE8E7223451D0E9D06B62829075D3E920C9E6AD436DB9D7E7427FFCE"
+    },
+    {
+      "path": "external/safetyhook/Zydis.c",
+      "sha256": "AD1D0ECB3935432D1F42504955D5B8740C0E7E091A3FB52BC751ADDC0D39E36C"
+    },
+    {
+      "path": "external/safetyhook/Zydis.h",
+      "sha256": "ED35A8138132254E7877C86D3533E86860E53CDD955189C433FF1BE80B7FD534"
+    },
+    {
+      "path": "external/safetyhook/safetyhook.cpp",
+      "sha256": "71C7F431163E4AA6AE70A2F1AC706E5FF3F98C2A1215A91F7F00D78AA42E889D"
+    },
+    {
+      "path": "external/safetyhook/safetyhook.hpp",
+      "sha256": "690923285915B2663CBAD225E288B41543F102875CCE4C02253127EF6749DE35"
+    },
+    {
+      "path": "external/spdlog/LICENSE",
+      "sha256": "D678C20826E1392578508E1C78649A1E3C31BDA05EF4388D967DBD654461B140"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/async.h",
+      "sha256": "3DDAABA57D2F757D6CB09568FE1823949E45426D73F6BAEB4CA8D8A2FE78121B"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/async_logger-inl.h",
+      "sha256": "C298ACFD85CD1AD21C0FF0A3CC930746174D4945F0844DCD6CA8B842EE9A22CE"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/async_logger.h",
+      "sha256": "5E3219C74C29DEE0B04A8C72AE6568E6D44999071F4416453A01514ECCD21B64"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/cfg/argv.h",
+      "sha256": "6F9AA40647FDA08E2AD776598A7B5DE1D1596EC9A73512C90C69504F6E347A2D"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/cfg/env.h",
+      "sha256": "D2AFD153FE8A1B2826FEB60EC62EA42811D1CA085471FDA238D002FEDF5BB1BC"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/cfg/helpers-inl.h",
+      "sha256": "1D43F8134B35EFD52F6E3387BE03602D3C85CA6DF2DCEAB0313B660C37D1DF90"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/cfg/helpers.h",
+      "sha256": "5134C03CA4795ED4E998A2249793B1917989BD2199FF66C689EF48FD9A827BFE"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/common-inl.h",
+      "sha256": "E170CA1AF147A885142C8AFDF29722AE52A40416DFD6B666758B39B5B5588D62"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/common.h",
+      "sha256": "DDF4FA8EE4687F364086C3F3BCA3B9113DF3622916C67776594D231418102143"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/backtracer-inl.h",
+      "sha256": "9B2795B78571295776003345D7E2B9F264FA71FABB7A15CDA7B049464A2D24C3"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/backtracer.h",
+      "sha256": "D4D613BADBE01D67BFAEFABA0A7A934F0E5F5EB3F18096E5CBA54AB2FD4DA883"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/circular_q.h",
+      "sha256": "0BC4025C81425023F4D58711D6AA6231A55EE606BB1FC88F4FB3E655E807E265"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/console_globals.h",
+      "sha256": "3DCED73DC2BC5EACC678EEC34AF6458F910740C8949FD1BC8449808D1345467A"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/file_helper-inl.h",
+      "sha256": "CB74C68B416FD94EF738B12E93AF4BB571B69F2BCC3B6987CC7EE0A1FBEE0547"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/file_helper.h",
+      "sha256": "E23822A24C9F913328CEED3A7176E832114EC65ABCCF802BAC280852B288415B"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/fmt_helper.h",
+      "sha256": "7A2E655F077C1F9CEB7D7A69214594C3721702B691B7A301BAD96F0AFFD45D06"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg-inl.h",
+      "sha256": "7EC7033B384263180C041A4AB627CC8081D7550AF6A4533F49334AF5FCE2D4F7"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg.h",
+      "sha256": "7E9A3B7B89646CC1AD36D21DE8E7D584F81DFA642760C12F40385DC0DB65E3B0"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg_buffer-inl.h",
+      "sha256": "E41147AA63DFB99B1B2285A88740D9E7C238099AE3518B2E88798E7E5991932A"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg_buffer.h",
+      "sha256": "5A79FDFA5429D23286C58926A53DE3EE83B577DB21A4CCCBD104CEDA8DED7C50"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/mpmc_blocking_q.h",
+      "sha256": "66ED3083A98E5CC142AA8D9DC18CE8DE5FF32F82382386546F6FF302A01FC6C6"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/null_mutex.h",
+      "sha256": "1377FDE4B54417DCA1B3D162D0F18C35F9418E1DB91A333949952F1C877127B1"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/os-inl.h",
+      "sha256": "F32D377E7B58E53B1D601A7E0FEF5E2C1D137592C25DF3BB4ADBF89E015018EF"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/os.h",
+      "sha256": "DC6AF3C0FAE5B49D8A703F6EF5432F3F25CD061290E81DD0D80441BA5719CF07"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/periodic_worker-inl.h",
+      "sha256": "72C338426A4CD5F1A387D222A867B575F01F8D1968326F5F30A82FF5071BD681"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/periodic_worker.h",
+      "sha256": "2773BF8766655B9BA5B53C9A84B2ABCD4A4F02EC5B55363740668534EAA217CC"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/registry-inl.h",
+      "sha256": "52163509EB3F64E0B014646611A250A0EE01674FE85F4EFDFD4AFDA0E003CB12"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/registry.h",
+      "sha256": "A5CE3C5A8BC019E7D8508268B222136C01F1E81360DF67F104F21BF4B49E4F4B"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/synchronous_factory.h",
+      "sha256": "3FCFCC28AA4EDC2998E9E00D218362600605B89E0C58EBF2C7267950412E1CDC"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/tcp_client-windows.h",
+      "sha256": "3553C39BC4A1A28E43EE05AB79F11762BA829847358E1F564BF4F8A96C683D73"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/tcp_client.h",
+      "sha256": "6977DEB87DB2535DA5AFB0013644386BCF32E49B64655C31344F5835F1324029"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/thread_pool-inl.h",
+      "sha256": "B7042C70DA4D1C0398DDC74FC12BB5EEC746647C18857ACE1C6F425B5CF9435E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/thread_pool.h",
+      "sha256": "432BCCDE480274C911460D7BA30CDA62AFEFD6FCC2CC57529B5F44D68324A62E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/udp_client-windows.h",
+      "sha256": "475721551D61F3749FE008762CF0359F67D6BD90383208749E30360BFA190D1D"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/udp_client.h",
+      "sha256": "53E10FA54EF911F254FA485FF9E6F8047C9C7659F5B345F87A4A590831832903"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/windows_include.h",
+      "sha256": "EE78DF4FA66A4E41ED97B47305953F9AF2140718C5FAB14D921AD8B195E9931B"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bin_to_hex.h",
+      "sha256": "5609BBF846807BA9A18330FDC0141D91A067C0E44B760B97693C2A88893A5635"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/args.h",
+      "sha256": "6E0BF8FFBD904E6EF525CDCE8E6E00312CE5D14F616CEA5D88132606CA0384C4"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/base.h",
+      "sha256": "892FCC48F31A80382F0E304E427D68D2FD62A2D78AEF142020199120DB5269FB"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/chrono.h",
+      "sha256": "F8E2A69BD97BC5B90C9AF7FB87E010775B695D487A77E8D8CBE624E57BD2F9BF"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/color.h",
+      "sha256": "F88BF0C4833CAED3A7F01B6D633C7B259741A26119E84C651AC1E31CFC980B72"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/compile.h",
+      "sha256": "636C13842ACCE0B42B378E65FE67A69E5635E8225C9701975E5B326A97BE5CB8"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/core.h",
+      "sha256": "B2B6692145B11C7C2774DB106078C97575A47D18E80C7783C68566475325EBB4"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/fmt.license.rst",
+      "sha256": "07580F2A3B35709CE703D523F447B242F6DFEC7582A8C0DF102C7FA2849375F8"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/format-inl.h",
+      "sha256": "E7BAF108B84E89B29915BB35733540F8F4262CD8F4B41C15754EED4D2F185F61"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/format.h",
+      "sha256": "B4C65350362BF40E76A8E6B450587D912C7081B6EAFEAFAF3D7BCF53153E17FC"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/os.h",
+      "sha256": "45D4E84BE4E84A128442F04EDA06E1305C8E02C61166854A3B8B348194D35DA5"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/ostream.h",
+      "sha256": "742416A6A88286609887FA512C4423820764AAFBB723A42A825F3193CB52B4F0"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/printf.h",
+      "sha256": "AFDDB422A86125E04A7260BB0F0AE3423EA8D591181ED5D4EF60B7A5D068993A"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/ranges.h",
+      "sha256": "CCAF61C9B5937E0FA97737FB047121C5FCA9DB34DE516B8EDFC1D913583E3C8E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/std.h",
+      "sha256": "3F06CDF32774B9E6915E9762411F5F4DE8B8BA5660ADCCBDEA514BE7F0B23826"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/xchar.h",
+      "sha256": "F0903D522C64FAAEE2C374A0B2063AC3E43D0B5006DFD3411F0E5DCCD8FF6062"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/chrono.h",
+      "sha256": "F57BE9FD2C4C39DC7FF73F736C481EAA418723CCC7ADEB16B3905A0F4A7B534E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/compile.h",
+      "sha256": "6ECD7B2AE593E3B7B00D577AD035C0598C29C2DF3947C21102EC110B2A33B5E9"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/fmt.h",
+      "sha256": "6FC4048665172D38D835203D757AA30D4136C622D26D26E881F72F96B86AA556"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/ostr.h",
+      "sha256": "D0437444E2DA75EE732E392CE96E8F72D1DB5BF9A6A79F0A1D36DBDD93CE1F1E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/ranges.h",
+      "sha256": "7EF5F93F56F8F39ECDA80B070BF1B3A93530832B6F69415C99ACB72BD33A80AC"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/std.h",
+      "sha256": "4A72A66FA67040B429DD791B10E75B21D5C18017ABABCAB808EF09900C727484"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/xchar.h",
+      "sha256": "0F5DB8046E2C81BCA4D2DD0245702366D5D4C51131A25CB0B79E5001A5002177"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/formatter.h",
+      "sha256": "213631628274DC6C26FCC9A3BED36A3A9A83EDEA5E6B9F027BAEA58CA9C5EFF3"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fwd.h",
+      "sha256": "246D2754FB77DCDCB7ED4BE2328944659FD154599EE09DF865DB5CDB33CBE349"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/logger-inl.h",
+      "sha256": "1507122F5C8BC7428FD5A606C29BC0FFF42B6F55C602311D1891E45D23AFB7A7"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/logger.h",
+      "sha256": "E6B8BA92B7C6B83B816871F9A663CAB4C1C21DA3C5B252904F3DAE412DFAD85D"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/mdc.h",
+      "sha256": "C3516A85D687F806080D81D0B63CB0353665B26D78F6CDC2C51E526AE9C492D8"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/pattern_formatter-inl.h",
+      "sha256": "7E05FAB1303D952801143118E33525A50D77304B3B3FEC117CCC8637C85135FB"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/pattern_formatter.h",
+      "sha256": "87FFFD034B0A2139A6373BA04D9F88AE57CFAC3865138E0859F19A9E5858DA43"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/android_sink.h",
+      "sha256": "96F8C917BE604BFC0CD4A84E6E9BEBD790C9828170F921A50F0F013A653CDA8D"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/ansicolor_sink-inl.h",
+      "sha256": "62A5E7C2522606660D4FAA683D206D748C94CDCD6C72540CE6AC46B28A153958"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/ansicolor_sink.h",
+      "sha256": "C6078602B09B78F781E4A18B966E2A3EA2DBEA5C9A84A77ADBE1E27557E85DE7"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/base_sink-inl.h",
+      "sha256": "7FE3E5BB453018D03E2B850384B18F8C00A1B64BE363BB22C4B9B92082D9BCC7"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/base_sink.h",
+      "sha256": "86186E0D15535B94270C94AB5EEB798D47DFE7330F4E622BF7C66DC46C820F37"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/basic_file_sink-inl.h",
+      "sha256": "613295EAAC45BABF5CD5E7BEC262763A5214071EAEAB58C5598AC60620285C6C"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/basic_file_sink.h",
+      "sha256": "E4693C382833FC13D6ADBDC68D602D479C72225A463892BC4FD6FDE6475EDD4C"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/callback_sink.h",
+      "sha256": "568EED97D5C29F942D811AFE8614CEAE6C110B74FFA4535123A5BD9DB31F263F"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/daily_file_sink.h",
+      "sha256": "EE32CBDD80B9FE51ABE04AE290D199C46CEC2ECBF35E7A2E796DAF712B8520D2"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/dist_sink.h",
+      "sha256": "FA6B8B53368B3CC9490046F1A207C3852835F0A00F6F677005C9E52799E86247"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/dup_filter_sink.h",
+      "sha256": "ADED06D32DE86861BE0B07A7C1561CD1A9F1DF80CDBC0EB15C4F9735C26CC309"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/hourly_file_sink.h",
+      "sha256": "AA31439C3C3072E9B77ACC2800005B586F6B6CDC2D790E0783050B8627A79411"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/kafka_sink.h",
+      "sha256": "9BB10A5EA347F2400BAADF0D794D5045169FAE77388132BC0CF3DCF30EC00C08"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/mongo_sink.h",
+      "sha256": "DF9A5C34BEF34A9A55F4BEC51F98C3F0527FDC61BC8EE247A9B4F4149E8FF0F0"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/msvc_sink.h",
+      "sha256": "2C9107975CC29F89880846DCE6939F2E8670A0B4AACF36A83CF08C8190475402"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/null_sink.h",
+      "sha256": "75D92F19D80BA59E15C8607E4C98A86A14E238E5CA9B5AFD6150DCF9E86D10D6"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/ostream_sink.h",
+      "sha256": "8A444E2537B82D6FE4A87C1162D4EB53F94CEB01ACBC8D646828F2B24F869085"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/qt_sinks.h",
+      "sha256": "E3BB4B606187DCFC06EF2ABAFB0BF285662ED1EDC079F5525CD4039E081E5212"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/ringbuffer_sink.h",
+      "sha256": "69DD445A2519BDC25261F2AF884B479A09A54458468F9F351A8333AE6AB370A5"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/rotating_file_sink-inl.h",
+      "sha256": "8DC1C0985BE041AC2EC0F155B534B748CD44B3EB33E8836DC849F9314C21D13E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/rotating_file_sink.h",
+      "sha256": "27FA443B8BD9158F4472E116A05FEA37E82B6452B6EB70A4EA78AE0089039142"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/sink-inl.h",
+      "sha256": "F8FABF0DE532BEF4788AD59F278AFBD3C4187B598F5C856370CDFA3DD564F28A"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/sink.h",
+      "sha256": "75E5C2B43C253CFE7C553077125E3B158E9D71CAF2765AD97BB08443EE83B56A"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/stdout_color_sinks-inl.h",
+      "sha256": "4267753C6A0F8F8380999FA1445438CDE62A62874A6BE4555D8BD23245F9E1F7"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/stdout_color_sinks.h",
+      "sha256": "03700FF3259FC97D2ADB52EF5C470CF847BB1D417BF5D74E851C7C1B6212FE0E"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/stdout_sinks-inl.h",
+      "sha256": "CD9298408922FCF38B45EEC7853CD0E96EFAC4CA65A8FC0326DCC17189853DFE"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/stdout_sinks.h",
+      "sha256": "A7EB6C3E4AEDBED13C57AE517CBEE30EF62582B3E02E35530123CAE58CE1F526"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/syslog_sink.h",
+      "sha256": "92DDDBD22C8E62597EAEF1D886093DF50DBAB19763A4D758B394227C68D55596"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/systemd_sink.h",
+      "sha256": "E312D6A5A52DC5ACD6321833F18FB6C29A438A1F24EE5DFE3DD29A550F35887F"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/tcp_sink.h",
+      "sha256": "92092DEC86BDC1CFCED58BD61A28C6C22CB5CB905050AA416437F9C9EB4A71A1"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/udp_sink.h",
+      "sha256": "6EB0B04604FA84E63B1BAB51539A281A0BF17C912B9B5A5F794EFDB0DDAB190B"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/win_eventlog_sink.h",
+      "sha256": "4783A96F7B89B19D48C14EEA3F82F3FFD659E8FAF34A4446659CD0C2D822E39C"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/wincolor_sink-inl.h",
+      "sha256": "ED4E3F9ED012BF495044E414E1F921311BBA888BC905A515DA41DDDE35C8C557"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/wincolor_sink.h",
+      "sha256": "75A20F219B48C8FF63D2E7A11DB9ED748FBC9CEF5198E9CF739B889062665AAF"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/spdlog-inl.h",
+      "sha256": "ECA55774ACB8F0CBE05F18CFA95405FD5FF1ED041CD7372556B2EEE39776A5EF"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/spdlog.h",
+      "sha256": "54283B3E3BF96C3DF22C40CAEA526FFE0BBF203B5F76A98AA130B91A50487195"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/stopwatch.h",
+      "sha256": "60F3AAED933185261AE603CC589CD39EBF93EF78321548871D469FB566903C44"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/tweakme.h",
+      "sha256": "8E641DF000560090A11ADB04EFF3F1A18E814F6EB8F2A9A9A1F22C0DCC572F82"
+    },
+    {
+      "path": "external/spdlog/include/spdlog/version.h",
+      "sha256": "A0C15D9295EBA580732DADA20940A443C53DDB47D8565C730D7AF1EE5F3BD712"
+    },
+    {
+      "path": "locales/README.md",
+      "sha256": "10857C25D682ACBEE8B327EC0301719D5FAA29E6BBEB4C4BBD2237B86FCBB45A"
+    },
+    {
+      "path": "locales/ar.json",
+      "sha256": "E42001CAA0CCFB726C04CBDBEC23DB1CEAAEA29D20C8D9F06434435C4F11148D"
+    },
+    {
+      "path": "locales/cs.json",
+      "sha256": "3DF50D36E8E2C856708D5056A1214CC5D7194FF8D28872E0A61DD51FC663F9EC"
+    },
+    {
+      "path": "locales/de.json",
+      "sha256": "521E7912E93A512334C27E429D8D546807D12825F5EC3D8FAD06118FC37C4738"
+    },
+    {
+      "path": "locales/en.json",
+      "sha256": "509D9538FC0F145FF20904FC28A2E8812EDF7EAF2EB3EF1EDE034022D0FB835E"
+    },
+    {
+      "path": "locales/es-419.json",
+      "sha256": "320EF452FEC9A9A730FC7016A19845D9DCD1AB9EB5566FC45BB33BEABDB071A9"
+    },
+    {
+      "path": "locales/es-ES.json",
+      "sha256": "3B0EA6E602594ACEAC65F8B957AC17FD83506C0EC146003CB43B851F844885A5"
+    },
+    {
+      "path": "locales/fr.json",
+      "sha256": "99DC442E66B7789689824B3E31958C060A4E0236A8D416756993366E4055CA3D"
+    },
+    {
+      "path": "locales/it.json",
+      "sha256": "801B0E1C5834EFCB8740AFA85C59B22C3670717DDE46E89034437B6AF860EF61"
+    },
+    {
+      "path": "locales/ja.json",
+      "sha256": "7D86A4A40C5A08A5FEEC8C8257A2B8CD2BC3691487BB6585AFF72E1F63F5C08E"
+    },
+    {
+      "path": "locales/ko.json",
+      "sha256": "D90AB3F2FD4534CAB447CDF6846FDEC489A2037DF8CDA251BD7D2CE22627C364"
+    },
+    {
+      "path": "locales/pl.json",
+      "sha256": "A186C1B36C7AEC62029D995558544DED6CBF9834E095A85957D909D5B60CBE65"
+    },
+    {
+      "path": "locales/pt-BR.json",
+      "sha256": "7F9C680770F5F95FF9686AF14AB9DBF692A73840D7A08CBA477F4D65C26B19B0"
+    },
+    {
+      "path": "locales/ru.json",
+      "sha256": "3D6E75566578F8EF09419854C15E87CA20FBD9E7FD81C7128085B8BBB26DD383"
+    },
+    {
+      "path": "locales/sr-Cyrl.json",
+      "sha256": "D657E0440B9070641E82FEBD2B9AC899BDCD3F43A4DAFC7B936838F1D7EB42D2"
+    },
+    {
+      "path": "locales/tr.json",
+      "sha256": "5E7CCEBE6FF4181EF39FE9EEB9E76AEA649996354F879874309A2DD198753AA5"
+    },
+    {
+      "path": "locales/uk.json",
+      "sha256": "1347899760898860DD0E4ACE7487BAFAB91536248CFC133B9DAE922F88E728F9"
+    },
+    {
+      "path": "locales/zh-Hans.json",
+      "sha256": "96BA45EE8915744E0BF47EC26C4D4422DBCA562C789A5A9917517A757CBB5F91"
+    },
+    {
+      "path": "locales/zh-Hant.json",
+      "sha256": "F01EE2AACE32A7CBB02E939854A698FDCD8EDA0C5E9522FF437A80AE3A542E05"
+    },
+    {
+      "path": "src/camera/camera_state_publication.hpp",
+      "sha256": "4AF93166FC80E823B4CDBBEA34039CF733818243AEBDE6252320C8C20CE499C6"
+    },
+    {
+      "path": "src/camera/camera_state_snapshot.cpp",
+      "sha256": "B0B5EA0C268DB9CD789C2A31EE3D3AA4A86F8C8ED6D8C4780C1F74C785AC9F5F"
+    },
+    {
+      "path": "src/camera/camera_state_snapshot.hpp",
+      "sha256": "158DA40460B40CA707C45773F4FB236ED0A25AF1F589E81EB4948A2BC2755988"
+    },
+    {
+      "path": "src/camera/fov_observation.cpp",
+      "sha256": "55A0E6E7A7A26AA26BE14516E6E5E0CF57AFBE2A7F640F56DCF13576852EED18"
+    },
+    {
+      "path": "src/camera/fov_observation.hpp",
+      "sha256": "64174502DE4A4AAAED7B1C465381FCE0D94142E115498E30D8A313D9167CFB87"
+    },
+    {
+      "path": "src/camera/fov_semantics.hpp",
+      "sha256": "0AE731D35AA17E9CE3530AC7C0B5AB482483CEFC1A0DF4136766D907CC7EA16D"
+    },
+    {
+      "path": "src/camera/gameplay_aspect_restoration.cpp",
+      "sha256": "8274121CE2FD5AA54FAFEFE480E29410E90D46540AC26C0BC8E2CBBC5A43940E"
+    },
+    {
+      "path": "src/camera/gameplay_aspect_restoration.hpp",
+      "sha256": "F097E14BEE137F161B2125578C2683ADCA03B88AF6C8A783B1C70FA4436D7F26"
+    },
+    {
+      "path": "src/camera/gameplay_baseline.cpp",
+      "sha256": "A3A6C9B76BCC9BE2AFE8E7F80B04CFA2302EE5CCAFE5B1471E168C954E584090"
+    },
+    {
+      "path": "src/camera/gameplay_baseline.hpp",
+      "sha256": "3589702701A51C0DF5FE8CA837EF9F60ABDB220086D3279E3FF2EAB9B54E1718"
+    },
+    {
+      "path": "src/camera/horplus.cpp",
+      "sha256": "87FB99C39D122E8CF1A8537A371386F462E024FB63DBCF0D27B63226D33E9E82"
+    },
+    {
+      "path": "src/camera/horplus.hpp",
+      "sha256": "F62A5F1FB964A3581A8E72E84519FD658F373A594E46A16E2A94B7D2DC225BA7"
+    },
+    {
+      "path": "src/camera/presentation_state.cpp",
+      "sha256": "002D03D5B9269DD2ECC765DC2FCE7FA8B946324D42EC7B79E0CAFB5D7418B057"
+    },
+    {
+      "path": "src/camera/presentation_state.hpp",
+      "sha256": "EA8C7B6E5B22D86AE292C68C61E6C015FAD50D43F9C84A8AD30F357D5E312BA0"
+    },
+    {
+      "path": "src/cinematics/cinematic_aspect.cpp",
+      "sha256": "CC4C75A1C2A90D4330F351DD5CF7FF9694D01208619BD9F6B3C28E56EA64424B"
+    },
+    {
+      "path": "src/cinematics/cinematic_aspect.hpp",
+      "sha256": "B5E251560331FA646EB003BA40F3EBA01F1D1C3148B782848C79A47C51416F07"
+    },
+    {
+      "path": "src/cinematics/cinematic_exit_authority.hpp",
+      "sha256": "CC4909E7E89C7E79C07CA91FCD5B0963098D8F2CD61755F2F59C061C05DE8E48"
+    },
+    {
+      "path": "src/cinematics/cinematic_fov.cpp",
+      "sha256": "D6938560819957A6F1548BB2BBA109FFB1169763F99FF14E1269A6233511211D"
+    },
+    {
+      "path": "src/cinematics/cinematic_fov.hpp",
+      "sha256": "24C2D87996D71AF38D7FFB5B19173C145956DA12A3EDB10BFB109F3048571FD5"
+    },
+    {
+      "path": "src/cinematics/cinematic_initialization.cpp",
+      "sha256": "2ABF137F4AECCB9809BEE1F43377B69BD6C98548D3072BF0956F1FDCFCBBC88D"
+    },
+    {
+      "path": "src/cinematics/cinematic_initialization.hpp",
+      "sha256": "91C5B855549C201AB11C5E7214FCBA63991BC428CCE7A9CF348B90A31D72E167"
+    },
+    {
+      "path": "src/cinematics/cinematic_recovery_retirement.hpp",
+      "sha256": "91217BD3C40ED2692B227945C14165148BAAE87487319AAF628540C43E4BB95D"
+    },
+    {
+      "path": "src/cinematics/cinematic_selection.cpp",
+      "sha256": "2BB4C9A5E3A84130A8548A458FD208BA4D972066A7109CBF0D4E165B419A64CC"
+    },
+    {
+      "path": "src/cinematics/cinematic_selection.hpp",
+      "sha256": "C53DA33EE79347024D012969114DA9C19CAC40C91B0DF1E3F171D8C8AE7C0495"
+    },
+    {
+      "path": "src/config/config_repository.cpp",
+      "sha256": "210D7A42EDCBA433314E886E82042E556E5710D0FFD9D848B99793AF9F962EAF"
+    },
+    {
+      "path": "src/config/config_repository.hpp",
+      "sha256": "A3EF5E1A647509B6636CD9143FFCB94B01FE8741AC5C30F5656D8BC51FF03AB9"
+    },
+    {
+      "path": "src/config/config_template.cpp",
+      "sha256": "2ABC2728CADCA86282DA0740E04D6670963B24275725042EE2017F24006015FC"
+    },
+    {
+      "path": "src/config/config_template.hpp",
+      "sha256": "C25B86989112B2F643B9CC9E6313BEA92A0E8A30C8CB3EECEDB632489BFE7106"
+    },
+    {
+      "path": "src/config/feature_config.cpp",
+      "sha256": "CCE0231EA847FDF34DE94C31AAE112FA872845BCE90B8313D6F1EDCC5CAFC2EE"
+    },
+    {
+      "path": "src/config/feature_config.hpp",
+      "sha256": "EAA2536ECB46214B4309D4B95758A15556AC5148AC1F50283328AEADD58CC5F9"
+    },
+    {
+      "path": "src/diagnostics/camera_log_probe.hpp",
+      "sha256": "863691179CA9F7F21630128AB2961B0079451FF6C247350A3BB95E8308FBB0CC"
+    },
+    {
+      "path": "src/diagnostics/camera_writer_identity.hpp",
+      "sha256": "ABBAB1A162111EC93BD14F56CBC2BCDFEC5D59683BEE5620C28AEC5533700E14"
+    },
+    {
+      "path": "src/diagnostics/cinematic_baseline_provenance.hpp",
+      "sha256": "54A993B9B63DD075D3EEA338287606070EBA90FBE70B347609D24D216D085310"
+    },
+    {
+      "path": "src/diagnostics/cinematic_continuation_trace.cpp",
+      "sha256": "0B9D321D283A27EB702BFC7E69BEF5C2BD06280E284C00F53328286034413FF8"
+    },
+    {
+      "path": "src/diagnostics/cinematic_continuation_trace.hpp",
+      "sha256": "B8A3876A55AD820052A866510550CA1506F6A67EF0579F0107E80E40B678A494"
+    },
+    {
+      "path": "src/diagnostics/cinematic_lifecycle_context.hpp",
+      "sha256": "CA599906683CB3861B83E50AD20A51FE2787E0460520BE07DE6E368CFDE3E1B9"
+    },
+    {
+      "path": "src/diagnostics/diagnostic_runtime.cpp",
+      "sha256": "B60D0DF79EAF0C71C97915D104EE083202A2B5A5460F8E121E3A816C6A495A24"
+    },
+    {
+      "path": "src/diagnostics/diagnostic_runtime.hpp",
+      "sha256": "01209BBAEF17A62292EA9DAA68A74AAC28A4C3E98B67F42C99D72B04CE413403"
+    },
+    {
+      "path": "src/diagnostics/dialogue_source_provenance.cpp",
+      "sha256": "B5A651BF5CDB890B719AFB9A77AFC37FB9155383C2D02D7CBF5A4CB5CC5EE34B"
+    },
+    {
+      "path": "src/diagnostics/dialogue_source_provenance.hpp",
+      "sha256": "567B05FD9BEFF04CD76F04F09F38E3DCE85FDD373A43D752B88B827C07545DA2"
+    },
+    {
+      "path": "src/diagnostics/language_state/language_state_transition.cpp",
+      "sha256": "A2D8D102998E7AE45DE6E3711F8B91B3DE8243688965D9FD864533C864E0995C"
+    },
+    {
+      "path": "src/diagnostics/language_state/language_state_transition.hpp",
+      "sha256": "D5FCB520182500FE3BFAFB6D496E1FBFC5E5E43C5F644BD860DE83FBA0FCFF3E"
+    },
+    {
+      "path": "src/diagnostics/language_state/language_state_watcher.cpp",
+      "sha256": "7C6181B15AAA1075C153558830BC94E09BFAD198EEA7BC9B4BAE71A5277F8956"
+    },
+    {
+      "path": "src/diagnostics/matchgameplay_prediction.hpp",
+      "sha256": "1F7022C56264A5C9950C22D34D07F6B0A5C17E3EDCA60D4C346B915ED8418636"
+    },
+    {
+      "path": "src/diagnostics/overlay_activation_trace.hpp",
+      "sha256": "E651E461573E870603BDB50633C4FC1B0D1DBB2FF168A12559F33B2C649A5720"
+    },
+    {
+      "path": "src/diagnostics/performance_telemetry.cpp",
+      "sha256": "7ED6CDE08783FC791E681AE406F035A0405D932AFC80DD513859BB0863C7B509"
+    },
+    {
+      "path": "src/diagnostics/performance_telemetry.hpp",
+      "sha256": "3686D116F6F5AE1509387A01B1F3D7EF174F473D0E330616C51D6618E0C3F305"
+    },
+    {
+      "path": "src/diagnostics/startup_journal.hpp",
+      "sha256": "694AB6DE7267418DCBB6AA780384D96E4C7672119F2EF093E6F79876EA74C0F7"
+    },
+    {
+      "path": "src/diagnostics/startup_timeline.hpp",
+      "sha256": "35B23F1B018728F0824D26DD17ECF6F183090C397538242048381321DFD8A538"
+    },
+    {
+      "path": "src/dialogue/dialogue_fov.cpp",
+      "sha256": "907098EAA42B784C823757E61E6D1426A140CBA489BF9514999D2E233C291F3F"
+    },
+    {
+      "path": "src/dialogue/dialogue_fov.hpp",
+      "sha256": "620F2E6EDE0D812982F7F503F9E029616A1685344F56EA535C21BCBD5BDBCAA5"
+    },
+    {
+      "path": "src/dialogue/dialogue_state.cpp",
+      "sha256": "7071626D3F94F64D155E244FCE3FA665549F2C7AD4AF0028067FFF0B409DDCAA"
+    },
+    {
+      "path": "src/dialogue/dialogue_state.hpp",
+      "sha256": "BD73EFB774FCB047638152A89DA5A1A75E9CFF3677D27A80AF389F522AF618F6"
+    },
+    {
+      "path": "src/gameplay/aspect_policy.cpp",
+      "sha256": "FB2FFCA4BED5C7988F1B0F6A26522D74722434371B727EBA84C42F30A387E0AC"
+    },
+    {
+      "path": "src/gameplay/aspect_policy.hpp",
+      "sha256": "60C9340B230924A3BF55A59BCA5CEE66269FDD0CB9F11DADCD90BA172C8FA710"
+    },
+    {
+      "path": "src/gameplay/gameplay_camera.cpp",
+      "sha256": "D19797469F68437508FBDCECB9465462F9F2E2A0C826A9D91948FBF0F23D6E61"
+    },
+    {
+      "path": "src/gameplay/gameplay_camera.hpp",
+      "sha256": "913B1F6A663473F1D9998A8E542CA79969D8E2C501413E92D2DE82601AE12B8B"
+    },
+    {
+      "path": "src/gameplay/gameplay_state.cpp",
+      "sha256": "71FA6F0600B872EBE8C276DD46B3C0D76EE71FA3AD289CD1BEF27B7A824D3536"
+    },
+    {
+      "path": "src/gameplay/gameplay_state.hpp",
+      "sha256": "C31F400223923F1C93D13745BF7B7FFFC19E5A78CD1DB3E485BE3D964D7A5E59"
+    },
+    {
+      "path": "src/gameplay/horplus_gameplay.cpp",
+      "sha256": "6A7A02D455BC95310FF7E614626EED0938949411BA11F44E8E56D4639B3B147A"
+    },
+    {
+      "path": "src/gameplay/horplus_gameplay.hpp",
+      "sha256": "E6E889D447C059D002E31AE929F059EA5435000CD2817335F1365756B20583A3"
+    },
+    {
+      "path": "src/hooks/hook_set.cpp",
+      "sha256": "C48ADF0F87C87245F6CE336224D3766DD1A7654830C6789EA3C47D2BBD5DD62C"
+    },
+    {
+      "path": "src/hooks/hook_set.hpp",
+      "sha256": "BD65D69CB13744ABB8D399196B2B28F190B92C283FF2C038272B8BFB06928D5D"
+    },
+    {
+      "path": "src/hooks/instruction_validator.cpp",
+      "sha256": "DAF3B4D4A952FC6078462B1D4216DA17AAF6FD5C42E51B66A7DFB2A8F5DB297F"
+    },
+    {
+      "path": "src/hooks/instruction_validator.hpp",
+      "sha256": "BA7C13ABCFC13820B8F848039C9EA3FEDAAB3B929DB131F79F70ADC4677990F5"
+    },
+    {
+      "path": "src/hooks/signature_scanner.cpp",
+      "sha256": "089EDC6A1058DAA02F271E46F3C731ACB926B0145AE29D75F772F98391BFE41A"
+    },
+    {
+      "path": "src/hooks/signature_scanner.hpp",
+      "sha256": "2D3C4B8347D2875DAAFB1129FC4A93AC5F932A05A7FE7EC96407791459145F7B"
+    },
+    {
+      "path": "src/hooks/signatures/signature_definitions.hpp",
+      "sha256": "AAFB4689239988CD3E9F8D8422E8576FEC13103E60FDA16398E0BE1F1C0DF255"
+    },
+    {
+      "path": "src/localization/locale_registry.hpp",
+      "sha256": "5E69C1686C08B4EF25B90509778D1347FEA58ED4B3B6192F8B84C03570C48CE9"
+    },
+    {
+      "path": "src/localization/localization_resource_ids.h",
+      "sha256": "EC860DF4C3EF0009F17F7493AA9B2A9368CFF929F872F25D49AE74BA84728213"
+    },
+    {
+      "path": "src/overlay/composition/composition_runtime.cpp",
+      "sha256": "75071D3C1A08DDD831C7C788EF206A95EE18A4436F3459372B81387D10E037B5"
+    },
+    {
+      "path": "src/overlay/composition/composition_runtime.hpp",
+      "sha256": "AC81562022EDC5BE825B3163F90C0A1DB432BEB868913501466986866082D79D"
+    },
+    {
+      "path": "src/overlay/input/input_state.cpp",
+      "sha256": "FAECEBCC5D0E89344FC893B20A13B350C0B695B88C1D2392C54E9FBE690E3AA4"
+    },
+    {
+      "path": "src/overlay/input/input_state.hpp",
+      "sha256": "08E51D66880B161511BD6288EDFC6E554A6BFCB7F9FE85167C6971942C298476"
+    },
+    {
+      "path": "src/overlay/localization/game_language_reader.cpp",
+      "sha256": "B6A6EE515C774E54E42CF457B8FA323816BFFD81695F1881E8981A0777FE7476"
+    },
+    {
+      "path": "src/overlay/localization/game_language_reader.hpp",
+      "sha256": "8F85E8E1A488D245271A9AC4241C7FB9321A3A666A437750432CD35F0ED4B395"
+    },
+    {
+      "path": "src/overlay/localization/localization_catalog.cpp",
+      "sha256": "6CAA582242A1EB3E0B727D2BE2D767380058E1D13653314AAB164CA2C08066E5"
+    },
+    {
+      "path": "src/overlay/localization/localization_catalog.hpp",
+      "sha256": "9AB66AB63C5F95D204FDB72B3268E86A807317578089304C4B8035A9CA909E56"
+    },
+    {
+      "path": "src/overlay/localization/localization_font.cpp",
+      "sha256": "40AD97CA75507ACE80CD9E5013BC4672B290B16AF344B2E721D5D7893F39B52A"
+    },
+    {
+      "path": "src/overlay/localization/localization_font.hpp",
+      "sha256": "68B884BAA9AAA077707559D9C576F09B7F7380647BC09FDEB9C7D21BA06CEC1F"
+    },
+    {
+      "path": "src/overlay/localization/localization_formatter.cpp",
+      "sha256": "E3795B747D62298AF04E760C78AA40FF4E61EEB0A309A009EB014346A6C4B484"
+    },
+    {
+      "path": "src/overlay/localization/localization_formatter.hpp",
+      "sha256": "7C65653198AE15965C0D2739B7E353DB75158D1ECA0EBE029F713C20CE23BB6F"
+    },
+    {
+      "path": "src/overlay/localization/localization_keys.cpp",
+      "sha256": "554D807589CFC3ED5AE5A03178C353419F10964B79469414CA53AD41AB450FCE"
+    },
+    {
+      "path": "src/overlay/localization/localization_keys.hpp",
+      "sha256": "6270E8B4E224DD364E0A1B774C151155D9FCAFD850B9EC4EEF3280371BAF6E13"
+    },
+    {
+      "path": "src/overlay/localization/localization_manager.cpp",
+      "sha256": "DCBB3F1886C9BADC6A331128F5F6C7FF126285DA41F5B90FB61BC221DC058C89"
+    },
+    {
+      "path": "src/overlay/localization/localization_manager.hpp",
+      "sha256": "84537C77D7D140823008FE04F7BE18C2F0737FB8CD791A8D92710B7A7794F070"
+    },
+    {
+      "path": "src/overlay/localization/localization_resources.rc",
+      "sha256": "7933F0842CE3CB7039F991E889B060539620B3356AA4468578CC599361F6546E"
+    },
+    {
+      "path": "src/overlay/localization/localization_validator.cpp",
+      "sha256": "56BA677D237E5799CD2170539748E78CA60B025BB45B44F2605F600CFCD18AEA"
+    },
+    {
+      "path": "src/overlay/localization/localization_validator.hpp",
+      "sha256": "DCD6FEBFC32E7878806A9AB78781E4B5B40862B4CDF0A5AB2BB308CCD6EABAE0"
+    },
+    {
+      "path": "src/overlay/optional_overlay_boundary.hpp",
+      "sha256": "D5D53703D71F8BCF5E8B6B1730A511B7A66782B05BFA825EC46BE57D1A61AAD2"
+    },
+    {
+      "path": "src/overlay/presentation/aspect_ratio_format.hpp",
+      "sha256": "EC1A0CB4D57C1AD8CDF6C60ACA6C0AE97029811DA83957EC6A714AB9D0FCECF5"
+    },
+    {
+      "path": "src/overlay/presentation/camera_integration.cpp",
+      "sha256": "701A11EEC03CE16C7C0DB2D7EB005F41731241400467775A3E925D5E8FF1B39C"
+    },
+    {
+      "path": "src/overlay/presentation/camera_integration.hpp",
+      "sha256": "D9D27D7D35F0291498578CC8E866E9B08F36003AD933AF1617575521C30C1CA9"
+    },
+    {
+      "path": "src/overlay/presentation/camera_state_view.cpp",
+      "sha256": "9355D7C50DF151F1CA3C05A2BCDC622B40CB40AC033B7447B987062E19449401"
+    },
+    {
+      "path": "src/overlay/presentation/camera_state_view.hpp",
+      "sha256": "73C35EC43F51A0430E20881BBD0D27D402E87B7C5EC86BB2DA2C7C55E67042B9"
+    },
+    {
+      "path": "src/overlay/presentation/feature_presentation.cpp",
+      "sha256": "8D861EED97BDF239249BF255EF7AAAFBC8472001D9DE2856786DE6075D6F8CD6"
+    },
+    {
+      "path": "src/overlay/presentation/feature_presentation.hpp",
+      "sha256": "A4B3834A0EA210A3151998C157D7ACC3B7244323C082E98D527864B019B6E4E4"
+    },
+    {
+      "path": "src/overlay/presentation/hotkey_binding_presentation.hpp",
+      "sha256": "02C6B8B62EF9F318F0B093084B77C46962385321DB7989BD0AC3382F6257CFD0"
+    },
+    {
+      "path": "src/overlay/presentation/inline_hotkey_layout.hpp",
+      "sha256": "7C610D51A40BCE9AFE934633CD4E59EC770718F7A80A327BD26A4911048DAB9B"
+    },
+    {
+      "path": "src/overlay/presentation/overlay_layout_metrics.cpp",
+      "sha256": "3655B1661EE0D47CC80FC2E7B5E46B6BDCC2828BE2C8685871B3C1C8B5FAADB3"
+    },
+    {
+      "path": "src/overlay/presentation/overlay_layout_metrics.hpp",
+      "sha256": "C5A05545C66FC3420AF601E02D531D7850470C11B463318C30E8AECB5978E9AB"
+    },
+    {
+      "path": "src/overlay/presentation/placement_config.cpp",
+      "sha256": "D9D9092DFE6B9F0C27AC16D7F040AAC645A269F1646C3A0BEA71BDA8A92FDB4B"
+    },
+    {
+      "path": "src/overlay/presentation/placement_config.hpp",
+      "sha256": "15011CA8567943B26CB1F6BFA0A8A27BF476D9D9AFDDF4F4263A29B5B85FC6BC"
+    },
+    {
+      "path": "src/overlay/presentation/presentation_contracts.hpp",
+      "sha256": "33300F1AB3F15774C45D33B9FF2854AF354817F713F87C70701429405E33E1E8"
+    },
+    {
+      "path": "src/overlay/presentation/selector_documentation_view.cpp",
+      "sha256": "C81F51E40CBB24C35553477BD689FB2C158F60B0946FD983D17D1372A8F433F3"
+    },
+    {
+      "path": "src/overlay/presentation/selector_documentation_view.hpp",
+      "sha256": "1E6B886C39E228F8F3A59D8FE0DD21EC752C48CEE197BF8597955909A0644C0C"
+    },
+    {
+      "path": "src/overlay/presentation/selector_examples_geometry.hpp",
+      "sha256": "9F739F28C3B04F17854283CD623513FAF9E1716265CBBB541EF7FA383F43E485"
+    },
+    {
+      "path": "src/overlay/presentation/selector_tooltip_state.hpp",
+      "sha256": "5556CAAC557A45DC7A40757D9CE981BA0C422AC1D34B66EDC3007B7FF6F2A234"
+    },
+    {
+      "path": "src/overlay/presentation/setting_tooltip_content.hpp",
+      "sha256": "BD214A2803C60C0761786ACBF9FE43E672765F37309DA891670020D87FDD58E2"
+    },
+    {
+      "path": "src/overlay/presentation/tooltip_row_layout.hpp",
+      "sha256": "ABC3C31BE077C1DD8E17A1E7D48BC4158F3B60A0D78852910018A530BD32D382"
+    },
+    {
+      "path": "src/overlay/presenter/composition_presenter_state.cpp",
+      "sha256": "BED5229B3FEA47A95036A34DD107E8A8C8A6324378D241E092CD8B41A6691501"
+    },
+    {
+      "path": "src/overlay/presenter/composition_presenter_state.hpp",
+      "sha256": "7144EE4D65FAC5394973B96E5F994DF53AE2354D9E6AA43279ABA82163359CC0"
+    },
+    {
+      "path": "src/overlay/presenter/imgui_d3d11_renderer.cpp",
+      "sha256": "3A42512DD7BE8FAE4BE1FAF4251DBA57FA46ECA7B6CDFD89928EEC59BC534945"
+    },
+    {
+      "path": "src/overlay/presenter/imgui_d3d11_renderer.hpp",
+      "sha256": "F86A85A8A49F44AD11CABC54DAC79FDAB69B0D438D4926DBEAC8CE15615B7E51"
+    },
+    {
+      "path": "src/overlay/presenter/placement_save_state.hpp",
+      "sha256": "BF29D94C699DD7896B644F1664422E1DD9050DECA894121D9DA00AE1E2D60F06"
+    },
+    {
+      "path": "src/overlay/presenter/presenter_runtime_policy.hpp",
+      "sha256": "9A02E58AFB27A805C1E844E814DB6D3C0BE60DA2FE5C7BC99885001EA4018E2C"
+    },
+    {
+      "path": "src/overlay/presenter/renderer_runtime.cpp",
+      "sha256": "5DC287300D1AF95846D439B36A3E77A7D06084307868593260DB9D95B37C9ED1"
+    },
+    {
+      "path": "src/overlay/presenter/renderer_runtime.hpp",
+      "sha256": "E4AB254C4D7A0F6AA40FB46FD6DE8803C54C59CD4263BAC2C07F274EF6D34E30"
+    },
+    {
+      "path": "src/overlay/presenter/renderer_state.cpp",
+      "sha256": "E9E30A8299594E57AF7B15C9A53AD0BC53384827439898DE1DB9BDA7A708AB9E"
+    },
+    {
+      "path": "src/overlay/presenter/renderer_state.hpp",
+      "sha256": "3D0EF8002D44CC2EEE2B9AD859172C88ECFA7D264640EC1254C612B4D0F1D5CC"
+    },
+    {
+      "path": "src/platform/win32/memory.cpp",
+      "sha256": "5CAAAB35D30675DE41C16F49214518FB6997CC67195EA6027666DE0C59648462"
+    },
+    {
+      "path": "src/platform/win32/memory.hpp",
+      "sha256": "67166DD581D475685278E19F0360902E9A9BFB5E9F4C319F19FE62242D85334B"
+    },
+    {
+      "path": "src/platform/win32/sha256.cpp",
+      "sha256": "1304A38135DB0DF4FF775D18D7BB384EC8AD710A36F6A64C4AA3F4046C6F2575"
+    },
+    {
+      "path": "src/platform/win32/sha256.hpp",
+      "sha256": "B196E09D7EA73E512D005B83C35EEC723C7E83270E45C411FA6C81D02642DD46"
+    },
+    {
+      "path": "src/platform/win32/viewport.cpp",
+      "sha256": "7952985E0B2B8276F57924D5E26F25606C2B190C93A7EBFB03319ABA6BE39F68"
+    },
+    {
+      "path": "src/platform/win32/viewport.hpp",
+      "sha256": "A9BED6B2E16A671AE2849D4555B52AFF18EE3D18B2F26444203241303F087CD2"
+    },
+    {
+      "path": "src/platform/win32/window.cpp",
+      "sha256": "E832C2620E42C81D4270AEBF478C7CE19FF66825C77EB2841FFB937AB81DCADD"
+    },
+    {
+      "path": "src/platform/win32/window.hpp",
+      "sha256": "D8A74B7F83B3EF9F7B309363784F22A3C71FB2F6B0A290727678785DBB4B7199"
+    },
+    {
+      "path": "src/plugin/camera_correction_gate.hpp",
+      "sha256": "740657AD9981BA18D124BAAD06F0D78476F7C67B29979AE24B7B5C1DFBDAA68A"
+    },
+    {
+      "path": "src/plugin/camera_writer_transaction.hpp",
+      "sha256": "0AA9B4925005E962CD178A133CD82B0BE4BF3377DAFCCF2E2766751448D5C6E2"
+    },
+    {
+      "path": "src/plugin/cinematic_lifecycle_transaction.hpp",
+      "sha256": "9FE3E399C6C1A90A6AD53093E81AA27E6C6BCDEB44E640AAA188AECA4082E9EB"
+    },
+    {
+      "path": "src/plugin/dialogue_boundary_transaction.hpp",
+      "sha256": "ABE2BAFEF58FFDB24286DF610157E10E17B4B4711A57B92513C2E031F6034D5D"
+    },
+    {
+      "path": "src/plugin/dll_entry.cpp",
+      "sha256": "DCC32DC209DB8A45D90190C43E25CB29EED48BD8927624B74C4C29460AFBBDCF"
+    },
+    {
+      "path": "src/plugin/feature_status.cpp",
+      "sha256": "65904A5A7AC58FE14AA5489EFBC3E43E16218F009407678E6C17D5D4E2AE2B2E"
+    },
+    {
+      "path": "src/plugin/feature_status.hpp",
+      "sha256": "8F8C2832CD6D2945FA301B80DFC0BCB0EC2F09780FAE1100AF1615D5514B225A"
+    },
+    {
+      "path": "src/plugin/optional_overlay_startup.hpp",
+      "sha256": "89722C0F6C81D0154625CAA90D89F33BB2EFEBDCFDE25A5C6BFF541C1661A9F9"
+    },
+    {
+      "path": "src/plugin/runtime.cpp",
+      "sha256": "3E9C4EAF512F551C145432C90D6A83AC5D6708705D91EE59C8CA53AA27F1F7F1"
+    },
+    {
+      "path": "src/plugin/runtime.hpp",
+      "sha256": "FC73CC50AD68C806F2191F943F612DCFCD303E9A58E8FBB6A97127C41D07B325"
+    },
+    {
+      "path": "src/plugin/runtime_internal.hpp",
+      "sha256": "CD1B1394DC972DDE1346A5B370AECEA15C7086642D24A065EC3956E9E7C6247F"
+    },
+    {
+      "path": "src/plugin/runtime_settings.cpp",
+      "sha256": "CF1904040D5D8A5A1162807410F0F5FA53D2F8B286457A1EB6EFEA9D465BE66B"
+    },
+    {
+      "path": "src/plugin/runtime_settings.hpp",
+      "sha256": "2A0C0CBB7DC4FF775D7B96D16ACB063AB996404C3EAA62FA5410497C454853A5"
+    },
+    {
+      "path": "src/plugin/worker_lifecycle.cpp",
+      "sha256": "DAB9AFA4017BEF8BE5789BB3BB3605B53DB6F54C1F6F2DA78F0E92CF86466B42"
+    },
+    {
+      "path": "src/plugin/worker_lifecycle.hpp",
+      "sha256": "35E1271F029FADA882CAF7FB95E813913008E8E31B78CC46EDBFAA4BA7FB57FB"
+    },
+    {
+      "path": "test.cmd",
+      "sha256": "B63A5D22AD4C6AD1308756E4E52EF73A52EC5F1811120D8D34F13B404880B415"
+    },
+    {
+      "path": "tests/camera/camera_state_snapshot_harness.cpp",
+      "sha256": "B8CA23113E73D46C5C13736AF158EF99FFFA387FA53DE34168D84FF53D78FE58"
+    },
+    {
+      "path": "tests/camera/fov_observation_harness.cpp",
+      "sha256": "69ADE24CEE5C292B830A3D523457EFE9BBFC70DB5C194CC83632A55FAF14016D"
+    },
+    {
+      "path": "tests/camera/gameplay_aspect_restoration_harness.cpp",
+      "sha256": "BD0D30F3BFC5AD79476AC839F6976BF4FB5D73C86B432BDFAE1072A02362290D"
+    },
+    {
+      "path": "tests/camera/gameplay_baseline_harness.cpp",
+      "sha256": "1FDDDF4581EF1740430A630B832EB76EB10290F38E0DDED2EB069C74AB069CDC"
+    },
+    {
+      "path": "tests/cinematics/cinematic_aspect_harness.cpp",
+      "sha256": "E4DAA7A08E53D2A177C76ED3C90D402596EB9D4CD0698663068BD61B6D059EC6"
+    },
+    {
+      "path": "tests/cinematics/cinematic_exit_authority_harness.cpp",
+      "sha256": "23689D256224DC54ABCC4389B2BEC3C96E2DEF6C6986F7630CBBD20ED355E3CC"
+    },
+    {
+      "path": "tests/cinematics/cinematic_fov_harness.cpp",
+      "sha256": "FBC11AF7CAE7B8F35BC5185EBCD580596561DE23D271BE9963DB6A7C08DF4039"
+    },
+    {
+      "path": "tests/cinematics/cinematic_initialization_harness.cpp",
+      "sha256": "2EAB96F3A8F5740E259234B9E9354D70F4487F2667FD35617B80D59424A79756"
+    },
+    {
+      "path": "tests/cinematics/cinematic_selection_harness.cpp",
+      "sha256": "9025534CAF576B23A96B5D748F4A45205D7D7525339716BCD7D0C0FB882D4760"
+    },
+    {
+      "path": "tests/cinematics/coordinator_recovery_harness.cpp",
+      "sha256": "D4DF9601B51AF7F53B0521235D9282CDD4992EF0479A8E520825BD0FF85CD1F9"
+    },
+    {
+      "path": "tests/cinematics/horplus_post_exit_recovery_harness.cpp",
+      "sha256": "8DB4638E5FAE868AAE3B7079B92D2E68477B07DCD4C105B49E372F5D85D8AF92"
+    },
+    {
+      "path": "tests/config/config_persistence_harness.cpp",
+      "sha256": "09F43E89B69C1C8E1F2797E621B3AB80BC6392A3E106651B8FF10F9697134B73"
+    },
+    {
+      "path": "tests/config/gameplay_mode_harness.cpp",
+      "sha256": "8EAD9272CCEC28169DBFB06DFDF22DE24DF8F227AA6741784939EFA77B5A7ADD"
+    },
+    {
+      "path": "tests/config/runtime_settings_api_harness.cpp",
+      "sha256": "1BC6360BA499607EC2AB6BD4A261E14581E256BE5B489511CE4B31FDD6205C1B"
+    },
+    {
+      "path": "tests/diagnostics/camera_writer_identity_harness.cpp",
+      "sha256": "8134BDE78EBAADFE3AAE7CDC5250584DCF554CAE217E500CC99BF71D6B908AC0"
+    },
+    {
+      "path": "tests/diagnostics/cinematic_lifecycle_context_harness.cpp",
+      "sha256": "3022EAA88834E7DB4687C8D99ED0FFB9244ABB6D638EACD2AB50D86ECFE34698"
+    },
+    {
+      "path": "tests/diagnostics/diagnostics_gate_harness.cpp",
+      "sha256": "46664646119B8F009972A4F085FE48C35842EFD59CD312F20ECB4AB8D7AE13C8"
+    },
+    {
+      "path": "tests/diagnostics/dialogue_source_provenance_harness.cpp",
+      "sha256": "A23552EF3CA8DCB1497DAAD0861527CE45C03244ACC2C994147B3BF4FDE38741"
+    },
+    {
+      "path": "tests/diagnostics/language_state_transition_harness.cpp",
+      "sha256": "51A3D10FC85002BE73369D8AC557FBD2C28DB3C815D9FE8769AE13A27AE6E0C1"
+    },
+    {
+      "path": "tests/diagnostics/matchgameplay_prediction_harness.cpp",
+      "sha256": "12F7F36737373D97F2DA866D6EE2D95A542375503F9AA29AF11D4532034633BA"
+    },
+    {
+      "path": "tests/diagnostics/performance_telemetry_harness.cpp",
+      "sha256": "0C572A37CC7D4ECBD6E3739DF35AFF6B84D9D1A44ABB5247A2C772917400D89B"
+    },
+    {
+      "path": "tests/diagnostics/startup_journal_harness.cpp",
+      "sha256": "38AE5CD185A15BF39154E7C60C70C4B2E28261E7E7DA57E137A0CD325267A22F"
+    },
+    {
+      "path": "tests/dialogue/candidate_hardening_harness.cpp",
+      "sha256": "71889CBEE095F9266449C2D8A4FA9B78AD7F94032B20042290D5DCE84F17A8D0"
+    },
+    {
+      "path": "tests/dialogue/dialogue_fov_harness.cpp",
+      "sha256": "BA9331BBCBB7E7A7E5B0D6C48087C84FF3C5B1F40E3821D949BFB4CF093EB8C3"
+    },
+    {
+      "path": "tests/dialogue/policy_snapshot_harness.cpp",
+      "sha256": "02907F9EB9D4FBBE5AF5391096FA1F1C9BD8E7F0642DA3AC0FB8559E8B81274A"
+    },
+    {
+      "path": "tests/dialogue/post_cinematic_exclusion_harness.cpp",
+      "sha256": "CB58043E977BB2CEEAF684F69C2CB0BC83A4CFC00D6DA626D5F6C315FC2DC2EA"
+    },
+    {
+      "path": "tests/dialogue/recovery_rearm_harness.cpp",
+      "sha256": "3201954B7D32D24D15E6C6BC0BA1F3FF948952C690C695F204D21FC0B4B0A286"
+    },
+    {
+      "path": "tests/feature_status/feature_status_harness.cpp",
+      "sha256": "F5B6DB8F8D4CAFD1D696D924CEA5091672B7C7EB9596F4C3CA53352AD861E690"
+    },
+    {
+      "path": "tests/fixtures/runtime/cinematics/cinematic_evidence.hpp",
+      "sha256": "29049D64D0ED13D2CFE3E85F2C4081D5379087F4293E26E2DD79823AA3886FB9"
+    },
+    {
+      "path": "tests/fixtures/runtime/dialogue/candidate_evidence.hpp",
+      "sha256": "2FACE316D79B32522C3080FB05F6EA2888361FE8E5F078FC088FEFB34FC220D5"
+    },
+    {
+      "path": "tests/fixtures/runtime/gameplay/horplus_evidence.hpp",
+      "sha256": "925C35C40298F7078258BA016692DEB42FECBC30E69A4B480880993A3216F6E3"
+    },
+    {
+      "path": "tests/fixtures/runtime/provenance.hpp",
+      "sha256": "4742FF150D187F9BA79C730BF47338BB9AD3E74C5F9A5E46AAE936DBD926D4B0"
+    },
+    {
+      "path": "tests/fixtures/runtime/transitions/restoration_evidence.hpp",
+      "sha256": "4562B445B93FCB37CC65F8C1F1C12EF5AF7A5A670F39DE997932C9C01B4C1D8D"
+    },
+    {
+      "path": "tests/gameplay/aspect_policy_harness.cpp",
+      "sha256": "B32D41D6C46823FD5AA0C5EDA7391AC6455D74A9DFF398102991D76CB7774A88"
+    },
+    {
+      "path": "tests/gameplay/gameplay_camera_resolver_harness.cpp",
+      "sha256": "A3F2BB70D20C569FF408F0BC0E68AB5F9ABAC2192F465C02B7B9ED7B406E0CC4"
+    },
+    {
+      "path": "tests/gameplay/gameplay_camera_safety_harness.cpp",
+      "sha256": "9C869422808A84E2CC2D470E0BB492792A70566AAA53BEDCD6F8E757945C4FD3"
+    },
+    {
+      "path": "tests/gameplay/gameplay_mode_transition_harness.cpp",
+      "sha256": "0A2B2E394945A3BFA00D5ABAB133F72583D1B339B212242FFA5F97F3F775B90C"
+    },
+    {
+      "path": "tests/gameplay/horplus_gameplay_harness.cpp",
+      "sha256": "BF44E16E85C97E9157D259091D3590355AE7514C4D0E673B700FD19D8D1ABAE8"
+    },
+    {
+      "path": "tests/gameplay/zoom_transition_harness.cpp",
+      "sha256": "1F018288F2A0D377D5CDC9409A8E96196DE5C2F25DACA4CF51CE00EB3DB3682D"
+    },
+    {
+      "path": "tests/lifecycle/worker_lifecycle_harness.cpp",
+      "sha256": "0E8E11A1C70DF9AD5E64BD7D3A02C38C45B26CD99A5BDE47CB9590A16F2EA5D3"
+    },
+    {
+      "path": "tests/overlay/activation_trace_harness.cpp",
+      "sha256": "AB259F06638C6BF7C9ABABCBC8B56EB9986378B19B7FE904054C2E2BA27871C7"
+    },
+    {
+      "path": "tests/overlay/camera_integration_harness.cpp",
+      "sha256": "5EADB3CFF646A0112076FCE9A3A262EDF82DDC7962DAD613B6C9AD36750458D9"
+    },
+    {
+      "path": "tests/overlay/composition_presenter_state_harness.cpp",
+      "sha256": "231365973CB914834C62E36624A6C3FC90A747A38F71FBC7B61D6795195AB4CA"
+    },
+    {
+      "path": "tests/overlay/feature_presentation_harness.cpp",
+      "sha256": "343EB1839AA320CE6429C3B72D36755F1DA72B93A756280B77208119EB381AEC"
+    },
+    {
+      "path": "tests/overlay/input_state_harness.cpp",
+      "sha256": "8A3DD15B431391EAA839DB5202C0D900467FC1046F5F883E939A3D2D6113F82F"
+    },
+    {
+      "path": "tests/overlay/localization_harness.cpp",
+      "sha256": "955782AB38BD5203A2F9B1F2D823404B3A1D6E28CAB588C3458C3789724FC74C"
+    },
+    {
+      "path": "tests/overlay/overlay_layout_metrics_harness.cpp",
+      "sha256": "4201887F0F90135E5B0256D768992964FF0A44A8DBA8F3B2FA6EB83D8E8D110A"
+    },
+    {
+      "path": "tests/overlay/placement_config_harness.cpp",
+      "sha256": "D2EF00BEC6FDA5A63546B8CA914D989BACD75CE9C048D72B6ABB4A5B8342D18A"
+    },
+    {
+      "path": "tests/overlay/selector_tooltip_state_harness.cpp",
+      "sha256": "284243F0AD168CB47B9455A120200F965EEB2CE3C09AED4F7D20A6E33ACE49BE"
+    },
+    {
+      "path": "tests/overlay/semantic_snapshot_harness.cpp",
+      "sha256": "DF92CAD7DEA32AF0F9091BAB0BFA4D5DBB65FD191B4BB2510FF067D7E4A3FF45"
+    },
+    {
+      "path": "tests/overlay/startup_timeline_harness.cpp",
+      "sha256": "95385E106B3F36BCEED2642F5A091A2D4DEDFF568631367B5AC7D19FC1B14276"
+    },
+    {
+      "path": "tests/platform/instruction_validator_harness.cpp",
+      "sha256": "61FF183328B16280A7CF03B79B05A6AE20DB0EED5E47514FD0D70D6C93F5157C"
+    },
+    {
+      "path": "tests/platform/memory_harness.cpp",
+      "sha256": "001D5CF3E2B830BC26C3F57DE37EAA2C0DA97EDFA4BAA6374C698C01881E308D"
+    },
+    {
+      "path": "tests/platform/signature_scanner_harness.cpp",
+      "sha256": "5ACDD14266CE1B197EDAC5F1A4532AD33ED84794F179F41851C5E91396D7DC2E"
+    },
+    {
+      "path": "tests/platform/viewport_harness.cpp",
+      "sha256": "78138D483C137E968441DBA730946EF5155243744D65AC37BFE44F7D31448DFD"
+    },
+    {
+      "path": "tests/plugin/camera_correction_gate_harness.cpp",
+      "sha256": "3673CED7CA4F733C654C1539AD5124CA26BF609415D73553BF4B44712805177D"
+    },
+    {
+      "path": "tests/plugin/camera_setting_transaction_harness.cpp",
+      "sha256": "EFF7970970CDCFD390CF3B10799241A967E117516FB80D0E78AEAE1728D705E2"
+    },
+    {
+      "path": "tests/plugin/camera_writer_transaction_harness.cpp",
+      "sha256": "4B813083D0693463C0DE11369049CB27BCFC7F8C41FF06FDA7610DA0CC2E69F8"
+    },
+    {
+      "path": "tests/plugin/cinematic_lifecycle_transaction_harness.cpp",
+      "sha256": "C64A3E5761CA2D6AAE8E7193C3A4AE2FFCB83F07178184A6052C7727BD359228"
+    },
+    {
+      "path": "tests/plugin/dialogue_boundary_transaction_harness.cpp",
+      "sha256": "48032B4D442B5CEC1394EE14893D9F4AF461D87F06724D56927656E79937ED51"
+    },
+    {
+      "path": "tests/plugin/n06_m01_zoom_game_derived_fixtures.hpp",
+      "sha256": "0AC96DA0FE9ADF0679A7EE9B8DDBCC81B92A918D60D2C945183F65A8C303314F"
+    },
+    {
+      "path": "tests/plugin/n06_m01_zoom_game_derived_harness.cpp",
+      "sha256": "7468D01B6AD05EA67A5B21928BCD1155C4A5440DA0DFB2EACB72C2090CB43E3D"
+    },
+    {
+      "path": "tests/plugin/optional_overlay_startup_harness.cpp",
+      "sha256": "5847ED00F0190DAAEA75DD4863B325BA47036A392E49EE02B3D77D91DA33B0FA"
+    },
+    {
+      "path": "tests/plugin/runtime_native_adapter_harness.cpp",
+      "sha256": "0839D921C745ACE21C71C2FAF8D9B339C938BC73A9F1D7EB8A8775401C8AFFD5"
+    },
+    {
+      "path": "tests/plugin/runtime_native_evidence_cases.hpp",
+      "sha256": "4EF99D6BF659D2D4017BD5A123F1CE72302D654ABB1738D7AA4A61574FFCC034"
+    },
+    {
+      "path": "tests/plugin/runtime_owner_binding_probe.cpp",
+      "sha256": "52A867EF03A74FFB1C5F7097C53C7DAFF021B346573F6FC4A9EC5A191AD906DA"
+    },
+    {
+      "path": "tests/regression/module_ownership_harness.cpp",
+      "sha256": "B3D5483195963D3ACEBBB2BA8F8857AE1264B115683F1A9B322479D0DB998F49"
+    },
+    {
+      "path": "tests/regression/runtime_evidence_replay_harness.cpp",
+      "sha256": "0F66007B19930059DD9AB80C20B9F3CAF1E23B305CB42248B564AAC53C750871"
+    },
+    {
+      "path": "tests/runner/localization_catalog_audit.ps1",
+      "sha256": "B43E28F6091E228D73FD84F5A7D1954D7F6F0DD5FEB64F8B073F38572EED3414"
+    },
+    {
+      "path": "tests/runner/native_runtime_evidence.ps1",
+      "sha256": "17ADA81B918530BCBCFF28070C0A5ACCE4924C294F3ACBDC1A9D5AC6FFC194AF"
+    },
+    {
+      "path": "tests/runner/runtime_native_adapter_inputs.ps1",
+      "sha256": "26A81C577BA2146F5AC7F51AB9541C67B9E3E54B12FAA09B7640FD22BEF16BE4"
+    },
+    {
+      "path": "tests/runner/test_cmd_audit.ps1",
+      "sha256": "2B58BC6AE8DF2760E59F02B2C407457161274CCE750458AF2E425EC3E74C3B00"
+    },
+    {
+      "path": "tests/runner/test_cmd_exit_code_contract.ps1",
+      "sha256": "9351E5DDA3B532194BFC4029601D2DD18D02B5DAB3FED057D18A5E72F6BB0A8E"
+    },
+    {
+      "path": "tests/runner/test_cmd_exit_status_probe.cpp",
+      "sha256": "6ADB639267E80C510C6032ACCD7BB46B84E7AEC545ABD15AE7EF9560ADA3E1D5"
+    },
+    {
+      "path": "tests/runner/test_harness_runner.ps1",
+      "sha256": "C27F4BC30916F8F6E8A26F21E10E2BD391FE81B333D06D41DA65CA6446C6EFC5"
+    },
+    {
+      "path": "tests/test_harnesses.json",
+      "sha256": "6DAD544F99EC88276C5A1840C1CAAB082584E30FFFE36134DA32306FF1957C16"
+    },
+    {
+      "path": "tools/build/build-cmake-candidate.cmd",
+      "sha256": "B9650DD1490E3F7ED3FCAB364904147E46D1D0636BADFAC31D8F0A311124B4E0"
+    },
+    {
+      "path": "tools/build/build-dcomp-prototype.cmd",
+      "sha256": "29CB2D25909DED8A21E149790D3153D5D3E0D62DC8639653703E12C4C515D42B"
+    },
+    {
+      "path": "tools/build/build-diagnostic.cmd",
+      "sha256": "3B0E6FA46A72163E08825465B64AF59757D7707C84F98D45835149CF0D944AD6"
+    },
+    {
+      "path": "tools/build/build-gameplay-fov-source-diagnostic.cmd",
+      "sha256": "730863C88846910D3FF1B9755958E6A6CB348D562D45DA84F38870B614F7E7F8"
+    },
+    {
+      "path": "tools/build/build-language-state-watcher.cmd",
+      "sha256": "700F0166A1DAE935A2802BB4BFDFE305F9C0883257F0914DAA6AF16138BB01BE"
+    },
+    {
+      "path": "tools/build/build-overlay-settings.cmd",
+      "sha256": "6EE3B8040AF7069DC85C61E9EE7BBCC61D9A076DD08A45C62AA50473A54E81E5"
+    },
+    {
+      "path": "tools/build/build-stratified-language-watcher.cmd",
+      "sha256": "B9B3E70AF4ECDFB9DE6385BDF1D9A3E7B5A886241CC7055A14C20CF494E97D68"
+    },
+    {
+      "path": "tools/build/build-targeted-language-candidates.cmd",
+      "sha256": "09A2250DFA84D4CC2F3CCE2D90F8214DCF336DE39BEA3E0A9904AA658DF012B5"
+    },
+    {
+      "path": "tools/build/production_sources.json",
+      "sha256": "322C81FA5C112180E6D94A5EC6833210A1901661582503DBD58AD77E79DCB254"
+    },
+    {
+      "path": "tools/build/publish_asi.ps1",
+      "sha256": "E82365CB2B23A390811963FCD495EA8143FADDF42A74F8FB3B3F381BE69AD811"
+    },
+    {
+      "path": "tools/build/test-cmake-candidate.cmd",
+      "sha256": "1BE0BFE2835A844EBBC3A2947AE6187525424C96A0FAA99DD53FD704A1A16361"
+    },
+    {
+      "path": "tools/fonts/rebuild_catalog_subsets.py",
+      "sha256": "AAE1DA44225D2F9C45D2039F0C87941AF0A6A692E1C9D04CAB005CC1F8674349"
+    },
+    {
+      "path": "tools/generate_ini_documentation.ps1",
+      "sha256": "B07E297625D44C1EDA83E03E05AC4F2E13B9D9C258A037BF25265F986F8699BA"
+    }
+  ],
+  "base_ini_sha256": "508F99B0D0EAD161E93955C32909C56CFA33E4C15D875EC468B0E56444CAFE4D"
+}

@@ -2,9 +2,98 @@
 
 #include <cstdint>
 #include <atomic>
+#include <utility>
 
 namespace overlay
 {
+    constexpr bool ResolveHostDisplaySnapshot(bool validHost,
+        bool foregroundIsHost, bool minimized) noexcept
+    {
+        return validHost && foregroundIsHost && !minimized;
+    }
+
+    // Owner-thread state: a visible toast is not proof of a drawn menu.
+    class MenuFrameAdmission
+    {
+    public:
+        void Request(bool visible) noexcept
+        {
+            if (requested_ != visible) Invalidate();
+            requested_ = visible;
+        }
+        void Invalidate() noexcept { drawn_ = committed_ = false; }
+        void DrawCompleted(bool menuDrawn) noexcept { drawn_ = requested_ && menuDrawn; }
+        void Commit(bool displayReady) noexcept
+        {
+            committed_ = requested_ && drawn_ && displayReady;
+        }
+        bool ready() const noexcept { return committed_; }
+    private:
+        bool requested_{};
+        bool drawn_{};
+        bool committed_{};
+    };
+
+    struct DisplayPlacement
+    {
+        int x{};
+        int y{};
+        int width{};
+        int height{};
+        unsigned dpi{96};
+        bool topmost{};
+        bool valid{};
+    };
+
+    enum class HostDisplayActivityEvent : std::uint8_t
+    {
+        KeyboardFocusLost,
+        ApplicationDeactivated,
+        KeyboardFocusGained,
+        ApplicationActivated,
+    };
+
+    enum class HostDisplayActivityAction : std::uint8_t
+    {
+        Preserve,
+        Deactivate,
+        Activate,
+    };
+
+    constexpr HostDisplayActivityAction ResolveHostDisplayActivity(
+        HostDisplayActivityEvent event) noexcept
+    {
+        switch (event) {
+        case HostDisplayActivityEvent::KeyboardFocusLost:
+            return HostDisplayActivityAction::Preserve;
+        case HostDisplayActivityEvent::ApplicationDeactivated:
+            return HostDisplayActivityAction::Deactivate;
+        case HostDisplayActivityEvent::KeyboardFocusGained:
+        case HostDisplayActivityEvent::ApplicationActivated:
+            return HostDisplayActivityAction::Activate;
+        }
+        return HostDisplayActivityAction::Preserve;
+    }
+
+    constexpr bool RequiresDisplayPlacementUpdate(
+        const DisplayPlacement& current,
+        const DisplayPlacement& requested) noexcept
+    {
+        return !current.valid || current.x != requested.x ||
+            current.y != requested.y || current.width != requested.width ||
+            current.height != requested.height || current.dpi != requested.dpi ||
+            current.topmost != requested.topmost;
+    }
+
+    template <typename ApplyChange, typename ObserveState>
+    bool CommitDisplayWindowVisibility(bool requestedVisible,
+        ApplyChange&& applyChange, ObserveState&& observeState)
+    {
+        if (!std::forward<ApplyChange>(applyChange)()) return false;
+        return static_cast<bool>(std::forward<ObserveState>(observeState)()) ==
+            requestedVisible;
+    }
+
     enum class PresenterRoute : std::uint8_t
     {
         WaitForWindow,

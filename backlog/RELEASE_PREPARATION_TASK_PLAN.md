@@ -189,12 +189,12 @@ Gate: documentation `PASS`. A documentation failure blocks A5–A8.
 
 ### A5 — Release assets batch
 
-- [ ] Update the compact user-facing `release-assets/README.md`.
-- [ ] Verify the release-assets INI matches production behavior and defaults.
+- [ ] Update the compact user-facing `release-assets/README.txt`.
+- [ ] Confirm the user-owned runtime INI is not included in release assets.
 - [ ] Review asset names, installation instructions and compatibility.
 - [ ] Keep test ASIs, tracers, logs, research, plans and debug artifacts out.
 - [ ] Confirm no feasibility-only policy, diagnostic option or temporary binding
-  remains in the distributed INI.
+  is documented or implied by the distributed assets.
 - [ ] Confirm the release-assets README is derived from the A4 documentation.
 
 Required result: a clean release-assets set matching the approved binary,
@@ -214,8 +214,7 @@ E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\release-as
 Normally include only:
 
 - final production `STALKER2CameraTweaks.asi`;
-- `STALKER2CameraTweaks.ini`;
-- `README.md`;
+- `README.txt`;
 - `LICENSE.md`;
 - `THIRD_PARTY_NOTICES.md`.
 

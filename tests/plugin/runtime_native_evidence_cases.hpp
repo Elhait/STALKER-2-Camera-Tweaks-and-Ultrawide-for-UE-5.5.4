@@ -463,6 +463,71 @@
         g_cinematicAspectComponentAvailable = true;
         g_cinematicSelectionValid = true;
         g_hotkeyRebindCaptureActive = true;
+
+        const auto logsBeforeDetach = logCalls;
+        {
+            auto admitted = g_nativeCallbackAdmission.TryEnter();
+            Check(static_cast<bool>(admitted), "Detach fixture admission failed");
+            // Exercise the actual DllMain dispatcher. This direct invocation
+            // tests effects; it does not emulate Windows holding loader lock.
+            Check(DllMain(nullptr, DLL_PROCESS_DETACH,
+                    reinterpret_cast<void*>(1)) == TRUE &&
+                !g_stopping && !g_nativeCallbackAdmission.IsClosed() &&
+                g_cameraWriterHookGate && g_cinematicHookGate &&
+                g_runtimeInitializationComplete && g_cinematicSelectionValid,
+                "Process-termination detach performed runtime teardown");
+            Check(DllMain(nullptr, DLL_PROCESS_DETACH, nullptr) == TRUE &&
+                DllMain(nullptr, DLL_PROCESS_DETACH, nullptr) == TRUE &&
+                g_stopping && g_nativeCallbackAdmission.IsClosed() &&
+                !g_cameraWriterHookGate && !g_cinematicHookGate &&
+                g_cinematicSelectionValid && g_hotkeyRebindCaptureActive &&
+                logCalls == logsBeforeDetach,
+                "Detach notification drained/reset resources or logged under loader lock");
+        }
+
+        for (bool menuVisible : {false, true})
+            for (bool partialImGui : {false, true})
+                for (bool queuedToast : {false, true})
+                    Check(overlay::RendererOwnershipTestAccess::VerifyEmptyShutdown(
+                            menuVisible, partialImGui, queuedToast),
+                        "Repeated CPU-only renderer shutdown retained input/ImGui ownership");
+
+        Check(&g_pendingNotifications == &g_runtime.pendingNotifications &&
+            &g_notificationMutex == &g_runtime.notificationMutex &&
+            &g_nextNotificationId == &g_runtime.nextNotificationId,
+            "Notification queue storage escaped the resident Runtime owner");
+        const bool overlayEnabled = g_config.overlayEnabled;
+        g_config.overlayEnabled = true;
+        const auto firstId = g_nextNotificationId;
+        std::atomic<unsigned> publishersDone{};
+        std::vector<std::thread> publishers;
+        for (unsigned producer = 0; producer != 4; ++producer)
+            publishers.emplace_back([&] {
+                for (unsigned item = 0; item != 128; ++item)
+                    plugin::PublishOverlayNotification(
+                        plugin::OverlayNotificationKind::SettingChanged,
+                        plugin::OverlayNotificationAction::GameplayMode,
+                        "test", "", plugin::OverlayNotificationStatus::Applied);
+                publishersDone.fetch_add(1, std::memory_order_release);
+            });
+        std::vector<plugin::OverlayNotification> observed;
+        while (publishersDone.load(std::memory_order_acquire) != 4) {
+            plugin::DrainOverlayNotifications(observed);
+            std::this_thread::yield();
+        }
+        for (auto& publisher : publishers) publisher.join();
+        plugin::DrainOverlayNotifications(observed);
+        auto previousId = firstId;
+        for (const auto& notification : observed) {
+            Check(notification.id > previousId,
+                "Concurrent notification delivery duplicated or reordered IDs");
+            previousId = notification.id;
+        }
+        Check(!observed.empty() && g_pendingNotifications.empty() &&
+            g_nextNotificationId == firstId + 512,
+            "Resident notification queue lost publication identity or failed to drain");
+        g_config.overlayEnabled = overlayEnabled;
+
         // No hooks or workers were installed. This calls real orchestration
         // only for its empty-resource terminal branch, not partial installation.
         ResetAllRuntimeResources();
@@ -531,6 +596,8 @@
         static_assert(offsetof(SafetyHookContext, rsp) == 0x180);
         static_assert(offsetof(SafetyHookContext, trampoline_rsp) == 0x188);
         static_assert(offsetof(SafetyHookContext, rip) == 0x190);
+        Check(g_nativeCallbackAdmission.Open(),
+            "Native callback admission did not begin in its closed state");
         float (* volatile entry)(float) = &EvidenceNativeLeaf;
         Near(entry(4.0f), 11.0f, "Unhooked compiled leaf result");
         auto result = safetyhook::MidHook::create(&EvidenceNativeLeaf,
@@ -539,22 +606,28 @@
         auto hook = std::move(*result);
         const auto original = hook.original_bytes();
         Check(!original.empty() && !hook.enabled(), "Native hook not created disabled");
-        std::cout << "local trampoline relocated_bytes=" << original.size() << " original=";
-        for (auto byte : original) std::cout << std::hex << static_cast<unsigned>(byte) << ' ';
-        std::cout << std::dec << '\n';
-        bool passed = entry(4.0f) == 11.0f && nativeLeafCalls == 0;
+        bool passed = true;
+        passed &= entry(4.0f) == 11.0f && nativeLeafCalls == 0;
         EvidenceRequireHookOperation(hook.enable().has_value());
-        passed &= hook.enabled() && entry(4.0f) == 13.0f && nativeLeafCalls == 1;
+        const float enabledResult = entry(4.0f);
+        passed &= hook.enabled() && enabledResult == 13.0f && nativeLeafCalls == 1;
         EvidenceRequireHookOperation(hook.disable().has_value());
-        passed &= !hook.enabled() && entry(4.0f) == 11.0f && nativeLeafCalls == 1 &&
-            std::memcmp(hook.target(), original.data(), original.size()) == 0;
+        const float disabledResult = entry(4.0f);
+        const bool restoredBytes = std::memcmp(hook.target(), original.data(),
+            original.size()) == 0;
+        passed &= !hook.enabled() && disabledResult == 11.0f &&
+            nativeLeafCalls == 1 && restoredBytes;
         EvidenceRequireHookOperation(hook.enable().has_value());
         nativeLeafThrows = true;
-        passed &= entry(4.0f) == 11.0f && nativeLeafCalls == 2;
+        const float exceptionResult = entry(4.0f);
+        passed &= exceptionResult == 11.0f && nativeLeafCalls == 2;
         EvidenceRequireHookOperation(hook.disable().has_value());
-        passed &= std::memcmp(hook.target(), original.data(), original.size()) == 0;
+        const bool exceptionRestoredBytes = std::memcmp(hook.target(),
+            original.data(), original.size()) == 0;
+        passed &= exceptionRestoredBytes;
         hook.reset();
-        passed &= entry(4.0f) == 11.0f && nativeLeafCalls == 2 && nativeLeafContract;
+        const float resetResult = entry(4.0f);
+        passed &= resetResult == 11.0f && nativeLeafCalls == 2 && nativeLeafContract;
         Check(passed, "Local trampoline context/continuation/enable/disable/exception contract failed");
     }
 
@@ -600,6 +673,8 @@
     }
 
     void EvidenceSafetyHookLifetimeFaults() {
+        Check(safetyhook::SafetyHookTestShutdownTrapBypass(),
+            "Shutdown VEH attempted to acquire the mutex or inspect interrupted trap state");
         Memory source, output; Setup(source);
         source.Put(0x4C, 2.0f); source.Put(0x50, 1.0f);
         source.Put(0x138, 1.0f); source.Put(0x13C, 2.0f);

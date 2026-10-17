@@ -40,7 +40,7 @@ publication, and subsystem handoffs.
   publication/diagnostic call ordering remain in `runtime.cpp`.
 
 Detailed, per-batch decisions are recorded in the
-[implementation plan](../../backlog/active/RUNTIME_CPP_DECOMPOSITION_IMPLEMENTATION_PLAN_2026-10-08.md),
+[implementation plan](../../completed/RUNTIME_CPP_DECOMPOSITION_IMPLEMENTATION_PLAN_2026-10-08.md),
 [move ledger](MOVE_LEDGER_2026-10-08.md), and B5/B6 boundary reports.
 
 ## Owner boundaries intentionally preserved

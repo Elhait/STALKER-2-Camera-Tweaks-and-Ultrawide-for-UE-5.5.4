@@ -24,6 +24,13 @@ namespace overlay
         {
             return context1_ != nullptr;
         }
+        bool HasOwnedResources() const noexcept
+        {
+            return device_ || context_ || context1_ || vertexShader_ ||
+                pixelShader_ || inputLayout_ || constants_ || vertexBuffer_ ||
+                indexBuffer_ || blendState_ || rasterizerState_ || sampler_ ||
+                fontTexture_;
+        }
         bool Render(const ImDrawData* drawData, ID3D11RenderTargetView* target,
             UINT surfaceWidth, UINT surfaceHeight, RECT updateRect,
             POINT updateOffset) noexcept;

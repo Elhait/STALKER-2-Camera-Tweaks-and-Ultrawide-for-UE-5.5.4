@@ -23,13 +23,6 @@ namespace plugin::detail
         }
     }
 
-    bool PersistHotkeyActionValue(const std::filesystem::path& configPath,
-        const char* section, const char* key, const char* value,
-        const config::LogFunction& log)
-    {
-        return config::PersistConfigValue(configPath, section, key, value, log);
-    }
-
     bool PersistRuntimeSetting(const RuntimeSettingMutation& mutation,
         const std::filesystem::path& configPath, std::string_view currentLocaleCode,
         const config::LogFunction& log)
@@ -76,12 +69,10 @@ namespace plugin::detail
             const auto* descriptor = value
                 ? localization::FindLocaleDescriptor(*value) : nullptr;
             if (!descriptor) return false;
-            const bool languagePersisted = config::PersistConfigValue(
-                configPath, "Overlay", "Language", *value, log);
-            const bool fontSizePersisted = config::PersistConfigValue(
-                configPath, "Overlay", "FontSize",
-                std::to_string(descriptor->initialFontSize), log);
-            return languagePersisted && fontSizePersisted;
+            return config::PersistConfigValues(configPath,
+                {{"Overlay", "Language", *value},
+                 {"Overlay", "FontSize", std::to_string(descriptor->initialFontSize)}},
+                log);
         }
         case RuntimeSettingKind::OverlayAutoLocale:
             return config::PersistConfigValue(configPath, "Overlay", "Language",

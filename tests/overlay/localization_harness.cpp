@@ -5,6 +5,7 @@
 #include "../../src/overlay/localization/localization_font.hpp"
 #include "../../src/overlay/presentation/inline_hotkey_layout.hpp"
 #include "../../src/overlay/localization/game_language_reader.hpp"
+#include "../../src/overlay/localization/game_language_reader_publication.hpp"
 #include "../../src/overlay/presentation/setting_tooltip_content.hpp"
 #include "../../src/overlay/presentation/selector_examples_geometry.hpp"
 #include "../../src/config/feature_config.hpp"
@@ -13,6 +14,7 @@
 #include <imgui.h>
 
 #include <cassert>
+#include <atomic>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -22,10 +24,48 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include <thread>
 #include <vector>
 
 int main()
 {
+    {
+        using Publication = overlay::detail::GameLanguageReaderPublication<
+            void(*)(int*), void(*)(void*)>;
+        const auto firstReader = +[](int*) {};
+        const auto secondReader = +[](int*) {};
+        const auto firstFree = +[](void*) {};
+        const auto secondFree = +[](void*) {};
+        Publication publication;
+        assert(publication.TryBeginInitialization());
+        std::atomic<bool> competitorObservedBusy{};
+        std::atomic<bool> completePairObserved{};
+        std::thread competitor([&] {
+            Publication::FunctionBundle functions{};
+            competitorObservedBusy.store(
+                !publication.TryBeginInitialization() &&
+                    !publication.TryRead(functions), std::memory_order_release);
+            while (!publication.TryRead(functions)) std::this_thread::yield();
+            completePairObserved.store(
+                ((functions.reader == firstReader && functions.free == firstFree) ||
+                    (functions.reader == secondReader && functions.free == secondFree)),
+                std::memory_order_release);
+        });
+        while (!competitorObservedBusy.load(std::memory_order_acquire))
+            std::this_thread::yield();
+        assert(publication.TryPublish({firstReader, firstFree}));
+        competitor.join();
+        assert(completePairObserved.load(std::memory_order_acquire));
+
+        Publication retryable;
+        assert(retryable.TryBeginInitialization());
+        retryable.RetryAfterFailure();
+        Publication::FunctionBundle functions{};
+        assert(!retryable.TryRead(functions) && retryable.TryBeginInitialization());
+        assert(retryable.TryPublish({secondReader, secondFree}) &&
+            retryable.TryRead(functions) && functions.reader == secondReader &&
+            functions.free == secondFree);
+    }
     {
         constexpr std::string_view suffix = ", щоб повернути керування грою";
         constexpr auto punctuation = overlay::inline_hotkey_layout::

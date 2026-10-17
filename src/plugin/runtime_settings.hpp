@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <variant>
 #include <vector>
@@ -203,6 +204,12 @@ namespace plugin
         bool changed{};
     };
 
+    struct RuntimeSettingsCommitResult
+    {
+        RuntimeMutationResult mutation{};
+        bool persisted{};
+    };
+
     enum class OverlayNotificationStatus : std::uint8_t
     {
         Applied,
@@ -216,6 +223,7 @@ namespace plugin
         SettingChanged,
         BindingChanged,
         HotkeyConflict,
+        PersistenceFailed,
         StartupOverlayHint,
     };
 
@@ -325,6 +333,16 @@ namespace plugin
             try { return callbacks->handler(mutation, callbacks->userData); }
             catch (...) { return {}; }
         }
+        RuntimeSettingsCommitResult ApplyAndPersist(
+            const RuntimeSettingMutation& mutation) const noexcept
+        {
+            try {
+                std::lock_guard<std::mutex> transaction(mutationPersistenceMutex_);
+                const auto result = Apply(mutation);
+                if (!result.accepted) return {result, false};
+                return {result, Persist(mutation)};
+            } catch (...) { return {}; }
+        }
         bool Snapshot(RuntimeSettingsSnapshot& snapshot) const noexcept
         {
             const auto* callbacks = PublishedCallbacks();
@@ -367,5 +385,6 @@ namespace plugin
 
         CallbackBundle callbacks_{};
         std::atomic<PublicationState> publicationState_{PublicationState::Unpublished};
+        mutable std::mutex mutationPersistenceMutex_;
     };
 }

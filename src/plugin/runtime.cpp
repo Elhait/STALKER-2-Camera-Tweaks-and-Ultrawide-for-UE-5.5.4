@@ -4,6 +4,7 @@
 #include "optional_overlay_startup.hpp"
 #include "runtime_settings.hpp"
 #include "camera_correction_gate.hpp"
+#include "native_callback_admission.hpp"
 #include "camera_writer_transaction.hpp"
 #include "dialogue_boundary_transaction.hpp"
 #include "cinematic_lifecycle_transaction.hpp"
@@ -49,10 +50,12 @@
 #include "../platform/win32/sha256.hpp"
 #include "../platform/win32/viewport.hpp"
 #include "../platform/win32/window.hpp"
+#include "../platform/win32/native_log_sink.hpp"
+#include "../platform/win32/module_residency.hpp"
 #include <safetyhook.hpp>
 #include <Zydis.h>
 #include <bcrypt.h>
-#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/logger.h>
 
 #include <atomic>
 #include <array>
@@ -65,7 +68,6 @@
 #include <cstdio>
 #include <deque>
 #include <filesystem>
-#include <fstream>
 #include <initializer_list>
 #include <limits>
 #include <memory>
@@ -107,9 +109,6 @@ namespace
     void MarkCameraPresentationTransition(bool includeDialogue);
 
     plugin::RuntimeSettingsApi g_runtimeSettings;
-    std::mutex g_notificationMutex;
-    std::deque<plugin::OverlayNotification> g_pendingNotifications;
-    std::uint64_t g_nextNotificationId{};
     using plugin::FeatureStatus;
     using plugin::FeatureStatusName;
     using config::CinematicAspectPolicy;
@@ -168,11 +167,15 @@ namespace plugin::detail
         std::uint8_t* fovWriteAddress{};
         hooks::HookSet hooks;
         std::shared_ptr<spdlog::logger> logger;
+        std::mutex notificationMutex;
+        std::deque<plugin::OverlayNotification> pendingNotifications;
+        std::uint64_t nextNotificationId{};
         config::FeatureConfig config{};
         std::mutex hotkeyConfigMutex;
         // Serializes camera correction callbacks with camera-setting commits.
         // Lock order is cameraCorrectionGate -> dialogueMutex -> cameraStateMutex.
         plugin::CameraCorrectionGate cameraCorrectionGate;
+        plugin::NativeCallbackAdmission nativeCallbackAdmission;
         std::atomic<std::uint64_t> gameplaySettingsEpoch{};
         std::atomic<std::uint64_t> cinematicsSettingsEpoch{};
         std::atomic<std::uint64_t> dialogueSettingsEpoch{};
@@ -365,6 +368,9 @@ namespace
     using plugin::detail::RuntimeState;
 
     RuntimeState& g_runtime = *new RuntimeState{};
+    auto& g_notificationMutex = g_runtime.notificationMutex;
+    auto& g_pendingNotifications = g_runtime.pendingNotifications;
+    auto& g_nextNotificationId = g_runtime.nextNotificationId;
 
     diagnostics::CinematicContinuationTrace* GetCinematicContinuationTrace() noexcept
     {
@@ -381,6 +387,7 @@ namespace
     auto& g_config = g_runtime.config;
     auto& g_hotkeyConfigMutex = g_runtime.hotkeyConfigMutex;
     auto& g_cameraCorrectionGate = g_runtime.cameraCorrectionGate;
+    auto& g_nativeCallbackAdmission = g_runtime.nativeCallbackAdmission;
     auto& g_gameplaySettingsEpoch = g_runtime.gameplaySettingsEpoch;
     auto& g_cinematicsSettingsEpoch = g_runtime.cinematicsSettingsEpoch;
     auto& g_dialogueSettingsEpoch = g_runtime.dialogueSettingsEpoch;
@@ -756,10 +763,19 @@ namespace
         g_hotkeyRebindConsumedKey.store(0, std::memory_order_release);
         g_cameraWriterHookGate.store(false, std::memory_order_release);
         g_cinematicHookGate.store(false, std::memory_order_release);
+        g_workers.SignalStop();
+        const auto callbackDrain = g_nativeCallbackAdmission.CloseAndDrain(5000);
+        if (callbackDrain != plugin::NativeCallbackAdmission::DrainResult::Drained) {
+            Log(callbackDrain == plugin::NativeCallbackAdmission::DrainResult::CalledFromAdmittedCallback
+                ? "Runtime reset deferred: requested from an admitted native callback; hook resources retained."
+                : "Runtime reset deferred: native callback drain timed out; hook resources retained.");
+            return;
+        }
         if (!StopWorkers(true)) {
             Log("Runtime reset deferred: required worker join did not complete; hook resources retained.");
             return;
         }
+        auto correctionLock = g_cameraCorrectionGate.Acquire();
         g_cinematicRecoveryOwner.Clear();
         LogDialogueDiagnosticSummary();
         ResetPostCinematicDialogueExclusion("runtime-reset");
@@ -1424,9 +1440,17 @@ namespace
             " transform_applied=", transformApplied ? 1 : 0, ".");
     }
 
-    template <void (*Callback)(SafetyHookContext&)>
+    void PassThroughCinematicAspectStore(SafetyHookContext& context) noexcept;
+
+    template <void (*Callback)(SafetyHookContext&),
+        void (*Rejected)(SafetyHookContext&) = nullptr>
     void SafeMidHookEntry(SafetyHookContext& context) noexcept
     {
+        auto admission = g_nativeCallbackAdmission.TryEnter();
+        if (!admission) {
+            if constexpr (Rejected != nullptr) Rejected(context);
+            return;
+        }
         try {
             Callback(context);
         } catch (...) {
@@ -2385,6 +2409,12 @@ namespace
         // Complete the replaced ten-byte store's control-flow adjustment
         // before any auxiliary processing can throw.
         context.rip += kCinematicStoreInstructionLength;
+        if (g_stopping.load(std::memory_order_acquire) ||
+            !g_cinematicHookGate.load(std::memory_order_acquire)) {
+            static_cast<void>(WriteAspectOnly(
+                static_cast<std::uintptr_t>(context.rax), kNativeAspect));
+            return;
+        }
         const auto targetObject = static_cast<std::uintptr_t>(context.rax);
         const bool associationDiagnosticsActive = diagnostics::Enabled();
         float diagnosticAspect = 0.0f;
@@ -2438,6 +2468,13 @@ namespace
         // The hook replaces C7 80 [disp32] [imm32]. The original store has no
         // control-flow side effects, so resuming after its ten-byte encoding
         // preserves the native lifecycle and following instructions.
+    }
+
+    void PassThroughCinematicAspectStore(SafetyHookContext& context) noexcept
+    {
+        context.rip += kCinematicStoreInstructionLength;
+        static_cast<void>(WriteAspectOnly(
+            static_cast<std::uintptr_t>(context.rax), kNativeAspect));
     }
 
     bool LogCameraModeChange(std::uintptr_t source, std::uintptr_t output, float writerInputXmm0,
@@ -3070,7 +3107,8 @@ namespace
         std::memcpy(g_cinematicOriginalImmediate, g_cinematicAspectStore + kCinematicImmediateOffset,
             sizeof(g_cinematicOriginalImmediate));
         auto hook = safetyhook::MidHook::create(
-            g_cinematicAspectStore, SafeMidHookEntry<&ApplyCinematicAspectStore>,
+            g_cinematicAspectStore,
+            SafeMidHookEntry<&ApplyCinematicAspectStore, &PassThroughCinematicAspectStore>,
             safetyhook::MidHook::StartDisabled);
         if (!hook) return false;
         g_cinematicAspectStoreHook = std::move(*hook);
@@ -3090,6 +3128,8 @@ namespace
         if (!g_cinematicHookGate.load(std::memory_order_acquire) ||
             g_stopping.load(std::memory_order_acquire)) return;
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (!g_cinematicHookGate.load(std::memory_order_acquire) ||
+            g_stopping.load(std::memory_order_acquire)) return;
         const auto previousCoordinator = g_coordinatorState.load(std::memory_order_acquire);
         std::optional<camera::CameraFovObservation> gameplayBoundaryObservation;
         if (previousCoordinator == CoordinatorState::Gameplay)
@@ -3307,6 +3347,8 @@ namespace
         if (!g_cinematicHookGate.load(std::memory_order_acquire) ||
             g_stopping.load(std::memory_order_acquire)) return;
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (!g_cinematicHookGate.load(std::memory_order_acquire) ||
+            g_stopping.load(std::memory_order_acquire)) return;
         const auto previousCoordinator = g_coordinator.load(std::memory_order_acquire);
         const bool selectionValid = g_cinematicSelectionValid.load(
             std::memory_order_acquire);
@@ -3701,6 +3743,7 @@ namespace
     {
         diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::DialogueCameraSample);
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (g_stopping.load(std::memory_order_acquire)) return;
 #ifdef DIALOGUE_DISCOVERY_DIAGNOSTIC
         TraceDialogueDiscovery(context);
 #endif
@@ -4537,6 +4580,8 @@ namespace
         if (!g_cameraWriterHookGate.load(std::memory_order_acquire) ||
             g_stopping.load(std::memory_order_acquire)) return;
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (!g_cameraWriterHookGate.load(std::memory_order_acquire) ||
+            g_stopping.load(std::memory_order_acquire)) return;
         auto coordinator = g_coordinator.load(std::memory_order_acquire);
         const auto observedSource = static_cast<std::uintptr_t>(context.rsi);
         const auto observedOutput = static_cast<std::uintptr_t>(context.rbx);
@@ -5832,6 +5877,8 @@ namespace
     plugin::RuntimeMutationResult ApplyRuntimeSetting(
         const plugin::RuntimeSettingMutation& mutation, void*)
     {
+        auto admission = g_nativeCallbackAdmission.TryEnter();
+        if (!admission || g_stopping.load(std::memory_order_acquire)) return {};
         const auto enabledTransaction = plugin::ApplyCameraSetting(
             g_cameraCorrectionGate,
             plugin::CameraSettingStateView{
@@ -5877,6 +5924,7 @@ namespace
             return enabledTransaction.mutation;
         }
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (g_stopping.load(std::memory_order_acquire)) return {};
         switch (mutation.kind) {
         case plugin::RuntimeSettingKind::OverlayLocaleCode: {
             const auto* value = std::get_if<std::string>(&mutation.value);
@@ -5939,7 +5987,10 @@ namespace
 
     bool ReadRuntimeSettings(plugin::RuntimeSettingsSnapshot& snapshot, void*)
     {
+        auto admission = g_nativeCallbackAdmission.TryEnter();
+        if (!admission || g_stopping.load(std::memory_order_acquire)) return false;
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (g_stopping.load(std::memory_order_acquire)) return false;
         snapshot.gameplayEnabled = g_runtimeGameplayEnabled.load(std::memory_order_acquire);
         snapshot.gameplayMode = g_runtimeGameplayMode.load(std::memory_order_acquire);
         snapshot.cinematicsEnabled = g_runtimeCinematicsEnabled.load(std::memory_order_acquire);
@@ -5969,11 +6020,15 @@ namespace
     bool ReadOverlaySemanticSnapshot(plugin::OverlaySemanticSnapshot& snapshot, void*)
     {
         diagnostics::RecordRuntimeEvent(diagnostics::RuntimeEvent::SemanticSnapshotRead);
+        auto admission = g_nativeCallbackAdmission.TryEnter();
+        if (!admission) return false;
         if (!g_runtimeInitializationComplete.load(std::memory_order_acquire) ||
             g_stopping.load(std::memory_order_acquire))
             return false;
 
         auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (!g_runtimeInitializationComplete.load(std::memory_order_acquire) ||
+            g_stopping.load(std::memory_order_acquire)) return false;
 
         snapshot = {};
         const auto setCurrentFact = [](auto& fact, auto value,
@@ -6148,14 +6203,6 @@ namespace
         return true;
     }
 
-    bool PersistHotkeyActionValue(const char* section, const char* key,
-        const char* value)
-    {
-        return plugin::detail::PersistHotkeyActionValue(g_configPath,
-            section, key, value,
-            [](std::string message) { Log(message); });
-    }
-
     bool PersistRuntimeSetting(const plugin::RuntimeSettingMutation& mutation, void*)
     {
         std::string_view localeCode;
@@ -6203,18 +6250,24 @@ namespace
                     const auto previousMode = g_runtimeGameplayMode.load(std::memory_order_acquire);
                     const auto mode = config::NextGameplayMode(
                         previousMode);
-                    const auto result = g_runtimeSettings.Apply(
+                    const auto commit = g_runtimeSettings.ApplyAndPersist(
                         plugin::RuntimeSettingMutation::Gameplay(mode));
-                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
-                        plugin::OverlayNotificationAction::GameplayMode,
-                        config::GameplayModeName(previousMode), config::GameplayModeName(mode),
-                        result.accepted
-                            ? (g_gameplayModeTransitionPending.load(std::memory_order_acquire)
-                                ? plugin::OverlayNotificationStatus::Pending
-                                : plugin::OverlayNotificationStatus::Applied)
-                            : plugin::OverlayNotificationStatus::Error);
-                    if (result.accepted && PersistHotkeyActionValue("Gameplay", "Mode",
-                        config::GameplayModeName(mode)))
+                    const auto result = commit.mutation;
+                    if (result.accepted && !commit.persisted)
+                        plugin::PublishOverlayNotification(
+                            plugin::OverlayNotificationKind::PersistenceFailed,
+                            plugin::OverlayNotificationAction::GameplayMode,
+                            {}, {}, plugin::OverlayNotificationStatus::Error);
+                    else
+                        plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                            plugin::OverlayNotificationAction::GameplayMode,
+                            config::GameplayModeName(previousMode), config::GameplayModeName(mode),
+                            result.accepted
+                                ? (g_gameplayModeTransitionPending.load(std::memory_order_acquire)
+                                    ? plugin::OverlayNotificationStatus::Pending
+                                    : plugin::OverlayNotificationStatus::Applied)
+                                : plugin::OverlayNotificationStatus::Error);
+                    if (result.accepted && commit.persisted)
                         Log("Hotkey ", HotkeyName(hotkeySettings.gameplayCycleKey), ": Gameplay.Mode=",
                             config::GameplayModeName(mode), " persisted.");
                     else if (result.accepted)
@@ -6229,13 +6282,20 @@ namespace
                     const auto previousPolicy = g_runtimeDialoguePolicy.load(std::memory_order_acquire);
                     const auto policy = NextDialogueZoomPolicy(
                         previousPolicy);
-                    const auto result = g_runtimeSettings.Apply(
+                    const auto commit = g_runtimeSettings.ApplyAndPersist(
                         plugin::RuntimeSettingMutation::Dialogue(policy));
-                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
-                        plugin::OverlayNotificationAction::DialogueZoom,
-                        DialogueZoomPolicyName(previousPolicy), DialogueZoomPolicyName(policy),
-                        result.accepted ? plugin::OverlayNotificationStatus::Ready
-                            : plugin::OverlayNotificationStatus::Error);
+                    const auto result = commit.mutation;
+                    if (result.accepted && !commit.persisted)
+                        plugin::PublishOverlayNotification(
+                            plugin::OverlayNotificationKind::PersistenceFailed,
+                            plugin::OverlayNotificationAction::DialogueZoom,
+                            {}, {}, plugin::OverlayNotificationStatus::Error);
+                    else
+                        plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                            plugin::OverlayNotificationAction::DialogueZoom,
+                            DialogueZoomPolicyName(previousPolicy), DialogueZoomPolicyName(policy),
+                            result.accepted ? plugin::OverlayNotificationStatus::Ready
+                                : plugin::OverlayNotificationStatus::Error);
                     if (!result.accepted) {
                         Log("Hotkey ", HotkeyName(hotkeySettings.dialogueCycleKey),
                             ": Dialogue.Mode=", DialogueZoomPolicyName(policy),
@@ -6253,8 +6313,7 @@ namespace
                         activePolicy = g_activeDialoguePolicy.Value();
                         activePolicyValid = g_activeDialoguePolicy.IsValid();
                     }
-                    if (PersistHotkeyActionValue("Dialogue", "Mode",
-                        DialogueZoomPolicyName(policy)))
+                    if (commit.persisted)
                         Log("Hotkey ", HotkeyName(hotkeySettings.dialogueCycleKey), ": Dialogue.Mode selected=",
                             DialogueZoomPolicyName(policy), " active=", DialogueZoomPolicyName(activePolicy),
                             " activeValid=", activePolicyValid, " persisted.");
@@ -6269,15 +6328,21 @@ namespace
                     const auto previousPolicy = g_runtimeCinematicPolicy.load(std::memory_order_acquire);
                     const auto policy = NextCinematicAspectPolicy(
                         previousPolicy);
-                    const auto result = g_runtimeSettings.Apply(
+                    const auto commit = g_runtimeSettings.ApplyAndPersist(
                         plugin::RuntimeSettingMutation::CinematicAspect(policy));
-                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
-                        plugin::OverlayNotificationAction::CinematicAspect,
-                        CinematicAspectPolicyName(previousPolicy), CinematicAspectPolicyName(policy),
-                        result.accepted ? plugin::OverlayNotificationStatus::Ready
-                            : plugin::OverlayNotificationStatus::Error);
-                    if (result.accepted && PersistHotkeyActionValue("Cinematics",
-                        "Mode", CinematicAspectPolicyName(policy)))
+                    const auto result = commit.mutation;
+                    if (result.accepted && !commit.persisted)
+                        plugin::PublishOverlayNotification(
+                            plugin::OverlayNotificationKind::PersistenceFailed,
+                            plugin::OverlayNotificationAction::CinematicAspect,
+                            {}, {}, plugin::OverlayNotificationStatus::Error);
+                    else
+                        plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                            plugin::OverlayNotificationAction::CinematicAspect,
+                            CinematicAspectPolicyName(previousPolicy), CinematicAspectPolicyName(policy),
+                            result.accepted ? plugin::OverlayNotificationStatus::Ready
+                                : plugin::OverlayNotificationStatus::Error);
+                    if (result.accepted && commit.persisted)
                         Log("Hotkey ", HotkeyName(hotkeySettings.cinematicCycleKey), ": Cinematics.Mode=", CinematicAspectPolicyName(policy),
                             " persisted for next cinematic.");
                     else if (result.accepted)
@@ -6292,15 +6357,21 @@ namespace
                     const auto previousMode = g_runtimeCinematicFovMode.load(std::memory_order_acquire);
                     const auto mode = config::NextCinematicFovMode(
                         previousMode);
-                    const auto result = g_runtimeSettings.Apply(
+                    const auto commit = g_runtimeSettings.ApplyAndPersist(
                         plugin::RuntimeSettingMutation::CinematicFov(mode));
-                    plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
-                        plugin::OverlayNotificationAction::CinematicFov,
-                        config::CinematicFovModeName(previousMode), config::CinematicFovModeName(mode),
-                        result.accepted ? plugin::OverlayNotificationStatus::Ready
-                            : plugin::OverlayNotificationStatus::Error);
-                    if (result.accepted && PersistHotkeyActionValue("Cinematics", "FovMode",
-                        config::CinematicFovModeName(mode)))
+                    const auto result = commit.mutation;
+                    if (result.accepted && !commit.persisted)
+                        plugin::PublishOverlayNotification(
+                            plugin::OverlayNotificationKind::PersistenceFailed,
+                            plugin::OverlayNotificationAction::CinematicFov,
+                            {}, {}, plugin::OverlayNotificationStatus::Error);
+                    else
+                        plugin::PublishOverlayNotification(plugin::OverlayNotificationKind::SettingChanged,
+                            plugin::OverlayNotificationAction::CinematicFov,
+                            config::CinematicFovModeName(previousMode), config::CinematicFovModeName(mode),
+                            result.accepted ? plugin::OverlayNotificationStatus::Ready
+                                : plugin::OverlayNotificationStatus::Error);
+                    if (result.accepted && commit.persisted)
                         Log("Hotkey ", HotkeyName(hotkeySettings.cinematicFovCycleKey),
                             ": Cinematics.FovMode=", config::CinematicFovModeName(mode),
                             " persisted for next cinematic.");
@@ -6321,6 +6392,7 @@ namespace
     void CloseInitializationReadiness() noexcept
     {
         g_stopping.store(true, std::memory_order_release);
+        g_nativeCallbackAdmission.Close();
         g_runtimeInitializationComplete.store(false, std::memory_order_release);
         g_hotkeyRebindCaptureActive.store(false, std::memory_order_release);
         g_hotkeyRebindConsumedKey.store(0, std::memory_order_release);
@@ -6349,15 +6421,26 @@ namespace
     DWORD WINAPI Initialize(void*)
     {
         g_runtimeInitializationComplete.store(false, std::memory_order_release);
+        if (!platform::win32::PinModuleForProcessLifetime(g_module)) {
+            CloseInitializationReadiness();
+            OutputDebugStringA("STALKER2CameraTweaks: process residency unavailable; initialization aborted.\n");
+            return ERROR_FUNCTION_FAILED;
+        }
         WCHAR modulePath[MAX_PATH]{};
-        GetModuleFileNameW(g_module, modulePath, MAX_PATH);
+        const DWORD modulePathLength = GetModuleFileNameW(g_module,
+            modulePath, MAX_PATH);
+        if (!modulePathLength || modulePathLength >= MAX_PATH) {
+            CloseInitializationReadiness();
+            OutputDebugStringA("STALKER2CameraTweaks: module path unavailable; initialization aborted.\n");
+            return ERROR_FUNCTION_FAILED;
+        }
         const auto moduleDirectory = std::filesystem::path(modulePath).remove_filename();
         const auto logPath = moduleDirectory / "STALKER2CameraTweaks.log";
         const auto configPath = config::DefaultConfigPath(moduleDirectory);
         g_configPath = configPath;
-        std::ofstream(logPath, std::ios::out | std::ios::trunc).close();
         try {
-            g_logger = spdlog::basic_logger_mt("STALKER2CameraTweaks", logPath.string(), true);
+            g_logger = std::make_shared<spdlog::logger>("STALKER2CameraTweaks",
+                std::make_shared<platform::win32::NativeLogSink>(logPath.c_str()));
             g_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %v");
             g_logger->flush_on(spdlog::level::err);
             g_logger->set_error_handler([](const std::string& message) {
@@ -6366,11 +6449,18 @@ namespace
                 OutputDebugStringA(message.c_str());
                 OutputDebugStringA("\n");
             });
-        } catch (...) { return 0; }
+        } catch (...) {
+            g_logger.reset();
+            CloseInitializationReadiness();
+            OutputDebugStringA("STALKER2CameraTweaks: log initialization failed; initialization aborted.\n");
+            return ERROR_OPEN_FAILED;
+        }
 
         try {
             if (!CreateWorkerStopEvent())
                 throw std::runtime_error("worker stop event could not be created");
+            if (!g_nativeCallbackAdmission.Open())
+                throw std::runtime_error("native callback admission was not drained before initialization");
             g_stopping.store(false, std::memory_order_release);
             std::string modHash;
             std::string gameHash;
@@ -6602,16 +6692,20 @@ namespace
                 OutputDebugStringA("STALKER2CameraTweaks: initialization cleanup incomplete.\n");
                 return ERROR_UNHANDLED_EXCEPTION;
             }
+            CloseInitializationReadiness();
             Log("Gameplay hook setup failed safely: ", exception.what());
             g_logger->flush();
+            return ERROR_UNHANDLED_EXCEPTION;
         } catch (...) {
             if (!TryInitializationFailureCleanup()) {
                 CloseInitializationReadiness();
                 OutputDebugStringA("STALKER2CameraTweaks: initialization cleanup incomplete.\n");
                 return ERROR_UNHANDLED_EXCEPTION;
             }
+            CloseInitializationReadiness();
             Log("Gameplay hook setup failed safely with an unknown exception.");
             g_logger->flush();
+            return ERROR_UNHANDLED_EXCEPTION;
         }
         g_runtimeInitializationComplete.store(true, std::memory_order_release);
         return 0;
@@ -6740,9 +6834,18 @@ namespace plugin
 #else
             Initialize(parameter);
 #endif
-        if (g_runtime.overlayStartupSucceeded.load(std::memory_order_acquire))
+        const bool initializationSucceeded = result == ERROR_SUCCESS;
+        const bool mayPublishCoreReady = plugin::ShouldPublishCameraCoreReady(
+            initializationSucceeded,
+            g_runtimeInitializationComplete.load(std::memory_order_acquire),
+            g_stopping.load(std::memory_order_acquire));
+        if (mayPublishCoreReady &&
+            g_runtime.overlayStartupSucceeded.load(std::memory_order_acquire))
             NotifyOverlayCameraCoreReady();
-        else if (g_config.overlayEnabled && g_logger)
+        else if (!mayPublishCoreReady) {
+            CloseInitializationReadiness();
+            Log("Core initialization failed or stopped; camera-core readiness remains closed.");
+        } else if (g_config.overlayEnabled && g_logger)
             Log("Overlay discovery startup failed; core runtime remains initialized.");
         return result;
 #else
@@ -6781,6 +6884,7 @@ namespace plugin
     {
         if (processTerminating) return;
         g_stopping.store(true, std::memory_order_release);
+        g_nativeCallbackAdmission.Close();
         g_cameraWriterHookGate.store(false, std::memory_order_release);
         g_cinematicHookGate.store(false, std::memory_order_release);
         g_workers.SignalStop();

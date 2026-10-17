@@ -18,11 +18,11 @@ call "%VSDEVCMD%" -arch=x64 -host_arch=x64
 if errorlevel 1 goto :fail
 if not exist "build-artifacts\language-state-watcher" mkdir "build-artifacts\language-state-watcher"
 set "OUT=build-artifacts\language-state-watcher"
-cl /nologo /std:c++latest /EHsc /W4 /utf-8 /I src\diagnostics\language_state tests\diagnostics\language_state_transition_harness.cpp src\diagnostics\language_state\language_state_transition.cpp /Fe:%OUT%\language_state_transition_harness.exe
+cl /nologo /std:c++latest /EHsc /W4 /utf-8 /I src\diagnostics\language_state /Fo%OUT%\ tests\diagnostics\language_state_transition_harness.cpp src\diagnostics\language_state\language_state_transition.cpp /Fe:%OUT%\language_state_transition_harness.exe
 if errorlevel 1 goto :fail
 %OUT%\language_state_transition_harness.exe
 if errorlevel 1 goto :fail
-cl /nologo /LD /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /I src\diagnostics\language_state src\diagnostics\language_state\language_state_watcher.cpp src\diagnostics\language_state\language_state_transition.cpp /link user32.lib /OUT:%OUT%\STALKER2LanguageStateWatcherDiagnostic.asi
+cl /nologo /LD /std:c++latest /O1 /MT /EHsc /W4 /utf-8 /I src\diagnostics\language_state /Fo%OUT%\ src\diagnostics\language_state\language_state_watcher.cpp src\diagnostics\language_state\language_state_transition.cpp /link user32.lib /OUT:%OUT%\STALKER2LanguageStateWatcherDiagnostic.asi
 if errorlevel 1 goto :fail
 popd
 exit /b 0

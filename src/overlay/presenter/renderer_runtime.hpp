@@ -1,6 +1,7 @@
 #pragma once
 
 #include "composition_presenter_state.hpp"
+#include "presenter_runtime_policy.hpp"
 #include "placement_save_state.hpp"
 #include "renderer_state.hpp"
 #include "../presentation/presentation_contracts.hpp"
@@ -33,15 +34,30 @@ namespace overlay
     {
     public:
         using LogFunction = void(*)(const std::string&);
+        using TerminalRequestFunction = void(*)() noexcept;
 
         void SetLogger(LogFunction logger) noexcept { logger_ = logger; }
-        bool Initialize(HWND window, UINT width, UINT height, UINT dpi = 96) noexcept;
+        void SetTerminalRequest(TerminalRequestFunction request) noexcept
+        {
+            terminalRequest_ = request;
+        }
+        bool Initialize(HWND gameWindow, HWND overlayWindow, UINT width,
+            UINT height, UINT dpi = 96) noexcept;
         bool OnWindowGeometry(HWND window, UINT width, UINT height,
             bool minimized, UINT dpi = 96) noexcept;
+        bool OnHostActivation(HWND window, bool active) noexcept;
+        void SetInputBindingReady(HWND window) noexcept;
+        void CompleteStartupGameDataProbe(bool readSucceeded) noexcept;
+        std::uint32_t StartupGameDataProbeWaitMilliseconds(
+            std::uint64_t nowMs) const noexcept
+        {
+            return startupReadiness_.ProbeWaitMilliseconds(nowMs);
+        }
+        bool ResolveStartupGameDataProbeTimeout() noexcept;
         bool Render() noexcept;
         bool OwnsWindow(HWND window) const noexcept
         {
-            return window_ == window && window != nullptr;
+            return gameWindow_ == window && window != nullptr;
         }
         bool ready() const noexcept
         {
@@ -56,8 +72,25 @@ namespace overlay
         {
             return state_.phase() == PresenterPhase::Disabled;
         }
+        bool InputPresentationReady() const noexcept
+        {
+            return ready() && visible() && menuFrameAdmission_.ready() && visualAttached_ &&
+                overlayWindowVisible_ && hostActive_ && !hostMinimized_ &&
+                overlayWindow_ && IsWindowVisible(overlayWindow_) && DisplayWindowAboveHost();
+        }
+        bool OwnedResourcesReleased() const noexcept
+        {
+            return !device_ && !dxgiDevice_ && !compositionDevice_ &&
+                !compositionTarget_ && !visual_ && !surface_ &&
+                !imguiRenderer_.HasOwnedResources() && !imguiReady_ &&
+                !imguiContextCreated_ && !ImGui::GetCurrentContext() &&
+                !gameWindow_ && !overlayWindow_ &&
+                !overlayWindowVisible_ && !visualAttached_;
+        }
         void SetVisible(bool visible) noexcept
         {
+            if (visible != this->visible()) forceFullDamage_ = true;
+            menuFrameAdmission_.Request(visible);
             visible_.store(visible, std::memory_order_release);
             surfaceDirty_ = true;
         }
@@ -69,9 +102,9 @@ namespace overlay
         {
             return state_.phase() == PresenterPhase::Ready &&
                 (surfaceDirty_ ||
-                    startupNotification_.ShouldWakePresenter(
-                        state_.phase() == PresenterPhase::Ready) &&
-                        !startupAutoLanguageSyncRequested_ ||
+                    (startupNotification_.ShouldWakePresenter(
+                        state_.phase() == PresenterPhase::Ready, inputBindingReady_) &&
+                        !startupReadiness_.probeStarted()) ||
                     !notifications_.empty());
         }
         bool notificationAnimationActive() const noexcept
@@ -80,13 +113,15 @@ namespace overlay
                 !notifications_.empty();
         }
         void RequestRedraw() noexcept { surfaceDirty_ = true; }
-        bool RebindWindow(HWND window, UINT width, UINT height,
+        bool RebindWindow(HWND gameWindow, UINT width, UINT height,
             UINT dpi = 96) noexcept;
         void Disable(const char* reason) noexcept;
-        void Shutdown() noexcept;
+        bool Shutdown() noexcept;
 
     private:
-        bool InitializeImpl(HWND window, UINT width, UINT height, UINT dpi);
+        friend struct RendererOwnershipTestAccess;
+        bool InitializeImpl(HWND gameWindow, HWND overlayWindow, UINT width,
+            UINT height, UINT dpi);
         bool CreateGraphicsDevice();
         bool CreateCompositionTarget(HWND window);
         bool CreateSurface(UINT width, UINT height,
@@ -102,15 +137,27 @@ namespace overlay
             UINT width, UINT height, const ImDrawData* drawData,
             presentation::Rect updateRect) noexcept;
         bool ApplyWindowDpi(UINT dpi) noexcept;
+        bool UpdateOverlayWindowBounds(bool forcePlacement = false) noexcept;
+        bool DisplayWindowAboveHost() const noexcept;
+        void ReconcileHostActivity() noexcept;
+        bool SetOverlayWindowVisibility(bool visible) noexcept;
+        void LogDisplayState() noexcept;
+        void LogNotificationLifecycle(const char* event,
+            const char* reason, std::uint64_t notificationId = 0) const noexcept;
+        void LogStartupGate(const char* event, const char* reason) const noexcept;
+        void LogStartupGateEligibility() noexcept;
         void FailAfterException() noexcept;
-        void Log(const std::string& message) const;
+        void Log(const std::string& message) const noexcept;
+        void Log(const char* message) const noexcept;
         void UpdateNotifications() noexcept;
         void PrepareStartupNotification() noexcept;
         void EnsureStartupNotification(
             const plugin::RuntimeSettingsSnapshot& settings) noexcept;
         void DrawNotifications();
-        void StartPendingNotificationLifetimes() noexcept;
-        void ResetComposition() noexcept;
+        bool StartPendingNotificationLifetimes() noexcept;
+        bool ReconcileCompositionAttachment() noexcept;
+        void LogCompositionAttachment() const noexcept;
+        bool ResetComposition() noexcept;
         void DetachImGui() noexcept;
         void ApplyInputEvents(UINT width, UINT height);
 
@@ -124,6 +171,7 @@ namespace overlay
         CompositionPresenterState state_;
         LocalizationManager localization_;
         LogFunction logger_{};
+        TerminalRequestFunction terminalRequest_{};
         Microsoft::WRL::ComPtr<ID3D11Device> device_;
         Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice_;
         Microsoft::WRL::ComPtr<IDCompositionDesktopDevice> compositionDevice_;
@@ -131,13 +179,22 @@ namespace overlay
         Microsoft::WRL::ComPtr<IDCompositionVisual2> visual_;
         Microsoft::WRL::ComPtr<IDCompositionSurface> surface_;
         ImGuiD3D11Renderer imguiRenderer_;
-        HWND window_{};
+        HWND gameWindow_{};
+        HWND overlayWindow_{};
         UINT surfaceWidth_{};
         UINT surfaceHeight_{};
         UINT windowDpi_{96};
         float dpiScale_{1.0f};
         std::uint64_t surfaceGeneration_{};
         bool compositionReady_{};
+        bool visualAttached_{};
+        bool hostActive_{};
+        bool inputBindingReady_{};
+        MenuFrameAdmission menuFrameAdmission_;
+        bool hostMinimized_{};
+        bool overlayWindowVisible_{};
+        DisplayPlacement overlayPlacement_{};
+        unsigned diagnosticDisplayState_{~0u};
         bool imguiReady_{};
         bool imguiContextCreated_{};
         int activeFontSizePixels_{};
@@ -155,14 +212,22 @@ namespace overlay
         std::wstring overlayConfigPath_;
         float overlayPositionX_{30.0f};
         float overlayPositionY_{30.0f};
+        float compactOverlayWidthLogical_{};
+        float compactOverlayHeightLogical_{};
+        bool cameraStateExpanded_{};
+        ImVec2 cameraStateCompactPosition_{};
+        bool cameraStateCompactPositionValid_{};
+        bool restoreCameraStateCompactPosition_{};
         float lastOverlayPositionX_{};
         float lastOverlayPositionY_{};
         bool overlayPlacementLoaded_{};
         bool overlayPositionObserved_{};
         PlacementSaveState placementSaveState_;
         StartupNotificationState startupNotification_;
-        bool startupAutoLanguageSyncRequested_{};
-        bool startupAutoLanguageSyncRequestFailureLogged_{};
+        StartupToastReadinessGate startupReadiness_;
+        bool startupGateEligibilityLogged_{};
+        bool startupAutoLocaleWaitLogged_{};
+        bool startupHintDrawSubmissionLogged_{};
         bool startupHintFrameLogged_{};
         bool firstRawMouseAppliedLogged_{};
         bool firstAbsoluteMouseAppliedLogged_{};

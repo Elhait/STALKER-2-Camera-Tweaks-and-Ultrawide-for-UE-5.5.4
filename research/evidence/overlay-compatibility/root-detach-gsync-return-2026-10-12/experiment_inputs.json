@@ -1,0 +1,26 @@
+[
+  {
+    "path": "CMakeLists.txt",
+    "sha256": "4D81D0C3EDC7BFE5D1BEAD3C464D423DBED3AB93C934FD2A83E3F0095709B2B1"
+  },
+  {
+    "path": "src/overlay/presenter/renderer_runtime.hpp",
+    "sha256": "0A495943D5EB17139D7E0EA72515533A64A99302A1F1E1795D39EAFCEF506013"
+  },
+  {
+    "path": "src/overlay/presenter/renderer_runtime.cpp",
+    "sha256": "C6D22704AB628B70BDF65DF075F62CB9FC59B6A06CFAF8773AF75C7DD429AC82"
+  },
+  {
+    "path": "src/overlay/composition/composition_runtime.cpp",
+    "sha256": "2EA0E81233FEBCF80899F7953CCC1CE53AABB0913F21DFD7EF236C7EA4C47171"
+  },
+  {
+    "path": "src/overlay/presenter/attachment_probe_members.inl",
+    "sha256": "80A68C84255F080CE65F939F591644FF6CE9A119D1297C93DA25107216446095"
+  },
+  {
+    "path": "src/overlay/presenter/attachment_probe_methods.inl",
+    "sha256": "9BE3DE29FBA28B3C069DFE4855ADB74369B544A12EFE3788F114A399C48A60EB"
+  }
+]

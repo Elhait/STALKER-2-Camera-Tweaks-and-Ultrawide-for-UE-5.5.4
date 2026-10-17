@@ -1,0 +1,17 @@
+[
+  {
+    "file": "STALKER2CameraTweaks.log",
+    "sha256": "4B4578D8A385DFA6D6C7251D0F829991779D294ECC972516443E74B59E47FCA7",
+    "length": 2285
+  },
+  {
+    "file": "STALKER2CameraTweaksOverlay.log",
+    "sha256": "586BF1325D66EA4F0493C7BEF4A02AF192F53449D4F211502E6004BB60357309",
+    "length": 13776
+  },
+  {
+    "file": "STALKER2CameraTweaksStartup.log",
+    "sha256": "D9AB6323C84D717DA51D7561C41BACEA0A9BE4E74103FEF8355E793C729D76BA",
+    "length": 1378
+  }
+]

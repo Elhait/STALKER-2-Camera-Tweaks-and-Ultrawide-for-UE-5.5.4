@@ -158,6 +158,7 @@
       "cinematic_status": "Cinematic 카메라 통합의 현재 표시 상태입니다."
     }
   },
+  "camera_state_toggle": { "label": "카메라 세부 정보", "open": "열기", "close": "닫기" },
   "camera_state": {
     "waiting": "첫 번째 완전한 카메라 업데이트를 기다리는 중입니다.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} 키는 이미 {setting}에 지정되어 있습니다",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "{key} 키를 눌러 오버레이 열기"
+    "open_overlay_hint": "{key} 키를 눌러 오버레이 열기",
+    "persistence_failed": "변경 사항은 적용되었으나 저장되지 않았습니다. 다음 실행부터 이전 값이 적용됩니다."
   }
 }

@@ -85,6 +85,12 @@ The overlay toggle and window position are stored in the main
 `STALKER2CameraTweaks.ini` under `[Overlay]`. Existing `Hotkeys.OverlayToggle`
 and the former `STALKER2CameraTweaksOverlay.ini` position are migrated once;
 the old placement file is then ignored and is not deleted.
+The main INI is user-owned runtime data, not a release or Vortex-deployed file.
+The mod creates it from the canonical template when absent and rebuilds known
+legacy layouts while preserving compatible settings. Structurally malformed or
+unrecognized INI content is backed up before recovery; safely readable section
+assignments are retained, and a failed backup or atomic replacement leaves the
+original file untouched. A canonical no-op startup does not rewrite the file.
 
 The production overlay lifecycle log is
 `STALKER2CameraTweaksOverlay.log`. The Overlay has no DXGI factory, game
@@ -94,15 +100,41 @@ enumeration and out-of-context window events, and waits for camera-core
 readiness before creating any presentation resources.
 
 A private D3D11 device owns the ImGui renderer and draws into
-`IDCompositionSurface` updates attached to an `IDCompositionTarget` for the
-game HWND. Overlay frames never acquire or retain game backbuffers, devices,
-queues or swapchains and do not execute on the game's native presentation
-path. The ImGui UI/context, D3D11 immediate context, and composition objects
-are serialized on one Overlay owner thread. The game window procedure is the
-input boundary: while the settings UI is open it copies keyboard, mouse and
-relative raw-mouse events into a bounded bridge; only the Overlay owner thread
-applies them to ImGui. The independent composition surface remains attached
-while hidden. A presenter-owned frame scheduler is event-driven while idle and
+`IDCompositionSurface` updates attached to an `IDCompositionTarget` for a
+separate unowned top-level Overlay display HWND. The target never binds to the
+game HWND. The display HWND is created and destroyed on the existing Overlay
+owner thread, is non-activating and mouse-transparent, and follows the game
+client rectangle, activation, minimization and rebind lifecycle. While shown for
+the active game, the non-activating display uses the topmost z-band even when
+the game HWND is not topmost: an accepted HWND_TOP placement is not sufficient
+to keep an unowned display above the foreground host after restore. Inactive or
+minimized UI remains hidden. Placement reuse and input admission also check the
+actual relative game/display z-order; WM_WINDOWPOSCHANGED revokes capture and
+queues owner-side reconciliation without retaining its borrowed WINDOWPOS.
+Overlay frames never acquire or retain game backbuffers, devices, queues or
+swapchains and do not execute on the game's native presentation path. The ImGui
+UI/context, D3D11 immediate context, and composition objects are serialized on
+one Overlay owner thread. The game window procedure is the
+nonblocking input boundary. It admits callbacks through the terminal gate,
+copies mouse and relative raw-mouse events into the bounded input bridge, and
+queues keyboard/control events for the Overlay owner. Settings Apply/Persist/
+Snapshot, rebind decisions, notification publication, Renderer access and file
+logging run on the owner thread. The bounded multi-producer command queue
+preserves accepted commands in reservation order; when admission fails or it
+fills, the current event passes to the game and the optional Overlay enters
+terminal fail-open shutdown rather than overwriting an accepted command.
+Native game-language reading remains on the GameHwnd thread; its bounded result
+is queued back for owner-thread application. The owner-aware message pump waits
+on terminal and command events independently of message-queue capacity, then
+drains admitted callbacks before owner-thread finalization. Composition
+resources remain resident while hidden. The
+owner detaches the target root after a successful final clear when the UI is
+closed, no notification remains, and startup hint creation is complete. It
+reattaches the prepared surface for UI or notification display before starting
+notification lifetimes. Attachment state is published only after an accepted
+SetRoot + Commit; failure disables the optional Overlay. The game window subclass
+and Delete handling remain active while detached.
+A presenter-owned frame scheduler is event-driven while idle and
 uses the DirectComposition compositor clock for active notification animation
 and dirty interactive frames where the OS exposes that API. A clean static
 panel does not render continuously; input/settings changes coalesce into
@@ -110,6 +142,12 @@ owner-thread frames. On systems without the compositor clock, interactive
 changes remain event-driven and only notification animation uses a bounded
 timer fallback. Startup guidance never depends on settings visibility, game
 frames, or presentation callbacks.
+Startup guidance is eligible only after runtime initialization, presenter and
+input-binding readiness, plus a successful game Interface Language read or the
+documented bounded fallback. The read uses the existing game-window callback;
+its one-shot 3000 ms response deadline is integrated into the owner wait and
+does not add a polling worker. This is evidence that the game-owned setting was
+read, not a claim that a stable scene or game frame has been presented.
 
 Surface changes use a generation transaction: the replacement surface is
 created, fully drawn and committed before it is attached to the visual and
@@ -122,14 +160,28 @@ disabled. No GPU fence wait or synchronous wait on game presentation is used.
 The camera runtime and its INI configuration remain independent of presenter
 readiness or failure.
 
-Input capture is activated independently from renderer generations after a
-committed composition surface and game HWND are ready. When closed, input
-passes to the game; when open, mouse ownership is transferred through the
-bounded event bridge and returned on close. Delete toggles the settings UI and
-Esc dismisses it. Terminal Overlay failure returns messages through the saved
-window-procedure continuation. If another window subclass is installed above
-Camera Tweaks, its continuation record is retained until that HWND is
-destroyed rather than overwriting the foreign subclass.
+Input capture is admitted only after the requested UI has a committed,
+attached surface and the display HWND is visible for the active, non-minimized
+game window. Opening requests remain fail-open until that frame is accepted.
+Focus loss, minimize, geometry/DPI changes, host destruction/rebind and
+terminal state immediately revoke capture; the owner re-establishes it after
+the display is ready again. While an interactive display is admitted, the
+owner publishes a 250 ms progress heartbeat. If it becomes stale for 750 ms,
+the callback closes admission and returns input through the saved native
+continuation. Delete continues through the game WndProc when capture is
+unavailable. When open and ready, mouse ownership is transferred through the
+bounded event bridge and returned on close. Esc dismisses the UI. If another
+window subclass is installed above Camera Tweaks, its continuation record is
+retained until that HWND is destroyed rather than overwriting the foreign
+subclass. Renderer failures request terminal state instead of synchronously
+tearing down graphics resources. The owner closes admission, drains admitted
+callbacks, and then runs one guarded finalizer on the owning thread.
+Independent cleanup steps continue after a step fails; DComp references and
+the display HWND are retained when detach/commit or Renderer release is not
+confirmed. Finalization is reported as `COMPLETE`, `RETAINED`, or
+`UNVERIFIED` from observed cleanup state, with a `PENDING` marker before
+teardown begins. This implementation has focused offline evidence; live
+Renderer/driver teardown remains unverified.
 
 ## Build and test policy
 
@@ -147,10 +199,12 @@ The production build selects overlay integration with `OVERLAY_PRODUCTION`;
 connects discovery with the plugin runtime. The old standalone
 `tools/build/build-overlay-poc.cmd` entry point retains `OVERLAY_RENDERING_POC` as a
 legacy source gate; production does not define that POC-named macro.
-`tools/build/build-diagnostic.cmd` creates a separate supported diagnostic ASI. The
-standalone POC/discovery and research watcher scripts are retired research
-entry points, not supported ASI profiles or contents of the production
-package.
+The ordinary ASI built by `build.cmd` contains the approved passive runtime
+diagnostics. `[Diagnostics] Enabled` in the INI is the runtime switch; enabling
+it does not require a separate ASI. `tools/build/build-diagnostic.cmd` is an
+optional compatibility wrapper for isolated diagnostic-profile work, not a
+second normal user build. The standalone POC/discovery and research watcher
+scripts are research entry points, not contents of the ordinary ASI.
 
 Production builds emit a bounded `STALKER2CameraTweaksStartup.log` startup
 journal containing process/worker startup, camera-core readiness, game-window
@@ -180,6 +234,49 @@ Normal dynamic `FreeLibrary`/manual ASI unload is not claimed as supported.
 - The runtime owner is deliberately process-resident and is not destroyed by
   DLL static teardown. Normal dynamic unload remains unsupported.
 
-Loaders and integrations must keep the ASI resident until process termination
-unless a future implementation establishes a non-loader-lock owner for a
-complete controlled unload.
+The initialization worker pins the ASI with GetModuleHandleEx(FROM_ADDRESS|PIN)
+before installing hooks or starting Overlay. Failure aborts initialization.
+After pinning, FreeLibrary cannot physically unmap its callbacks or resident
+owners. Racing unload against the original asynchronous attach/initialization
+handoff is still unsupported; loaders must allow initialization to run.
+
+`plugin::Shutdown()` is a camera-core reset helper; production currently has
+no caller for it and it is not a combined ASI-unload API. Initialization failure
+can reset camera-core resources. Overlay terminal disable separately closes
+input admission, drains admitted callbacks and finalizes its resources on the
+Overlay owner thread. Destruction of GameHwnd permits host rebind and does not
+by itself request terminal shutdown of the mod.
+
+Ordinary process exit has no guaranteed pre-exit handoff to either owner. It
+can terminate those threads before DLL detach, so explicit worker joins,
+hook restoration, COM release and Overlay finalization are not promised for
+that scenario. Process-owned handles, windows and address space are reclaimed
+by Windows; this is not evidence that DWM or the graphics driver completed
+their asynchronous work. Forced termination may omit DLL detach entirely.
+
+The existing `OVERLAY_OWNER_FINALIZATION=STARTED outcome=PENDING`,
+`OVERLAY_OWNER_FINALIZATION=COMPLETE|RETAINED|UNVERIFIED` and
+`OVERLAY_RENDERER_OWNED_REFS_RELEASED` records describe a running Overlay owner
+finalizer. They are not mandatory end-of-game records. The startup journal has
+no detach writer. There is no production `MOD_SHUTDOWN_COMPLETE` guarantee.
+
+The identified logging/configuration paths use Win32 file handles rather than
+CRT FILE streams. The main synchronous spdlog logger is owned directly by
+Runtime and never registered in spdlog's static registry. The Overlay log and
+its mutex have process-lifetime storage; its owner can still explicitly close
+the handle. INI transport uses the same Win32 primitive with staged flush/close
+and the existing atomic replacement, without changing parsing/migration rules.
+ImGui disk settings are disabled because all mod windows use NoSavedSettings
+and placement belongs to the main INI.
+
+The pending-notification queue/counter/mutex belong to the resident Runtime.
+SafetyHook retains its mutable allocator weak-reference state and TrapManager
+instead of registering their destructors with CRT. Its existing VEH checks
+Windows process-shutdown state before accessing its mutex/map; the function
+address is cached outside those locks before installing traps. No new shutdown
+hook is introduced. Bounded process-lifetime retention is intentional; it does
+not make manual unload a supported operation or promise driver completion.
+The /MT CRT and host still have their own termination behavior outside these
+identified paths. The bounded audit, exact repair scope and qualification
+limits are recorded in
+[`FINAL_ASI_SHUTDOWN_LIFECYCLE_CLOSURE_2026-10-17.md`](../research/reports/FINAL_ASI_SHUTDOWN_LIFECYCLE_CLOSURE_2026-10-17.md).

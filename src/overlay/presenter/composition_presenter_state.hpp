@@ -82,4 +82,18 @@ namespace overlay
 
     RedrawReason SelectRedrawReason(bool ready, bool dirty, bool visible,
         bool notificationActive) noexcept;
+
+    template <typename SetRoot, typename Commit>
+    bool CommitCompositionAttachment(bool& attached, bool requested,
+        SetRoot&& setRoot, Commit&& commit)
+    {
+        if (attached == requested) return true;
+        if (!std::forward<SetRoot>(setRoot)(requested) ||
+            !std::forward<Commit>(commit)())
+            return false;
+        // Publish only accepted transactions. The owner disables the Overlay on
+        // failure rather than reusing a tree with uncertain pending commands.
+        attached = requested;
+        return true;
+    }
 }

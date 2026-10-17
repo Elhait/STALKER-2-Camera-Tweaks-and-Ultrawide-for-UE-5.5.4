@@ -160,6 +160,7 @@
       "cinematic_status": "Поточний статус відображення інтеграції камери катсцен."
     }
   },
+  "camera_state_toggle": { "label": "Деталі камери", "open": "Відкрити", "close": "Закрити" },
   "camera_state": {
     "waiting": "Очікування першого повного оновлення камери.",
     "field": {
@@ -182,6 +183,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "Клавішу {key} уже призначено для дії «{setting}»",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Щоб відкрити оверлей, натисніть {key}"
+    "open_overlay_hint": "Щоб відкрити оверлей, натисніть {key}",
+    "persistence_failed": "Зміну застосовано, але не збережено. Після перезапуску гри повернеться попереднє значення."
   }
 }

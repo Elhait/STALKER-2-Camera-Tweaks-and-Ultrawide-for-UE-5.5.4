@@ -5,12 +5,71 @@
 #include "../../src/platform/win32/memory.hpp"
 #include "../../src/gameplay/gameplay_camera.hpp"
 #include "../../src/plugin/camera_writer_transaction.hpp"
+#include "../../src/platform/win32/sha256.hpp"
+#include "../../src/overlay/presenter/renderer_runtime.hpp"
+#include <atomic>
 #include <limits>
+#include <new>
+namespace overlay {
+    struct RendererOwnershipTestAccess {
+        static bool VerifyEmptyShutdown(bool menuVisible, bool partialImGui,
+            bool queuedToast) {
+            Renderer renderer;
+            auto& input = GetInputState();
+            input.Close();
+            if (menuVisible) {
+                input.Toggle();
+                input.SetFocused(true);
+                input.BeginRebind(HotkeyAction::GameplayMode, VK_F9);
+            }
+            renderer.SetVisible(menuVisible);
+            if (partialImGui) {
+                ImGui::CreateContext();
+                renderer.imguiContextCreated_ = true;
+            }
+            if (queuedToast) {
+                plugin::OverlayNotification toast;
+                toast.kind = plugin::OverlayNotificationKind::StartupOverlayHint;
+                renderer.notifications_.push_back({std::move(toast), {}});
+            }
+            // Real Shutdown, with no HWND/device/surface creation. This covers
+            // CPU/input ownership only, not a successfully initialized GPU path.
+            const bool first = renderer.Shutdown();
+            const bool second = renderer.Shutdown();
+            return first && second && renderer.OwnedResourcesReleased() &&
+                !renderer.visible() && !input.visible() &&
+                !input.rebindActive() && !input.ShouldOwnInput();
+        }
+
+        static bool VerifyPartialBackendCleanup(ID3D11Device* device) {
+            ImGui::CreateContext();
+            Renderer renderer;
+            renderer.imguiContextCreated_ = true;
+            const bool initialized = renderer.imguiRenderer_.Initialize(device,
+                ImGui::GetIO().Fonts);
+            const bool partialOwnership = !initialized && !renderer.imguiReady_ &&
+                renderer.imguiRenderer_.HasOwnedResources();
+            renderer.DetachImGui();
+            return partialOwnership && !renderer.imguiRenderer_.HasOwnedResources() &&
+                !ImGui::GetCurrentContext() && !renderer.imguiContextCreated_;
+        }
+    };
+}
 namespace {
+    thread_local unsigned sha256AllocationFaultPoint{};
+    std::atomic<bool> nativeResetCallbackEntered{};
+    std::atomic<bool> nativeResetCallbackRelease{};
+    std::atomic<bool> nativeResetCallbackMutated{};
+    std::atomic<bool> nativeResetCompleted{};
+    std::atomic<bool> nativeSelfResetReturned{};
+    std::atomic<bool> nativeSelfResetClosed{};
     template <typename T>
     bool RuntimeAdapterFixtureZoomSafeRead(std::uintptr_t address, T& value);
     DWORD RuntimeAdapterFixtureInitializeThreadCall(void* parameter);
     void RuntimeAdapterFixtureInitializationFailureCleanup();
+}
+void RuntimeAdapterFixtureSha256AllocationCheckpoint(unsigned checkpoint) {
+    if (sha256AllocationFaultPoint == checkpoint) throw std::bad_alloc{};
 }
 namespace platform::win32 {
     float RuntimeAdapterFixtureViewport();
@@ -38,6 +97,31 @@ namespace gameplay {
 #undef NotifyOverlayCameraStatePublished
 #undef ReadClientViewportAspect
 #undef ReadCurrentProcessClientViewportAspect
+#include "../../src/plugin/dll_entry.cpp"
+
+namespace {
+    void RuntimeAdapterNativeResetBarrierCallback(SafetyHookContext& context) {
+        nativeResetCallbackEntered.store(true, std::memory_order_release);
+        const auto deadline = GetTickCount64() + 3000;
+        while (!nativeResetCallbackRelease.load(std::memory_order_acquire) &&
+            GetTickCount64() < deadline)
+            Sleep(1);
+        auto correctionLock = g_cameraCorrectionGate.Acquire();
+        if (!g_stopping.load(std::memory_order_acquire) &&
+            g_cameraWriterHookGate.load(std::memory_order_acquire)) {
+            context.xmm0.f32[0] = 123.0f;
+            g_runtimeInitializationComplete.store(true, std::memory_order_release);
+            nativeResetCallbackMutated.store(true, std::memory_order_release);
+        }
+    }
+
+    void RuntimeAdapterSelfResetCallback(SafetyHookContext&) {
+        ResetAllRuntimeResources();
+        nativeSelfResetClosed.store(g_nativeCallbackAdmission.IsClosed() && g_stopping,
+            std::memory_order_release);
+        nativeSelfResetReturned.store(true, std::memory_order_release);
+    }
+}
 
 #include <iostream>
 #include <thread>
@@ -47,6 +131,9 @@ namespace gameplay {
 #include <spdlog/sinks/base_sink.h>
 
 plugin::detail::RuntimeState* RuntimeOwnerFromSeparateTranslationUnit() noexcept;
+namespace safetyhook {
+    extern "C" bool SafetyHookTestShutdownTrapBypass();
+}
 
 namespace {
     float fixtureViewport = 21.5f / 9.0f;
@@ -92,6 +179,20 @@ namespace {
     void Check(bool condition, const char* message) {
         if (!condition) throw std::runtime_error(message);
     }
+
+    void PartialImGuiCleanup() {
+        Microsoft::WRL::ComPtr<ID3D11Device> device;
+        constexpr D3D_FEATURE_LEVEL level = D3D_FEATURE_LEVEL_9_1;
+        // Software-only device: the production vs_4_0 pipeline requires >=10_0.
+        // This fails after real device/context ownership, without a window/target.
+        const auto hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr,
+            D3D11_CREATE_DEVICE_BGRA_SUPPORT, &level, 1, D3D11_SDK_VERSION,
+            device.GetAddressOf(), nullptr, nullptr);
+        Check(SUCCEEDED(hr), "WARP partial-initialization fixture device creation failed");
+        Check(overlay::RendererOwnershipTestAccess::VerifyPartialBackendCleanup(device.Get()),
+            "DetachImGui must release real partial backend ownership before destroying context");
+        device.Reset();
+    }
     void Near(float a, float b, const char* message) {
         Check(std::isfinite(a) && std::fabs(a - b) < 0.0002f, message);
     }
@@ -134,6 +235,8 @@ namespace {
         Check(&g_coordinator == &g_runtime.coordinator, "Coordinator owner differs");
     }
     void Setup(Memory& source) {
+        Check(g_nativeCallbackAdmission.Open(),
+            "Native callback admission did not begin in its closed state");
         diagnostics::SetEnabled(diagnosticMode);
         InitializeCinematicContinuationDiagnostics(diagnosticMode);
         Check((GetCinematicContinuationTrace() != nullptr) == diagnosticMode,
@@ -1109,6 +1212,133 @@ namespace {
             << " off_trace_owner=" << (GetCinematicContinuationTrace() ? "allocated_for_on_fixture" : "null")
             << "\n";
     }
+
+    void Sha256AllocationOwnership() {
+        wchar_t tempDirectory[MAX_PATH]{};
+        wchar_t tempPath[MAX_PATH]{};
+        const DWORD directoryLength = GetTempPathW(
+            static_cast<DWORD>(std::size(tempDirectory)), tempDirectory);
+        Check(directoryLength && directoryLength < std::size(tempDirectory) &&
+            GetTempFileNameW(tempDirectory, L"cth", 0, tempPath) != 0,
+            "Could not create SHA-256 fixture file");
+        struct DeleteFixtureFile {
+            wchar_t* path;
+            ~DeleteFixtureFile() { DeleteFileW(path); }
+        } deleteFixture{tempPath};
+
+        const HANDLE output = CreateFileW(tempPath, GENERIC_WRITE, 0, nullptr,
+            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        Check(output != INVALID_HANDLE_VALUE, "Could not open SHA-256 fixture output");
+        constexpr char payload[] = "abc";
+        DWORD written{};
+        const bool wrote = WriteFile(output, payload, 3, &written, nullptr) != FALSE &&
+            written == 3;
+        const bool outputClosed = CloseHandle(output) != FALSE;
+        Check(wrote && outputClosed, "Could not write/close SHA-256 fixture input");
+
+        std::string digest;
+        Check(platform::win32::ComputeSha256(tempPath, digest),
+            "SHA-256 normal path failed");
+        Check(digest == "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
+            "SHA-256 digest mismatch");
+        const auto fileCanBeOpenedExclusively = [&]() {
+            const HANDLE verification = CreateFileW(tempPath, GENERIC_READ, 0,
+                nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (verification == INVALID_HANDLE_VALUE) return false;
+            return CloseHandle(verification) != FALSE;
+        };
+        Check(fileCanBeOpenedExclusively(),
+            "Successful SHA-256 left its source file handle open");
+
+        constexpr unsigned allocationCheckpoints[]{1, 2, 3};
+        for (const unsigned checkpoint : allocationCheckpoints) {
+            sha256AllocationFaultPoint = checkpoint;
+            std::string preservedResult = "previous-digest";
+            const bool hashed = platform::win32::detail::ComputeSha256WithTestCheckpoint(
+                tempPath, preservedResult,
+                &RuntimeAdapterFixtureSha256AllocationCheckpoint);
+            sha256AllocationFaultPoint = 0;
+            Check(!hashed && preservedResult == "previous-digest",
+                "Injected SHA allocation failure was reported as success or changed output");
+            Check(fileCanBeOpenedExclusively(),
+                "SHA allocation exception left its source file handle open");
+        }
+    }
+
+    void NativeCallbackResetDrain() {
+        Memory source, output;
+        Setup(source);
+        nativeResetCallbackEntered.store(false, std::memory_order_release);
+        nativeResetCallbackRelease.store(false, std::memory_order_release);
+        nativeResetCallbackMutated.store(false, std::memory_order_release);
+        nativeResetCompleted.store(false, std::memory_order_release);
+        auto context = Context(source, output, 90.0f);
+        const auto initialContext = context;
+
+        std::thread callback([&] {
+            SafeMidHookEntry<&RuntimeAdapterNativeResetBarrierCallback>(context);
+        });
+        const auto callbackDeadline = GetTickCount64() + 3000;
+        while (!nativeResetCallbackEntered.load(std::memory_order_acquire) &&
+            GetTickCount64() < callbackDeadline)
+            Sleep(1);
+        Check(nativeResetCallbackEntered.load(std::memory_order_acquire),
+            "Native callback did not acquire admission before reset");
+
+        std::thread reset([&] {
+            ResetAllRuntimeResources();
+            nativeResetCompleted.store(true, std::memory_order_release);
+        });
+        const auto closeDeadline = GetTickCount64() + 3000;
+        while (!g_nativeCallbackAdmission.IsClosed() && GetTickCount64() < closeDeadline)
+            Sleep(1);
+        const bool gateClosed = g_nativeCallbackAdmission.IsClosed();
+        const bool resetWaitedForCallback = !nativeResetCompleted.load(std::memory_order_acquire);
+        const bool readinessClosedDuringDrain = g_stopping.load(std::memory_order_acquire) &&
+            !g_runtimeInitializationComplete.load(std::memory_order_acquire) &&
+            !g_cameraWriterHookGate.load(std::memory_order_acquire) &&
+            !g_cinematicHookGate.load(std::memory_order_acquire);
+        nativeResetCallbackRelease.store(true, std::memory_order_release);
+        callback.join();
+        reset.join();
+
+        Check(gateClosed && resetWaitedForCallback && readinessClosedDuringDrain,
+            "Reset did not close admission and wait for the previously admitted callback");
+        Check(nativeResetCompleted.load(std::memory_order_acquire) &&
+            !nativeResetCallbackMutated.load(std::memory_order_acquire) &&
+            !g_runtimeInitializationComplete.load(std::memory_order_acquire) &&
+            !g_cameraWriterHookGate.load(std::memory_order_acquire) &&
+            !g_cinematicHookGate.load(std::memory_order_acquire),
+            "Callback mutated or republished readiness after reset admission closed");
+        UnchangedContext(initialContext, context);
+        auto rejected = g_nativeCallbackAdmission.TryEnter();
+        Check(!rejected, "Closed native callback admission accepted a new callback");
+
+        Check(g_nativeCallbackAdmission.Open(),
+            "Drained native callback gate could not be reopened for the self-reset check");
+        nativeSelfResetReturned.store(false, std::memory_order_release);
+        nativeSelfResetClosed.store(false, std::memory_order_release);
+        auto selfContext = Context(source, output, 90.0f);
+        SafeMidHookEntry<&RuntimeAdapterSelfResetCallback>(selfContext);
+        Check(nativeSelfResetReturned.load(std::memory_order_acquire) &&
+            nativeSelfResetClosed.load(std::memory_order_acquire),
+            "Reset called from its own callback did not return with admission closed");
+        ResetAllRuntimeResources();
+        Check(g_nativeCallbackAdmission.CloseAndDrain(100) ==
+            plugin::NativeCallbackAdmission::DrainResult::Drained,
+            "Self-callback exit did not allow a subsequent control-thread reset");
+
+        source.Put(kAspectOffset, fixtureViewport);
+        auto aspectContext = Context(source, output, 90.0f);
+        aspectContext.rax = source.Address();
+        aspectContext.rip = 0x123400;
+        SafeMidHookEntry<&ApplyCinematicAspectStore, &PassThroughCinematicAspectStore>(aspectContext);
+        Near(source.Get<float>(kAspectOffset), kNativeAspect,
+            "Closed admission did not preserve the cinematic store's native value");
+        Check(aspectContext.rip == 0x123400 + kCinematicStoreInstructionLength,
+            "Closed admission did not preserve the native cinematic-store continuation");
+    }
+
 #include "runtime_native_evidence_cases.hpp"
 }
 
@@ -1156,7 +1386,8 @@ extern "C" void RuntimeAdapterFixtureWake() noexcept {
     nativeEvents.push_back({NativeEffect::Wake, 0, true});
 }
 int main(int argc, char** argv) {
-    if (argc == 1) {
+    if (argc == 1 || (argc == 2 && std::string_view(argv[1]) == "--non-graphics")) {
+        const bool nonGraphics = argc == 2;
         const char* cases[] = {"writer-wide", "writer-native", "writer-combine", "writer-combine-readonly",
             "writer-combine-invalid-viewport", "writer-aspect", "writer-off", "writer-gate-off", "writer-stopping",
             "writer-unreadable", "aspect-wide", "aspect-off", "aspect-readonly", "aspect-unreadable",
@@ -1192,13 +1423,18 @@ int main(int argc, char** argv) {
             "evidence-safetyhook-lifetime-faults", "evidence-safetyhook-failed-create",
             "evidence-safetyhook-disable-postwrite", "evidence-reset-self-join",
             "evidence-reset-native-hook", "evidence-install-transaction-order",
+            "evidence-sha256-allocation-ownership", "evidence-native-callback-reset-drain",
+            "evidence-partial-imgui-cleanup",
             "diagnostic-work",
             "startup-fatal-early", "startup-fatal-partial",
             "startup-fatal-cleanup-throws", "startup-fatal-retained-worker"};
         wchar_t executable[MAX_PATH]{};
         const auto length = GetModuleFileNameW(nullptr, executable, MAX_PATH);
         if (!length || length >= MAX_PATH) return 1;
+        unsigned executed{};
         for (auto scenario : cases) for (auto mode : {"off", "on"}) {
+            if (nonGraphics && std::string_view(scenario) == "evidence-partial-imgui-cleanup")
+                continue;
             const std::string arguments = std::string(scenario) + " " + mode;
             std::wstring command = std::wstring(L"\"") + executable + L"\" " +
                 std::wstring(arguments.begin(), arguments.end());
@@ -1213,20 +1449,31 @@ int main(int argc, char** argv) {
             CloseHandle(child.hThread);
             const auto wait = WaitForSingleObject(child.hProcess, 10000);
             DWORD code = 1;
-            if (wait == WAIT_OBJECT_0) GetExitCodeProcess(child.hProcess, &code);
+            if (wait == WAIT_OBJECT_0) {
+                if (!GetExitCodeProcess(child.hProcess, &code)) {
+                    std::cerr << scenario << ": FAIL: could not read child exit code\n";
+                }
+            }
             else {
                 // Only this fixture-owned child may be terminated; a gate
                 // regression must fail the harness rather than hang test.cmd.
                 TerminateProcess(child.hProcess, 1);
-                WaitForSingleObject(child.hProcess, 2000);
-                std::cerr << scenario << ": FAIL: fixture timed out\n";
+                const auto cleanupWait = WaitForSingleObject(child.hProcess, 2000);
+                if (cleanupWait != WAIT_OBJECT_0) {
+                    std::cerr << scenario << ": FAIL: timed-out child cleanup unverified; PID="
+                        << child.dwProcessId << " wait=" << cleanupWait << "\n";
+                    CloseHandle(child.hProcess);
+                    return 2;
+                }
+                std::cerr << scenario << ": FAIL: fixture timed out; child cleanup verified\n";
             }
             CloseHandle(child.hProcess);
             if (code != 0) return 1;
+            ++executed;
         }
-        std::cout << "runtime_native_adapter_harness: PASS (" << std::size(cases)
-            << " cases x Diagnostic Mode OFF/ON; " << std::size(cases) * 2
-            << " fresh processes)\n"; return 0;
+        std::cout << "runtime_native_adapter_harness: PASS (" << executed
+            << " fresh processes; Diagnostic Mode OFF/ON; graphics_cases_omitted="
+            << (nonGraphics ? 1 : 0) << ")\n"; return 0;
     }
     if (argc == 3 && std::string(argv[1]) == "diagnostics-performance") {
         try {
@@ -1242,6 +1489,9 @@ int main(int argc, char** argv) {
         const std::string scenario = argv[1];
         diagnosticMode = argc > 2 && std::string(argv[2]) == "on";
         if (scenario == "diagnostic-work") DiagnosticWork();
+        else if (scenario == "evidence-sha256-allocation-ownership") Sha256AllocationOwnership();
+        else if (scenario == "evidence-partial-imgui-cleanup") PartialImGuiCleanup();
+        else if (scenario == "evidence-native-callback-reset-drain") NativeCallbackResetDrain();
         else if (scenario.starts_with("evidence-")) NativeEvidence(scenario);
         else if (scenario.starts_with("startup-fatal-")) StartupFailure(scenario);
         else if (scenario == "restoration-logging") RestorationLogging();

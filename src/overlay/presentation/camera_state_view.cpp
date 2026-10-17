@@ -30,7 +30,10 @@ namespace overlay
         {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() +
+                ImGui::GetColumnWidth());
             ImGui::TextDisabled("%s", label);
+            ImGui::PopTextWrapPos();
             ImGui::TableSetColumnIndex(1);
             ImGui::TextWrapped("%s", value);
         }
@@ -224,13 +227,13 @@ namespace overlay
             state.freshness.writerObservation == camera::SnapshotFreshness::Current);
         DrawField("Flags", flags.c_str());
 
+        ImGui::EndTable();
+
         if (state.gameplayMode.valid && static_cast<config::GameplayMode>(
                 state.gameplayMode.value) == config::GameplayMode::RuntimeCombine) {
             const auto& e = state.evidence;
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
             ImGui::SeparatorText("RuntimeCombine");
-            ImGui::TableSetColumnIndex(1);
+            if (!BeginFields("camera_state_runtime_combine")) return;
             const auto before = Aspect(e.runtimeCombineAspectBefore, e.runtimeCombineValid);
             const auto target = Aspect(e.runtimeCombineTargetAspect, e.runtimeCombineValid);
             const auto after = Aspect(e.runtimeCombineAspectAfter, e.runtimeCombineReadbackValid);
@@ -252,8 +255,8 @@ namespace overlay
                 e.runtimeCombineValid);
             DrawField("Input FOV", inputFov.c_str());
             DrawField("Output FOV", outputFovValue.c_str());
+            ImGui::EndTable();
         }
-        ImGui::EndTable();
 
         ImGui::SeparatorText("Transition Evidence");
         if (BeginFields("camera_state_transition_evidence")) {

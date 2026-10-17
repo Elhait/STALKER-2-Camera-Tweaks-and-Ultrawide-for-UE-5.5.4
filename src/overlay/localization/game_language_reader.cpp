@@ -1,4 +1,5 @@
 #include "game_language_reader.hpp"
+#include "game_language_reader_publication.hpp"
 
 #include "../../localization/locale_registry.hpp"
 #include "../../plugin/runtime.hpp"
@@ -33,9 +34,9 @@ namespace
     };
     constexpr wchar_t kGameImageName[] = L"Stalker2-Win64-Shipping.exe";
 
-    ReadLanguageFn g_reader{};
-    FreeGameBufferFn g_free{};
-    bool g_initialized{};
+    using ReaderPublication = overlay::detail::GameLanguageReaderPublication<
+        ReadLanguageFn, FreeGameBufferFn>;
+    ReaderPublication g_readerFunctions;
 
     bool ReadSelf(const void* source, void* destination, std::size_t size) noexcept
     {
@@ -111,14 +112,23 @@ namespace
 
     bool InitializeOnce() noexcept
     {
-        if (g_initialized) return g_reader != nullptr;
+        ReaderPublication::FunctionBundle published{};
+        if (g_readerFunctions.TryRead(published)) return true;
+        if (!g_readerFunctions.TryBeginInitialization()) return false;
         HMODULE image = GetModuleHandleW(kGameImageName);
-        if (!image || !ValidateImage(image)) return false;
-        g_reader = reinterpret_cast<ReadLanguageFn>(
-            reinterpret_cast<std::uintptr_t>(image) + kReaderRva);
-        g_free = reinterpret_cast<FreeGameBufferFn>(
-            reinterpret_cast<std::uintptr_t>(image) + kFreeRva);
-        g_initialized = true;
+        if (!image || !ValidateImage(image)) {
+            g_readerFunctions.RetryAfterFailure();
+            return false;
+        }
+        const ReaderPublication::FunctionBundle functions{
+            reinterpret_cast<ReadLanguageFn>(
+                reinterpret_cast<std::uintptr_t>(image) + kReaderRva),
+            reinterpret_cast<FreeGameBufferFn>(
+                reinterpret_cast<std::uintptr_t>(image) + kFreeRva)};
+        if (!g_readerFunctions.TryPublish(functions)) {
+            g_readerFunctions.RetryAfterFailure();
+            return false;
+        }
         return true;
     }
 
@@ -144,41 +154,61 @@ namespace
 
     bool ReadLocale(char* output, std::size_t capacity) noexcept
     {
+        ReaderPublication::FunctionBundle functions{};
+        if (!g_readerFunctions.TryRead(functions)) return false;
         FStringLayout value{};
         bool returned = false;
-        __try { returned = g_reader(&value) == &value; }
+        __try { returned = functions.reader(&value) == &value; }
         __except (EXCEPTION_EXECUTE_HANDLER) { returned = false; }
         const bool plausible = returned && value.data && value.count >= 1 && value.count <= 64 &&
             value.capacity >= value.count && IsReadable(value.data,
                 static_cast<std::size_t>(value.count) * sizeof(wchar_t));
         const bool copied = plausible && CopyLocale(value, output, capacity);
         if (plausible) {
-            __try { g_free(value.data); }
+            __try { functions.free(value.data); }
             __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
         }
         return copied;
     }
 }
 
-void overlay::SynchronizeAutoLanguageOnOverlayOpen(bool overlayVisible) noexcept
+void overlay::SynchronizeAutoLanguageOnOverlayOpen(HWND window,
+    bool overlayVisible) noexcept
 {
     if (!ShouldSynchronizeAutoLanguage(overlayVisible,
             plugin::GetRuntimeSettingsSnapshot().overlayLocaleAuto)) return;
-    SynchronizeAutoLanguageIfConfigured();
+    if (!RequestAutoLanguageSynchronization(window))
+        plugin::SetDetectedOverlayLocale("en");
 }
 
-void overlay::SynchronizeAutoLanguageIfConfigured() noexcept
+bool overlay::ReadGameLanguageLocale(char* output,
+    std::size_t capacity) noexcept
+{
+    if (!output || capacity < 3) return false;
+    output[0] = '\0';
+    if (!InitializeOnce() || !ReadLocale(output, capacity)) {
+        output[0] = 'e';
+        output[1] = 'n';
+        output[2] = '\0';
+        return false;
+    }
+    return true;
+}
+
+void overlay::ApplyDetectedGameLanguageLocale(const char* localeCode,
+    bool readSucceeded) noexcept
 {
     if (!plugin::GetRuntimeSettingsSnapshot().overlayLocaleAuto) return;
-    char locale[64]{};
-    if (!InitializeOnce() || !ReadLocale(locale, sizeof(locale))) {
-        plugin::SetDetectedOverlayLocale("en");
-        return;
-    }
-    plugin::SetDetectedOverlayLocale(locale);
+    plugin::SetDetectedOverlayLocale(readSucceeded && localeCode
+        ? localeCode : "en");
 }
 
 bool overlay::RequestAutoLanguageSynchronization(HWND window) noexcept
 {
     return window && PostMessageW(window, AutoLanguageSyncMessage, 0, 0) != FALSE;
+}
+
+bool overlay::RequestStartupGameDataProbe(HWND window) noexcept
+{
+    return window && PostMessageW(window, StartupGameDataProbeMessage, 0, 0) != FALSE;
 }

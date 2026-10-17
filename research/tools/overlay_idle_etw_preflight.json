@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "profiles": "CPU+GPU+DesktopComposition",
+  "verifiedDate": "2026-10-13",
+  "computerName": "DESKTOP-36LTLN5",
+  "osBuild": "26200",
+  "evidenceFolder": "build-artifacts/overlay-idle-etw/20261013-134230-Preflight-24408",
+  "report": "research/tools/OVERLAY_IDLE_ETW_CAPTURE.md",
+  "scope": "Previously reviewed local recording capability, not game correctness",
+  "lostEvents": 0,
+  "lostBuffers": 0,
+  "verified": ["CSwitch stacks", "ReadyThread stacks", "CPU Profile stacks", "DXGI", "DxgKrnl", "Dwm-Core", "DirectComposition", "START/STOP markers"],
+  "rawEvidenceAvailability": "Original ignored evidence directory no longer present; reviewed result preserved in report and conversation. No new preflight claimed."
+}

@@ -73,8 +73,15 @@ Allocation::Allocation(std::shared_ptr<Allocator> allocator, uint8_t* address, s
 }
 
 std::shared_ptr<Allocator> Allocator::global() {
-    static std::weak_ptr<Allocator> global_allocator{};
-    static std::mutex global_allocator_mutex{};
+    struct GlobalAllocatorState {
+        std::weak_ptr<Allocator> allocator;
+        std::mutex mutex;
+    };
+    // The weak reference is mutable during installation too. Do not register
+    // its destructor to inspect potentially interrupted state on process exit.
+    static auto& state = *new GlobalAllocatorState{};
+    auto& global_allocator = state.allocator;
+    auto& global_allocator_mutex = state.mutex;
 
     std::scoped_lock lock{global_allocator_mutex};
 
@@ -1391,8 +1398,13 @@ struct TrapInfo {
 
 class TrapManager final {
 public:
+    using ShutdownProbe = BOOLEAN(NTAPI*)();
+    static std::atomic<ShutdownProbe> shutdown_probe;
     static std::mutex mutex;
-    static std::unique_ptr<TrapManager> instance;
+    // The ASI is process-resident. Keep the VEH and mutable trap map alive
+    // until Windows removes the process; CRT detach must not traverse a map
+    // interrupted during hook installation or remove its handler under loader lock.
+    static TrapManager* instance;
     static bool is_destructed;
 
     TrapManager() { m_trap_veh = AddVectoredExceptionHandler(1, trap_handler); }
@@ -1463,6 +1475,12 @@ private:
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
+        // A resident VEH can still be called by another DLL's detach code.
+        // During process termination its mutex/map may belong to a killed
+        // installation thread. Read Windows' shutdown state before any lock.
+        const auto shutdown = shutdown_probe.load(std::memory_order_acquire);
+        if (shutdown && shutdown()) return EXCEPTION_CONTINUE_SEARCH;
+
         std::scoped_lock lock{mutex};
         auto* faulting_address = reinterpret_cast<uint8_t*>(exp->ExceptionRecord->ExceptionInformation[1]);
         auto* trap = instance->find_trap(faulting_address);
@@ -1483,11 +1501,34 @@ private:
 
         return EXCEPTION_CONTINUE_EXECUTION;
     }
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+public:
+    static BOOLEAN NTAPI TestShutdown() { return TRUE; }
+    static bool TestShutdownBypass() {
+        const auto previous = shutdown_probe.exchange(&TestShutdown,
+            std::memory_order_acq_rel);
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
+        EXCEPTION_POINTERS exception{&record, nullptr};
+        std::scoped_lock lock{mutex};
+        const auto result = trap_handler(&exception);
+        shutdown_probe.store(previous, std::memory_order_release);
+        return result == EXCEPTION_CONTINUE_SEARCH;
+    }
+#endif
 };
 
 std::mutex TrapManager::mutex;
-std::unique_ptr<TrapManager> TrapManager::instance;
+std::atomic<TrapManager::ShutdownProbe> TrapManager::shutdown_probe{};
+static_assert(std::atomic<TrapManager::ShutdownProbe>::is_always_lock_free);
+TrapManager* TrapManager::instance{};
 bool TrapManager::is_destructed = false;
+
+#ifdef SAFETYHOOK_TEST_VIRTUAL_PROTECT
+extern "C" bool SafetyHookTestShutdownTrapBypass() {
+    return TrapManager::TestShutdownBypass();
+}
+#endif
 
 void find_me() {
 }
@@ -1497,6 +1538,15 @@ static std::mutex virtual_protect_mutex;
 static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn,
     bool* write_attempted) {
     if (write_attempted) *write_attempted = false;
+    // Resolve outside our mutex: GetModuleHandle may take loader lock. No
+    // module loading or symbol resolution occurs in the exception handler.
+    if (!TrapManager::shutdown_probe.load(std::memory_order_acquire)) {
+        const auto ntdll = GetModuleHandleW(L"ntdll.dll");
+        const auto shutdown = ntdll ? reinterpret_cast<TrapManager::ShutdownProbe>(
+            GetProcAddress(ntdll, "RtlDllShutdownInProgress")) : nullptr;
+        if (!shutdown) return false;
+        TrapManager::shutdown_probe.store(shutdown, std::memory_order_release);
+    }
     MEMORY_BASIC_INFORMATION find_me_mbi{};
     MEMORY_BASIC_INFORMATION from_mbi{};
     MEMORY_BASIC_INFORMATION to_mbi{};
@@ -1529,7 +1579,7 @@ static bool trap_threads_result(uint8_t* from, uint8_t* to, size_t len, const st
         std::scoped_lock lock{TrapManager::mutex};
 
         if (TrapManager::instance == nullptr) {
-            TrapManager::instance = std::make_unique<TrapManager>();
+            TrapManager::instance = new TrapManager{};
         }
 
         TrapManager::instance->add_trap(from, to, len);

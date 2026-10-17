@@ -1,0 +1,46 @@
+OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2
+OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0
+OVERLAY_DISPLAY_WINDOW_CREATED owner_thread=1 unowned=1
+OVERLAY_COMPOSITOR_CLOCK_READY
+OVERLAY_WINDOW_EVENTS_ARMED
+STARTUP_GATE_RUNTIME_READY ts_ms=14902734 reason=camera_core_initialization_complete
+STARTUP_GATE_WAITING ts_ms=14902734 reason=overlay_presenter_and_input_binding
+OVERLAY_DPI_CHANGED dpi=120 scale=1.250000 coordinate_contract=physical_client_pixels
+OVERLAY_DCOMP_INIT_BEGIN
+OVERLAY_DCOMP_DEVICE_READY featureLevel=45312
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_TOAST_LIFECYCLE ts_ms=14902890 tid=22452 event=root_attach reason=initial_surface_commit id=0 queue_count=0 queue=- startup_pending=1 menu_requested=0 root_attached=1 display_visible=0 hwnd_visible=0 host_active=0 minimized=0 generation=1 z_above_host=0
+OVERLAY_DCOMP_SURFACE_READY generation=1 width=5120 height=1440
+OVERLAY_FIRST_FRAME
+OVERLAY_DISPLAY_STATE requested=0 root_attached=1 host_active=0 host_minimized=0 display_visible=0 z_order_above_game=0 game_hwnd=3804240 foreground_hwnd=723070 display_hwnd=790208
+OVERLAY_INPUT_BINDING_PENDING game_thread_install=1
+OVERLAY_PRESENTER_ATTACHED hwnd=3804240
+STARTUP_GATE_OVERLAY_READY ts_ms=14906109 reason=presenter_and_game_input_binding_ready
+OVERLAY_INPUT_HOOK_OK game_thread_install=1
+STARTUP_GATE_WAITING ts_ms=14906125 reason=validated_game_interface_language_probe
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_TOAST_LIFECYCLE ts_ms=14906125 tid=22452 event=startup_wait_locale reason=accepted_startup_game_data_probe id=0 queue_count=0 queue=- startup_pending=1 menu_requested=0 root_attached=1 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=1 z_above_host=0
+OVERLAY_DISPLAY_STATE requested=0 root_attached=1 host_active=1 host_minimized=0 display_visible=1 z_order_above_game=1 game_hwnd=3804240 foreground_hwnd=3804240 display_hwnd=790208
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+STARTUP_GATE_GAME_DATA_OBSERVED ts_ms=14907546 reason=validated_interface_language_read
+STARTUP_GATE_ELIGIBLE ts_ms=14907546 reason=runtime_overlay_and_game_data_ready
+OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1
+OVERLAY_TOAST_LIFECYCLE ts_ms=14907546 tid=22452 event=startup_created reason=ready_and_locale_resolved id=0 queue_count=1 queue=0:pending:220:0 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=1 z_above_host=1
+OVERLAY_FONT_ATLAS_REBUILT size=19 profile=base
+OVERLAY_TOAST_LIFECYCLE ts_ms=14907562 tid=22452 event=toast_draw_submitted reason=imgui_drawlist_has_vertices id=0 queue_count=1 queue=0:pending:220:0 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=1 z_above_host=1
+OVERLAY_NOTIFICATION_LIFETIME_STARTED id=0
+OVERLAY_TOAST_LIFECYCLE ts_ms=14907562 tid=22452 event=ttl_start reason=submitted_draw_and_attachment_commit id=0 queue_count=1 queue=0:started:0:14917562 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=1 z_above_host=1
+OVERLAY_STARTUP_HINT_DRAWN_AND_COMMITTED
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_DISPLAY_STATE requested=1 root_attached=1 host_active=1 host_minimized=0 display_visible=1 z_order_above_game=1 game_hwnd=3804240 foreground_hwnd=3804240 display_hwnd=790208
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_INPUT_ABSOLUTE_MOUSE_APPLIED x=3190 y=1229
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_DISPLAY_STATE requested=0 root_attached=1 host_active=1 host_minimized=0 display_visible=1 z_order_above_game=1 game_hwnd=3804240 foreground_hwnd=3804240 display_hwnd=790208
+OVERLAY_TOAST_LIFECYCLE ts_ms=14917562 tid=22452 event=queue_expire reason=ttl_deadline id=0 queue_count=1 queue=0:started:10000:14917562 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=1 z_above_host=1
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=3804240 foreground_hwnd=3804240 display_hwnd=790208
+OVERLAY_TOAST_LIFECYCLE ts_ms=14917562 tid=22452 event=display_hide reason=display_visibility_reconciled id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=1 z_above_host=1
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_TOAST_LIFECYCLE ts_ms=14917562 tid=22452 event=root_detach reason=no_display_demand id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=1 z_above_host=1
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=0 host_minimized=0 display_visible=0 z_order_above_game=0 game_hwnd=3804240 foreground_hwnd=723070 display_hwnd=790208

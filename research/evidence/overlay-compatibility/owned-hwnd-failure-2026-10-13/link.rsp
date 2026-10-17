@@ -1,0 +1,9 @@
+/NOLOGO
+/OUT:"E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\build-artifacts\overlay-owned-hwnd-failure\failure-handoff-fixture.exe"
+"E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\build-artifacts\overlay-owned-hwnd-failure\failure.obj"
+user32.lib
+gdi32.lib
+ole32.lib
+d3d11.lib
+dxgi.lib
+dcomp.lib

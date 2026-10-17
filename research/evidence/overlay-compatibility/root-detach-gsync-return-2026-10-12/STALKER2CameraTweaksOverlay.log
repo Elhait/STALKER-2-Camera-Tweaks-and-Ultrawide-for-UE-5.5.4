@@ -1,0 +1,181 @@
+OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2
+OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0
+OVERLAY_COMPOSITOR_CLOCK_READY
+OVERLAY_WINDOW_EVENTS_ARMED
+OVERLAY_DPI_CHANGED dpi=120 scale=1.250000 coordinate_contract=physical_client_pixels
+OVERLAY_DCOMP_INIT_BEGIN
+OVERLAY_DCOMP_DEVICE_READY featureLevel=45312
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7553921 qpc=75539524204 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=0 draw_calls=1 commit_attempts=1 commits_accepted=1
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_DCOMP_SURFACE_READY generation=1 width=5138 height=1487
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_INPUT_HOOK_OK key=Delete
+OVERLAY_PRESENTER_ATTACHED hwnd=658340
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7553937 qpc=75539653944 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=1 draw_calls=2 commit_attempts=2 commits_accepted=2
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_DCOMP_SURFACE_RESIZED generation=2 width=5120 height=1440
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7553937 qpc=75539662536 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=2 draw_calls=3 commit_attempts=4 commits_accepted=4
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7557281 qpc=75573027027 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=3 draw_calls=4 commit_attempts=5 commits_accepted=5
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7557453 qpc=75574784561 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=4 draw_calls=4 commit_attempts=5 commits_accepted=5
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7557546 qpc=75575707268 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=5 draw_calls=4 commit_attempts=5 commits_accepted=5
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7558671 qpc=75586949596 root_commit_accepted=1 visible=0 notifications=0 startup_pending=1 render_calls=6 draw_calls=4 commit_attempts=5 commits_accepted=5
+OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1
+OVERLAY_FONT_ATLAS_REBUILT size=19 profile=base
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_NOTIFICATION_LIFETIME_STARTED id=0
+OVERLAY_STARTUP_HINT_DRAWN_AND_COMMITTED
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7568687 qpc=75687096374 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2323 draw_calls=2319 commit_attempts=2321 commits_accepted=2321
+OVERLAY_ATTACHMENT_PROBE reason=idle_begin variant=C tick_ms=7568687 qpc=75687096681 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2323 draw_calls=2319 commit_attempts=2321 commits_accepted=2321
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=toggle_before variant=C tick_ms=7635015 qpc=76350513157 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2323 draw_calls=2319 commit_attempts=2321 commits_accepted=2321
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_INPUT_ABSOLUTE_MOUSE_APPLIED x=289 y=473
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7635031 qpc=76350590201 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2324 draw_calls=2320 commit_attempts=2323 commits_accepted=2323
+OVERLAY_ATTACHMENT_PROBE reason=idle_end variant=C tick_ms=7635031 qpc=76350592190 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2324 draw_calls=2320 commit_attempts=2323 commits_accepted=2323
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_INPUT_RAW_MOUSE_CAPTURED dx=1 dy=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_INPUT_RAW_MOUSE_APPLIED dx=1 dy=0 x=290 y=473
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=toggle_before variant=C tick_ms=7638203 qpc=76382362145 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2365 draw_calls=2361 commit_attempts=2364 commits_accepted=2364
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7638203 qpc=76382370267 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2366 draw_calls=2362 commit_attempts=2366 commits_accepted=2366
+OVERLAY_ATTACHMENT_PROBE reason=idle_begin variant=C tick_ms=7638203 qpc=76382370452 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2366 draw_calls=2362 commit_attempts=2366 commits_accepted=2366
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=toggle_before variant=C tick_ms=7659218 qpc=76592513407 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2366 draw_calls=2362 commit_attempts=2366 commits_accepted=2366
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7659234 qpc=76592628398 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2367 draw_calls=2363 commit_attempts=2368 commits_accepted=2368
+OVERLAY_ATTACHMENT_PROBE reason=idle_end variant=C tick_ms=7659234 qpc=76592628545 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2367 draw_calls=2363 commit_attempts=2368 commits_accepted=2368
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_INPUT_ABSOLUTE_MOUSE_CAPTURED source=WM_MOUSEMOVE coordinate_space=physical_client
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=toggle_before variant=C tick_ms=7661250 qpc=76612837503 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2369 draw_calls=2365 commit_attempts=2370 commits_accepted=2370
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7661265 qpc=76612874160 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2370 draw_calls=2366 commit_attempts=2372 commits_accepted=2372
+OVERLAY_ATTACHMENT_PROBE reason=idle_begin variant=C tick_ms=7661265 qpc=76612874322 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2370 draw_calls=2366 commit_attempts=2372 commits_accepted=2372
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7678593 qpc=76786279610 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2370 draw_calls=2366 commit_attempts=2372 commits_accepted=2372
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7679968 qpc=76799953109 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2371 draw_calls=2366 commit_attempts=2372 commits_accepted=2372
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7680062 qpc=76800966985 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2372 draw_calls=2366 commit_attempts=2372 commits_accepted=2372
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_ATTACHMENT_PROBE reason=toggle_before variant=C tick_ms=7734046 qpc=77340679787 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2373 draw_calls=2366 commit_attempts=2372 commits_accepted=2372
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7734046 qpc=77340829040 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2374 draw_calls=2367 commit_attempts=2374 commits_accepted=2374
+OVERLAY_ATTACHMENT_PROBE reason=idle_end variant=C tick_ms=7734046 qpc=77340829254 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2374 draw_calls=2367 commit_attempts=2374 commits_accepted=2374
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=toggle_before variant=C tick_ms=7734765 qpc=77347874284 root_commit_accepted=1 visible=1 notifications=0 startup_pending=0 render_calls=2375 draw_calls=2368 commit_attempts=2375 commits_accepted=2375
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=1
+OVERLAY_ATTACHMENT_PROBE reason=root_commit_accepted variant=C tick_ms=7734765 qpc=77347902506 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2376 draw_calls=2369 commit_attempts=2377 commits_accepted=2377
+OVERLAY_ATTACHMENT_PROBE reason=idle_begin variant=C tick_ms=7734765 qpc=77347902673 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2376 draw_calls=2369 commit_attempts=2377 commits_accepted=2377
+OVERLAY_ATTACHMENT_CLOCK_DEMAND active=0
+OVERLAY_ATTACHMENT_PROBE reason=geometry_begin variant=C tick_ms=7810015 qpc=78100362878 root_commit_accepted=0 visible=0 notifications=0 startup_pending=0 render_calls=2376 draw_calls=2369 commit_attempts=2377 commits_accepted=2377
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440

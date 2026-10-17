@@ -158,6 +158,7 @@
       "cinematic_status": "Cinematic kamera entegrasyonunun mevcut sunum durumu."
     }
   },
+  "camera_state_toggle": { "label": "Kamera ayrıntıları", "open": "Aç", "close": "Kapat" },
   "camera_state": {
     "waiting": "İlk eksiksiz kamera güncellemesi bekleniyor.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} zaten {setting} için atanmış",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Katman arayüzünü açmak için {key} tuşuna basın"
+    "open_overlay_hint": "Katman arayüzünü açmak için {key} tuşuna basın",
+    "persistence_failed": "Değişiklik etkin ancak kaydedilmedi. Oyun yeniden başlatıldığında önceki değer geri yüklenecek."
   }
 }

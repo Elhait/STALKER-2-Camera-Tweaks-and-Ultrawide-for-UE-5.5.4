@@ -1,0 +1,11 @@
+/nologo
+/c
+/std:c++latest
+/EHsc
+/W4
+/WX
+/utf-8
+/O1
+/MT
+/Fo"E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\build-artifacts\overlay-owned-hwnd-failure\failure.obj"
+"E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\research\prototypes\overlay_owned_hwnd\failure_handoff_fixture.cpp"

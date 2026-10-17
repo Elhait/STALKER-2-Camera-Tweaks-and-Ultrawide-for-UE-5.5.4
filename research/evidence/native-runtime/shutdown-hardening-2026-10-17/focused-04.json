@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "canonical_logical_settings=PASS\r\ncinematic_migration_legacy_valid_native_aspect=PASS\r\ncinematic_migration_legacy_valid_non_native_aspect=PASS\r\ncinematic_migration_new_valid_native_mode=PASS\r\ncinematic_migration_new_valid_non_native_mode=PASS\r\ncinematic_migration_malformed_aspect_preserves_legacy_disabled=PASS\r\ncinematic_migration_malformed_mode_preserves_legacy_disabled=PASS\r\ncinematic_migration_explicit_legacy_disabled=PASS\r\ncinematic_migration_explicit_new_disabled_wins=PASS\r\ncinematic_migration_explicit_new_enabled_wins=PASS\r\ndialogue_migration_legacy_native=PASS\r\ndialogue_migration_legacy_adaptive=PASS\r\ndialogue_migration_legacy_reduced=PASS\r\ndialogue_migration_legacy_disabled=PASS\r\ndialogue_migration_malformed_legacy=PASS\r\ndialogue_migration_malformed_mode_native_legacy=PASS\r\ndialogue_migration_explicit_enabled_true=PASS\r\ndialogue_migration_explicit_enabled_false=PASS\r\ndialogue_migration_canonical_mode_precedence=PASS\r\ndialogue_migration_canonical_all_precedence=PASS\r\ndialogue_migration_canonical_only=PASS\r\nnormal=PASS mid_read_failure_rejected=PASS duplicate_overlay_placement=PASS multi_value_atomic=PASS staging_failure_preserves=PASS replacement_failure_preserves=PASS read_only_preserves=PASS template_normal=PASS template_staging_failure_preserves=PASS template_replacement_failure_preserves=PASS template_repair_idempotent=PASS unknown_recovery_backup=PASS bom_legacy_migration=PASS no_op_file_identity=PASS isolated_persistence=PASS boolean_documentation_resync=PASS diagnostics_config=PASS overlay_enabled=PASS overlay_language=PASS overlay_font_size=PASS cinematic_fov_mode=PASS cinematic_migration_round_trips=PASS dialogue_migration_round_trips=PASS duplicate_occurrences=PASS hotkey_bindings=PASS hotkey_registry=PASS legacy_overlay_toggle=PASS canonical_initial_documentation=PASS legacy_documentation=PASS user_comments_removed=PASS modified_legacy_replaced=PASS style_normalization=PASS\r\n",
+  "ProcessId": 33088
+}

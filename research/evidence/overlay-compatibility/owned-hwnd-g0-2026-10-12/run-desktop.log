@@ -1,0 +1,25 @@
+API CoInitializeEx hr=0x00000000
+API D3D11CreateDevice hardware hr=0x00000000
+API IDXGIDevice hr=0x00000000
+API DCompositionCreateDevice hr=0x00000000
+API CreateTarget OverlayHwnd hr=0x00000000
+TARGET created=1 host_calls=0 target=0000028425A0F630 host_thread=30384 overlay_thread=27184
+API CreateVisual hr=0x00000000
+API CreateSurface hr=0x00000000
+API BeginDraw hr=0x00000000
+API EndDraw hr=0x00000000
+API SetContent hr=0x00000000
+API SetRoot attached hr=0x00000000
+API Commit attached hr=0x00000000
+API DwmFlush sampling only hr=0x00000000
+PIXEL transparent actual=40,100,160 expected=40,100,160 PASS
+PIXEL half_alpha actual=148,50,80 expected=148,50,80 PASS
+PIXEL opaque_marker actual=255,0,0 expected=255,0,0 PASS
+CURSOR SendInput=1 read=1 requested=429,308 actual=429,308
+INPUT passive host=1 overlay=0 focus=1 PASS
+CURSOR SendInput=1 read=1 requested=429,308 actual=429,308
+INPUT first_interactive host=1 overlay=1 mouseactivate=1 focus=1 PASS
+RESULT alpha=1 passive=1 interactive=1 persistent_target=1 host_target_calls=0
+API cleanup SetRoot null hr=0x00000000
+API cleanup Commit hr=0x00000000
+EXIT 0

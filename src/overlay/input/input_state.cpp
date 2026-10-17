@@ -6,6 +6,68 @@
 
 namespace overlay
 {
+    OwnerInputCommandQueue::OwnerInputCommandQueue() noexcept
+    {
+        for (std::uint64_t index = 0; index < Capacity; ++index)
+            slots_[index].sequence.store(index, std::memory_order_relaxed);
+    }
+
+    bool OwnerInputCommandQueue::TryPush(
+        const OwnerInputCommand& command) noexcept
+    {
+        auto position = writePosition_.load(std::memory_order_relaxed);
+        for (unsigned attempt = 0; attempt < 8; ++attempt) {
+            auto& slot = slots_[position % Capacity];
+            const auto sequence = slot.sequence.load(std::memory_order_acquire);
+            if (sequence == position) {
+                if (writePosition_.compare_exchange_weak(position, position + 1,
+                        std::memory_order_relaxed, std::memory_order_relaxed)) {
+                    slot.command = command;
+                    slot.sequence.store(position + 1, std::memory_order_release);
+                    return true;
+                }
+            } else if (sequence < position) {
+                return false;
+            } else {
+                position = writePosition_.load(std::memory_order_relaxed);
+            }
+        }
+        return false;
+    }
+
+    bool OwnerInputCommandQueue::TryPop(
+        OwnerInputCommand& command) noexcept
+    {
+        const auto position = readPosition_.load(std::memory_order_relaxed);
+        auto& slot = slots_[position % Capacity];
+        if (slot.sequence.load(std::memory_order_acquire) != position + 1)
+            return false;
+        command = slot.command;
+        slot.sequence.store(position + Capacity, std::memory_order_release);
+        readPosition_.store(position + 1, std::memory_order_relaxed);
+        return true;
+    }
+
+    bool OwnerInputCommandQueue::empty() const noexcept
+    {
+        return readPosition_.load(std::memory_order_acquire) ==
+            writePosition_.load(std::memory_order_acquire);
+    }
+
+    bool OwnerInputCommandQueue::full() const noexcept
+    {
+        return size() >= Capacity;
+    }
+
+    std::uint32_t OwnerInputCommandQueue::size() const noexcept
+    {
+        const auto write = writePosition_.load(std::memory_order_acquire);
+        const auto read = readPosition_.load(std::memory_order_acquire);
+        const auto count = write - read;
+        return static_cast<std::uint32_t>((std::min<std::uint64_t>)(count,
+            Capacity));
+    }
+
     InputEventBridge& GetInputEventBridge() noexcept
     {
         static InputEventBridge bridge;
@@ -43,7 +105,25 @@ namespace overlay
         events_[eventCount_++] = {InputEventKind::AbsoluteMousePosition, 0, 0, 0,
             initialX, initialY};
         events_[eventCount_++] = {InputEventKind::Focus, 0, TRUE};
+        drainedResetGeneration_ = resetGeneration_.load(
+            std::memory_order_acquire);
         active_.store(true, std::memory_order_release);
+    }
+
+    bool InputEventBridge::TryActivate(int initialX, int initialY) noexcept
+    {
+        std::unique_lock lock{mutex_, std::try_to_lock};
+        if (!lock.owns_lock()) return false;
+        eventCount_ = 0;
+        rawMouseActive_.store(false, std::memory_order_release);
+        events_[eventCount_++] = {InputEventKind::Reset};
+        events_[eventCount_++] = {InputEventKind::AbsoluteMousePosition, 0, 0, 0,
+            initialX, initialY};
+        events_[eventCount_++] = {InputEventKind::Focus, 0, TRUE};
+        drainedResetGeneration_ = resetGeneration_.load(
+            std::memory_order_acquire);
+        active_.store(true, std::memory_order_release);
+        return true;
     }
 
     void InputEventBridge::Deactivate() noexcept
@@ -54,13 +134,38 @@ namespace overlay
         eventCount_ = 2;
         events_[0] = {InputEventKind::Reset};
         events_[1] = {InputEventKind::Focus, 0, FALSE};
+        drainedResetGeneration_ = resetGeneration_.load(
+            std::memory_order_acquire);
+    }
+
+    bool InputEventBridge::TryDeactivate() noexcept
+    {
+        active_.store(false, std::memory_order_release);
+        rawMouseActive_.store(false, std::memory_order_release);
+        std::unique_lock lock{mutex_, std::try_to_lock};
+        if (!lock.owns_lock()) {
+            resetGeneration_.fetch_add(1, std::memory_order_acq_rel);
+            return false;
+        }
+        eventCount_ = 2;
+        events_[0] = {InputEventKind::Reset};
+        events_[1] = {InputEventKind::Focus, 0, FALSE};
+        drainedResetGeneration_ = resetGeneration_.load(
+            std::memory_order_acquire);
+        return true;
     }
 
     bool InputEventBridge::Enqueue(InputEvent event, bool coalescible) noexcept
     {
         if (!active()) return false;
         try {
-            std::lock_guard lock{mutex_};
+            std::unique_lock lock{mutex_, std::try_to_lock};
+            if (!lock.owns_lock()) {
+                active_.store(false, std::memory_order_release);
+                rawMouseActive_.store(false, std::memory_order_release);
+                resetGeneration_.fetch_add(1, std::memory_order_acq_rel);
+                return false;
+            }
             if (!active()) return false;
             if (coalescible && eventCount_ > 0 &&
                 events_[eventCount_ - 1].kind == event.kind) {
@@ -81,26 +186,18 @@ namespace overlay
                 return true;
             }
             if (eventCount_ >= MaximumQueuedEvents) {
-                std::size_t expendable = 0;
-                while (expendable < eventCount_ &&
-                    events_[expendable].kind != InputEventKind::AbsoluteMousePosition &&
-                    events_[expendable].kind != InputEventKind::RelativeMouseMotion)
-                    ++expendable;
-                if (expendable < eventCount_) {
-                    for (std::size_t index = expendable + 1;
-                        index < eventCount_; ++index)
-                        events_[index - 1] = events_[index];
-                    --eventCount_;
-                } else if (coalescible) {
-                    return false;
-                } else {
-                    eventCount_ = 1;
-                    events_[0] = {InputEventKind::Reset};
-                }
+                active_.store(false, std::memory_order_release);
+                rawMouseActive_.store(false, std::memory_order_release);
+                eventCount_ = 0;
+                resetGeneration_.fetch_add(1, std::memory_order_acq_rel);
+                return false;
             }
             events_[eventCount_++] = event;
             return true;
         } catch (...) {
+            active_.store(false, std::memory_order_release);
+            rawMouseActive_.store(false, std::memory_order_release);
+            resetGeneration_.fetch_add(1, std::memory_order_acq_rel);
             return false;
         }
     }
@@ -145,10 +242,68 @@ namespace overlay
     {
         std::lock_guard lock{mutex_};
         events.clear();
+        const auto resetGeneration = resetGeneration_.load(
+            std::memory_order_acquire);
+        if (!active() || resetGeneration != drainedResetGeneration_) {
+            events.push_back({InputEventKind::Reset});
+            events.push_back({InputEventKind::Focus, 0, FALSE});
+            eventCount_ = 0;
+            drainedResetGeneration_ = resetGeneration;
+            return;
+        }
         events.reserve(eventCount_);
         events.insert(events.end(), events_.begin(),
             events_.begin() + static_cast<std::ptrdiff_t>(eventCount_));
         eventCount_ = 0;
+    }
+
+    bool InputCallbackAdmissionGate::TryEnter() noexcept
+    {
+        auto state = state_.load(std::memory_order_acquire);
+        for (;;) {
+            if (state & ClosedBit) return false;
+            if ((state & CountMask) == CountMask) return false;
+            if (state_.compare_exchange_weak(state, state + 1,
+                    std::memory_order_acq_rel, std::memory_order_acquire))
+                return true;
+        }
+    }
+
+    bool InputCallbackAdmissionGate::Leave() noexcept
+    {
+        auto state = state_.load(std::memory_order_acquire);
+        for (;;) {
+            const auto count = state & CountMask;
+            if (!count) return (state & ClosedBit) != 0;
+            const auto next = state - 1;
+            if (state_.compare_exchange_weak(state, next,
+                    std::memory_order_acq_rel, std::memory_order_acquire))
+                return (next & ClosedBit) && (next & CountMask) == 0;
+        }
+    }
+
+    bool InputCallbackAdmissionGate::Close() noexcept
+    {
+        const auto previous = state_.fetch_or(ClosedBit,
+            std::memory_order_acq_rel);
+        return (previous & ClosedBit) == 0;
+    }
+
+    bool InputCallbackAdmissionGate::closed() const noexcept
+    {
+        return (state_.load(std::memory_order_acquire) & ClosedBit) != 0;
+    }
+
+    std::uint64_t InputCallbackAdmissionGate::inFlight() const noexcept
+    {
+        return state_.load(std::memory_order_acquire) & CountMask;
+    }
+
+    void CloseInputAdmission(InputCallbackAdmissionGate& admission,
+        InputEventBridge& bridge) noexcept
+    {
+        admission.Close();
+        bridge.TryDeactivate();
     }
 
     InputState& GetInputState() noexcept
@@ -183,7 +338,9 @@ namespace overlay
     bool InputState::HandleToggleMessage(UINT message, WPARAM key, int toggleKey)
     {
         if (message != WM_KEYUP || key != static_cast<WPARAM>(toggleKey)) return false;
-        CancelRebind();
+        std::unique_lock lock{rebindMutex_, std::try_to_lock};
+        if (!lock.owns_lock()) return false;
+        CancelRebindLocked();
         Toggle();
         return true;
     }
@@ -214,20 +371,27 @@ namespace overlay
         previousBinding_ = previousKey;
         lastAcceptedBinding_ = previousKey;
         rebindActive_ = true;
+        rebindActivePublished_.store(true, std::memory_order_release);
+        callbackRebindKey_.store(0, std::memory_order_release);
     }
 
     RebindMessageResult InputState::HandleRebindMessage(
-        UINT message, WPARAM key, bool modifierDown)
+        UINT message, WPARAM key, bool modifierDown,
+        HotkeyAction* capturedAction, int* capturedPreviousKey)
     {
         if (!IsRebindMessage(message)) return RebindMessageResult::PassThrough;
-        std::lock_guard lock(rebindMutex_);
+        std::unique_lock lock{rebindMutex_, std::try_to_lock};
+        if (!lock.owns_lock()) return RebindMessageResult::PassThrough;
         const bool keyDown = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
         const bool keyUp = message == WM_KEYUP || message == WM_SYSKEYUP;
         if (!keyDown && !keyUp) return RebindMessageResult::PassThrough;
 
         const int virtualKey = static_cast<int>(key);
         if (consumedKey_ != 0 && virtualKey == consumedKey_) {
-            if (keyUp) consumedKey_ = 0;
+            if (keyUp) {
+                consumedKey_ = 0;
+                callbackRebindKey_.store(0, std::memory_order_release);
+            }
             return RebindMessageResult::Consumed;
         }
         if (!rebindActive_ || !keyDown) return RebindMessageResult::PassThrough;
@@ -235,12 +399,16 @@ namespace overlay
             consumedKey_ = virtualKey;
             CancelRebindLocked();
             consumedKey_ = virtualKey;
+            callbackRebindKey_.store(virtualKey, std::memory_order_release);
             return RebindMessageResult::Cancelled;
         }
         if (modifierDown || !IsSupportedBindingKey(virtualKey))
             return RebindMessageResult::PassThrough;
 
+        if (capturedAction) *capturedAction = rebindAction_;
+        if (capturedPreviousKey) *capturedPreviousKey = previousBinding_;
         consumedKey_ = virtualKey;
+        callbackRebindKey_.store(virtualKey, std::memory_order_release);
         return RebindMessageResult::CapturedKey;
     }
 
@@ -261,6 +429,20 @@ namespace overlay
         lastAcceptedBinding_ = acceptedKey;
         previousBinding_ = acceptedKey;
         rebindActive_ = false;
+        rebindActivePublished_.store(false, std::memory_order_release);
+        callbackRebindKey_.store(0, std::memory_order_release);
+    }
+
+    bool InputState::TryCommitAcceptedRebind(int acceptedKey) noexcept
+    {
+        std::unique_lock lock{rebindMutex_, std::try_to_lock};
+        if (!lock.owns_lock()) return false;
+        lastAcceptedBinding_ = acceptedKey;
+        previousBinding_ = acceptedKey;
+        rebindActive_ = false;
+        rebindActivePublished_.store(false, std::memory_order_release);
+        callbackRebindKey_.store(0, std::memory_order_release);
+        return true;
     }
 
     void InputState::CancelRebind()
@@ -269,16 +451,21 @@ namespace overlay
         CancelRebindLocked();
     }
 
+    bool InputState::TryCancelRebind() noexcept
+    {
+        std::unique_lock lock{rebindMutex_, std::try_to_lock};
+        if (!lock.owns_lock()) return false;
+        CancelRebindLocked();
+        consumedKey_ = 0;
+        return true;
+    }
+
     void InputState::CancelRebindLocked() noexcept
     {
         rebindActive_ = false;
+        rebindActivePublished_.store(false, std::memory_order_release);
+        callbackRebindKey_.store(0, std::memory_order_release);
         previousBinding_ = lastAcceptedBinding_;
-    }
-
-    bool InputState::rebindActive() const
-    {
-        std::lock_guard lock(rebindMutex_);
-        return rebindActive_;
     }
 
     HotkeyAction InputState::rebindAction() const

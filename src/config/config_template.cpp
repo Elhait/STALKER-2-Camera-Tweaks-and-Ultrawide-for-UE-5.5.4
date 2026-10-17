@@ -1,12 +1,13 @@
 #include "config_template.hpp"
 #include "config_repository.hpp"
+#include "config_line_reader.hpp"
 
 #include "canonical_ini_documentation.hpp"
 #include "feature_config.hpp"
 
 #include <algorithm>
 #include <array>
-#include <fstream>
+#include <cwchar>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -31,19 +32,14 @@ namespace config
         using canonical_ini_documentation::CinematicFovComments;
         using canonical_ini_documentation::DialogueEnabledComments;
         using canonical_ini_documentation::DialogueZoomComments;
+        using canonical_ini_documentation::DiagnosticsEnabledComments;
         using canonical_ini_documentation::HotkeysEnabledComments;
         using canonical_ini_documentation::HotkeyGameplayCycleComments;
         using canonical_ini_documentation::HotkeyCinematicAspectCycleComments;
         using canonical_ini_documentation::HotkeyCinematicFovCycleComments;
         using canonical_ini_documentation::HotkeyDialogueCycleComments;
         using canonical_ini_documentation::OverlayToggleComments;
-        constexpr std::string_view diagnosticsComments[] = {
-            "# ------------------------------------------------------------------------------",
-            "# Optional read-only runtime telemetry.",
-            "# ------------------------------------------------------------------------------",
-            "# Enable CameraState, ZOOM and HorPlus FOV telemetry.",
-            "# Default: false",
-        };
+        using canonical_ini_documentation::OverlayEnabledComments;
         constexpr std::string_view overlayPositionComments[] = {
             "# ------------------------------------------------------------------------------",
             "# Automatically managed Overlay layout settings",
@@ -63,15 +59,6 @@ namespace config
             "# Auto follows the game's Interface Language when the Overlay opens.",
             "# Or select a locale code from the supported locale registry.",
             "# Default: Auto",
-        };
-        constexpr std::string_view overlayEnabledComments[] = {
-            "# ------------------------------------------------------------------------------",
-            "# Controls the optional Overlay subsystem.",
-            "# ------------------------------------------------------------------------------",
-            "# Startup-only. Restart the game after changing this value.",
-            "# false - disable the Overlay completely; camera corrections remain active.",
-            "# true - enable the Overlay.",
-            "# Default: true",
         };
         constexpr std::string_view overlayFontSizeComments[] = {
             "# Overlay font size in pixels. Supported range: 12-24.",
@@ -93,7 +80,8 @@ namespace config
             {"Mode", "Mode=Adaptive", DialogueZoomComments, std::size(DialogueZoomComments)},
         };
         constexpr ManagedKey diagnosticsKeys[] = {
-            {"Enabled", "Enabled=false", diagnosticsComments, std::size(diagnosticsComments)},
+            {"Enabled", "Enabled=false", DiagnosticsEnabledComments,
+                std::size(DiagnosticsEnabledComments)},
         };
         constexpr ManagedKey hotkeyKeys[] = {
             {"Enabled", "Enabled=false", HotkeysEnabledComments,
@@ -108,8 +96,8 @@ namespace config
                 std::size(HotkeyDialogueCycleComments)},
         };
         constexpr ManagedKey overlayKeys[] = {
-            {"Enabled", "Enabled=true", overlayEnabledComments,
-                std::size(overlayEnabledComments)},
+            {"Enabled", "Enabled=true", OverlayEnabledComments,
+                std::size(OverlayEnabledComments)},
             {"ToggleKey", "ToggleKey=VK_2E", OverlayToggleComments,
                 std::size(OverlayToggleComments)},
             {"Language", "Language=Auto", overlayLanguageComments,
@@ -213,6 +201,16 @@ namespace config
             "#   16:9 - Uses 16:9 framing for cinematics, regardless of the display aspect.",
             "#   21:9 - Uses 21:9 framing for cinematics, regardless of the display aspect.",
             "#   32:9 - Uses 32:9 framing for cinematics, regardless of the display aspect.",
+            "# Example: 32:9 on a 16:9 display produces wider framing with black bars above and below.",
+            "# Default: Auto"
+        };
+        constexpr std::string_view legacyCinematicAspectModeDuplicateExample[] = {
+            "# Available modes:",
+            "#   Auto - Uses the current runtime viewport aspect for cinematic framing. Supports arbitrary valid aspect ratios.",
+            "#   Native - Native behavior is controlled by the separate Enabled switch; framing choices are Auto, 16:9, 21:9 and 32:9.",
+            "#   16:9 - Uses 16:9 framing for cinematics, regardless of the display aspect.",
+            "#   21:9 - Uses 21:9 framing for cinematics, regardless of the display aspect.",
+            "#   32:9 - Uses 32:9 framing for cinematics, regardless of the display aspect.",
             "# Example: Example: 32:9 on a 16:9 display produces wider framing with black bars above and below.",
             "# Default: Auto"
         };
@@ -232,6 +230,11 @@ namespace config
         constexpr std::string_view legacyDialogueEnabledGenerated[] = {
             "; true - apply the selected Dialogue mode after an accepted dialogue start.",
             "; false - keep native camera output while continuing to observe dialogue lifecycle."
+        };
+        constexpr std::string_view legacyDiagnosticsEnabled[] = {
+            "# Optional read-only runtime telemetry.",
+            "# Enable CameraState, ZOOM and HorPlus FOV telemetry.",
+            "# Default: false",
         };
         constexpr std::string_view legacyHotkeysEnabled[] = {
             "; Enables or disables all runtime hotkeys.",
@@ -373,6 +376,8 @@ namespace config
             {"Cinematics", "AspectRatio", legacyCinematicAspectGenerated, std::size(legacyCinematicAspectGenerated)},
             {"Cinematics", "Mode", legacyCinematicAspectModeCurrent,
                 std::size(legacyCinematicAspectModeCurrent)},
+            {"Cinematics", "Mode", legacyCinematicAspectModeDuplicateExample,
+                std::size(legacyCinematicAspectModeDuplicateExample)},
             {"Cinematics", "Enabled", legacyCinematicEnabledGenerated, std::size(legacyCinematicEnabledGenerated)},
             {"Cinematics", "FovMode", legacyCinematicFovGenerated, std::size(legacyCinematicFovGenerated)},
             {"Hotkeys", "Enabled", legacyHotkeysEnabled, std::size(legacyHotkeysEnabled)},
@@ -395,6 +400,8 @@ namespace config
                 std::size(legacyDialogueZoomGenerated)},
             {"Dialogue", "Mode", legacyDialogueZoomModeCurrent,
                 std::size(legacyDialogueZoomModeCurrent)},
+            {"Diagnostics", "Enabled", legacyDiagnosticsEnabled,
+                std::size(legacyDiagnosticsEnabled)},
             {"Overlay", "Enabled", legacyOverlayEnabled, std::size(legacyOverlayEnabled)},
             {"Overlay", "PositionX", legacyOverlayPositionCurrent,
                 std::size(legacyOverlayPositionCurrent)},
@@ -531,6 +538,48 @@ namespace config
             return RemoveExactCommentBlocks(body, section, blocks.data(), blocks.size());
         }
 
+        std::vector<std::string> RemoveManagedDocumentationPreambles(
+            const std::vector<std::string>& body, const ManagedKey* keys,
+            std::size_t keyCount)
+        {
+            // Legacy templates have no ownership delimiters. Treat any remaining
+            // contiguous comment preamble of a supported key as stale module
+            // documentation, then emit the explicit canonical block below.
+            std::vector<bool> remove(body.size(), false);
+            for (std::size_t keyLine = 0; keyLine < body.size(); ++keyLine) {
+                const auto trimmed = Trim(body[keyLine]);
+                const auto separator = trimmed.find('=');
+                if (separator == std::string::npos) continue;
+                const auto key = Trim(trimmed.substr(0, separator));
+                bool managed = false;
+                for (std::size_t keyIndex = 0; keyIndex < keyCount; ++keyIndex)
+                    managed |= key == keys[keyIndex].name;
+                if (!managed) continue;
+
+                std::size_t runStart = keyLine;
+                while (runStart > 0 && IsCommentOrBlank(body[runStart - 1])) --runStart;
+                for (std::size_t index = runStart; index < keyLine; ++index)
+                    remove[index] = true;
+            }
+
+            std::vector<std::string> result;
+            result.reserve(body.size());
+            for (std::size_t index = 0; index < body.size(); ++index)
+                if (!remove[index]) result.emplace_back(body[index]);
+            return result;
+        }
+
+        void AppendManagedDocumentation(std::vector<std::string>& output,
+            std::string_view section, const ManagedKey& key)
+        {
+            if (!key.commentCount) return;
+            const auto identity = std::string(section) + "." + std::string(key.name);
+            output.emplace_back("# <" + identity + ">");
+            for (std::size_t index = 0; index < key.commentCount; ++index)
+                output.emplace_back(key.comments[index]);
+            output.emplace_back("# </" + identity + ">");
+        }
+
         std::vector<std::string> RemoveLegacyManagedCommentBlocks(
             const std::vector<std::string>& source)
         {
@@ -560,31 +609,162 @@ namespace config
         {
             if (line.size() < 2 || line.front() != '[' || line.back() != ']') return false;
             section = Trim(line.substr(1, line.size() - 2));
-            return true;
+            return !section.empty();
+        }
+
+        bool SanitizeRecoverableConfig(std::vector<std::string>& lines)
+        {
+            bool malformed = false;
+            bool hasSection = false;
+            bool hasKnownSection = false;
+            std::string activeSection;
+            std::vector<std::string> recoverable;
+            recoverable.reserve(lines.size());
+            if (!lines.empty() && lines.front().compare(0, 3, "\xEF\xBB\xBF", 3) == 0)
+                lines.front().erase(0, 3);
+            for (const auto& line : lines) {
+                if (line.find('\0') != std::string::npos) {
+                    malformed = true;
+                    continue;
+                }
+                const auto trimmed = Trim(line);
+                if (trimmed.empty() || trimmed.front() == ';' || trimmed.front() == '#') {
+                    recoverable.push_back(line);
+                    continue;
+                }
+
+                std::string section;
+                if (IsSectionHeader(trimmed, section)) {
+                    activeSection = std::move(section);
+                    hasSection = true;
+                    hasKnownSection = hasKnownSection || activeSection == "Gameplay" ||
+                        activeSection == "Cinematics" || activeSection == "Dialogue" ||
+                        activeSection == "Diagnostics" || activeSection == "Hotkeys" ||
+                        activeSection == "Overlay" || activeSection == "Features";
+                    recoverable.push_back(line);
+                    continue;
+                }
+                if (trimmed.front() == '[' || trimmed.back() == ']') {
+                    malformed = true;
+                    activeSection.clear();
+                    continue;
+                }
+
+                const auto separator = trimmed.find('=');
+                if (separator == std::string::npos ||
+                    Trim(trimmed.substr(0, separator)).empty() || activeSection.empty()) {
+                    malformed = true;
+                    continue;
+                }
+                recoverable.push_back(line);
+            }
+            if (!hasSection || !hasKnownSection) malformed = true;
+            if (malformed) lines = std::move(recoverable);
+            return malformed;
+        }
+
+        bool CreateConfigBackup(const std::filesystem::path& path,
+            std::filesystem::path& backupPath)
+        {
+            SYSTEMTIME now{};
+            GetSystemTime(&now);
+            wchar_t timestamp[32]{};
+            swprintf_s(timestamp, L"%04u%02u%02u-%02u%02u%02u-%03u",
+                static_cast<unsigned int>(now.wYear),
+                static_cast<unsigned int>(now.wMonth),
+                static_cast<unsigned int>(now.wDay),
+                static_cast<unsigned int>(now.wHour),
+                static_cast<unsigned int>(now.wMinute),
+                static_cast<unsigned int>(now.wSecond),
+                static_cast<unsigned int>(now.wMilliseconds));
+            const auto base = path.parent_path() /
+                (path.filename().wstring() + L".backup-" + timestamp);
+            for (unsigned int suffix = 0; suffix != 100; ++suffix) {
+                const std::wstring suffixText = suffix == 0 ? std::wstring{} :
+                    L"-" + std::to_wstring(suffix);
+                backupPath = std::filesystem::path(base.wstring() + suffixText + L".ini");
+                if (CopyFileW(path.c_str(), backupPath.c_str(), TRUE)) return true;
+                const auto error = GetLastError();
+                if (error != ERROR_FILE_EXISTS && error != ERROR_ALREADY_EXISTS)
+                    return false;
+            }
+            return false;
         }
     }
 
     static bool SynchronizeManagedConfigTemplateBody(const std::filesystem::path& path,
         const TemplateLogFunction& log)
     {
-        std::ifstream input(path);
-        if (!input) return false;
-
         std::vector<std::string> source;
-        std::string line;
-        while (std::getline(input, line)) {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            source.push_back(std::move(line));
+        detail::ConfigTextFormat format{};
+        std::error_code existenceError;
+        const bool fileExists = std::filesystem::exists(path, existenceError);
+        if (existenceError) return false;
+        if (fileExists) {
+            if (!detail::ReadConfigFile(path.c_str(), source, &format)) return false;
         }
-        input.close();
         const auto original = source;
+        const bool requiresRecoveryBackup = fileExists &&
+            SanitizeRecoverableConfig(source);
 
         const auto sourceWithoutLegacyDescriptions = RemoveLegacyManagedCommentBlocks(source);
         source = sourceWithoutLegacyDescriptions;
         for (auto& current : source)
             current = NormalizeCommentPrefix(std::move(current));
+        source.erase(std::remove_if(source.begin(), source.end(), [](const std::string& line) {
+            const auto trimmed = Trim(line);
+            return trimmed.empty() || trimmed.front() == '#' || trimmed.front() == ';';
+        }), source.end());
         const auto normalizedHeader = NormalizeHeader(source);
         source = normalizedHeader;
+
+        // Resolve the legacy Gameplay switch before canonical defaults exist.
+        // A valid canonical value is authoritative regardless of section order.
+        bool canonicalGameplayEnabled = false;
+        bool legacyGameplayEnabledFound = false;
+        bool migratedGameplayEnabled = true;
+        {
+            std::string section;
+            for (const auto& current : source) {
+                const auto line = Trim(current);
+                if (IsSectionHeader(line, section)) continue;
+                const auto separator = line.find('=');
+                if (separator == std::string::npos) continue;
+                const auto key = Trim(line.substr(0, separator));
+                bool value{};
+                if (!ParseBool(line.substr(separator + 1), value)) continue;
+                if (section == "Gameplay" && key == "Enabled")
+                    canonicalGameplayEnabled = true;
+                else if (section == "Features" && key == "GameplayAspectFix") {
+                    legacyGameplayEnabledFound = true;
+                    migratedGameplayEnabled = value;
+                }
+            }
+        }
+        if (legacyGameplayEnabledFound) {
+            std::vector<std::string> migrated;
+            std::string section;
+            for (const auto& current : source) {
+                const auto line = Trim(current);
+                if (IsSectionHeader(line, section)) {
+                    migrated.push_back(current);
+                    continue;
+                }
+                const auto separator = line.find('=');
+                const auto key = separator == std::string::npos
+                    ? std::string{} : Trim(line.substr(0, separator));
+                if (section == "Features" && key == "GameplayAspectFix") continue;
+                if (!canonicalGameplayEnabled && section == "Gameplay" &&
+                    key == "Enabled") continue;
+                migrated.push_back(current);
+            }
+            if (!canonicalGameplayEnabled) {
+                migrated.emplace_back("[Gameplay]");
+                migrated.emplace_back(migratedGameplayEnabled
+                    ? "Enabled=true" : "Enabled=false");
+            }
+            source = std::move(migrated);
+        }
 
         std::string legacyOverlayToggle;
         bool hasOverlayToggle = false;
@@ -887,8 +1067,7 @@ namespace config
                     if (keyIndex > 0 &&
                         !IsContinuationManagedKey(sectionName, keys[keyIndex].name))
                         output.emplace_back("");
-                    for (std::size_t commentIndex = 0; commentIndex < keys[keyIndex].commentCount; ++commentIndex)
-                        output.emplace_back(std::string(keys[keyIndex].comments[commentIndex]));
+                    AppendManagedDocumentation(output, sectionName, keys[keyIndex]);
                     output.emplace_back(FormatAssignment(
                         std::string(keys[keyIndex].defaultLine)));
                 }
@@ -898,8 +1077,10 @@ namespace config
             const std::string& section, const ManagedKey* keys, std::size_t keyCount) {
                 std::vector<std::string> repaired;
                 std::vector<bool> found(keyCount, false);
-                const auto withoutCurrentComments = RemoveCurrentManagedCommentBlocks(
+                const auto withoutKnownComments = RemoveCurrentManagedCommentBlocks(
                     body, section, keys, keyCount);
+                const auto withoutCurrentComments = RemoveManagedDocumentationPreambles(
+                    withoutKnownComments, keys, keyCount);
                 for (const auto& original : withoutCurrentComments) {
                     const auto trimmed = Trim(original);
 
@@ -915,8 +1096,7 @@ namespace config
                         if (!repaired.empty() && !repaired.back().empty() &&
                             !IsContinuationManagedKey(section, keys[matchingKey].name))
                             repaired.emplace_back("");
-                        for (std::size_t commentIndex = 0; commentIndex < keys[matchingKey].commentCount; ++commentIndex)
-                            repaired.emplace_back(std::string(keys[matchingKey].comments[commentIndex]));
+                        AppendManagedDocumentation(repaired, section, keys[matchingKey]);
                         found[matchingKey] = true;
                     }
                     repaired.emplace_back(separator != std::string::npos
@@ -928,8 +1108,7 @@ namespace config
                     if (!repaired.empty() && !repaired.back().empty() &&
                         !IsContinuationManagedKey(section, keys[keyIndex].name))
                         repaired.emplace_back("");
-                    for (std::size_t commentIndex = 0; commentIndex < keys[keyIndex].commentCount; ++commentIndex)
-                        repaired.emplace_back(std::string(keys[keyIndex].comments[commentIndex]));
+                    AppendManagedDocumentation(repaired, section, keys[keyIndex]);
                     repaired.emplace_back(FormatAssignment(
                         std::string(keys[keyIndex].defaultLine)));
                 }
@@ -944,13 +1123,12 @@ namespace config
                     const auto enabledKey = std::find_if(keys, keys + keyCount,
                         [](const ManagedKey& key) { return key.name == "Enabled"; });
                     if (enabled != repaired.end() && enabledKey != keys + keyCount) {
-                        const auto keyIndex = static_cast<std::size_t>(enabled - repaired.begin());
-                        const auto commentCount = enabledKey->commentCount;
-                        if (commentCount <= keyIndex) {
-                            const auto blockStart = keyIndex - commentCount;
+                        const auto documentationStart = std::find(repaired.begin(), enabled,
+                            "# <Overlay.Enabled>");
+                        if (documentationStart != enabled) {
                             std::vector<std::string> enabledBlock(
-                                repaired.begin() + blockStart, enabled + 1);
-                            repaired.erase(repaired.begin() + blockStart, enabled + 1);
+                                documentationStart, enabled + 1);
+                            repaired.erase(documentationStart, enabled + 1);
                             if (!repaired.empty() && !repaired.front().empty())
                                 enabledBlock.emplace_back("");
                             repaired.insert(repaired.begin(), enabledBlock.begin(),
@@ -962,6 +1140,10 @@ namespace config
             };
 
         std::vector<std::string> output;
+        // Treat repeated managed sections as one logical body. Repairing each
+        // occurrence separately would append defaults that override earlier
+        // compatible assignments. Preserve assignment order (last value wins).
+        std::vector<std::string> emittedManagedSections;
         std::array<bool, 6> foundSections{};
         std::size_t index = 0;
         while (index < source.size()) {
@@ -987,8 +1169,22 @@ namespace config
                 continue;
             }
 
-            const std::vector<std::string> body(source.begin() + sectionStart + 1,
-                source.begin() + sectionEnd);
+            if (std::find(emittedManagedSections.begin(), emittedManagedSections.end(),
+                    section) != emittedManagedSections.end()) {
+                index = sectionEnd;
+                continue;
+            }
+            emittedManagedSections.push_back(section);
+            std::vector<std::string> body;
+            std::string logicalSection;
+            for (const auto& current : source) {
+                std::string nextSection;
+                if (IsSectionHeader(Trim(current), nextSection)) {
+                    logicalSection = std::move(nextSection);
+                    continue;
+                }
+                if (logicalSection == section) body.push_back(current);
+            }
             const auto repaired = repairSection(body, section, keys, keyCount);
             output.emplace_back(source[sectionStart]);
             output.insert(output.end(), repaired.begin(), repaired.end());
@@ -1011,6 +1207,15 @@ namespace config
             appendSection(output, sectionNames[sectionIndex], keys, keyCount);
         }
 
+        std::vector<std::string> compactOutput;
+        compactOutput.reserve(output.size());
+        for (auto& line : output) {
+            if (line.empty() && !compactOutput.empty() && compactOutput.back().empty())
+                continue;
+            compactOutput.emplace_back(std::move(line));
+        }
+        output = std::move(compactOutput);
+
         std::vector<std::string> spacedOutput;
         spacedOutput.reserve(output.size() + std::size(sectionNames) * 2);
         for (const auto& outputLine : output) {
@@ -1028,27 +1233,36 @@ namespace config
         output = std::move(spacedOutput);
 
         if (output == original) return false;
+        if (requiresRecoveryBackup) {
+            std::filesystem::path backupPath;
+            if (!CreateConfigBackup(path, backupPath)) {
+                if (log) log("Config recovery backup failed; existing config preserved.");
+                return false;
+            }
+            if (log) log("Structurally invalid config backed up before recovery.");
+        }
         const auto temporary = std::filesystem::path(path.wstring() + L".tmp");
         {
-            std::ofstream file(temporary, std::ios::out | std::ios::trunc);
-            if (!file) {
+            platform::win32::NativeFile file;
+            if (!file.Open(temporary.c_str(), true)) {
                 DeleteFileW(temporary.c_str());
                 if (log) log("Config template staging open failed; existing config preserved.");
                 return false;
             }
+            bool written = true;
             for (std::size_t outputIndex = 0; outputIndex < output.size(); ++outputIndex) {
-                file << output[outputIndex];
-                if (outputIndex + 1 < output.size()) file << '\n';
+                written = written && file.Write(output[outputIndex]);
+                if (outputIndex + 1 < output.size() || format.trailingLineEnding)
+                    written = written && file.Write(format.lineEnding);
             }
-            file.flush();
-            if (!file) {
-                file.close();
+            const bool flushed = written && file.FlushToDisk();
+            if (!flushed) {
+                file.Close();
                 DeleteFileW(temporary.c_str());
                 if (log) log("Config template staging write failed; existing config preserved.");
                 return false;
             }
-            file.close();
-            if (file.fail()) {
+            if (!file.Close()) {
                 DeleteFileW(temporary.c_str());
                 if (log) log("Config template staging close failed; existing config preserved.");
                 return false;

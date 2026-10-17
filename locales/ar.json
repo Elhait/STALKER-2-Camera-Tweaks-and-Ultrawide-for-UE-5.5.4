@@ -158,6 +158,7 @@
       "cinematic_status": "حالة العرض الحالية لتكامل كاميرا اللقطات."
     }
   },
+  "camera_state_toggle": { "label": "تفاصيل الكاميرا", "open": "فتح", "close": "إغلاق" },
   "camera_state": {
     "waiting": "بانتظار أول تحديث كامل للكاميرا.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "المفتاح {key} معيّن بالفعل إلى {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "اضغط {key} لفتح التراكب"
+    "open_overlay_hint": "اضغط {key} لفتح التراكب",
+    "persistence_failed": "التغيير نشط لكنه لم يُحفظ. سيعود إلى قيمته السابقة عند إعادة تشغيل اللعبة."
   }
 }

@@ -201,7 +201,7 @@ Supported hotkey bindings: F1-F12, 0-9 and A-Z.
 [list=1]
 [*]Install Ultimate ASI Loader and place dsound.dll in Stalker2\Binaries\Win64.
 [*]Remove old STALKER2UltrawideFix.asi, STALKER2GameplayAspectFix.asi and their old INI/log files. Do not load them together with the new ASI.
-[*]Extract STALKER2CameraTweaks.asi and STALKER2CameraTweaks.ini into the same Win64 folder.
+[*]Extract STALKER2CameraTweaks.asi into Stalker2\\Binaries\\Win64. The mod creates its user-owned INI beside the ASI on first launch and migrates recognized settings from older layouts.
 [*]Launch the game.
 [/list]
 

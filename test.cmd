@@ -43,19 +43,7 @@ if not "%errorlevel%"=="0" goto :fail
 set "TEMP=%CD%\build-artifacts\tests\temp"
 set "TMP=%TEMP%"
 
-PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\test_cmd_audit.ps1 -RunnerPath test.cmd -RegistryPath tests\test_harnesses.json
-if not "%errorlevel%"=="0" goto :fail
-
-"%CMAKE_DIR%\cmake.exe" -S . -B "%BUILD_DIR%" -G Ninja -DCMAKE_MAKE_PROGRAM="%NINJA_DIR%\ninja.exe" -DCMAKE_BUILD_TYPE=Release -DCMAKE_TRY_COMPILE_CONFIGURATION=Release -DCAMERA_TWEAKS_PROFILE=production -DCAMERA_TWEAKS_STARTUP_TIMELINE=OFF -DCAMERA_TWEAKS_DIALOGUE_DISCOVERY=OFF
-if not "%errorlevel%"=="0" goto :fail
-
-"%CMAKE_DIR%\cmake.exe" --build "%BUILD_DIR%" --target test_harnesses --parallel
-if not "%errorlevel%"=="0" goto :fail
-
-PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\test_cmd_exit_code_contract.ps1 -ProbePath build-artifacts\tests\test_cmd_exit_status_probe.exe
-if not "%errorlevel%"=="0" goto :fail
-
-PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\test_harness_runner.ps1 -RegistryPath tests\test_harnesses.json
+PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\test_cmd_orchestrator.ps1 -RegistryPath tests\test_harnesses.json %*
 if not "%errorlevel%"=="0" goto :fail
 
 popd

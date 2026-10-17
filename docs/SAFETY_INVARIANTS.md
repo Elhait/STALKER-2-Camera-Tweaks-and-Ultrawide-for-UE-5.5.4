@@ -57,16 +57,21 @@
 - Overlay position migration is one-shot and non-destructive: legacy coordinates
   are copied into `[Overlay]` in the main INI, and the old file is left untouched
   but no longer read after the migration marker is committed.
-- The startup overlay hint is presenter-owned state, created once after
-  composition readiness and runtime settings availability, before the first
-  frame build. In Auto locale mode, an accepted asynchronous game-language
-  synchronization completes before hint creation; if posting that request
-  fails, a confirmed English fallback is used. Pending creation itself keeps
-  the presenter scheduler awake until synchronization is accepted; thereafter
-  the language-sync message is the wake event. Visibility, Delete and
-  game-frame activity are not prerequisites. A notification's visible lifetime begins only after its draw
-  is committed on the visual's attached surface (for replacement generations,
-  after SetContent + composition Commit + generation publication). Pending
+- The startup overlay hint is presenter-owned, one-shot state. Eligibility
+  requires completed camera-core/runtime initialization, a ready Overlay
+  presenter with its GameHwnd input binding, and either a successful read of
+  the game's validated Interface Language value or an explicit bounded
+  fallback. The one-shot read runs through the existing GameHwnd callback and
+  returns to the Overlay owner; it does not add a graphics hook. Auto mode
+  applies the detected locale, while an explicit user locale remains
+  authoritative. A failed/post-rejected probe falls back immediately; an
+  accepted probe that receives no result resolves after one 3000 ms owner-wait
+  deadline, not a polling loop. Auto mode uses confirmed English fallback in
+  those failure cases. This gate does not claim that a game scene or frame is
+  ready. Manual menu/Delete handling is independent of startup-hint readiness.
+  A notification's visible lifetime begins only after its draw is committed on
+  the visual's attached surface (for replacement generations, after
+  SetContent + composition Commit + generation publication). Pending
   notifications cannot expire before that point; fade, expiry and the final
   clear commit remain presenter-scheduled.
 - Controlled shutdown signals and joins workers before resetting hooks or
@@ -116,6 +121,13 @@
   single ImGui/D3D11 owner thread but never accesses its UI/GPU state. The
   compatibility fallback is bounded to notification animation; input redraw
   remains event-driven. No busy-loop or game Present synchronization is used.
+- A settled hidden Overlay with no notifications or pending startup hint has an
+  empty composition target root. Its owner retains graphics resources and the
+  Delete input path. Root transitions publish attachment only after SetRoot and
+  Commit succeed; failure disables Overlay instead of reusing uncertain pending
+  commands. Reattachment follows accepted surface preparation/publication and
+  precedes notification lifetime publication. No compositor completion wait is
+  introduced on either thread.
 - The composition owner thread creates and updates surfaces. A generation is
   published only after a complete draw and successful composition commit; a
   failed replacement leaves the previous generation authoritative. Minimize
@@ -127,19 +139,39 @@
   alter or wait on the game's native presentation path. No per-frame GPU fence
   waits or game Present synchronization are used.
 - Window/input subclassing is independent of renderer-generation state. The
-  game HWND is the input boundary and the original window procedure is
-  preserved for pass-through. While the settings UI is closed, the game owns
-  input. While open, mouse messages and raw relative deltas are copied into a
-  bounded bridge and applied to ImGui only on the composition owner thread;
+  game HWND is the input boundary; a separate unowned Overlay HWND owns the
+  DComp target and is created/destroyed on the Overlay owner thread. The
+  original game window procedure is preserved for pass-through. The WndProc
+  uses terminal admission, bounded
+  command enqueue and try-only input-bridge operations; it does not acquire the
+  Renderer mutex, apply or persist settings, publish notifications, snapshot
+  runtime settings, or perform file logging. Accepted keyboard/control
+  commands are processed in order on the composition owner thread. Queue
+  saturation rejects the current command, passes that event through, and
+  requests terminal fail-open shutdown without overwriting previously
+  accepted commands. While the settings UI is closed, the game owns input.
+  While open, mouse messages and raw relative deltas are copied into a bounded
+  bridge and applied to ImGui only on the composition owner thread;
   zero-delta raw packets do not claim the relative-motion stream; a real
   relative movement does. Input ownership is released transactionally on
-  close/focus loss. No
+  close/focus loss. Input admission requires an accepted visible composition
+  frame and fresh owner progress; focus loss, minimize, host geometry changes,
+  rebind and terminal state revoke it before owner-side reconciliation. A
+  stale owner heartbeat terminally fails open rather than allowing the game to
+  remain without input. No
   game-thread ImGui access, per-frame OS cursor polling or ClipCursor lease is
   used. If a foreign subclass is above Camera Tweaks, its saved continuation
   is retained until that window is destroyed rather than forcibly rewriting
   the foreign chain. Terminal Overlay disable cannot reacquire input capture.
   Core Gameplay, Cinematics and Dialogue initialization and INI settings remain
-  active if Overlay setup fails.
+  active if Overlay setup fails. Renderer disable/failure requests terminal
+  owner cleanup; it never performs synchronous graphics teardown on the
+  failing caller. The owner drains admitted callbacks and runs a one-shot
+  guarded finalizer. A failed DComp detach/commit retains the composition
+  references and display HWND. The log distinguishes `COMPLETE`, known
+  `RETAINED` resources and `UNVERIFIED` outcomes, with `PENDING` emitted before
+  cleanup; Renderer-owned reference emptiness alone is not proof of DWM/driver
+  teardown.
 - Build success is not runtime proof. Runtime compatibility claims require
   executable identity, log evidence and the named regression scenario.
 - Runtime settings API noexcept forwarding contains exceptions from its owned

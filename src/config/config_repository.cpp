@@ -1,4 +1,5 @@
 #include "config_repository.hpp"
+#include "config_line_reader.hpp"
 
 #include "feature_config.hpp"
 
@@ -6,7 +7,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <fstream>
 #include <mutex>
 #include <utility>
 #include <vector>
@@ -22,20 +22,22 @@ namespace config
         }
 
         bool ReplaceConfig(const std::filesystem::path& path,
-            std::vector<std::string>& lines)
+            const std::vector<std::string>& lines,
+            const detail::ConfigTextFormat& format)
         {
             const auto temporary = path.wstring() + L".tmp";
             {
-                std::ofstream output(temporary, std::ios::out | std::ios::trunc);
-                if (!output) return false;
+                platform::win32::NativeFile output;
+                if (!output.Open(temporary.c_str(), true)) return false;
+                bool written = true;
                 for (std::size_t index = 0; index < lines.size(); ++index) {
-                    output << lines[index];
-                    if (index + 1 < lines.size()) output << '\n';
+                    written = written && output.Write(lines[index]);
+                    if (index + 1 < lines.size() || format.trailingLineEnding)
+                        written = written && output.Write(format.lineEnding);
                 }
-                output.flush();
-                if (!output) { output.close(); DeleteFileW(temporary.c_str()); return false; }
-                output.close();
-                if (output.fail()) { DeleteFileW(temporary.c_str()); return false; }
+                const bool flushed = written && output.FlushToDisk();
+                const bool closed = output.Close();
+                if (!flushed || !closed) { DeleteFileW(temporary.c_str()); return false; }
             }
             if (MoveFileExW(temporary.c_str(), path.c_str(),
                 MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return true;
@@ -44,16 +46,10 @@ namespace config
         }
 
         bool ReadLines(const std::filesystem::path& path,
-            std::vector<std::string>& lines)
+            std::vector<std::string>& lines,
+            detail::ConfigTextFormat* format = nullptr)
         {
-            std::ifstream input(path);
-            if (!input) return false;
-            std::string line;
-            while (std::getline(input, line)) {
-                if (!line.empty() && line.back() == '\r') line.pop_back();
-                lines.push_back(std::move(line));
-            }
-            return !input.bad();
+            return detail::ReadConfigFile(path.c_str(), lines, format);
         }
 
         std::string ReadValue(const std::vector<std::string>& lines,
@@ -86,62 +82,52 @@ namespace config
             return key + " = " + value;
         }
 
-        void NormalizeSectionAssignments(std::vector<std::string>& lines,
-            const char* targetSection)
-        {
-            std::string section;
-            for (auto& raw : lines) {
-                const auto line = Trim(raw);
-                if (line.size() >= 2 && line.front() == '[' && line.back() == ']') {
-                    section = Trim(line.substr(1, line.size() - 2));
-                    continue;
-                }
-                if (section == targetSection && !line.empty() && line.front() != '#' &&
-                    line.front() != ';' && line.find('=') != std::string::npos)
-                    raw = FormatAssignment(raw);
-            }
-        }
-
         void SetValue(std::vector<std::string>& lines, const char* targetSection,
             const char* targetKey, const std::string& value)
         {
             std::size_t sectionStart = lines.size();
             std::size_t sectionEnd = lines.size();
+            bool sectionFound = false;
+            bool valueFound = false;
             std::string section;
             for (std::size_t index = 0; index < lines.size(); ++index) {
                 const auto line = Trim(lines[index]);
                 if (line.size() >= 2 && line.front() == '[' && line.back() == ']') {
-                    if (section == targetSection && sectionStart != lines.size()) {
+                    if (section == targetSection && sectionFound)
                         sectionEnd = index;
-                        break;
-                    }
                     section = Trim(line.substr(1, line.size() - 2));
-                    if (section == targetSection) sectionStart = index;
+                    if (section == targetSection) {
+                        sectionStart = index;
+                        sectionEnd = lines.size();
+                        sectionFound = true;
+                    }
                 } else if (section == targetSection && sectionStart != lines.size()) {
-                    const auto separator = line.find('=');
+                    const auto separator = lines[index].find('=');
                     if (separator != std::string::npos &&
-                        Trim(line.substr(0, separator)) == targetKey)
-                        lines[index] = FormatAssignment(std::string(targetKey) + "=" + value);
+                        Trim(lines[index].substr(0, separator)) == targetKey) {
+                        const auto valueBegin = lines[index].find_first_not_of(" \t", separator + 1);
+                        const auto valueEnd = lines[index].find_last_not_of(" \t");
+                        const auto existingValue = valueBegin == std::string::npos ||
+                            valueBegin > valueEnd ? std::string{} :
+                                lines[index].substr(valueBegin, valueEnd - valueBegin + 1);
+                        if (existingValue != value) {
+                            if (valueBegin == std::string::npos || valueBegin > valueEnd)
+                                lines[index].replace(separator + 1, std::string::npos, value);
+                            else
+                                lines[index].replace(valueBegin, valueEnd - valueBegin + 1, value);
+                        }
+                        valueFound = true;
+                    }
                 }
             }
-            if (sectionStart != lines.size()) {
-                if (sectionEnd == lines.size()) sectionEnd = lines.size();
+            if (sectionFound) {
                 const auto key = std::string(targetKey) + "=" + value;
-                bool present = false;
-                for (std::size_t index = sectionStart + 1; index < sectionEnd; ++index) {
-                    const auto line = Trim(lines[index]);
-                    const auto separator = line.find('=');
-                    present |= separator != std::string::npos &&
-                        Trim(line.substr(0, separator)) == targetKey;
-                }
-                if (!present) lines.insert(lines.begin() + sectionEnd, key);
-                NormalizeSectionAssignments(lines, targetSection);
+                if (!valueFound) lines.insert(lines.begin() + sectionEnd, key);
                 return;
             }
             if (!lines.empty() && !lines.back().empty()) lines.emplace_back();
             lines.emplace_back(std::string("[") + targetSection + "]");
             lines.emplace_back(std::string(targetKey) + "=" + value);
-            NormalizeSectionAssignments(lines, targetSection);
         }
 
         int ParseInteger(const std::string& value, int fallback)
@@ -174,29 +160,18 @@ namespace config
         config.overlayLocaleCode = std::string(localization::CanonicalLocaleCode);
         config.overlayLocaleAuto = true;
         config.overlayFontSize = OverlayFontSizeDefault;
-        bool createdInitialConfig = false;
-        if (!std::filesystem::exists(path)) {
-            std::lock_guard<std::mutex> serializedUpdate(PersistenceMutex());
-            if (!std::filesystem::exists(path)) {
-            std::ofstream created(path, std::ios::out | std::ios::trunc);
-            if (!created) return false;
-            created.flush();
-            if (!created) return false;
-            created.close();
-            if (created.fail()) return false;
-            createdInitialConfig = true;
-            }
-        }
-
+        std::error_code existenceError;
+        const bool existedBeforeSynchronization = std::filesystem::exists(path,
+            existenceError);
+        if (existenceError) return false;
         const bool templateSynchronized = synchronizeTemplate && synchronizeTemplate(path);
-        if (createdInitialConfig && !templateSynchronized) return false;
+        if (!existedBeforeSynchronization && !templateSynchronized) return false;
         if (templateSynchronized && log)
             log("Config template synchronized: updated managed descriptions and hotkey settings.");
 
-        std::ifstream input(path);
-        if (!input) return false;
         std::string section;
-        std::string line;
+        std::vector<std::string> configLines;
+        if (!detail::ReadConfigFile(path.c_str(), configLines)) return false;
         bool overlayFontSizeValid = false;
         bool overlayToggleKeyExplicit = false;
         bool cinematicEnabledExplicit = false;
@@ -208,7 +183,7 @@ namespace config
         DialogueZoomPolicy dialogueModeValue = DialogueZoomPolicy::Adaptive;
         bool dialogueZoomValid = false;
         DialogueZoomPolicy dialogueZoomValue = DialogueZoomPolicy::Adaptive;
-        while (std::getline(input, line)) {
+        for (auto& line : configLines) {
             line = Trim(line);
             if (line.empty() || line.front() == ';' || line.front() == '#') continue;
             if (line.front() == '[' && line.back() == ']') {
@@ -411,69 +386,28 @@ namespace config
         const char* targetSection, const char* targetKey,
         const std::string& value, const LogFunction& log)
     {
+        if (!targetSection || !targetKey) return false;
+        return PersistConfigValues(path,
+            {{targetSection, targetKey, value}}, log);
+    }
+
+    bool PersistConfigValues(const std::filesystem::path& path,
+        const std::vector<ConfigValueUpdate>& updates, const LogFunction& log)
+    {
+        if (path.empty() || updates.empty()) return false;
         std::lock_guard<std::mutex> serializedUpdate(PersistenceMutex());
-        std::ifstream input(path);
-        if (!input) return false;
-
         std::vector<std::string> lines;
-        std::string line;
-        while (std::getline(input, line)) {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            lines.push_back(std::move(line));
+        detail::ConfigTextFormat format{};
+        if (!ReadLines(path, lines, &format)) return false;
+        const auto originalLines = lines;
+        for (const auto& update : updates) {
+            if (update.section.empty() || update.key.empty()) return false;
+            SetValue(lines, update.section.c_str(), update.key.c_str(), update.value);
         }
-        input.close();
 
-        bool sectionFound = false;
-        std::size_t sectionEnd = lines.size();
-        std::string section;
-        for (std::size_t index = 0; index < lines.size(); ++index) {
-            const auto trimmed = Trim(lines[index]);
-            if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']') {
-                if (section == targetSection && sectionFound) sectionEnd = index;
-                section = Trim(trimmed.substr(1, trimmed.size() - 2));
-                if (section == targetSection) sectionFound = true;
-                continue;
-            }
-            if (!sectionFound || section != targetSection) continue;
-            const auto separator = trimmed.find('=');
-            if (separator != std::string::npos &&
-                Trim(trimmed.substr(0, separator)) == targetKey)
-                lines[index] = FormatAssignment(std::string(targetKey) + "=" + value);
-        }
-        if (!sectionFound) {
-            if (!lines.empty() && !lines.back().empty()) lines.emplace_back();
-            lines.emplace_back(std::string("[") + targetSection + "]");
-            lines.emplace_back(std::string(targetKey) + "=" + value);
-        } else {
-            if (sectionEnd == lines.size()) {
-                sectionEnd = lines.size();
-                section.clear();
-                for (std::size_t index = 0; index < lines.size(); ++index) {
-                    const auto trimmed = Trim(lines[index]);
-                    if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']')
-                        section = Trim(trimmed.substr(1, trimmed.size() - 2));
-                    else if (section == targetSection)
-                        sectionEnd = index + 1;
-                }
-            }
-            bool present = false;
-            section.clear();
-            for (std::size_t index = 0; index < lines.size(); ++index) {
-                const auto trimmed = Trim(lines[index]);
-                if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']') {
-                    section = Trim(trimmed.substr(1, trimmed.size() - 2));
-                    continue;
-                }
-                const auto separator = trimmed.find('=');
-                if (section == targetSection && separator != std::string::npos &&
-                    Trim(trimmed.substr(0, separator)) == targetKey) present = true;
-            }
-            if (!present) lines.insert(lines.begin() + sectionEnd,
-                std::string(targetKey) + "=" + value);
-        }
-        NormalizeSectionAssignments(lines, targetSection);
+        if (lines == originalLines) return true;
 
-        if (ReplaceConfig(path, lines)) return true;
+        if (ReplaceConfig(path, lines, format)) return true;
 
         const auto replaceError = GetLastError();
         if (log) log("Atomic INI replacement unavailable: win32Error=" +
@@ -488,7 +422,8 @@ namespace config
         if (path.empty()) return false;
         std::lock_guard<std::mutex> serializedUpdate(PersistenceMutex());
         std::vector<std::string> lines;
-        if (!ReadLines(path, lines)) return false;
+        detail::ConfigTextFormat format{};
+        if (!ReadLines(path, lines, &format)) return false;
         migrated = false;
         const int currentX = ParseInteger(ReadValue(lines, "Overlay", "PositionX", "30"), 30);
         const int currentY = ParseInteger(ReadValue(lines, "Overlay", "PositionY", "30"), 30);
@@ -504,7 +439,7 @@ namespace config
             SetValue(lines, "Overlay", "PositionX", std::to_string(migratedX));
             SetValue(lines, "Overlay", "PositionY", std::to_string(migratedY));
             SetValue(lines, "Overlay", "PositionMigrationComplete", "1");
-            if (!ReplaceConfig(path, lines)) { migrated = false; return false; }
+            if (!ReplaceConfig(path, lines, format)) { migrated = false; return false; }
             positionX = migratedX;
             positionY = migratedY;
             return true;
@@ -520,9 +455,12 @@ namespace config
         if (path.empty()) return false;
         std::lock_guard<std::mutex> serializedUpdate(PersistenceMutex());
         std::vector<std::string> lines;
-        if (!ReadLines(path, lines)) return false;
+        detail::ConfigTextFormat format{};
+        if (!ReadLines(path, lines, &format)) return false;
+        const auto originalLines = lines;
         SetValue(lines, "Overlay", "PositionX", std::to_string(positionX));
         SetValue(lines, "Overlay", "PositionY", std::to_string(positionY));
-        return ReplaceConfig(path, lines);
+        if (lines == originalLines) return true;
+        return ReplaceConfig(path, lines, format);
     }
 }

@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "Overlay input state harness: PASS\r\n",
+  "ProcessId": 9732
+}

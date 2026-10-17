@@ -1,0 +1,2 @@
+before_exit
+DESTRUCTOR_BEGIN

@@ -17,7 +17,7 @@ if not defined VSDEVCMD (
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64
 if errorlevel 1 goto :fail
 if not exist "build-artifacts\language-state-watcher" mkdir "build-artifacts\language-state-watcher"
-cl /nologo /std:c++latest /EHsc /W4 /utf-8 /DUNICODE /D_UNICODE research\diagnostics\stratified_language_transition_watcher.cpp /Fe:build-artifacts\language-state-watcher\STALKER2StratifiedLanguageTransitionDiagnostic-Batched.exe /link user32.lib
+cl /nologo /std:c++latest /EHsc /W4 /utf-8 /DUNICODE /D_UNICODE /Fo:build-artifacts\language-state-watcher\ research\diagnostics\stratified_language_transition_watcher.cpp /Fe:build-artifacts\language-state-watcher\STALKER2StratifiedLanguageTransitionDiagnostic-Batched.exe /link user32.lib
 if errorlevel 1 goto :fail
 build-artifacts\language-state-watcher\STALKER2StratifiedLanguageTransitionDiagnostic-Batched.exe --self-test
 if errorlevel 1 goto :fail

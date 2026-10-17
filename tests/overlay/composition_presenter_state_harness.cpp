@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 
 namespace
 {
@@ -35,6 +36,10 @@ namespace
     void TestStartupHintPublicationRequiresPresenterAndSettings()
     {
         overlay::StartupNotificationState notification;
+        Require(!notification.ShouldWakePresenter(true, false) &&
+                notification.ShouldWakePresenter(true, true) &&
+                notification.pending(),
+            "startup language/notification preparation waits for committed input binding");
         Require(notification.pending() &&
                 notification.ShouldWakePresenter(true) &&
                 !notification.ShouldWakePresenter(false),
@@ -58,6 +63,75 @@ namespace
             "explicit locale does not wait for Auto synchronization");
         Require(!StartupHintMustWaitForAutoLocale(true, false, false),
             "failed async request permits confirmed English fallback");
+    }
+
+    void TestStartupToastReadinessGate()
+    {
+        using overlay::StartupToastReadinessGate;
+        StartupToastReadinessGate gameDataFirst;
+        Require(gameDataFirst.ResolveGameDataProbe(true),
+            "successful native game-data read is recorded before other readiness facts");
+        Require(!gameDataFirst.eligible(),
+            "game data alone cannot make the startup toast eligible");
+        Require(gameDataFirst.MarkOverlayReady() && !gameDataFirst.eligible(),
+            "overlay readiness alone cannot bypass runtime initialization");
+        Require(gameDataFirst.MarkRuntimeInitialized() && gameDataFirst.eligible(),
+            "all three readiness facts make the startup toast eligible");
+        Require(!gameDataFirst.MarkRuntimeInitialized() &&
+                !gameDataFirst.MarkOverlayReady(),
+            "repeated readiness notifications are idempotent");
+        Require(!gameDataFirst.ResolveGameDataProbe(true),
+            "repeated game-data callbacks do not create another transition");
+
+        StartupToastReadinessGate boundedFallback;
+        boundedFallback.MarkRuntimeInitialized();
+        Require(!boundedFallback.eligible(),
+            "runtime readiness alone is insufficient before Overlay readiness");
+        boundedFallback.MarkOverlayReady();
+        Require(boundedFallback.BeginGameDataProbe(1000,
+                    overlay::StartupGameDataProbeTimeoutMs) &&
+                boundedFallback.probePending() && !boundedFallback.eligible(),
+            "accepted probe waits for an actual game-data result");
+        Require(boundedFallback.ProbeWaitMilliseconds(3999) == 1 &&
+                !boundedFallback.ResolveProbeTimeout(3999),
+            "probe does not fall back before its bounded deadline");
+        Require(boundedFallback.ResolveProbeTimeout(4000) &&
+                boundedFallback.fallbackResolved() && boundedFallback.eligible(),
+            "missing response resolves through an explicit bounded fallback");
+        Require(!boundedFallback.ResolveProbeTimeout(4001) &&
+                !boundedFallback.ResolveFallback(),
+            "fallback resolution is one-shot");
+        Require(boundedFallback.ResolveGameDataProbe(true) &&
+                boundedFallback.gameDataObserved() && boundedFallback.eligible(),
+            "late game data is recorded without revoking prior safe eligibility");
+
+        StartupToastReadinessGate failedRead;
+        failedRead.MarkRuntimeInitialized();
+        failedRead.MarkOverlayReady();
+        Require(failedRead.BeginGameDataProbe(50,
+                    overlay::StartupGameDataProbeTimeoutMs) &&
+                failedRead.ResolveGameDataProbe(false) &&
+                failedRead.fallbackResolved() && !failedRead.gameDataObserved() &&
+                failedRead.eligible(),
+            "failed native read resolves explicitly and cannot masquerade as game data");
+
+        StartupToastReadinessGate autoLocaleFallback;
+        autoLocaleFallback.MarkRuntimeInitialized();
+        autoLocaleFallback.MarkOverlayReady();
+        Require(autoLocaleFallback.BeginGameDataProbe(75,
+                    overlay::StartupGameDataProbeTimeoutMs) &&
+                !overlay::StartupHintMustWaitForAutoLocale(true, true, false) &&
+                !autoLocaleFallback.eligible(),
+            "Auto-locale synchronized/fallback state alone is not game-data evidence");
+        Require(autoLocaleFallback.ResolveGameDataProbe(false) &&
+                autoLocaleFallback.fallbackResolved() &&
+                !autoLocaleFallback.gameDataObserved() &&
+                autoLocaleFallback.eligible(),
+            "only the explicit startup fallback resolves a failed Auto-locale read");
+
+        overlay::InputState input;
+        Require(!failedRead.gameDataObserved() && input.Toggle() && input.visible(),
+            "manual menu opening remains independent of startup data readiness");
     }
 
     void TestGenerationPublicationAndResizeRetirement()
@@ -237,6 +311,74 @@ namespace
             "toast redraw/expiry deadline is measured from its first committed frame");
     }
 
+    void TestStartupToastAttachmentLifecycleWithoutMenu()
+    {
+        constexpr std::uint64_t toastId = 0;
+        constexpr std::uint32_t duration = overlay::StartupHintDurationMs;
+        overlay::StartupNotificationState startup;
+        std::size_t activeNotifications = 0;
+        bool menuRequested = false;
+        overlay::NotificationLifetime lifetime;
+
+        Require(overlay::StartupHintMustWaitForAutoLocale(true, false, true) &&
+                startup.pending(),
+            "accepted Auto-locale wait preserves startup demand before creation");
+        Require(overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()),
+            "pending startup toast alone keeps the composition root attached");
+        Require(startup.MarkCreated(true, true),
+            "resolved Auto locale creates exactly one startup toast");
+        ++activeNotifications;
+        Require(!startup.pending() &&
+                overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()),
+            "queued toast alone keeps the root attached after creation");
+        Require(!startup.MarkCreated(true, true),
+            "manual menu activity cannot recreate the one-shot startup toast");
+
+        Require(lifetime.IsDrawable(500, duration) &&
+                !lifetime.IsExpired(500, duration),
+            "toast remains drawable and cannot expire before a submitted frame");
+        const std::uint64_t submitted[]{toastId};
+        Require(!overlay::StartNotificationLifetimeAfterCommit(lifetime,
+                    toastId, submitted, false, 1000) &&
+                lifetime.awaitingFirstCommit(),
+            "delayed DComp commit does not start the toast lifetime");
+        Require(overlay::StartNotificationLifetimeAfterCommit(lifetime,
+                    toastId, submitted, true, 2000) &&
+                lifetime.visibleAtMs() == 2000,
+            "submitted toast draw plus accepted commit starts its visible TTL");
+
+        menuRequested = true;
+        Require(overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()),
+            "opening the menu during toast does not change attachment demand");
+        menuRequested = false;
+        Require(overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()),
+            "closing the menu cannot detach while the toast remains queued");
+        Require(!lifetime.IsExpired(11999, duration),
+            "toast remains active until its exact visible-time deadline");
+        Require(lifetime.IsExpired(12000, duration),
+            "toast expires at the deadline measured from the accepted frame");
+
+        activeNotifications = 0;
+        Require(!overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()),
+            "root detaches only after menu, queue and startup demand are all clear");
+        menuRequested = true;
+        Require(overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()) &&
+                !startup.MarkCreated(true, true) && activeNotifications == 0,
+            "later manual open reattaches for the menu but does not replay expired toast");
+        menuRequested = false;
+        menuRequested = true;
+        menuRequested = false;
+        Require(!overlay::CompositionRootRequired(menuRequested,
+                    activeNotifications, startup.pending()),
+            "rapid open-close after expiry returns to settled detached state");
+    }
+
     void TestProductionPresenterRoutingAcrossRestore()
     {
         using overlay::PresenterRoute;
@@ -258,6 +400,76 @@ namespace
         Require(overlay::SelectPresenterRoute(true, true, false, false) ==
                 PresenterRoute::Idle,
             "stable window does not restart initialization on unrelated redraw");
+    }
+
+    void TestDisplayWindowVisibilityRequiresAcceptedAndObservedState()
+    {
+        bool visible = false;
+        Require(overlay::CommitDisplayWindowVisibility(true,
+                    [&]() { visible = true; return true; },
+                    [&]() { return visible; }),
+            "show is accepted only after native visibility is observed");
+        Require(overlay::CommitDisplayWindowVisibility(false,
+                    [&]() { visible = false; return true; },
+                    [&]() { return visible; }),
+            "hide is accepted only after native invisibility is observed");
+
+        bool observed = false;
+        Require(!overlay::CommitDisplayWindowVisibility(false,
+                    [&]() { return false; },
+                    [&]() { observed = true; return true; }) && !observed,
+            "failed native visibility operation is not published or re-observed");
+        Require(!overlay::CommitDisplayWindowVisibility(false,
+                    []() { return true; }, []() { return true; }),
+            "failed hide observation remains a lifecycle failure");
+        Require(!overlay::CommitDisplayWindowVisibility(true,
+                    []() { return true; }, []() { return false; }),
+            "failed show observation remains a lifecycle failure");
+    }
+
+    void TestKeyboardFocusLossDoesNotDeactivateHostDisplay()
+    {
+        using overlay::HostDisplayActivityAction;
+        using overlay::HostDisplayActivityEvent;
+        using overlay::ResolveHostDisplayActivity;
+        Require(ResolveHostDisplayActivity(
+                    HostDisplayActivityEvent::KeyboardFocusLost) ==
+                HostDisplayActivityAction::Preserve,
+            "keyboard focus loss alone preserves display activity for a foreground game");
+        Require(ResolveHostDisplayActivity(
+                    HostDisplayActivityEvent::ApplicationDeactivated) ==
+                HostDisplayActivityAction::Deactivate,
+            "application deactivation hides the Overlay display");
+        Require(ResolveHostDisplayActivity(
+                    HostDisplayActivityEvent::KeyboardFocusGained) ==
+                HostDisplayActivityAction::Activate &&
+            ResolveHostDisplayActivity(
+                    HostDisplayActivityEvent::ApplicationActivated) ==
+                HostDisplayActivityAction::Activate,
+            "focus or application activation restores display activity");
+    }
+
+    void TestDisplayPlacementCacheTracksPhysicalGeometryAndDpi()
+    {
+        using overlay::DisplayPlacement;
+        using overlay::RequiresDisplayPlacementUpdate;
+        const DisplayPlacement baseline{-1920, 120, 2560, 1440, 96, false, true};
+        Require(!RequiresDisplayPlacementUpdate(baseline, baseline),
+            "unchanged negative-origin physical placement does not reposition");
+        Require(RequiresDisplayPlacementUpdate(baseline,
+                {-1920, 120, 2560, 1440, 120, false, true}) &&
+            RequiresDisplayPlacementUpdate(baseline,
+                {-1920, 120, 2560, 1440, 144, false, true}),
+            "125% and 150% DPI transitions invalidate the placement cache");
+        Require(RequiresDisplayPlacementUpdate(baseline,
+                {-2560, 120, 2560, 1440, 96, false, true}) &&
+            RequiresDisplayPlacementUpdate(baseline,
+                {-1920, 120, 3440, 1440, 96, false, true}) &&
+            RequiresDisplayPlacementUpdate(baseline,
+                {-1920, 120, 2560, 1440, 96, true, true}),
+            "position, size and topmost policy changes request placement");
+        Require(RequiresDisplayPlacementUpdate({}, baseline),
+            "new or rebound display HWND always receives an initial placement");
     }
 
     void TestTimerIdentityDrivesAutonomousProgression()
@@ -505,6 +717,54 @@ namespace
             "resize/replacement generation invalidates region history and falls back full");
     }
 
+    void TestCompositionAttachmentCommitOrderingAndFailures()
+    {
+        for (bool initial : {false, true}) {
+            bool attached = initial;
+            int sequence = 0;
+            Require(overlay::CommitCompositionAttachment(attached, !initial,
+                [&](bool requested) {
+                    Require(requested == !initial && attached == initial && sequence == 0,
+                        "root request precedes Commit and attachment publication");
+                    sequence = 1;
+                    return true;
+                }, [&]() {
+                    Require(sequence == 1 && attached == initial,
+                        "attachment remains unpublished during Commit");
+                    sequence = 2;
+                    return true;
+                }) && attached == !initial && sequence == 2,
+                "accepted attach/detach publishes only after Commit");
+            int unnecessaryCalls = 0;
+            Require(overlay::CommitCompositionAttachment(attached, !initial,
+                [&](bool) { ++unnecessaryCalls; return true; },
+                [&]() { ++unnecessaryCalls; return true; }) && unnecessaryCalls == 0,
+                "settled attachment performs no redundant native work");
+
+            attached = initial;
+            bool committed = false;
+            volatile bool nativeSuccess = false;
+            Require(!overlay::CommitCompositionAttachment(attached, !initial,
+                [&](bool) { return nativeSuccess; }, [&]() { committed = true; return true; }) &&
+                !committed && attached == initial,
+                "SetRoot failure neither commits nor publishes requested attachment");
+            Require(!overlay::CommitCompositionAttachment(attached, !initial,
+                [](bool) { return true; }, [&]() { return nativeSuccess; }) && attached == initial,
+                "Commit failure cannot publish requested attachment");
+            bool caught = false;
+            volatile bool nativeThrows = true;
+            try {
+                overlay::CommitCompositionAttachment(attached, !initial,
+                    [](bool) { return true; }, [&]() -> bool {
+                        if (nativeThrows) throw std::runtime_error("commit");
+                        return true;
+                    });
+            } catch (...) { caught = true; }
+            Require(caught && attached == initial,
+                "throwing operation cannot publish an unaccepted root transaction");
+        }
+    }
+
     void TestExplicitDpiCoordinateAndFontContract()
     {
         using overlay::presentation::DpiCoordinateAwareness;
@@ -528,15 +788,44 @@ namespace
 
 int main()
 {
+    overlay::MenuFrameAdmission menu;
+    menu.DrawCompleted(false); // an already visible startup toast
+    menu.Request(true);
+    menu.Commit(true);
+    Require(!menu.ready(), "toast visibility alone cannot capture menu input");
+    menu.DrawCompleted(true);
+    menu.Commit(false);
+    Require(!menu.ready(), "menu draw without visible committed attachment cannot capture input");
+    menu.Commit(true);
+    Require(menu.ready(), "drawn current menu and accepted display admit input");
+    menu.Request(false);
+    menu.Request(true);
+    menu.Commit(true);
+    Require(!menu.ready(), "reopen requires a fresh menu frame");
+    menu.DrawCompleted(true);
+    menu.Invalidate(); // lost host / new surface / rebind
+    menu.Commit(true);
+    Require(!menu.ready(), "invalidated generation cannot revive old menu readiness");
+    Require(overlay::ResolveHostDisplaySnapshot(true, true, false),
+        "foreground snapshot recovers activation missed before WndProc binding");
+    Require(!overlay::ResolveHostDisplaySnapshot(true, false, false) &&
+            !overlay::ResolveHostDisplaySnapshot(true, true, true) &&
+            !overlay::ResolveHostDisplaySnapshot(false, true, false),
+        "inactive, minimized and destroyed hosts cannot be reactivated by stale events");
     TestCoreAndWindowReadinessAreIndependent();
     TestStartupHintPublicationRequiresPresenterAndSettings();
     TestStartupHintWaitsForAcceptedAutoLocaleSync();
+    TestStartupToastReadinessGate();
     TestGenerationPublicationAndResizeRetirement();
     TestCommittedSurfaceRetiresOldResourceOnlyAfterCommit();
     TestMinimizeRestoreKeepsGeneration();
     TestDeviceLossRecoveryIsBounded();
     TestInputLifecycleAndNotificationRedraw();
+    TestStartupToastAttachmentLifecycleWithoutMenu();
     TestProductionPresenterRoutingAcrossRestore();
+    TestDisplayWindowVisibilityRequiresAcceptedAndObservedState();
+    TestKeyboardFocusLossDoesNotDeactivateHostDisplay();
+    TestDisplayPlacementCacheTracksPhysicalGeometryAndDpi();
     TestTimerIdentityDrivesAutonomousProgression();
     TestSemanticPresenterPacingStates();
     TestInputEventsScheduleOneOwnerWake();
@@ -544,6 +833,7 @@ int main()
     TestToastLifetimeRequiresSubmittedVisibleGeneration();
     TestDeviceRecoveryPreservesVisibleAndHiddenInputOwnership();
     TestDamageTrackingPreservesRetainedSurfacePixels();
+    TestCompositionAttachmentCommitOrderingAndFailures();
     TestExplicitDpiCoordinateAndFontContract();
     std::cout << "composition presenter lifecycle: PASS\n";
     return 0;

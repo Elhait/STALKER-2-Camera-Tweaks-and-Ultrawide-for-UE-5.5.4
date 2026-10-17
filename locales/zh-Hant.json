@@ -158,6 +158,7 @@
       "cinematic_status": "Cinematic 相機整合的目前呈現狀態。"
     }
   },
+  "camera_state_toggle": { "label": "相機狀態", "open": "開啟", "close": "關閉" },
   "camera_state": {
     "waiting": "正在等待第一次完整的鏡頭更新。",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} 已指派給 {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "按 {key} 開啟覆蓋介面"
+    "open_overlay_hint": "按 {key} 開啟覆蓋介面",
+    "persistence_failed": "變更已生效，未保存。重啟遊戲後恢復原值。"
   }
 }

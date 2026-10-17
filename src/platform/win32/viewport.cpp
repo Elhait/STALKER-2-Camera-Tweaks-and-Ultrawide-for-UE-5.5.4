@@ -18,12 +18,8 @@ namespace platform::win32
 
     float ReadCurrentProcessClientViewportAspect()
     {
-        HWND window = GetForegroundWindow();
-        DWORD processId = 0;
-        if (!window || (GetWindowThreadProcessId(window, &processId),
-            processId != GetCurrentProcessId())) {
-            window = FindCurrentProcessWindow();
-        }
+        const HWND window = SelectCurrentProcessViewportWindow(
+            GetForegroundWindow(), FindCurrentProcessWindow());
 
         RECT client{};
         if (window && GetClientRect(window, &client)) {

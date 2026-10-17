@@ -183,6 +183,9 @@ target_include_directories(STALKER2CameraTweaks PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends")
 target_compile_definitions(STALKER2CameraTweaks PRIVATE
     NDEBUG OVERLAY_PRODUCTION OVERLAY_SETTINGS_FRONTEND OVERLAY_COMBINED)
+set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/runtime.cpp"
+    TARGET_DIRECTORY STALKER2CameraTweaks
+    APPEND PROPERTY COMPILE_DEFINITIONS SPDLOG_WCHAR_FILENAMES)
 if(CAMERA_TWEAKS_STARTUP_TIMELINE)
     target_compile_definitions(STALKER2CameraTweaks PRIVATE OVERLAY_STARTUP_TIMELINE)
 else()
@@ -215,7 +218,8 @@ function(configure_actual_adapter_target target_name)
         "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends")
     target_compile_definitions(${target_name} PRIVATE
         NDEBUG SAFETYHOOK_TEST_VIRTUAL_PROTECT
-        OVERLAY_PRODUCTION OVERLAY_SETTINGS_FRONTEND OVERLAY_COMBINED OVERLAY_STARTUP_JOURNAL)
+        OVERLAY_PRODUCTION OVERLAY_SETTINGS_FRONTEND OVERLAY_COMBINED
+        OVERLAY_STARTUP_JOURNAL)
     target_compile_options(${target_name} PRIVATE
         ${CAMERA_TWEAKS_TEST_COMPILE_OPTIONS})
     target_link_libraries(${target_name} PRIVATE
@@ -227,7 +231,7 @@ enable_testing()
 file(READ "${CAMERA_TWEAKS_TEST_REGISTRY}" CAMERA_TWEAKS_TEST_REGISTRY_JSON)
 string(JSON CAMERA_TWEAKS_TEST_SCHEMA GET "${CAMERA_TWEAKS_TEST_REGISTRY_JSON}" schema_version)
 string(JSON CAMERA_TWEAKS_TEST_COUNT LENGTH "${CAMERA_TWEAKS_TEST_REGISTRY_JSON}" harnesses)
-if(NOT CAMERA_TWEAKS_TEST_SCHEMA EQUAL 1 OR NOT CAMERA_TWEAKS_TEST_COUNT EQUAL 60)
+if(NOT CAMERA_TWEAKS_TEST_SCHEMA EQUAL 1 OR NOT CAMERA_TWEAKS_TEST_COUNT EQUAL 59)
     message(FATAL_ERROR "Test harness registry contract failed: schema=${CAMERA_TWEAKS_TEST_SCHEMA}, targets=${CAMERA_TWEAKS_TEST_COUNT}")
 endif()
 
@@ -269,9 +273,9 @@ foreach(index RANGE 0 ${CAMERA_TWEAKS_TEST_COMMON_INCLUDE_LAST})
     list(APPEND CAMERA_TWEAKS_TEST_COMMON_INCLUDE_NAMES "${include_dir}")
     list(APPEND CAMERA_TWEAKS_TEST_COMMON_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/${include_dir}")
 endforeach()
-set(CAMERA_TWEAKS_TEST_OUTPUT_ABSOLUTE "${CMAKE_CURRENT_SOURCE_DIR}/${CAMERA_TWEAKS_TEST_OUTPUT_DIRECTORY}")
-set(CAMERA_TWEAKS_TEST_GENERATED_ABSOLUTE "${CMAKE_CURRENT_SOURCE_DIR}/${CAMERA_TWEAKS_TEST_GENERATED_DIRECTORY}")
-set(CAMERA_TWEAKS_TEST_RESOURCE_ABSOLUTE "${CMAKE_CURRENT_SOURCE_DIR}/${CAMERA_TWEAKS_TEST_RESOURCE_OUTPUT}")
+set(CAMERA_TWEAKS_TEST_OUTPUT_ABSOLUTE "${CMAKE_CURRENT_BINARY_DIR}/tests")
+set(CAMERA_TWEAKS_TEST_GENERATED_ABSOLUTE "${generated_directory}")
+set(CAMERA_TWEAKS_TEST_RESOURCE_ABSOLUTE "${resource_output}")
 set_source_files_properties("${generated_ini_header}" PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE)
 set_source_files_properties("${resource_output}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
 
@@ -375,25 +379,40 @@ get_filename_component(CAMERA_TWEAKS_SUPPORT_OUTPUT_DIRECTORY "${CAMERA_TWEAKS_S
 get_filename_component(CAMERA_TWEAKS_SUPPORT_OUTPUT_NAME "${CAMERA_TWEAKS_SUPPORT_OUTPUT}" NAME_WE)
 add_executable(${CAMERA_TWEAKS_SUPPORT_NAME} EXCLUDE_FROM_ALL "${CMAKE_CURRENT_SOURCE_DIR}/${CAMERA_TWEAKS_SUPPORT_SOURCE}")
 set_target_properties(${CAMERA_TWEAKS_SUPPORT_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${CAMERA_TWEAKS_SUPPORT_OUTPUT_DIRECTORY}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tests"
     OUTPUT_NAME "${CAMERA_TWEAKS_SUPPORT_OUTPUT_NAME}")
 target_compile_options(${CAMERA_TWEAKS_SUPPORT_NAME} PRIVATE ${CAMERA_TWEAKS_TEST_COMPILE_OPTIONS})
+
+add_library(shutdown_storage_probe MODULE EXCLUDE_FROM_ALL
+    tests/lifecycle/shutdown_storage_probe.cpp)
+set_target_properties(shutdown_storage_probe PROPERTIES
+    PREFIX "" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tests"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tests")
+target_compile_options(shutdown_storage_probe PRIVATE ${CAMERA_TWEAKS_TEST_COMPILE_OPTIONS})
+add_dependencies(worker_lifecycle_harness shutdown_storage_probe)
 
 add_custom_target(test_harnesses DEPENDS ${CAMERA_TWEAKS_TEST_TARGETS} ${CAMERA_TWEAKS_SUPPORT_NAME})
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tests/temp")
 
 add_test(NAME runtime_native_adapter_matrix
-    COMMAND "$<TARGET_FILE:runtime_native_adapter_harness>")
+    COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+        -Executable "$<TARGET_FILE:runtime_native_adapter_harness>")
 foreach(fixture IN ITEMS zoom-in zoom-out)
     foreach(mode IN ITEMS off on)
         string(REPLACE "-" "_" fixture_id "${fixture}")
         add_test(NAME "n06_m01_${fixture_id}_${mode}"
-            COMMAND "$<TARGET_FILE:n06_m01_zoom_game_derived_harness>" "${fixture}" "${mode}")
+            COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+                -Executable "$<TARGET_FILE:n06_m01_zoom_game_derived_harness>"
+                -ArgumentsJson "[\"${fixture}\",\"${mode}\"]")
     endforeach()
 endforeach()
 set_tests_properties(runtime_native_adapter_matrix
     n06_m01_zoom_in_off n06_m01_zoom_in_on
     n06_m01_zoom_out_off n06_m01_zoom_out_on
     PROPERTIES
+        RUN_SERIAL TRUE
+        TIMEOUT 330
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         ENVIRONMENT "TEMP=${CMAKE_CURRENT_BINARY_DIR}/tests/temp;TMP=${CMAKE_CURRENT_BINARY_DIR}/tests/temp")

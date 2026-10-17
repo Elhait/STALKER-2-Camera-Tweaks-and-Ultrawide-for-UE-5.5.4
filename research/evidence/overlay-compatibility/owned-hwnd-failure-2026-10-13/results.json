@@ -1,0 +1,52 @@
+[
+    {
+        "scenario":  "race",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "startup",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "queue-full",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "partial-0",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "partial-1",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "partial-2",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "cleanup-failure",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "stopping",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "late",
+        "exit_code":  0,
+        "pass":  true
+    },
+    {
+        "scenario":  "stale-token",
+        "exit_code":  0,
+        "pass":  true
+    }
+]

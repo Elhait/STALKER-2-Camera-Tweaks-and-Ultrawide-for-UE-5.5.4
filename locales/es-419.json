@@ -158,6 +158,7 @@
       "cinematic_status": "Estado de presentación actual de la integración de cámara cinematográfica."
     }
   },
+  "camera_state_toggle": { "label": "Detalles de cámara", "open": "Abrir", "close": "Cerrar" },
   "camera_state": {
     "waiting": "Esperando la primera actualización completa de cámara.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} ya está asignada a {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Presiona {key} para abrir la superposición"
+    "open_overlay_hint": "Presiona {key} para abrir la superposición",
+    "persistence_failed": "El cambio está activo, pero no se guardó. El valor anterior volverá al reiniciar el juego."
   }
 }

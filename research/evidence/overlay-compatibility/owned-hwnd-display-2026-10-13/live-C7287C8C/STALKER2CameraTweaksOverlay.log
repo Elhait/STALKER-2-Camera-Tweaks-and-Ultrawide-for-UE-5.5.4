@@ -1,0 +1,76 @@
+OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2
+OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0
+OVERLAY_DISPLAY_WINDOW_CREATED owner_thread=1 unowned=1
+OVERLAY_COMPOSITOR_CLOCK_READY
+OVERLAY_WINDOW_EVENTS_ARMED
+OVERLAY_DPI_CHANGED dpi=120 scale=1.250000 coordinate_contract=physical_client_pixels
+OVERLAY_DCOMP_INIT_BEGIN
+OVERLAY_DCOMP_DEVICE_READY featureLevel=45312
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_DCOMP_SURFACE_READY generation=1 width=5138 height=1487
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_FIRST_FRAME
+OVERLAY_DISPLAY_STATE requested=0 root_attached=1 host_active=1 host_minimized=0 display_visible=1 game_hwnd=396310 foreground_hwnd=396310 display_hwnd=461840
+OVERLAY_INPUT_HOOK_OK key=Delete
+OVERLAY_PRESENTER_ATTACHED hwnd=396310
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_DCOMP_SURFACE_RESIZED generation=2 width=5120 height=1440
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1
+OVERLAY_FONT_ATLAS_REBUILT size=19 profile=base
+OVERLAY_NOTIFICATION_LIFETIME_STARTED id=0
+OVERLAY_STARTUP_HINT_DRAWN_AND_COMMITTED
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 game_hwnd=396310 foreground_hwnd=396310 display_hwnd=461840
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_ACTIVATION_TRACE request=1 event=toggle_requested qpc=22684034903 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=visibility_requested qpc=22684035130 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=presenter_readiness qpc=22684035181 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ACTIVATION_TRACE request=1 event=frame_begin qpc=22684078018 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=semantic_read_begin qpc=22684078486 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=1 event=semantic_read_end qpc=22684078635 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_DISPLAY_STATE requested=1 root_attached=1 host_active=1 host_minimized=0 display_visible=1 game_hwnd=396310 foreground_hwnd=396310 display_hwnd=461840
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_ACTIVATION_TRACE request=1 event=first_visible_frame qpc=22684086169 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_INPUT_ABSOLUTE_MOUSE_APPLIED x=3067 y=791
+OVERLAY_ACTIVATION_TRACE request=1 event=render_submitted qpc=22684170952 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=2 event=toggle_requested qpc=22703920871 qpcFrequency=10000000 tid=21188 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=2 event=visibility_requested qpc=22703921098 qpcFrequency=10000000 tid=21188 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=2 event=presenter_readiness qpc=22703921145 qpcFrequency=10000000 tid=21188 visible=0 presenterReady=1 result=1
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 game_hwnd=396310 foreground_hwnd=396310 display_hwnd=461840
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_ACTIVATION_TRACE request=3 event=toggle_requested qpc=22726087717 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=visibility_requested qpc=22726087948 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=presenter_readiness qpc=22726087996 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_ACTIVATION_TRACE request=3 event=frame_begin qpc=22726215231 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=semantic_read_begin qpc=22726215639 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=semantic_read_end qpc=22726215729 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=3 event=render_submitted qpc=22726219377 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_DISPLAY_STATE requested=1 root_attached=1 host_active=1 host_minimized=0 display_visible=1 game_hwnd=396310 foreground_hwnd=396310 display_hwnd=461840
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_ACTIVATION_TRACE request=3 event=first_visible_frame qpc=22726225638 qpcFrequency=10000000 tid=21188 visible=1 presenterReady=1 result=1
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_ACTIVATION_TRACE request=4 event=toggle_requested qpc=22732087758 qpcFrequency=10000000 tid=21188 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=4 event=visibility_requested qpc=22732087959 qpcFrequency=10000000 tid=21188 visible=0 presenterReady=1 result=1
+OVERLAY_ACTIVATION_TRACE request=4 event=presenter_readiness qpc=22732088007 qpcFrequency=10000000 tid=21188 visible=0 presenterReady=1 result=1
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 game_hwnd=396310 foreground_hwnd=396310 display_hwnd=461840
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=0 host_minimized=0 display_visible=0 game_hwnd=396310 foreground_hwnd=198718 display_hwnd=461840

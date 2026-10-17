@@ -37,7 +37,7 @@ Validated native Gameplay FOV interpolation after cinematic exit is mapped conti
 
 1. Install [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader), using `dsound.dll` in `Stalker2\Binaries\Win64`.
 2. Remove older `STALKER2UltrawideFix.asi` and `STALKER2GameplayAspectFix.asi` files and their old INI/log files. Do not load them alongside this mod.
-3. Copy `STALKER2CameraTweaks.asi` and `STALKER2CameraTweaks.ini` into the same `Win64` folder.
+3. Copy `STALKER2CameraTweaks.asi` into `Stalker2\Binaries\Win64`. The mod creates the user-owned INI beside it on first launch and migrates recognized settings from older layouts.
 4. Start the game.
 
 The mod creates and documents the INI when it is missing. Restart the game after manually editing it. Runtime logs are written beside the game executable.
@@ -86,6 +86,6 @@ DialogueCycle=F12
 - In windowed mode, a custom resolution whose aspect is not represented by a native game aspect mode may be resized when native `AspectRecalculation` returns to `Auto`. This does not mean arbitrary-aspect `HorPlus` is unsupported.
 - Future game patches may require updated signatures. Validation failures are handled safely, but signature resolution does not guarantee compatibility with future patches.
 
-Do not install this release alongside old `STALKER2UltrawideFix.asi` or `STALKER2GameplayAspectFix.asi` files. The release archive contains the production ASI, default INI, README, license and third-party notices; diagnostic builds, research files, logs and historical binaries are excluded.
+Do not install this release alongside old `STALKER2UltrawideFix.asi` or `STALKER2GameplayAspectFix.asi` files. The release archive contains only the production ASI, README, license and third-party notices. The user-owned INI is generated beside the ASI at runtime and is not deployed by Vortex; diagnostic builds, research files, logs and historical binaries are excluded.
 
 For full documentation, see the [repository README](https://github.com/Elhait/STALKER-2-Camera-Tweaks-and-Ultrawide-for-UE-5.5.4/blob/main/README.md).

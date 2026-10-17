@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "registry_targets=59 repository_harnesses=59 runner_invocations=62 native_cases=105 native_children=210 resource_targets=3 missing_inputs=0\r\ncanonical_test_registry=PASS\r\n",
+  "ProcessId": 30284
+}

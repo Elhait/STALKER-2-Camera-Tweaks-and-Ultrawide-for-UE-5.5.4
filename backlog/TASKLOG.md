@@ -3,6 +3,180 @@
 This is the active task log. New completed implementation, bounded research, and
 approved cleanup batches are recorded here from 2026-09-22 onward.
 
+> Retrospective note (2026-10-17): the prior entries stopped at 2026-09-24 even
+> though substantial release and implementation work followed. The milestone
+> entries below reconstruct the omitted work from the v3.1.0 release records,
+> current task plans, implementation reports, test evidence and user-confirmed
+> runtime observations. They are milestone summaries, not a fabricated daily
+> diary; where the source records only offline validation or a specific older
+> artifact, that boundary is retained.
+
+## 2026-10-17 — Compare v3.1.0 with proposed v3.2.0
+
+- Scope: review the complete staged source diff from the exact `v3.1.0` tag and
+  prepare a release comparison and version recommendation. No source/build or
+  release artifact changes.
+- Evidence: `HEAD` is `v3.1.0` (`e756442`); staged diff contained 236 paths,
+  approximately 24,358 insertions and 1,167 deletions. Product changes were
+  separated from research/evidence, test infrastructure and local generated
+  state.
+- Completed: created
+  `research/reports/V3_1_0_TO_V3_2_0_RELEASE_COMPARISON_2026-10-17.md`;
+  recommended `3.2.0` as a working version, subject to release qualification.
+  Identified `imgui.ini` as local generated state to exclude from release
+  packaging. No official v3.2.0 package was created or authorized.
+
+## 2026-10-17 — ASI shutdown safety hardening and live exit qualification
+
+- Scope: close the identified SL01 CRT file-stream and SL02 global-container
+  teardown risks, qualify the resulting Release candidate, and record the
+  requested ordinary game exit. No camera-policy changes or graphics fixture.
+- Changed: replaced the identified production log/config FILE paths with
+  native Win32 file I/O; made the identified mutable global/static state
+  process-resident; pinned the module before publishing runtime hooks; guarded
+  the resident SafetyHook exception handler during Windows shutdown.
+- Candidate: `build-artifacts/shutdown-hardening/STALKER2CameraTweaks.asi`,
+  3,568,128 bytes, SHA-256
+  `97696DBA3C40067F4F89D8C8F62D2D93C5AD2A97707860492E723A4E2016F5D4`.
+- Validation: focused checks 12/12 PASS. Safe canonical `test.cmd -NonGraphics`
+  PASS: 62 ordered invocations, 208 adapter processes and four Zoom fixtures;
+  the WARP/graphics cleanup case was explicitly omitted. Release build PASS;
+  process cleanup verified. The user ran this candidate in a normal game
+  session, opened/closed the Overlay, and confirmed ordinary game exit. The
+  inspected logs showed successful startup and no logged errors; no final
+  shutdown marker is required for normal process termination.
+- Completed: SL01/SL02 are fixed for the concrete production execution paths
+  documented in the report; offline qualification and the observed ordinary
+  live exit are complete. This is not a blanket guarantee for crash, explicit
+  unload, arbitrary third-party teardown or graphics-driver completion.
+- Deferred: graphics-inclusive/WARP fixture and unrelated domain regression
+  replay were outside the approved shutdown scope and were not run.
+- Report: `research/reports/FINAL_ASI_SHUTDOWN_LIFECYCLE_CLOSURE_2026-10-17.md`;
+  plan: `research/plans/FINAL_ASI_SHUTDOWN_SAFETY_HARDENING_2026-10-17.md`.
+
+## 2026-10-16 — Camera State panel expansion and toggle
+
+- Scope: expand the settings Overlay to a third Camera State column with
+  internal scrolling, deterministic compact/expanded width restoration, and a
+  clearly labeled localized Open/Close control.
+- Evidence: user reviewed the in-game screenshots and reported that the panel
+  and toggle look correct; the user also reported running the requested test
+  suite. The rendered Camera State data remains read-only.
+- Completed: panel opens to the right, closes back to the compact layout, and
+  does not change the Overlay's height contract. The dedicated control uses
+  localized labels and distinct open/closed presentation.
+- Limit: visual confirmation is for the user's observed display/configuration;
+  it is not a full matrix of every locale, DPI and aspect ratio.
+
+## 2026-10-15–16 — Startup toast readiness and presentation follow-up
+
+- Scope: investigate the welcome toast appearing inconsistently without
+  changing unrelated camera behavior or adding presentation hooks.
+- Completed: F5 retained draw/commit-gated TTL behavior; F6 added bounded
+  lifecycle evidence and deterministic startup-only regression coverage; F7
+  added a readiness gate requiring runtime/Overlay readiness and a successful
+  game-data signal or bounded fallback; F8 compared startup and manual-menu
+  presentation paths without claiming that Commit proves visible pixels.
+- Runtime result: an initial F7 run was not seen by the user despite successful
+  internal lifecycle markers. In a later ordinary run, the user reported the
+  toast was visible before Delete for about 10 seconds. This is one positive
+  observation, not a guarantee across all launches.
+- Records: `research/reports/F5_STARTUP_OVERLAY_TOAST_FINAL_HARDENING_2026-10-15.md`,
+  `research/reports/F6_STARTUP_TOAST_ROOT_CAUSE_AND_REGRESSION_2026-10-15.md`,
+  `research/reports/F7_STARTUP_TOAST_READINESS_GATE_2026-10-16.md`,
+  `research/reports/F8_STARTUP_TOAST_PRESENTATION_VERIFICATION_2026-10-16.md`.
+
+## 2026-10-14–15 — F3 configuration lifecycle and F4 remediation
+
+- Scope: preserve user configuration across upgrades, remove release-manager
+  ownership of the runtime INI, and repair the concrete F4 preflight findings.
+- Completed: known legacy INI structures are rebuilt while compatible values
+  are retained; malformed recovery backs up readable input; unchanged
+  canonical files avoid writes; release packaging uses an allowlist that omits
+  the INI. F4 remediation addressed BCrypt handle lifetime, INI migration and
+  repeated managed sections, Win32 subclass/language binding order, activation
+  recovery, menu-frame input admission, partial ImGui cleanup and contained
+  CTest process execution.
+- Validation: F3 focused persistence/idempotence and packaging checks passed.
+  F4 implementation report records focused checks and canonical regression
+  evidence; later Overlay visibility investigation remains a distinct runtime
+  follow-up and is not hidden by the offline PASS.
+- Records: `research/reports/INI_CONFIGURATION_LIFECYCLE_F3_2026-10-14.md`,
+  `research/reports/F4_PREFLIGHT_CUMULATIVE_CODE_AUDIT_2026-10-15.md`,
+  `research/reports/F4_PREFLIGHT_REMEDIATION_IMPLEMENTATION_REPORT_2026-10-15.md`.
+
+## 2026-10-13 — F2 final-release remediation batches
+
+- Scope: implement the approved R1–R9 remediation sequence from the cumulative
+  production audit, preserving existing camera policies and Overlay ownership
+  contracts.
+- Completed: strengthened process-tree test containment; optional Overlay and
+  initialization failure handling; native callback reset/drain; config
+  read/migration/persistence; input rebinding; build isolation; viewport
+  behavior; native continuation lifetime; and native hook execution evidence
+  and its localized correction. The approved plan records batch-level checks
+  and remaining scope limits.
+- Validation/status: focused checks were run per batch. Do not treat the plan's
+  implementation-complete status as proof of every live path; later F4
+  qualification and the shutdown-specific follow-up are recorded separately.
+- Record: `research/plans/FINAL_RELEASE_HARDENING_REMEDIATION_PLAN_2026-10-13.md`.
+
+## 2026-10-12–13 — Overlay-owned HWND migration, G0–G5
+
+- Scope: replace the game-HWND DirectComposition target with a separate
+  Overlay-owned display window while retaining the single graphics owner and
+  fail-open game input path.
+- Completed: G0 feasibility and failure-handoff fixtures; G1-A command/input
+  admission, G1-B HWND integration, G1-C readiness/geometry, G1-D owner-thread
+  finalization and G1-E cumulative offline integration; G2 partial-lifecycle
+  handling; G3 geometry/scheduler; G4 regression; and G5 compatibility review.
+- Validation: G4 records 62/62 invocations, 204 adapter child executions and
+  4/4 Zoom scenarios. G5 was user-accepted for exact candidate
+  `123D792A61A550892141DBEC12BB059A606BEA6A30B0C8B300491B6CAFC7DEF2`; the
+  earlier live HUD/G-SYNC observations are not transferred to other hashes.
+  The user accepted G-SYNC Indicator disappearance while the menu is open.
+- Limits: a startup-area freeze was documented with unknown wait object/cause;
+  it was not claimed fixed. Earlier positive graphics observations apply only
+  to their named ASI candidates.
+- Records: `research/reports/OVERLAY_OWNED_HWND_G1_FINALIZATION_2026-10-13.md`,
+  `research/reports/OVERLAY_OWNED_HWND_G2_G3_GAP_RESULT_2026-10-13.md`,
+  `research/reports/OVERLAY_OWNED_HWND_G4_REGRESSION_RESULT_2026-10-13.md`,
+  `research/reports/OVERLAY_OWNED_HWND_G5_COMPATIBILITY_STATUS_2026-10-13.md`.
+
+## 2026-10-12 — Prepare v3.1.0 release baseline
+
+- Scope: record the release baseline that followed the previous task-log entry
+  and became the comparison point for the proposed next version.
+- Completed per `RELEASE_NOTES_v3.1.0.md`: passive runtime diagnostics were
+  included in the standard ASI; hook/startup failure handling and diagnostics
+  gating were strengthened; the build moved to the explicit CMake/Ninja
+  production source registry; and the canonical test runner was hardened to
+  propagate nonzero and crash exits. Existing Gameplay/Cinematics/Dialogue
+  policies were retained.
+- Validation boundary: release notes record automated tests, production and
+  diagnostic builds, and localization/resource audits as passed. They also
+  state that the exact final 3.1.0 artifact had not received its own in-game
+  validation. Baseline tag: `v3.1.0`, commit `e756442`.
+- Record: `RELEASE_NOTES_v3.1.0.md`.
+
+## 2026-10-12 — DirectComposition coexistence experiments
+
+- Scope: investigate the NVIDIA overlay/G-SYNC interaction and presentation
+  pauses using the existing artifacts and bounded experiments before choosing
+  the next Overlay architecture.
+- Findings: target release/recreation improved some HUD coexistence
+  observations but had mixed stability, so those ASIs stayed experimental.
+  The investigation then favored a persistent DirectComposition target on a
+  separate Overlay-owned HWND, avoiding target ownership on the game HWND.
+  PresentMon/ETW observations documented a long pause, but the wait object and
+  causal graphics/runtime path were not established.
+- Disposition: preserved the experimental and root-detach artifacts; advanced
+  the separate-HWND design through feasibility review rather than promoting
+  target release to production.
+- Records: `research/reports/DCOMP_TARGET_RELEASE_EXPERIMENT_2026-10-12.md`,
+  `research/reports/DCOMP_NVIDIA_OVERLAY_COEXISTENCE_AUDIT_2026-10-12.md`,
+  `research/reports/DCOMP_CLOSED_OVERLAY_FRAME_PACING_INVESTIGATION_2026-10-12.md`.
+
 ## 2026-09-24 — Proggy Vector-only experimental ASI
 
 - Scope: build one isolated experimental ASI using Proggy Vector as the sole

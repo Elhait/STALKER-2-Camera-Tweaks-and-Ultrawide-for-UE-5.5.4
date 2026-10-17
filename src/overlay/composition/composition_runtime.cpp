@@ -2,24 +2,29 @@
 
 #include "../localization/game_language_reader.hpp"
 #include "../input/input_state.hpp"
+#include "../input/game_thread_subclass.hpp"
 #include "../optional_overlay_boundary.hpp"
 #include "../presenter/presenter_runtime_policy.hpp"
 #include "../presentation/presentation_contracts.hpp"
 #include "../presenter/renderer_runtime.hpp"
+#include "owner_finalizer.hpp"
+#include "stable_record_pool.hpp"
 #include "../../diagnostics/diagnostic_runtime.hpp"
-#include "../../diagnostics/overlay_activation_trace.hpp"
 #include "../../diagnostics/performance_telemetry.hpp"
 #include "../../diagnostics/startup_journal.hpp"
 #include "../../plugin/runtime.hpp"
 #include "../../config/feature_config.hpp"
+#include "../../platform/win32/window.hpp"
+#include "../../platform/win32/native_file.hpp"
+#include "../../platform/process_lifetime.hpp"
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
-#include <fstream>
 #include <mutex>
 #include <iterator>
+#include <limits>
 #include <new>
 #include <string>
 #include <vector>
@@ -30,8 +35,13 @@ namespace
     constexpr UINT RefreshMessage = WM_APP + 0x5A2;
     constexpr UINT FrameClockMessage = WM_APP + 0x5A3;
     constexpr UINT FrameClockUnavailableMessage = WM_APP + 0x5A4;
+    constexpr UINT InstallInputBindingMessage = WM_APP + 0x5A5;
     constexpr UINT_PTR RenderTimerSeed = 0x5A3;
     constexpr UINT FallbackAnimationIntervalMs = 16;
+    constexpr DWORD OwnerHeartbeatIntervalMs = 250;
+    constexpr std::uint64_t OwnerHeartbeatMaximumAgeMs = 750;
+    constexpr auto OverlayDisplayClassName =
+        platform::win32::OverlayDisplayWindowClassName;
 
     std::recursive_mutex g_rendererMutex;
     overlay::PresenterTimerIdentity g_renderTimer;
@@ -48,24 +58,86 @@ namespace
     {
         return *g_renderer.load(std::memory_order_acquire);
     }
-    std::ofstream g_log;
+    struct OverlayLogState
+    {
+        std::mutex mutex;
+        platform::win32::NativeFile file;
+    };
+    platform::ProcessLifetime<OverlayLogState> g_logStorage;
+    auto& g_log = g_logStorage.get().file;
+    auto& g_logMutex = g_logStorage.get().mutex;
     HMODULE g_module{};
     DWORD g_processId{};
     std::atomic<DWORD> g_uiThreadId{};
     std::atomic<bool> g_cameraCoreReady{};
     std::atomic<bool> g_workerStarted{};
+    std::atomic<HWND> g_overlayDisplayWindow{};
+    bool g_overlayDisplayClassRegistered{};
+    std::atomic<bool> g_ownerFinalizing{};
+    overlay::OwnerFinalizer g_ownerFinalizer;
+    std::atomic<bool> g_overlayInputReady{};
+    overlay::InputOwnerHeartbeat g_ownerHeartbeat;
     overlay::PresenterWakeGate g_redrawWakePending;
     std::atomic<bool> g_imguiPopupOpen{};
-    std::atomic<bool> g_firstRawMouseCaptureLogged{};
-    std::atomic<bool> g_firstAbsoluteMouseCaptureLogged{};
     HWINEVENTHOOK g_windowEvents{};
     HWINEVENTHOOK g_locationEvents{};
     std::atomic<HWND> g_inputWindow{};
-    std::mutex g_logMutex;
-    struct InputWindowBinding { HWND window{}; WNDPROC original{}; };
-    std::mutex g_inputBindingsMutex;
-    std::vector<InputWindowBinding> g_inputBindings;
-    void Log(const std::string& message);
+    struct InputWindowBinding
+    {
+        HWND window{};
+        std::atomic<WNDPROC> original{};
+        std::uint64_t generation{};
+        enum class InstallState { Pending, Installing, Installed, Failed };
+        std::atomic<InstallState> installState{InstallState::Pending};
+    };
+    constexpr std::size_t InputWindowBindingCapacity = 64;
+    overlay::StableRecordPool<InputWindowBinding, InputWindowBindingCapacity>
+        g_inputWindowBindings;
+    bool g_inputBindingLimitReported{};
+    constexpr wchar_t InputBindingProperty[] =
+        L"STALKER2CameraTweaks.InputWindowBinding";
+    std::atomic<InputWindowBinding*> g_currentInputBinding{};
+    std::atomic<InputWindowBinding*> g_pendingInputBinding{};
+    HHOOK g_bindingInstallHook{}; // owner-thread handle; callback uses CallNextHookEx(nullptr)
+    std::atomic<std::uint64_t> g_nextInputBindingGeneration{1};
+    overlay::InputCallbackAdmissionGate g_inputCallbackAdmission;
+    HANDLE g_terminalWakeEvent{};
+    HANDLE g_callbackDrainEvent{};
+    HANDLE g_ownerCommandWakeEvent{};
+    overlay::OwnerInputCommandQueue g_ownerInputCommands;
+    std::atomic<int> g_overlayToggleKey{VK_DELETE};
+    std::atomic<const char*> g_terminalReason{};
+    void Log(const std::string& message) noexcept;
+    void Log(const char* message) noexcept;
+
+    void RequestOverlayTerminal() noexcept
+    {
+        g_overlayInputReady.store(false, std::memory_order_release);
+        g_ownerHeartbeat.Reset();
+        overlay::CloseInputAdmission(g_inputCallbackAdmission,
+            overlay::GetInputEventBridge());
+        if (g_callbackDrainEvent &&
+            g_inputCallbackAdmission.inFlight() == 0)
+            SetEvent(g_callbackDrainEvent);
+        if (g_terminalWakeEvent) SetEvent(g_terminalWakeEvent);
+        const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
+        if (threadId) PostThreadMessageW(threadId, WakeMessage, 0, 0);
+    }
+
+    void RequestOverlayTerminalWithReason(const char* staticReason) noexcept
+    {
+        const char* expected{};
+        g_terminalReason.compare_exchange_strong(expected, staticReason,
+            std::memory_order_release, std::memory_order_relaxed);
+        RequestOverlayTerminal();
+    }
+
+    void FinishWindowMessage(HWND window, UINT message);
+
+    bool EnqueueOwnerInputCommand(InputWindowBinding* binding, HWND window,
+        UINT message, WPARAM wParam, LPARAM lParam,
+        bool finishAfterContinuation = false,
+        bool rebindModifierDown = false) noexcept;
 
     using WaitForCompositorClockFunction = DWORD(WINAPI*)(UINT,
         const HANDLE*, DWORD);
@@ -127,27 +199,31 @@ namespace
         if (previous != active) SetEvent(g_frameClockControl);
     }
 
-    void StopFrameClock() noexcept
+    bool StopFrameClock() noexcept
     {
         g_frameClockDemand.store(false, std::memory_order_release);
         if (g_frameClockStop) SetEvent(g_frameClockStop);
         if (g_frameClockControl) SetEvent(g_frameClockControl);
         if (g_frameClockThread) {
-            WaitForSingleObject(g_frameClockThread, INFINITE);
-            CloseHandle(g_frameClockThread);
+            const DWORD wait = WaitForSingleObject(g_frameClockThread, INFINITE);
+            if (wait != WAIT_OBJECT_0) return false;
+            if (!CloseHandle(g_frameClockThread)) return false;
             g_frameClockThread = nullptr;
         }
-        if (g_frameClockReady) CloseHandle(g_frameClockReady);
-        if (g_frameClockControl) CloseHandle(g_frameClockControl);
-        if (g_frameClockStop) CloseHandle(g_frameClockStop);
-        g_frameClockReady = nullptr;
-        g_frameClockControl = nullptr;
-        g_frameClockStop = nullptr;
+        if (g_frameClockReady && CloseHandle(g_frameClockReady))
+            g_frameClockReady = nullptr;
+        if (g_frameClockControl && CloseHandle(g_frameClockControl))
+            g_frameClockControl = nullptr;
+        if (g_frameClockStop && CloseHandle(g_frameClockStop))
+            g_frameClockStop = nullptr;
         g_frameClockAvailable.store(false, std::memory_order_release);
+        return !g_frameClockThread && !g_frameClockReady &&
+            !g_frameClockControl && !g_frameClockStop;
     }
 
     void StartFrameClock() noexcept
     {
+        try {
         g_frameClockControl = CreateEventW(nullptr, FALSE, FALSE, nullptr);
         g_frameClockStop = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         g_frameClockReady = CreateEventW(nullptr, TRUE, FALSE, nullptr);
@@ -169,34 +245,57 @@ namespace
         } else {
             Log("OVERLAY_COMPOSITOR_CLOCK_READY");
         }
+        } catch (...) {
+            // Frame-clock setup is optional; a logging/allocation failure must
+            // not escape this noexcept worker helper.
+            StopFrameClock();
+        }
     }
 
     WNDPROC OriginalWindowProc(HWND window) noexcept
     {
-        std::scoped_lock lock{g_inputBindingsMutex};
-        const auto found = std::find_if(g_inputBindings.begin(), g_inputBindings.end(),
-            [window](const auto& binding) { return binding.window == window; });
-        return found == g_inputBindings.end() ? nullptr : found->original;
+        auto* binding = static_cast<InputWindowBinding*>(
+            GetPropW(window, InputBindingProperty));
+        return binding ? binding->original.load(std::memory_order_acquire)
+            : nullptr;
     }
 
     void ForgetInputWindow(HWND window) noexcept
     {
-        std::scoped_lock lock{g_inputBindingsMutex};
-        std::erase_if(g_inputBindings,
-            [window](const auto& binding) { return binding.window == window; });
+        auto* binding = static_cast<InputWindowBinding*>(
+            GetPropW(window, InputBindingProperty));
+        if (binding) RemovePropW(window, InputBindingProperty);
     }
 
-    void Log(const std::string& message)
+    void WriteLog(const std::string& message)
     {
         std::scoped_lock lock{g_logMutex};
-        if (g_log) {
-            g_log << message << '\n';
-            g_log.flush();
+        if (g_log.isOpen()) {
+            if (g_log.Write(message)) g_log.Write("\r\n");
         }
+    }
+
+    void Log(const std::string& message) noexcept
+    {
+        overlay::TryOptionalOverlayLog(&WriteLog, message);
+    }
+
+    void Log(const char* message) noexcept
+    {
+        overlay::TryOptionalOverlayLog(&WriteLog, message);
+    }
+
+    void CloseLog() noexcept
+    {
+        try {
+            std::scoped_lock lock{g_logMutex};
+            g_log.Close();
+        } catch (...) {}
     }
 
     void OpenLog() noexcept
     {
+        try {
         wchar_t path[MAX_PATH]{};
         const DWORD length = GetModuleFileNameW(g_module, path,
             static_cast<DWORD>(std::size(path)));
@@ -205,7 +304,92 @@ namespace
         const auto separator = logPath.find_last_of(L"\\/");
         if (separator != std::wstring::npos) logPath.resize(separator + 1);
         logPath += L"STALKER2CameraTweaksOverlay.log";
-        g_log.open(logPath, std::ios::out | std::ios::trunc);
+        std::scoped_lock lock{g_logMutex};
+        g_log.Open(logPath.c_str(), true);
+        } catch (...) {
+            CloseLog();
+        }
+    }
+
+    LRESULT CALLBACK OverlayDisplayWindowProc(HWND window, UINT message,
+        WPARAM wParam, LPARAM lParam)
+    {
+        if (message == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
+        if (message == WM_CLOSE) {
+            RequestOverlayTerminalWithReason("display_close");
+            return 0;
+        }
+        if (message == WM_NCDESTROY) {
+            if (g_overlayDisplayWindow.load(std::memory_order_acquire) == window)
+                g_overlayDisplayWindow.store(nullptr, std::memory_order_release);
+            if (!g_ownerFinalizing.load(std::memory_order_acquire))
+                RequestOverlayTerminal();
+        }
+        return DefWindowProcW(window, message, wParam, lParam);
+    }
+
+    bool CreateOverlayDisplayWindow() noexcept
+    {
+        if (!g_module || g_overlayDisplayWindow.load(std::memory_order_acquire))
+            return false;
+        WNDCLASSEXW windowClass{sizeof(windowClass)};
+        if (!GetClassInfoExW(g_module, OverlayDisplayClassName, &windowClass)) {
+            windowClass = {};
+            windowClass.cbSize = sizeof(windowClass);
+            windowClass.style = CS_HREDRAW | CS_VREDRAW;
+            windowClass.lpfnWndProc = &OverlayDisplayWindowProc;
+            windowClass.hInstance = g_module;
+            windowClass.lpszClassName = OverlayDisplayClassName;
+            if (!RegisterClassExW(&windowClass)) return false;
+            g_overlayDisplayClassRegistered = true;
+        } else if (windowClass.lpfnWndProc != &OverlayDisplayWindowProc) {
+            return false;
+        }
+        const HWND window = CreateWindowExW(WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW |
+            WS_EX_LAYERED | WS_EX_TRANSPARENT, OverlayDisplayClassName,
+            L"S.T.A.L.K.E.R. 2 Camera Tweaks Overlay", WS_POPUP,
+            0, 0, 1, 1, nullptr, nullptr, g_module, nullptr);
+        if (!window) return false;
+        // Match the unowned-HWND pixel fixture: DComp supplies the content,
+        // while LAYERED/TRANSPARENT preserves cross-thread mouse pass-through.
+        g_overlayDisplayWindow.store(window, std::memory_order_release);
+        return true;
+    }
+
+    bool DestroyOverlayDisplayWindow() noexcept
+    {
+        const HWND window = g_overlayDisplayWindow.load(std::memory_order_acquire);
+        if (window) {
+            if (GetWindowThreadProcessId(window, nullptr) != GetCurrentThreadId()) {
+                try { Log("OVERLAY_DISPLAY_WINDOW_DESTROY_REJECTED wrong_thread=1"); }
+                catch (...) {}
+                return false;
+            }
+            ShowWindow(window, SW_HIDE);
+            if (!DestroyWindow(window)) {
+                try {
+                    Log("OVERLAY_DISPLAY_WINDOW_DESTROY_FAILED error=" +
+                        std::to_string(GetLastError()));
+                } catch (...) {}
+                return false;
+            }
+            g_overlayDisplayWindow.store(nullptr, std::memory_order_release);
+            try { Log("OVERLAY_DISPLAY_WINDOW_DESTROYED owner_thread=1"); }
+            catch (...) {}
+        }
+        if (g_overlayDisplayClassRegistered) {
+            if (!UnregisterClassW(OverlayDisplayClassName, g_module)) {
+                try {
+                    Log("OVERLAY_DISPLAY_CLASS_UNREGISTER_FAILED error=" +
+                        std::to_string(GetLastError()));
+                } catch (...) {}
+                return false;
+            }
+            g_overlayDisplayClassRegistered = false;
+            try { Log("OVERLAY_DISPLAY_CLASS_UNREGISTERED owner_thread=1"); }
+            catch (...) {}
+        }
+        return true;
     }
 
     struct WindowCandidate
@@ -219,7 +403,9 @@ namespace
         auto& best = *reinterpret_cast<WindowCandidate*>(parameter);
         DWORD ownerProcess{};
         GetWindowThreadProcessId(window, &ownerProcess);
-        if (ownerProcess != g_processId || !IsWindowVisible(window) ||
+        if (window == g_overlayDisplayWindow.load(std::memory_order_acquire) ||
+            platform::win32::IsOverlayDisplayWindow(window) ||
+            ownerProcess != g_processId || !IsWindowVisible(window) ||
             GetWindow(window, GW_OWNER) ||
             (GetWindowLongPtrW(window, GWL_STYLE) & WS_CHILD))
             return TRUE;
@@ -247,7 +433,9 @@ namespace
         if (objectId != OBJID_WINDOW || childId != CHILDID_SELF || !window) return;
         DWORD ownerProcess{};
         GetWindowThreadProcessId(window, &ownerProcess);
-        if (ownerProcess != g_processId) return;
+        if (ownerProcess != g_processId ||
+            window == g_overlayDisplayWindow.load(std::memory_order_acquire) ||
+            platform::win32::IsOverlayDisplayWindow(window)) return;
         if (event == EVENT_OBJECT_CREATE || event == EVENT_OBJECT_SHOW ||
             event == EVENT_OBJECT_DESTROY || event == EVENT_OBJECT_LOCATIONCHANGE)
         PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire), RefreshMessage,
@@ -279,26 +467,23 @@ namespace
             // coordinate space. Convert explicitly for this HWND instead of
             // guessing a scale from GetDpiForWindow (which is 96 for unaware
             // windows and can differ from the physical monitor DPI).
-            const bool physical = LogicalToPhysicalPointForPerMonitorDPI(
-                window, &position) != FALSE;
+            LogicalToPhysicalPointForPerMonitorDPI(window, &position);
             const bool queued = bridge.PushAbsoluteMousePosition(
                 position.x, position.y);
-            if (queued && !g_firstAbsoluteMouseCaptureLogged.exchange(true,
-                    std::memory_order_acq_rel))
-                Log(std::string("OVERLAY_INPUT_ABSOLUTE_MOUSE_CAPTURED source=WM_MOUSEMOVE coordinate_space=") +
-                    (physical ? "physical_client" : "host_client_fallback"));
-            if (queued) RequestOverlayRedraw();
+            if (!queued) return false;
+            RequestOverlayRedraw();
             return true;
         }
         case WM_LBUTTONDOWN: case WM_LBUTTONUP: case WM_LBUTTONDBLCLK:
         case WM_RBUTTONDOWN: case WM_RBUTTONUP: case WM_RBUTTONDBLCLK:
         case WM_MBUTTONDOWN: case WM_MBUTTONUP: case WM_MBUTTONDBLCLK:
         case WM_XBUTTONDOWN: case WM_XBUTTONUP: case WM_XBUTTONDBLCLK:
-            if (bridge.PushMouseButton(message, wParam)) RequestOverlayRedraw();
+            if (!bridge.PushMouseButton(message, wParam)) return false;
+            RequestOverlayRedraw();
             return true;
         case WM_MOUSEWHEEL: case WM_MOUSEHWHEEL:
-            if (bridge.PushMouseWheel(message, wParam, lParam))
-                RequestOverlayRedraw();
+            if (!bridge.PushMouseWheel(message, wParam, lParam)) return false;
+            RequestOverlayRedraw();
             return true;
         case WM_INPUT: {
             RAWINPUT raw{};
@@ -308,16 +493,10 @@ namespace
                 &raw, &bytes, sizeof(RAWINPUTHEADER));
             if (copied != sizeof(RAWINPUT) || raw.header.dwType != RIM_TYPEMOUSE)
                 return false;
-            if (!(raw.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) &&
-                bridge.PushRelativeMouseMotion(raw.data.mouse.lLastX,
-                    raw.data.mouse.lLastY)) {
-                RequestOverlayRedraw();
-                if (!g_firstRawMouseCaptureLogged.exchange(true,
-                        std::memory_order_acq_rel))
-                    Log("OVERLAY_INPUT_RAW_MOUSE_CAPTURED dx=" +
-                        std::to_string(raw.data.mouse.lLastX) + " dy=" +
-                        std::to_string(raw.data.mouse.lLastY));
-            }
+            if (raw.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) return false;
+            if (!bridge.PushRelativeMouseMotion(raw.data.mouse.lLastX,
+                    raw.data.mouse.lLastY)) return false;
+            RequestOverlayRedraw();
             (void)window;
             return true;
         }
@@ -326,19 +505,55 @@ namespace
         }
     }
 
-    void ActivateOverlayInput(HWND window) noexcept
+    bool ActivateOverlayInput(HWND window) noexcept
     {
-        if (!overlay::GetInputState().ShouldOwnInput()) return;
+        if (!overlay::GetInputState().ShouldOwnInput()) return false;
         auto& bridge = overlay::GetInputEventBridge();
-        if (bridge.active()) return;
+        if (bridge.active()) return true;
         POINT position{};
         if (!GetCursorPos(&position) || !ScreenToClient(window, &position))
             position = {};
         // This runs on the presenter's PMv2 owner thread, so ScreenToClient
         // yields the physical client-pixel coordinate used by the surface.
-        bridge.Activate(position.x, position.y);
+        if (!bridge.TryActivate(position.x, position.y)) return false;
         RequestOverlayRedraw();
         Log("OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge");
+        SetCursor(nullptr);
+        return true;
+    }
+
+    bool ReconcileOverlayInputReadiness() noexcept
+    {
+        if (g_inputCallbackAdmission.closed()) return false;
+        auto& input = overlay::GetInputState();
+        auto* renderer = g_renderer.load(std::memory_order_acquire);
+        const HWND window = g_inputWindow.load(std::memory_order_acquire);
+        const bool ready = renderer && window && input.ShouldOwnInput() &&
+            renderer->OwnsWindow(window) && renderer->InputPresentationReady();
+        if (!ready) {
+            g_overlayInputReady.store(false, std::memory_order_release);
+            g_ownerHeartbeat.Reset();
+            overlay::GetInputEventBridge().TryDeactivate();
+            return false;
+        }
+        if (!ActivateOverlayInput(window)) {
+            g_overlayInputReady.store(false, std::memory_order_release);
+            g_ownerHeartbeat.Reset();
+            return false;
+        }
+        g_ownerHeartbeat.Publish(GetTickCount64());
+        g_overlayInputReady.store(true, std::memory_order_release);
+        return true;
+    }
+
+    bool OverlayOwnerResponsiveForInput() noexcept
+    {
+        if (!g_overlayInputReady.load(std::memory_order_acquire)) return false;
+        if (g_ownerHeartbeat.IsFresh(GetTickCount64(),
+                OwnerHeartbeatMaximumAgeMs))
+            return true;
+        RequestOverlayTerminalWithReason("owner_heartbeat_not_fresh");
+        return false;
     }
 
     struct OverlayWindowDecision
@@ -354,46 +569,46 @@ namespace
         return g_imguiPopupOpen.load(std::memory_order_acquire);
     }
 
-    void RemoveInputHook() noexcept;
+    bool RemoveInputHook() noexcept;
+    void CompletePendingInputBinding();
 
-    void DisableAfterOverlayException()
+    void DisableAfterOverlayException() noexcept
     {
-        std::scoped_lock lock{g_rendererMutex};
-        RendererInstance().Disable("composition_runtime_exception");
-        overlay::GetInputEventBridge().Deactivate();
-        RemoveInputHook();
-        const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
-        if (threadId) PostThreadMessageW(threadId, WakeMessage, 0, 0);
+        RequestOverlayTerminalWithReason("callback_exception");
     }
 
     OverlayWindowDecision ProcessOverlayWindowMessage(HWND window,
-        UINT message, WPARAM wParam, LPARAM lParam)
+        UINT message, WPARAM wParam, LPARAM lParam,
+        bool rebindModifierDown)
     {
         OverlayWindowDecision decision{};
         auto& input = overlay::GetInputState();
         if (RendererInstance().disabled() || window !=
                 g_inputWindow.load(std::memory_order_acquire))
             return decision;
-        if (message == overlay::AutoLanguageSyncMessage) {
-            overlay::SynchronizeAutoLanguageIfConfigured();
-            RequestOverlayRedraw();
-            return {true, 0};
+        if (message == WM_SETCURSOR && input.ShouldOwnInput() &&
+            LOWORD(lParam) == HTCLIENT) {
+            SetCursor(nullptr);
+            return {true, TRUE};
         }
+        overlay::HotkeyAction capturedAction{};
+        int capturedPreviousKey{};
         const auto captureResult = overlay::InputState::IsRebindMessage(message)
             ? input.HandleRebindMessage(message, wParam,
                 overlay::InputState::IsRebindKeyDownMessage(message) &&
-                    ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0 ||
-                        (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0 ||
-                        (GetAsyncKeyState(VK_MENU) & 0x8000) != 0))
+                    rebindModifierDown,
+                &capturedAction, &capturedPreviousKey)
             : overlay::RebindMessageResult::PassThrough;
         if (captureResult == overlay::RebindMessageResult::Cancelled) {
+            input.PublishCallbackRebindKey(0);
             plugin::SetHotkeyRebindCaptureActive(false);
             RequestOverlayRedraw();
             return {true, 0};
         }
         if (captureResult == overlay::RebindMessageResult::CapturedKey) {
             const int key = static_cast<int>(wParam);
-            const auto action = input.rebindAction();
+            const auto action = capturedAction;
+            const int previousKey = capturedPreviousKey;
             plugin::MarkHotkeyRebindKeyConsumed(key);
             auto& api = plugin::GetRuntimeSettingsApi();
             const auto mutationForAction = [action, key]() {
@@ -412,7 +627,8 @@ namespace
                 return plugin::RuntimeSettingMutation::GameplayHotkey(key);
             };
             const auto mutation = mutationForAction();
-            const auto result = api.Apply(mutation);
+            const auto commit = api.ApplyAndPersist(mutation);
+            const auto result = commit.mutation;
             const auto notificationAction = [action]() {
                 switch (action) {
                 case overlay::HotkeyAction::GameplayMode: return plugin::OverlayNotificationAction::GameplayMode;
@@ -424,14 +640,21 @@ namespace
                 return plugin::OverlayNotificationAction::AnotherSetting;
             };
             if (result.accepted) {
-                const bool persisted = api.Persist(mutation);
+                if (action == overlay::HotkeyAction::OverlayToggle)
+                    g_overlayToggleKey.store(key, std::memory_order_release);
                 plugin::PublishOverlayNotification(
                     plugin::OverlayNotificationKind::BindingChanged,
-                    notificationAction(), config::HotkeyName(input.previousBinding()),
-                    config::HotkeyName(key), persisted
+                    notificationAction(), config::HotkeyName(previousKey),
+                    config::HotkeyName(key), commit.persisted
                         ? plugin::OverlayNotificationStatus::Applied
                         : plugin::OverlayNotificationStatus::Error);
-                input.CommitAcceptedRebind(key);
+                if (!commit.persisted)
+                    plugin::PublishOverlayNotification(
+                        plugin::OverlayNotificationKind::PersistenceFailed,
+                        notificationAction(), {}, {},
+                        plugin::OverlayNotificationStatus::Error);
+                if (!input.TryCommitAcceptedRebind(key)) return decision;
+                input.PublishCallbackRebindKey(0);
                 plugin::SetHotkeyRebindCaptureActive(false);
             } else {
                 plugin::RuntimeSettingsSnapshot settings{};
@@ -475,27 +698,16 @@ namespace
         const UINT toggleMessage = escapeDismiss ? WM_KEYUP : message;
         if (input.HandleToggleMessage(toggleMessage, wParam, toggleKey)) {
             plugin::SetHotkeyRebindCaptureActive(false);
-            const auto activationRequest =
-                diagnostics::overlay_activation_trace::BeginRequest(
-                    &Log, input.visible(), RendererInstance().ready());
             RendererInstance().SetVisible(input.visible());
-            diagnostics::overlay_activation_trace::RecordStage(&Log,
-                activationRequest,
-                diagnostics::overlay_activation_trace::Stage::VisibilityRequested,
-                "visibility_requested", input.visible(), RendererInstance().ready());
-            diagnostics::overlay_activation_trace::RecordStage(&Log,
-                activationRequest,
-                diagnostics::overlay_activation_trace::Stage::PresenterReadiness,
-                "presenter_readiness", input.visible(), RendererInstance().ready(),
-                RendererInstance().ready());
             if (input.visible()) {
                 input.SetFocused(true);
                 diagnostics::RequestRuntimePerformanceSummary();
-                overlay::SynchronizeAutoLanguageOnOverlayOpen(input.visible());
-                ActivateOverlayInput(window);
-                SetCursor(nullptr);
+                overlay::SynchronizeAutoLanguageOnOverlayOpen(window,
+                    input.visible());
             } else {
-                overlay::GetInputEventBridge().Deactivate();
+                g_overlayInputReady.store(false, std::memory_order_release);
+                g_ownerHeartbeat.Reset();
+                overlay::GetInputEventBridge().TryDeactivate();
                 RequestOverlayRedraw();
                 if (OriginalWindowProc(window)) {
                     decision.restoreGameCursor = true;
@@ -510,10 +722,11 @@ namespace
             return decision;
         }
         if (input.ShouldOwnInput()) {
-            if (IsKeyboardMessage(message) &&
-                overlay::GetInputEventBridge().PushKeyboardMessage(
-                    message, wParam, lParam))
+            if (IsKeyboardMessage(message)) {
+                if (!overlay::GetInputEventBridge().PushKeyboardMessage(
+                        message, wParam, lParam)) return decision;
                 RequestOverlayRedraw();
+            }
             if (input.ShouldConsumeEscapeFromGame(message, wParam))
                 return {true, 0};
             if (message == WM_SETCURSOR && LOWORD(lParam) == HTCLIENT) {
@@ -524,36 +737,147 @@ namespace
                 QueueOverlayMouseInput(window, message, wParam, lParam))
                 return {true, 0, true};
             if (IsInputWindowMessage(message)) {
-                QueueOverlayMouseInput(window, message, wParam, lParam);
-                return {true, 0};
+                if (QueueOverlayMouseInput(window, message, wParam, lParam))
+                    return {true, 0};
             }
         }
         if (message == WM_KILLFOCUS ||
             (message == WM_ACTIVATEAPP && wParam == FALSE)) {
+            const auto activityEvent = message == WM_KILLFOCUS
+                ? overlay::HostDisplayActivityEvent::KeyboardFocusLost
+                : overlay::HostDisplayActivityEvent::ApplicationDeactivated;
+            const auto activityAction =
+                overlay::ResolveHostDisplayActivity(activityEvent);
+            if (activityAction == overlay::HostDisplayActivityAction::Deactivate)
+                RendererInstance().OnHostActivation(window, false);
+            input.PublishCallbackRebindKey(0);
             input.SetFocused(false);
             input.ResetEscapeDismissSequence();
-            input.CancelRebind();
-            plugin::SetHotkeyRebindCaptureActive(false);
             if (input.visible()) {
-                overlay::GetInputEventBridge().Deactivate();
+                overlay::GetInputEventBridge().TryDeactivate();
                 RequestOverlayRedraw();
             }
+            if (!input.TryCancelRebind()) return decision;
+            plugin::SetHotkeyRebindCaptureActive(false);
         } else if ((message == WM_SETFOCUS ||
                 (message == WM_ACTIVATEAPP && wParam != FALSE))) {
+            const auto activityEvent = message == WM_SETFOCUS
+                ? overlay::HostDisplayActivityEvent::KeyboardFocusGained
+                : overlay::HostDisplayActivityEvent::ApplicationActivated;
+            const auto activityAction =
+                overlay::ResolveHostDisplayActivity(activityEvent);
+            if (activityAction == overlay::HostDisplayActivityAction::Activate)
+                RendererInstance().OnHostActivation(window, true);
             input.SetFocused(true);
             if (input.visible()) ActivateOverlayInput(window);
         }
         return decision;
     }
 
+    bool EnqueueOwnerInputCommand(InputWindowBinding* binding, HWND window,
+        UINT message, WPARAM wParam, LPARAM lParam,
+        bool finishAfterContinuation, bool rebindModifierDown) noexcept
+    {
+        if (!binding || binding->window != window ||
+            g_currentInputBinding.load(std::memory_order_acquire) != binding ||
+            g_inputCallbackAdmission.closed())
+            return false;
+        overlay::OwnerInputCommand command{};
+        command.window = window;
+        command.generation = binding->generation;
+        command.message = message;
+        command.wParam = wParam;
+        command.lParam = lParam;
+        command.bindingIdentity = reinterpret_cast<std::uintptr_t>(binding);
+        command.finishAfterContinuation = finishAfterContinuation;
+        command.rebindModifierDown = rebindModifierDown;
+        if (!g_ownerInputCommands.TryPush(command)) {
+            RequestOverlayTerminalWithReason("owner_command_rejected");
+            return false;
+        }
+        if (g_ownerCommandWakeEvent) SetEvent(g_ownerCommandWakeEvent);
+        return true;
+    }
+
+    bool EnqueueOwnerLanguageResult(InputWindowBinding* binding, HWND window,
+        const char* localeCode, bool readSucceeded,
+        bool startupGameDataProbe) noexcept
+    {
+        if (!binding || binding->window != window || !localeCode ||
+            g_currentInputBinding.load(std::memory_order_acquire) != binding ||
+            g_inputCallbackAdmission.closed())
+            return false;
+        overlay::OwnerInputCommand command{};
+        command.window = window;
+        command.generation = binding->generation;
+        command.message = overlay::AutoLanguageSyncMessage;
+        command.bindingIdentity = reinterpret_cast<std::uintptr_t>(binding);
+        command.hasLocaleResult = true;
+        command.localeReadSucceeded = readSucceeded;
+        command.startupGameDataProbe = startupGameDataProbe;
+        for (std::size_t index = 0;
+            index + 1 < command.localeCode.size() && localeCode[index]; ++index)
+            command.localeCode[index] = localeCode[index];
+        if (!g_ownerInputCommands.TryPush(command)) {
+            RequestOverlayTerminalWithReason("owner_language_command_rejected");
+            return false;
+        }
+        if (g_ownerCommandWakeEvent) SetEvent(g_ownerCommandWakeEvent);
+        return true;
+    }
+
+    void ProcessOwnerInputCommands()
+    {
+        constexpr unsigned MaximumCommandsPerTurn = 64;
+        overlay::OwnerInputCommand command{};
+        unsigned processed{};
+        while (processed < MaximumCommandsPerTurn &&
+            g_ownerInputCommands.TryPop(command)) {
+            ++processed;
+            auto* binding = reinterpret_cast<InputWindowBinding*>(
+                command.bindingIdentity);
+            if (!binding || binding->generation != command.generation ||
+                binding != g_currentInputBinding.load(std::memory_order_acquire)) {
+                Log("OVERLAY_INPUT_COMMAND_REJECTED reason=stale_generation");
+                continue;
+            }
+            std::scoped_lock lock{g_rendererMutex};
+            if (g_inputCallbackAdmission.closed()) return;
+            const auto decision = overlay::RunOptionalOverlayWork([&]() {
+                if (command.hasLocaleResult) {
+                    overlay::ApplyDetectedGameLanguageLocale(
+                        command.localeCode.data(), command.localeReadSucceeded);
+                    if (command.startupGameDataProbe)
+                        RendererInstance().CompleteStartupGameDataProbe(
+                            command.localeReadSucceeded);
+                    RequestOverlayRedraw();
+                    return;
+                }
+                const auto result = ProcessOverlayWindowMessage(command.window,
+                    command.message, command.wParam, command.lParam,
+                    command.rebindModifierDown);
+                if (result.restoreGameCursor)
+                    PostMessageW(command.window, WM_SETCURSOR,
+                        reinterpret_cast<WPARAM>(command.window),
+                        MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+                if (command.finishAfterContinuation)
+                    FinishWindowMessage(command.window, command.message);
+            }, &DisableAfterOverlayException);
+            if (decision != overlay::OptionalOverlayWorkResult::Completed) return;
+            ReconcileOverlayInputReadiness();
+        }
+        if (!g_ownerInputCommands.empty() && g_ownerCommandWakeEvent)
+            SetEvent(g_ownerCommandWakeEvent);
+    }
+
     void FinishWindowMessage(HWND window, UINT message)
     {
         auto& input = overlay::GetInputState();
         if (message == WM_DESTROY || message == WM_NCDESTROY) {
-            overlay::GetInputEventBridge().Deactivate();
+            overlay::GetInputEventBridge().TryDeactivate();
             if (input.visible()) {
                 input.Toggle();
-                input.CancelRebind();
+                input.TryCancelRebind();
                 plugin::SetHotkeyRebindCaptureActive(false);
                 RendererInstance().SetVisible(false);
                 SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(32512)));
@@ -564,11 +888,16 @@ namespace
             ForgetInputWindow(window);
             if (g_inputWindow.load(std::memory_order_acquire) == window)
                 g_inputWindow.store(nullptr, std::memory_order_release);
+            auto* binding = static_cast<InputWindowBinding*>(
+                g_currentInputBinding.load(std::memory_order_acquire));
+            if (binding && binding->window == window)
+                g_currentInputBinding.store(nullptr, std::memory_order_release);
             PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire),
                 RefreshMessage, 0,
                 EVENT_OBJECT_DESTROY);
         } else if (message == WM_SIZE || message == WM_MOVE ||
-            message == WM_DISPLAYCHANGE || message == WM_DPICHANGED) {
+            message == WM_DISPLAYCHANGE || message == WM_DPICHANGED ||
+            message == WM_WINDOWPOSCHANGED) {
             PostThreadMessageW(g_uiThreadId.load(std::memory_order_acquire), RefreshMessage,
                 reinterpret_cast<WPARAM>(window),
                 EVENT_OBJECT_LOCATIONCHANGE);
@@ -578,86 +907,300 @@ namespace
     LRESULT CALLBACK OverlayWindowProc(HWND window, UINT message,
         WPARAM wParam, LPARAM lParam)
     {
-        OverlayWindowDecision decision{};
-        WNDPROC original{};
-        overlay::RunOptionalOverlayWork([&]() {
-            std::scoped_lock lock{g_rendererMutex};
-            original = OriginalWindowProc(window);
-            decision = ProcessOverlayWindowMessage(window, message, wParam, lParam);
-        }, &DisableAfterOverlayException);
-        if (decision.restoreGameCursor && original)
-            CallWindowProcW(original, window, WM_SETCURSOR,
-                reinterpret_cast<WPARAM>(window), MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
-        if (decision.handled) {
-            if (decision.callDefaultProcedure)
-                return DefWindowProcW(window, message, wParam, lParam);
-            return decision.result;
+        auto* const binding = static_cast<InputWindowBinding*>(
+            GetPropW(window, InputBindingProperty));
+        const WNDPROC original = binding
+            ? binding->original.load(std::memory_order_acquire) : nullptr;
+        if (!binding || binding->window != window || !original)
+            return DefWindowProcW(window, message, wParam, lParam);
+
+        const bool admitted = g_inputCallbackAdmission.TryEnter();
+        if (!admitted || g_currentInputBinding.load(std::memory_order_acquire) != binding) {
+            if (admitted && g_inputCallbackAdmission.Leave() && g_callbackDrainEvent)
+                SetEvent(g_callbackDrainEvent);
+            return CallWindowProcW(original, window, message, wParam, lParam);
         }
-        const LRESULT result = original
-            ? CallWindowProcW(original, window, message, wParam, lParam)
-            : DefWindowProcW(window, message, wParam, lParam);
-        overlay::RunOptionalOverlayWork([&]() {
-            std::scoped_lock lock{g_rendererMutex};
-            FinishWindowMessage(window, message);
-        }, &DisableAfterOverlayException);
+        struct AdmissionExit
+        {
+            overlay::InputCallbackAdmissionGate& gate;
+            HANDLE drainEvent{};
+            bool active{true};
+            void Release() noexcept
+            {
+                if (active) {
+                    active = false;
+                    if (gate.Leave() && drainEvent) SetEvent(drainEvent);
+                }
+            }
+            ~AdmissionExit() { Release(); }
+        } admission{g_inputCallbackAdmission, g_callbackDrainEvent};
+
+        if (g_inputCallbackAdmission.closed()) {
+            admission.Release();
+            return CallWindowProcW(original, window, message, wParam, lParam);
+        }
+
+        const bool ownerResponsive = OverlayOwnerResponsiveForInput();
+        if (g_inputCallbackAdmission.closed()) {
+            admission.Release();
+            return CallWindowProcW(original, window, message, wParam, lParam);
+        }
+
+        if (message == WM_KILLFOCUS ||
+            (message == WM_ACTIVATEAPP && wParam == FALSE) ||
+            message == WM_SIZE || message == WM_MOVE ||
+            message == WM_DISPLAYCHANGE || message == WM_DPICHANGED ||
+            message == WM_WINDOWPOSCHANGED || message == WM_NCDESTROY) {
+            g_overlayInputReady.store(false, std::memory_order_release);
+            g_ownerHeartbeat.Reset();
+            overlay::GetInputEventBridge().TryDeactivate();
+        }
+
+        bool consume{};
+        if (message == overlay::AutoLanguageSyncMessage ||
+            message == overlay::StartupGameDataProbeMessage) {
+            char localeCode[64]{};
+            const bool readSucceeded = overlay::ReadGameLanguageLocale(
+                localeCode, std::size(localeCode));
+            consume = EnqueueOwnerLanguageResult(binding, window, localeCode,
+                readSucceeded,
+                message == overlay::StartupGameDataProbeMessage);
+        } else if (IsKeyboardMessage(message)) {
+            auto& input = overlay::GetInputState();
+            const bool overlayOwnsKeyboard = input.ShouldOwnInput() &&
+                ownerResponsive;
+            const bool rebindActive = input.rebindActive();
+            const bool rebindModifiersDown =
+                (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0 ||
+                (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0 ||
+                (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+            const bool isToggle = message == WM_KEYUP &&
+                !rebindActive &&
+                wParam == static_cast<WPARAM>(g_overlayToggleKey.load(
+                    std::memory_order_acquire));
+            if (isToggle && ownerResponsive) {
+                // Revoke capture before the owner processes a close request.
+                // Opening remains fail-open until a visible frame is accepted.
+                g_overlayInputReady.store(false, std::memory_order_release);
+                g_ownerHeartbeat.Reset();
+                overlay::GetInputEventBridge().TryDeactivate();
+            }
+            const bool isRebindKeyDown = rebindActive &&
+                overlay::InputState::IsRebindKeyDownMessage(message) &&
+                (wParam == VK_ESCAPE ||
+                    (overlay::InputState::IsSupportedBindingKey(
+                        static_cast<int>(wParam)) &&
+                        !rebindModifiersDown));
+            const bool isCapturedRebindKeyUp = rebindActive &&
+                (message == WM_KEYUP || message == WM_SYSKEYUP) &&
+                input.callbackRebindKey() ==
+                    static_cast<int>(wParam);
+            const bool escape = overlayOwnsKeyboard && wParam == VK_ESCAPE &&
+                (message == WM_KEYDOWN || message == WM_KEYUP ||
+                    message == WM_SYSKEYDOWN || message == WM_SYSKEYUP);
+            const bool queued = (overlayOwnsKeyboard || isToggle) &&
+                EnqueueOwnerInputCommand(binding, window, message,
+                    wParam, lParam, false, rebindModifiersDown);
+            if (queued && isRebindKeyDown && wParam != VK_ESCAPE)
+                input.PublishCallbackRebindKey(static_cast<int>(wParam));
+            if (queued && isCapturedRebindKeyUp)
+                input.PublishCallbackRebindKey(0);
+            consume = queued && overlayOwnsKeyboard && (isToggle ||
+                isRebindKeyDown || isCapturedRebindKeyUp || escape);
+            if (queued && message == WM_CHAR && !overlayOwnsKeyboard)
+                consume = false;
+            if (!queued && (isToggle || isRebindKeyDown ||
+                    isCapturedRebindKeyUp || escape) &&
+                g_inputCallbackAdmission.closed()) {
+                consume = false;
+            }
+        } else if (ownerResponsive && message == WM_SETCURSOR &&
+            overlay::GetInputState().ShouldOwnInput() &&
+            LOWORD(lParam) == HTCLIENT) {
+            consume = EnqueueOwnerInputCommand(binding, window, message,
+                wParam, lParam);
+        } else if (ownerResponsive &&
+            overlay::GetInputState().ShouldOwnInput() &&
+            (message == WM_INPUT || IsInputWindowMessage(message))) {
+            consume = QueueOverlayMouseInput(window, message, wParam, lParam);
+            if (!consume && !overlay::GetInputEventBridge().active())
+                RequestOverlayTerminalWithReason("input_bridge_unavailable");
+        } else if (message == WM_KILLFOCUS ||
+            (message == WM_ACTIVATEAPP && wParam == FALSE) ||
+            message == WM_SETFOCUS ||
+            (message == WM_ACTIVATEAPP && wParam != FALSE)) {
+            if (message == WM_KILLFOCUS ||
+                (message == WM_ACTIVATEAPP && wParam == FALSE)) {
+                overlay::GetInputState().PublishCallbackRebindKey(0);
+                overlay::GetInputEventBridge().TryDeactivate();
+            }
+            EnqueueOwnerInputCommand(binding, window, message, wParam, lParam);
+        }
+
+        const bool finishAfterContinuation = message == WM_DESTROY ||
+            message == WM_NCDESTROY || message == WM_SIZE ||
+            message == WM_MOVE || message == WM_DISPLAYCHANGE ||
+            message == WM_DPICHANGED || message == WM_WINDOWPOSCHANGED;
+        const LRESULT result = consume
+            ? (message == WM_INPUT ? DefWindowProcW(window, message, wParam, lParam) : 0)
+            : CallWindowProcW(original, window, message, wParam, lParam);
+        if (!g_inputCallbackAdmission.closed() && finishAfterContinuation)
+            // WINDOWPOS belongs to this native call only. The owner needs the
+            // notification, not a dangling pointer; it observes current HWNDs.
+            EnqueueOwnerInputCommand(binding, window, message, wParam,
+                message == WM_WINDOWPOSCHANGED ? 0 : lParam, true);
+        admission.Release();
         return result;
+    }
+
+    LRESULT CALLBACK InstallInputBindingOnGameThread(int code, WPARAM remove,
+        LPARAM parameter) noexcept
+    {
+        if (code >= 0 && remove == PM_REMOVE &&
+            g_inputCallbackAdmission.TryEnter()) {
+            auto* binding = g_pendingInputBinding.load(std::memory_order_acquire);
+            auto* message = reinterpret_cast<MSG*>(parameter);
+            if (binding && message && message->hwnd == binding->window &&
+                message->message == InstallInputBindingMessage &&
+                !g_inputCallbackAdmission.closed()) {
+                auto expected = InputWindowBinding::InstallState::Pending;
+                if (binding->installState.compare_exchange_strong(expected,
+                        InputWindowBinding::InstallState::Installing)) {
+                    const bool installed = overlay::InstallGameThreadSubclass(
+                        binding->window, InputBindingProperty,
+                        reinterpret_cast<HANDLE>(binding), &OverlayWindowProc,
+                        binding->original);
+                    if (installed) {
+                        g_currentInputBinding.store(binding, std::memory_order_release);
+                        g_inputWindow.store(binding->window, std::memory_order_release);
+                    }
+                    binding->installState.store(installed
+                        ? InputWindowBinding::InstallState::Installed
+                        : InputWindowBinding::InstallState::Failed,
+                        std::memory_order_release);
+                    message->message = WM_NULL;
+                    RequestOverlayRedraw();
+                }
+            }
+            if (g_inputCallbackAdmission.Leave() && g_callbackDrainEvent)
+                SetEvent(g_callbackDrainEvent);
+        }
+        return CallNextHookEx(nullptr, code, remove, parameter);
     }
 
     bool InstallInputHook(HWND window)
     {
         if (!window || g_inputWindow.load(std::memory_order_acquire)) return false;
-        std::scoped_lock bindingLock{g_inputBindingsMutex};
-        const auto existing = std::find_if(g_inputBindings.begin(), g_inputBindings.end(),
-            [window](const auto& binding) { return binding.window == window; });
-        if (existing != g_inputBindings.end()) return false;
-        g_inputBindings.push_back({window, nullptr});
-        SetLastError(0);
-        const auto previous = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
-            window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&OverlayWindowProc)));
-        if (!previous) {
-            std::erase_if(g_inputBindings,
-                [window](const auto& binding) { return binding.window == window; });
-            Log("OVERLAY_INPUT_HOOK_FAILED");
-            return false;
-        }
-        const auto binding = std::find_if(g_inputBindings.begin(), g_inputBindings.end(),
-            [window](const auto& value) { return value.window == window; });
-        if (binding == g_inputBindings.end()) return false;
-        binding->original = previous;
-        g_inputWindow.store(window, std::memory_order_release);
+        DWORD processId{};
+        const DWORD windowThread = GetWindowThreadProcessId(window, &processId);
+        if (!windowThread || processId != GetCurrentProcessId()) return false;
+        if (g_inputCallbackAdmission.closed() || g_bindingInstallHook ||
+            g_pendingInputBinding.load(std::memory_order_acquire) ||
+            GetPropW(window, InputBindingProperty)) return false;
         plugin::RuntimeSettingsSnapshot settings{};
         const int key = plugin::GetRuntimeSettingsApi().Snapshot(settings)
             ? settings.overlayToggleKey : VK_DELETE;
-        Log(std::string("OVERLAY_INPUT_HOOK_OK key=") + config::HotkeyName(key));
+        g_overlayToggleKey.store(key, std::memory_order_release);
+        auto* binding = g_inputWindowBindings.TryAcquire();
+        if (!binding) {
+            if (!g_inputBindingLimitReported) {
+                g_inputBindingLimitReported = true;
+                try {
+                    Log("OVERLAY_INPUT_BINDING_BUDGET_EXHAUSTED retained=" +
+                        std::to_string(g_inputWindowBindings.retainedCount()) +
+                        " capacity=" +
+                        std::to_string(g_inputWindowBindings.capacity()));
+                } catch (...) {}
+                RequestOverlayTerminal();
+            }
+            return false;
+        }
+        binding->window = window;
+        binding->generation = g_nextInputBindingGeneration.fetch_add(1,
+            std::memory_order_relaxed);
+        if (!g_inputWindowBindings.Commit(binding)) {
+            RequestOverlayTerminal();
+            return false;
+        }
+        g_pendingInputBinding.store(binding, std::memory_order_release);
+        g_bindingInstallHook = SetWindowsHookExW(WH_GETMESSAGE,
+            &InstallInputBindingOnGameThread, g_module, windowThread);
+        if (!g_bindingInstallHook ||
+            !PostMessageW(window, InstallInputBindingMessage, 0, 0)) {
+            RequestOverlayTerminal();
+            return false;
+        }
+        Log("OVERLAY_INPUT_BINDING_PENDING game_thread_install=1");
+        return true;
+    }
+
+    void CompletePendingInputBinding()
+    {
+        auto* binding = g_pendingInputBinding.load(std::memory_order_acquire);
+        if (!binding) return;
+        const auto state = binding->installState.load(std::memory_order_acquire);
+        if (state == InputWindowBinding::InstallState::Pending ||
+            state == InputWindowBinding::InstallState::Installing) return;
+        if (g_bindingInstallHook && !UnhookWindowsHookEx(g_bindingInstallHook)) {
+            RequestOverlayTerminal();
+            return;
+        }
+        g_bindingInstallHook = nullptr;
+        g_pendingInputBinding.store(nullptr, std::memory_order_release);
+        if (state != InputWindowBinding::InstallState::Installed ||
+            !RendererInstance().OwnsWindow(binding->window)) {
+            RequestOverlayTerminal();
+            return;
+        }
+        RendererInstance().SetInputBindingReady(binding->window);
+        Log("OVERLAY_INPUT_HOOK_OK game_thread_install=1");
+        RequestOverlayRedraw();
 #if defined(OVERLAY_STARTUP_JOURNAL)
         diagnostics::startup_journal::MarkOnce(8, "INPUT_ACTIVATED",
             "window_proc_installed");
         diagnostics::startup_journal::Flush();
 #endif
-        return true;
     }
 
-    void RemoveInputHook() noexcept
+    bool RemoveInputHook() noexcept
     {
         const HWND window = g_inputWindow.load(std::memory_order_acquire);
-        if (!window) return;
+        if (!window) return true;
+        auto* binding = static_cast<InputWindowBinding*>(
+            GetPropW(window, InputBindingProperty));
         const WNDPROC original = OriginalWindowProc(window);
         if (!original) {
             g_inputWindow.store(nullptr, std::memory_order_release);
-            return;
+            return false;
         }
+        bool removed = true;
         if (IsWindow(window) && reinterpret_cast<WNDPROC>(GetWindowLongPtrW(
                 window, GWLP_WNDPROC)) == &OverlayWindowProc) {
-            SetWindowLongPtrW(window, GWLP_WNDPROC,
+            SetLastError(0);
+            const auto previous = SetWindowLongPtrW(window, GWLP_WNDPROC,
                 reinterpret_cast<LONG_PTR>(original));
-            ForgetInputWindow(window);
+            if (!previous && GetLastError() != 0) {
+                removed = false;
+                try {
+                    Log("OVERLAY_INPUT_HOOK_REMOVE_FAILED error=" +
+                        std::to_string(GetLastError()));
+                } catch (...) {}
+            } else {
+                ForgetInputWindow(window);
+            }
         } else if (IsWindow(window)) {
-            Log("OVERLAY_INPUT_CHAIN_RETAINED foreign_subclass_after_us=1");
+            try {
+                Log("OVERLAY_INPUT_CHAIN_RETAINED foreign_subclass_after_us=1");
+            } catch (...) {}
+            removed = false;
         } else {
             ForgetInputWindow(window);
         }
+        if (g_currentInputBinding.load(std::memory_order_acquire) == binding)
+            g_currentInputBinding.store(nullptr, std::memory_order_release);
         g_inputWindow.store(nullptr, std::memory_order_release);
         overlay::GetInputEventBridge().Deactivate();
+        return removed;
     }
 
     void UpdateRenderTimer()
@@ -748,7 +1291,10 @@ namespace
                 static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(candidate)));
             diagnostics::startup_journal::Flush();
 #endif
-            if (RendererInstance().Initialize(candidate, width, height, dpi)) {
+            const HWND overlayWindow = g_overlayDisplayWindow.load(
+                std::memory_order_acquire);
+            if (overlayWindow && RendererInstance().Initialize(candidate,
+                    overlayWindow, width, height, dpi)) {
                 if (InstallInputHook(candidate))
                     Log("OVERLAY_PRESENTER_ATTACHED hwnd=" +
                         std::to_string(reinterpret_cast<std::uintptr_t>(candidate)));
@@ -756,6 +1302,13 @@ namespace
                     Log("OVERLAY_INPUT_ATTACH_UNAVAILABLE");
             }
         } else if (route == overlay::PresenterRoute::RebindWindow) {
+            if (g_pendingInputBinding.load(std::memory_order_acquire)) {
+                RequestOverlayTerminal();
+                return;
+            }
+            g_overlayInputReady.store(false, std::memory_order_release);
+            g_ownerHeartbeat.Reset();
+            overlay::GetInputEventBridge().TryDeactivate();
             RemoveInputHook();
             if (RendererInstance().RebindWindow(candidate, width, height, dpi) &&
                 InstallInputHook(candidate))
@@ -770,14 +1323,15 @@ namespace
             }
         }
         ReconcileTerminalInputOwnership();
-        ReconcileTerminalInputOwnership();
         UpdateRenderTimer();
+        ReconcileOverlayInputReadiness();
     }
 
     DWORD WINAPI Worker(void*) noexcept
     {
         const DPI_AWARENESS_CONTEXT previousDpiContext =
             SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        overlay::RunOptionalOverlayWork([&]() {
         g_uiThreadId = GetCurrentThreadId();
         g_processId = GetCurrentProcessId();
         MSG message{};
@@ -786,32 +1340,115 @@ namespace
         auto* renderer = new (std::nothrow) overlay::Renderer{};
         if (!renderer) {
             Log("OVERLAY_RENDERER_ALLOCATION_FAILED");
+            CloseLog();
             g_workerStarted.store(false, std::memory_order_release);
             g_uiThreadId.store(0, std::memory_order_release);
-            return 0;
+            return;
         }
         g_renderer.store(renderer, std::memory_order_release);
         RendererInstance().SetLogger(&Log);
+        RendererInstance().SetTerminalRequest(&RequestOverlayTerminal);
         Log(previousDpiContext ? "OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2"
             : "OVERLAY_DPI_THREAD_CONTEXT=UNCHANGED_API_UNAVAILABLE");
         Log("OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0");
-        StartFrameClock();
+        const bool displayWindowReady = CreateOverlayDisplayWindow();
+        if (!displayWindowReady) {
+            Log("OVERLAY_DISPLAY_WINDOW_CREATE_FAILED");
+            RequestOverlayTerminal();
+        } else {
+            Log("OVERLAY_DISPLAY_WINDOW_CREATED owner_thread=1 unowned=1");
+            StartFrameClock();
+        }
 #if defined(OVERLAY_STARTUP_JOURNAL)
         diagnostics::startup_journal::MarkOnce(1, "OVERLAY_WORKER_START",
             "composition_owner_thread");
         diagnostics::startup_journal::Flush();
 #endif
-        g_windowEvents = SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
-            nullptr, &OnWindowEvent, g_processId, 0, WINEVENT_OUTOFCONTEXT);
-        g_locationEvents = SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE,
-            EVENT_OBJECT_LOCATIONCHANGE, nullptr, &OnWindowEvent,
-            g_processId, 0, WINEVENT_OUTOFCONTEXT);
-        Log(g_windowEvents && g_locationEvents ? "OVERLAY_WINDOW_EVENTS_ARMED"
-            : "OVERLAY_WINDOW_EVENTS_PARTIAL");
-        if (g_cameraCoreReady.load(std::memory_order_acquire))
-            RefreshPresenter(nullptr, 0);
+        if (displayWindowReady) {
+            g_windowEvents = SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
+                nullptr, &OnWindowEvent, g_processId, 0, WINEVENT_OUTOFCONTEXT);
+            g_locationEvents = SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE,
+                EVENT_OBJECT_LOCATIONCHANGE, nullptr, &OnWindowEvent,
+                g_processId, 0, WINEVENT_OUTOFCONTEXT);
+            Log(g_windowEvents && g_locationEvents ? "OVERLAY_WINDOW_EVENTS_ARMED"
+                : "OVERLAY_WINDOW_EVENTS_PARTIAL");
+            if (g_cameraCoreReady.load(std::memory_order_acquire))
+                RefreshPresenter(nullptr, 0);
+        }
 
-        while (GetMessageW(&message, nullptr, 0, 0) > 0) {
+        const HANDLE ownerWaitHandles[]{g_terminalWakeEvent,
+            g_ownerCommandWakeEvent};
+        bool terminalRequested{};
+        while (!terminalRequested) {
+            CompletePendingInputBinding();
+            if (g_overlayInputReady.load(std::memory_order_acquire))
+                g_ownerHeartbeat.Publish(GetTickCount64());
+            DWORD ownerWaitTimeout = g_overlayInputReady.load(
+                std::memory_order_acquire) ? OwnerHeartbeatIntervalMs : INFINITE;
+            {
+                std::scoped_lock lock{g_rendererMutex};
+                const auto probeWait = RendererInstance().
+                    StartupGameDataProbeWaitMilliseconds(GetTickCount64());
+                if (probeWait != (std::numeric_limits<std::uint32_t>::max)())
+                    ownerWaitTimeout = (std::min)(ownerWaitTimeout,
+                        static_cast<DWORD>(probeWait));
+            }
+            const DWORD wait = MsgWaitForMultipleObjectsEx(2,
+                ownerWaitHandles,
+                ownerWaitTimeout,
+                QS_ALLINPUT,
+                MWMO_INPUTAVAILABLE);
+            if (wait == WAIT_TIMEOUT) {
+                overlay::RunOptionalOverlayWork([&]() {
+                    std::scoped_lock lock{g_rendererMutex};
+                    if (RendererInstance().ResolveStartupGameDataProbeTimeout()) {
+                        if (!g_presenterMinimized.load(std::memory_order_acquire))
+                            RendererInstance().Render();
+                        UpdateRenderTimer();
+                    }
+                }, &DisableAfterOverlayException);
+                ReconcileOverlayInputReadiness();
+                continue;
+            }
+            if (wait == WAIT_OBJECT_0) break;
+            if (wait == WAIT_FAILED) {
+                RequestOverlayTerminal();
+                break;
+            }
+            if (wait == WAIT_OBJECT_0 + 1) {
+                ProcessOwnerInputCommands();
+                if (g_inputCallbackAdmission.closed()) break;
+                overlay::RunOptionalOverlayWork([&]() {
+                    bool discoveryNeeded{};
+                    {
+                        std::scoped_lock lock{g_rendererMutex};
+                        if (g_renderer.load(std::memory_order_acquire)) {
+                            RendererInstance().RequestRedraw();
+                            HWND candidate = FindGameWindow();
+                            discoveryNeeded =
+                                !RendererInstance().hasSurfaceGeneration() ||
+                                (candidate && !RendererInstance().OwnsWindow(candidate));
+                            if (!discoveryNeeded &&
+                                !g_frameClockAvailable.load(std::memory_order_acquire) &&
+                                !g_presenterMinimized.load(std::memory_order_acquire))
+                                RendererInstance().Render();
+                            if (!discoveryNeeded) UpdateRenderTimer();
+                        }
+                    }
+                    if (discoveryNeeded)
+                        RefreshPresenter(FindGameWindow(), EVENT_OBJECT_SHOW);
+                }, &DisableAfterOverlayException);
+                ReconcileOverlayInputReadiness();
+            }
+            if (wait != WAIT_OBJECT_0 + 2) continue;
+
+            for (unsigned dispatched = 0; dispatched < 64 &&
+                PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE); ++dispatched) {
+                if (message.message == WM_QUIT) {
+                    RequestOverlayTerminal();
+                    terminalRequested = true;
+                    break;
+                }
             if (message.message == RefreshMessage) {
                 overlay::RunOptionalOverlayWork([&]() {
                     RefreshPresenter(reinterpret_cast<HWND>(message.wParam),
@@ -836,6 +1473,7 @@ namespace
                     if (discoveryNeeded)
                         RefreshPresenter(candidate, EVENT_OBJECT_SHOW);
                 }, &DisableAfterOverlayException);
+                ReconcileOverlayInputReadiness();
             } else if (message.message == FrameClockMessage) {
                 g_frameClockTickPending.BeginHandling();
                 overlay::RunOptionalOverlayWork([&]() {
@@ -847,6 +1485,7 @@ namespace
                     ReconcileTerminalInputOwnership();
                     UpdateRenderTimer();
                 }, &DisableAfterOverlayException);
+                ReconcileOverlayInputReadiness();
             } else if (message.message == FrameClockUnavailableMessage) {
                 Log("OVERLAY_COMPOSITOR_CLOCK_LOST status=" +
                     std::to_string(static_cast<std::uint32_t>(message.wParam)) +
@@ -858,6 +1497,7 @@ namespace
                         RendererInstance().Render();
                     UpdateRenderTimer();
                 }, &DisableAfterOverlayException);
+                ReconcileOverlayInputReadiness();
             } else if (message.message == WM_TIMER &&
                 g_renderTimer.Matches(message.wParam)) {
                 overlay::RunOptionalOverlayWork([&]() {
@@ -872,20 +1512,178 @@ namespace
                     }
                     UpdateRenderTimer();
                 }, &DisableAfterOverlayException);
+                ReconcileOverlayInputReadiness();
             }
             TranslateMessage(&message);
             DispatchMessageW(&message);
+                if (g_inputCallbackAdmission.closed()) {
+                    terminalRequested = true;
+                    break;
+                }
+            }
+        }
+        }, [&]() noexcept {
+            auto* renderer = g_renderer.load(std::memory_order_acquire);
+            if (renderer) renderer->Disable("overlay_worker_exception");
+            else RequestOverlayTerminal();
+        });
+
+        RequestOverlayTerminal();
+        if (g_renderer.load(std::memory_order_acquire)) {
+            try {
+                std::scoped_lock lock{g_rendererMutex};
+                RendererInstance().SetVisible(false);
+            } catch (...) {
+                // Do not let an optional visibility update cross the native
+                // worker entry; finalization will report any retained state.
+            }
         }
 
-        if (g_windowEvents) UnhookWinEvent(g_windowEvents);
-        if (g_locationEvents) UnhookWinEvent(g_locationEvents);
-        const auto timerId = g_renderTimer.TakeForCancellation();
-        if (timerId) KillTimer(nullptr, static_cast<UINT_PTR>(timerId));
-        StopFrameClock();
-        RemoveInputHook();
-        overlay::GetInputEventBridge().Deactivate();
-        if (g_log) g_log.close();
+        bool callbacksDrained = g_inputCallbackAdmission.inFlight() == 0;
+        if (!callbacksDrained && g_callbackDrainEvent) {
+            const DWORD drainResult = WaitForSingleObject(g_callbackDrainEvent,
+                INFINITE);
+            callbacksDrained = drainResult == WAIT_OBJECT_0 &&
+                g_inputCallbackAdmission.inFlight() == 0;
+        }
+
+        bool observersRemoved = true;
+        bool timerRemoved = true;
+        bool frameClockStopped = true;
+        bool inputHookRemoved = false;
+        bool rendererReleased = false;
+        bool displayWindowDestroyed = false;
+        g_ownerFinalizing.store(true, std::memory_order_release);
+        try {
+            Log("OVERLAY_OWNER_FINALIZATION=STARTED outcome=PENDING callbacks_in_flight=" +
+                std::to_string(g_inputCallbackAdmission.inFlight()) + " reason=" +
+                (g_terminalReason.load(std::memory_order_acquire)
+                    ? g_terminalReason.load(std::memory_order_acquire) : "unspecified"));
+        } catch (...) {}
+        const auto outcome = g_ownerFinalizer.Run([&]() {
+            const auto* finalRenderer = g_renderer.load(std::memory_order_acquire);
+            const bool rendererEmpty = !finalRenderer ||
+                finalRenderer->OwnedResourcesReleased();
+            const bool noWindow = !g_overlayDisplayWindow.load(
+                std::memory_order_acquire);
+            const bool noFrameClock = !g_frameClockThread &&
+                !g_frameClockReady && !g_frameClockControl &&
+                !g_frameClockStop;
+            const bool complete = callbacksDrained && observersRemoved && timerRemoved &&
+                frameClockStopped && inputHookRemoved && rendererReleased &&
+                rendererEmpty && noWindow && noFrameClock;
+            if (complete) return overlay::OwnerFinalizationOutcome::Complete;
+            if ((!callbacksDrained &&
+                    g_inputCallbackAdmission.inFlight() != 0) ||
+                (finalRenderer && !rendererEmpty) || !noWindow ||
+                !noFrameClock || !inputHookRemoved ||
+                g_bindingInstallHook || g_windowEvents || g_locationEvents || g_renderTimer.active())
+                return overlay::OwnerFinalizationOutcome::Retained;
+            return overlay::OwnerFinalizationOutcome::Unverified;
+        }, [&]() {
+            if (g_bindingInstallHook) {
+                const bool removed = UnhookWindowsHookEx(g_bindingInstallHook) != FALSE;
+                observersRemoved = removed;
+                if (removed) {
+                    g_bindingInstallHook = nullptr;
+                    g_pendingInputBinding.store(nullptr, std::memory_order_release);
+                }
+            }
+            if (!g_bindingInstallHook)
+                g_pendingInputBinding.store(nullptr, std::memory_order_release);
+            if (g_windowEvents) {
+                const bool removed = UnhookWinEvent(g_windowEvents) != FALSE;
+                observersRemoved = observersRemoved && removed;
+                if (removed) g_windowEvents = nullptr;
+            }
+            if (g_locationEvents) {
+                const bool removed = UnhookWinEvent(g_locationEvents) != FALSE;
+                observersRemoved = observersRemoved && removed;
+                if (removed) g_locationEvents = nullptr;
+            }
+            return observersRemoved
+                ? overlay::OwnerFinalizationOutcome::Complete
+                : overlay::OwnerFinalizationOutcome::Retained;
+        }, [&]() {
+            const auto timerInterval = g_renderTimer.intervalMs();
+            const auto timerId = g_renderTimer.TakeForCancellation();
+            timerRemoved = !timerId ||
+                KillTimer(nullptr, static_cast<UINT_PTR>(timerId)) != FALSE;
+            if (!timerRemoved) g_renderTimer.Arm(timerId, timerInterval);
+            return timerRemoved ? overlay::OwnerFinalizationOutcome::Complete
+                : overlay::OwnerFinalizationOutcome::Unverified;
+        }, [&]() {
+            frameClockStopped = StopFrameClock();
+            return frameClockStopped ? overlay::OwnerFinalizationOutcome::Complete
+                : g_frameClockThread ? overlay::OwnerFinalizationOutcome::Retained
+                                     : overlay::OwnerFinalizationOutcome::Unverified;
+        }, [&]() {
+            if (!callbacksDrained) return g_inputCallbackAdmission.inFlight()
+                ? overlay::OwnerFinalizationOutcome::Retained
+                : overlay::OwnerFinalizationOutcome::Unverified;
+            inputHookRemoved = RemoveInputHook();
+            overlay::GetInputEventBridge().Deactivate();
+            return inputHookRemoved ? overlay::OwnerFinalizationOutcome::Complete
+                                    : overlay::OwnerFinalizationOutcome::Retained;
+        }, [&]() {
+            if (!callbacksDrained) return g_inputCallbackAdmission.inFlight()
+                ? overlay::OwnerFinalizationOutcome::Retained
+                : overlay::OwnerFinalizationOutcome::Unverified;
+            auto* renderer = g_renderer.load(std::memory_order_acquire);
+            if (!renderer) {
+                rendererReleased = true;
+                return overlay::OwnerFinalizationOutcome::Complete;
+            }
+            std::scoped_lock lock{g_rendererMutex};
+            rendererReleased = renderer->Shutdown() &&
+                renderer->OwnedResourcesReleased();
+            return rendererReleased ? overlay::OwnerFinalizationOutcome::Complete
+                : renderer->OwnedResourcesReleased()
+                    ? overlay::OwnerFinalizationOutcome::Unverified
+                    : overlay::OwnerFinalizationOutcome::Retained;
+        }, [&]() {
+            if (!rendererReleased) return g_overlayDisplayWindow.load(
+                    std::memory_order_acquire)
+                ? overlay::OwnerFinalizationOutcome::Retained
+                : overlay::OwnerFinalizationOutcome::Unverified;
+            displayWindowDestroyed = DestroyOverlayDisplayWindow();
+            return displayWindowDestroyed ? overlay::OwnerFinalizationOutcome::Complete
+                : (g_overlayDisplayWindow.load(std::memory_order_acquire) ||
+                    g_overlayDisplayClassRegistered)
+                    ? overlay::OwnerFinalizationOutcome::Retained
+                    : overlay::OwnerFinalizationOutcome::Unverified;
+        });
+
+        try {
+            const char* outcomeName = outcome == overlay::OwnerFinalizationOutcome::Complete
+                ? "COMPLETE"
+                : outcome == overlay::OwnerFinalizationOutcome::Retained
+                    ? "RETAINED" : "UNVERIFIED";
+            auto* finalizedRenderer = g_renderer.load(std::memory_order_acquire);
+            const bool rendererRefsReleased = !finalizedRenderer ||
+                finalizedRenderer->OwnedResourcesReleased();
+            Log(std::string("OVERLAY_RENDERER_OWNED_REFS_RELEASED=") +
+                (rendererRefsReleased ? "1" : "0"));
+            Log(std::string("OVERLAY_OWNER_FINALIZATION=") + outcomeName +
+                " callbacks_drained=" + std::to_string(callbacksDrained ? 1 : 0) +
+                " observers_removed=" + std::to_string(observersRemoved ? 1 : 0) +
+                " timer_removed=" + std::to_string(timerRemoved ? 1 : 0) +
+                " frame_clock_stopped=" + std::to_string(frameClockStopped ? 1 : 0) +
+                " input_hook_removed=" + std::to_string(inputHookRemoved ? 1 : 0) +
+                " renderer_released=" + std::to_string(rendererReleased ? 1 : 0) +
+                " display_window_destroyed=" +
+                    std::to_string(displayWindowDestroyed ? 1 : 0) +
+                " display_class_registered=" +
+                    std::to_string(g_overlayDisplayClassRegistered ? 1 : 0) +
+                " pending_owner_commands=" +
+                    std::to_string(g_ownerInputCommands.size()));
+        } catch (...) {
+            // Cleanup outcome remains in the one-shot owner record even if
+            // optional log formatting cannot be completed.
+        }
+        CloseLog();
         if (previousDpiContext) SetThreadDpiAwarenessContext(previousDpiContext);
+        g_uiThreadId.store(0, std::memory_order_release);
         return 0;
     }
 }
@@ -899,6 +1697,29 @@ extern "C" bool StartOverlayDiscovery(HMODULE module)
 {
     g_module = module;
     DisableThreadLibraryCalls(module);
+    if (g_inputCallbackAdmission.closed()) return false;
+    if (!g_terminalWakeEvent) {
+        g_terminalWakeEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!g_terminalWakeEvent) return false;
+    }
+    if (!g_callbackDrainEvent) {
+        g_callbackDrainEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!g_callbackDrainEvent) {
+            CloseHandle(g_terminalWakeEvent);
+            g_terminalWakeEvent = nullptr;
+            return false;
+        }
+    }
+    if (!g_ownerCommandWakeEvent) {
+        g_ownerCommandWakeEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+        if (!g_ownerCommandWakeEvent) {
+            CloseHandle(g_callbackDrainEvent);
+            CloseHandle(g_terminalWakeEvent);
+            g_callbackDrainEvent = nullptr;
+            g_terminalWakeEvent = nullptr;
+            return false;
+        }
+    }
     bool expected = false;
     if (!g_workerStarted.compare_exchange_strong(expected, true,
             std::memory_order_acq_rel))
@@ -906,6 +1727,12 @@ extern "C" bool StartOverlayDiscovery(HMODULE module)
     const HANDLE thread = CreateThread(nullptr, 0, &Worker, nullptr, 0, nullptr);
     if (!thread) {
         g_workerStarted.store(false, std::memory_order_release);
+        CloseHandle(g_ownerCommandWakeEvent);
+        CloseHandle(g_callbackDrainEvent);
+        CloseHandle(g_terminalWakeEvent);
+        g_ownerCommandWakeEvent = nullptr;
+        g_callbackDrainEvent = nullptr;
+        g_terminalWakeEvent = nullptr;
         return false;
     }
     CloseHandle(thread);
@@ -936,6 +1763,7 @@ extern "C" void NotifyOverlayCameraStatePublished() noexcept
 
 extern "C" void RequestOverlayRedraw()
 {
+    if (g_ownerCommandWakeEvent) SetEvent(g_ownerCommandWakeEvent);
     const DWORD threadId = g_uiThreadId.load(std::memory_order_acquire);
     if (!threadId) return;
     if (!g_redrawWakePending.TrySchedule()) return;

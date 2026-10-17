@@ -1,7 +1,7 @@
 #include "renderer_runtime.hpp"
+#include "presenter_runtime_policy.hpp"
 #include "../optional_overlay_boundary.hpp"
 #include "../../diagnostics/diagnostic_runtime.hpp"
-#include "../../diagnostics/overlay_activation_trace.hpp"
 #include "../../diagnostics/startup_journal.hpp"
 
 #include <imgui.h>
@@ -41,6 +41,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
 #include <cwchar>
 #include <filesystem>
 #include <initializer_list>
+#include <limits>
 #ifdef OVERLAY_SETTINGS_FRONTEND
 #include "../../plugin/runtime.hpp"
 #include "../../config/feature_config.hpp"
@@ -165,6 +166,87 @@ namespace overlay
         const std::string Tr(const LocalizationManager& manager, loc::Key key,
             const TextArguments& arguments)
         { return manager.Format(key, arguments); }
+
+        bool DrawCameraStateToggle(const LocalizationManager& localization,
+            bool expanded)
+        {
+            const std::string label = Tr(localization,
+                loc::camera_state::DetailsToggleLabel);
+            const std::string action = Tr(localization, expanded
+                ? loc::camera_state::DetailsToggleClose
+                : loc::camera_state::DetailsToggleOpen);
+            const ImGuiStyle& style = ImGui::GetStyle();
+            const float height = ImGui::GetFrameHeight();
+            const ImVec2 size(ImGui::GetContentRegionAvail().x, height);
+            const bool clicked = ImGui::InvisibleButton("camera_state_details_toggle",
+                size);
+            const ImVec2 minimum = ImGui::GetItemRectMin();
+            const ImVec2 maximum = ImGui::GetItemRectMax();
+            const bool hovered = ImGui::IsItemHovered();
+            const bool active = ImGui::IsItemActive();
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+            const ImU32 background = active ? IM_COL32(48, 82, 119, 245)
+                : expanded ? IM_COL32(43, 70, 102, 235)
+                : hovered ? IM_COL32(39, 62, 89, 230)
+                : IM_COL32(34, 52, 75, 215);
+            const ImU32 border = hovered || active ? IM_COL32(92, 151, 210, 255)
+                : IM_COL32(68, 103, 143, 230);
+            drawList->AddRectFilled(minimum, maximum, background,
+                style.FrameRounding);
+            drawList->AddRect(minimum, maximum, border, style.FrameRounding,
+                ImDrawFlags_None, 1.0f);
+
+            const float centerY = (minimum.y + maximum.y) * 0.5f;
+            const float iconLeft = minimum.x + style.FramePadding.x + 2.0f;
+            const float iconTop = centerY - 6.0f;
+            const float iconRight = iconLeft + 13.0f;
+            const float iconBottom = centerY + 6.0f;
+            const ImU32 iconColor = IM_COL32(166, 202, 239, 255);
+            drawList->AddRect(ImVec2(iconLeft, iconTop),
+                ImVec2(iconRight, iconBottom), iconColor, 1.5f, ImDrawFlags_None,
+                1.2f);
+            const float dividerX = expanded ? iconRight - 4.0f : iconLeft + 4.0f;
+            drawList->AddLine(ImVec2(dividerX, iconTop + 1.5f),
+                ImVec2(dividerX, iconBottom - 1.5f), iconColor, 1.2f);
+            if (expanded) {
+                drawList->AddLine(ImVec2(iconLeft + 3.0f, centerY),
+                    ImVec2(iconLeft + 8.0f, centerY), iconColor, 1.2f);
+                drawList->AddLine(ImVec2(iconLeft + 3.0f, centerY),
+                    ImVec2(iconLeft + 5.5f, centerY - 2.5f), iconColor, 1.2f);
+                drawList->AddLine(ImVec2(iconLeft + 3.0f, centerY),
+                    ImVec2(iconLeft + 5.5f, centerY + 2.5f), iconColor, 1.2f);
+            } else {
+                drawList->AddLine(ImVec2(iconLeft + 5.0f, centerY),
+                    ImVec2(iconLeft + 10.0f, centerY), iconColor, 1.2f);
+                drawList->AddLine(ImVec2(iconLeft + 10.0f, centerY),
+                    ImVec2(iconLeft + 7.5f, centerY - 2.5f), iconColor, 1.2f);
+                drawList->AddLine(ImVec2(iconLeft + 10.0f, centerY),
+                    ImVec2(iconLeft + 7.5f, centerY + 2.5f), iconColor, 1.2f);
+            }
+
+            const ImU32 labelColor = ImGui::GetColorU32(ImGuiCol_Text);
+            const ImU32 actionColor = ImGui::GetColorU32(hovered || active
+                ? ImVec4(0.96f, 0.98f, 1.0f, 1.0f)
+                : ImVec4(0.70f, 0.82f, 0.96f, 1.0f));
+            const ImVec2 labelSize = ImGui::CalcTextSize(label.c_str());
+            const ImVec2 actionSize = ImGui::CalcTextSize(action.c_str());
+            const float textY = centerY - ImGui::GetTextLineHeight() * 0.5f;
+            const float labelX = iconRight + style.ItemInnerSpacing.x;
+            drawList->AddText(ImVec2(labelX, textY), labelColor, label.c_str());
+            const float actionRight = maximum.x - style.FramePadding.x - 12.0f;
+            const float actionX = (std::max)(labelX + labelSize.x +
+                style.ItemSpacing.x, actionRight - actionSize.x);
+            drawList->AddText(ImVec2(actionX, textY), actionColor, action.c_str());
+            const float arrowX = maximum.x - style.FramePadding.x - 3.0f;
+            const float arrowDirection = expanded ? -1.0f : 1.0f;
+            drawList->AddLine(ImVec2(arrowX - arrowDirection * 3.0f,
+                centerY - 3.0f), ImVec2(arrowX, centerY), actionColor, 1.2f);
+            drawList->AddLine(ImVec2(arrowX, centerY),
+                ImVec2(arrowX - arrowDirection * 3.0f, centerY + 3.0f),
+                actionColor, 1.2f);
+            return clicked;
+        }
 
         float IntrinsicOptionWidth(std::string_view option)
         {
@@ -664,13 +746,35 @@ namespace overlay
             const Renderer::LogFunction& logger)
         {
             auto& api = plugin::GetRuntimeSettingsApi();
-            const auto result = api.Apply(mutation);
-            if (!result.accepted) {
+            const auto result = api.ApplyAndPersist(mutation);
+            if (!result.mutation.accepted) {
                 if (logger) logger("OVERLAY_SETTING_REJECTED");
                 return false;
             }
-            if (!api.Persist(mutation) && logger)
-                logger("OVERLAY_SETTING_PERSIST_FAILED");
+            if (!result.persisted) {
+                if (logger) logger("OVERLAY_SETTING_PERSIST_FAILED");
+                plugin::OverlayNotificationAction action =
+                    plugin::OverlayNotificationAction::AnotherSetting;
+                switch (mutation.kind) {
+                case plugin::RuntimeSettingKind::GameplayEnabled:
+                case plugin::RuntimeSettingKind::GameplayMode:
+                    action = plugin::OverlayNotificationAction::GameplayMode; break;
+                case plugin::RuntimeSettingKind::CinematicsEnabled:
+                case plugin::RuntimeSettingKind::CinematicAspectPolicy:
+                    action = plugin::OverlayNotificationAction::CinematicAspect; break;
+                case plugin::RuntimeSettingKind::CinematicFovMode:
+                    action = plugin::OverlayNotificationAction::CinematicFov; break;
+                case plugin::RuntimeSettingKind::DialogueEnabled:
+                case plugin::RuntimeSettingKind::DialogueZoomPolicy:
+                    action = plugin::OverlayNotificationAction::DialogueZoom; break;
+                case plugin::RuntimeSettingKind::OverlayToggleKey:
+                    action = plugin::OverlayNotificationAction::OverlayToggle; break;
+                default: break;
+                }
+                plugin::PublishOverlayNotification(
+                    plugin::OverlayNotificationKind::PersistenceFailed, action,
+                    {}, {}, plugin::OverlayNotificationStatus::Error);
+            }
             return true;
         }
 
@@ -689,49 +793,95 @@ namespace overlay
 #endif
     }
 
-    void Renderer::Log(const std::string& message) const
+    void Renderer::Log(const std::string& message) const noexcept
     {
-        if (logger_) logger_(message);
+        if (logger_) TryOptionalOverlayLog(logger_, message);
+    }
+
+    void Renderer::Log(const char* message) const noexcept
+    {
+        if (logger_) TryOptionalOverlayLog(logger_, message);
+    }
+
+    void Renderer::LogStartupGate(const char* event,
+        const char* reason) const noexcept
+    {
+        if (!diagnostics::Enabled() || !logger_ || !event || !reason) return;
+        try {
+            Log(std::string("STARTUP_GATE_") + event + " ts_ms=" +
+                std::to_string(static_cast<std::uint64_t>(GetTickCount64())) +
+                " reason=" + reason);
+        } catch (...) {}
+    }
+
+    void Renderer::LogStartupGateEligibility() noexcept
+    {
+        if (!startupReadiness_.eligible() || startupGateEligibilityLogged_) return;
+        startupGateEligibilityLogged_ = true;
+        LogStartupGate("ELIGIBLE", startupReadiness_.gameDataObserved()
+            ? "runtime_overlay_and_game_data_ready"
+            : "runtime_overlay_ready_explicit_fallback");
     }
 
     namespace
     {
         void LogDiagnostic(const Renderer::LogFunction& logger,
-            const std::string& message)
+            const std::string& message) noexcept
         {
-            if (logger && diagnostics::Enabled()) logger(message);
+            if (logger && diagnostics::Enabled())
+                TryOptionalOverlayLog(logger, message);
+        }
+
+        void LogDiagnostic(const Renderer::LogFunction& logger,
+            const char* message) noexcept
+        {
+            if (logger && diagnostics::Enabled())
+                TryOptionalOverlayLog(logger, message);
         }
     }
 
-    bool Renderer::Initialize(HWND window, UINT width, UINT height, UINT dpi) noexcept
+    bool Renderer::Initialize(HWND gameWindow, HWND overlayWindow, UINT width,
+        UINT height, UINT dpi) noexcept
     {
         bool initialized = false;
         const auto outcome = RunOptionalOverlayWork([&]() {
-            initialized = InitializeImpl(window, width, height, dpi);
+            initialized = InitializeImpl(gameWindow, overlayWindow, width,
+                height, dpi);
         }, [this]() noexcept { FailAfterException(); });
         return outcome == OptionalOverlayWorkResult::Completed && initialized;
     }
 
-    bool Renderer::RebindWindow(HWND window, UINT width, UINT height,
+    bool Renderer::RebindWindow(HWND gameWindow, UINT width, UINT height,
         UINT dpi) noexcept
     {
         bool rebound = false;
         const auto outcome = RunOptionalOverlayWork([&]() {
-            if (!window || !IsWindow(window) || !width || !height ||
+            if (!gameWindow || !IsWindow(gameWindow) || !overlayWindow_ ||
+                !IsWindow(overlayWindow_) || !width || !height ||
                 disabled() || !state_.cameraCoreReady())
                 return;
             SurfaceUpdateToken token{};
             if (!state_.BeginSurfaceUpdate({width, height}, token)) return;
-            if (startupNotification_.pending())
-                startupAutoLanguageSyncRequested_ = false;
+            if (!SetOverlayWindowVisibility(false)) {
+                Disable("window_rebind_hide_failed");
+                return;
+            }
+            overlayPlacement_.valid = false;
             DetachImGui();
-            ResetComposition();
-            window_ = window;
+            if (!ResetComposition()) {
+                Disable("window_rebind_composition_detach_failed");
+                return;
+            }
+            gameWindow_ = gameWindow;
+            menuFrameAdmission_.Invalidate();
+            inputBindingReady_ = false;
+            hostActive_ = GetForegroundWindow() == gameWindow_;
+            hostMinimized_ = IsIconic(gameWindow_) != FALSE;
             if (!ApplyWindowDpi(dpi)) {
                 Disable("window_rebind_dpi_setup_failed");
                 return;
             }
-            if (!CreateGraphicsDevice() || !CreateCompositionTarget(window_) ||
+            if (!CreateGraphicsDevice() || !CreateCompositionTarget(overlayWindow_) ||
                 !BuildImGui() || !CreateSurface(width, height, surface_) ||
                 FAILED(visual_->SetContent(surface_.Get())) ||
                 FAILED(compositionTarget_->SetRoot(visual_.Get())) ||
@@ -745,6 +895,9 @@ namespace overlay
             surfaceHeight_ = height;
             surfaceGeneration_ = state_.generation();
             compositionReady_ = true;
+            visualAttached_ = true;
+            LogCompositionAttachment();
+            LogNotificationLifecycle("root_attach", "window_rebind_surface_commit");
             surfaceDirty_ = true;
             forceFullDamage_ = true;
             damageTracker_.Invalidate();
@@ -752,24 +905,33 @@ namespace overlay
             Log("OVERLAY_DCOMP_WINDOW_REBOUND generation=" +
                 std::to_string(surfaceGeneration_));
             rebound = RenderImpl(surface_.Get(), width, height);
-            if (rebound) StartPendingNotificationLifetimes();
+            if (rebound) rebound = StartPendingNotificationLifetimes();
         }, [this]() noexcept { FailAfterException(); });
         return outcome == OptionalOverlayWorkResult::Completed && rebound;
     }
 
-    bool Renderer::InitializeImpl(HWND window, UINT width, UINT height, UINT dpi)
+    bool Renderer::InitializeImpl(HWND gameWindow, HWND overlayWindow,
+        UINT width, UINT height, UINT dpi)
     {
         state_.MarkCameraCoreReady();
-        if (!window || !IsWindow(window) || !width || !height ||
+        startupReadiness_.MarkRuntimeInitialized();
+        LogStartupGate("RUNTIME_READY", "camera_core_initialization_complete");
+        LogStartupGate("WAITING", "overlay_presenter_and_input_binding");
+        if (!gameWindow || !IsWindow(gameWindow) || !overlayWindow ||
+            !IsWindow(overlayWindow) || !width || !height ||
             !state_.MarkWindowAvailable({width, height}))
             return false;
-        window_ = window;
+        gameWindow_ = gameWindow;
+        inputBindingReady_ = false;
+        overlayWindow_ = overlayWindow;
+        hostActive_ = GetForegroundWindow() == gameWindow_;
+        hostMinimized_ = IsIconic(gameWindow_) != FALSE;
         if (!ApplyWindowDpi(dpi)) {
             Disable("window_dpi_setup_failed");
             return false;
         }
         Log("OVERLAY_DCOMP_INIT_BEGIN");
-        if (!CreateGraphicsDevice() || !CreateCompositionTarget(window_) ||
+        if (!CreateGraphicsDevice() || !CreateCompositionTarget(overlayWindow_) ||
             !BuildImGui()) {
             Disable("composition_initialization_failed");
             return false;
@@ -795,6 +957,9 @@ namespace overlay
         surfaceHeight_ = height;
         surfaceGeneration_ = state_.generation();
         compositionReady_ = true;
+        visualAttached_ = true;
+        LogCompositionAttachment();
+        LogNotificationLifecycle("root_attach", "initial_surface_commit");
         surfaceDirty_ = true;
         forceFullDamage_ = true;
         damageTracker_.Invalidate();
@@ -810,8 +975,45 @@ namespace overlay
         diagnostics::startup_journal::Flush();
 #endif
         const bool rendered = RenderImpl(surface_.Get(), width, height);
-        if (rendered) StartPendingNotificationLifetimes();
-        return rendered;
+        return rendered && StartPendingNotificationLifetimes();
+    }
+
+    void Renderer::SetInputBindingReady(HWND window) noexcept
+    {
+        if (!OwnsWindow(window)) return;
+        inputBindingReady_ = true;
+        ReconcileHostActivity();
+        surfaceDirty_ = true;
+        if (ready() && startupReadiness_.MarkOverlayReady())
+            LogStartupGate("OVERLAY_READY",
+                "presenter_and_game_input_binding_ready");
+    }
+
+    void Renderer::CompleteStartupGameDataProbe(bool readSucceeded) noexcept
+    {
+        const bool wasFallback = startupReadiness_.fallbackResolved();
+        const bool changed = startupReadiness_.ResolveGameDataProbe(readSucceeded);
+        if (readSucceeded && changed)
+            LogStartupGate("GAME_DATA_OBSERVED", wasFallback
+                ? "late_validated_interface_language_read"
+                : "validated_interface_language_read");
+        else if (!readSucceeded && changed)
+            LogStartupGate("FALLBACK", "native_interface_language_read_failed");
+        LogStartupGateEligibility();
+        surfaceDirty_ = true;
+    }
+
+    bool Renderer::ResolveStartupGameDataProbeTimeout() noexcept
+    {
+        if (!startupReadiness_.ResolveProbeTimeout(GetTickCount64())) return false;
+        plugin::RuntimeSettingsSnapshot settings{};
+        if (plugin::GetRuntimeSettingsApi().Snapshot(settings) &&
+            settings.overlayLocaleAuto && !settings.overlayLocaleAutoSynchronized)
+            plugin::SetDetectedOverlayLocale("en");
+        LogStartupGate("FALLBACK", "game_data_probe_timeout_3000ms");
+        LogStartupGateEligibility();
+        surfaceDirty_ = true;
+        return true;
     }
 
     bool Renderer::CreateGraphicsDevice()
@@ -870,6 +1072,7 @@ namespace overlay
 
     bool Renderer::ApplyWindowDpi(UINT dpi) noexcept
     {
+        try {
         const UINT normalizedDpi = dpi ? dpi : 96u;
         if (normalizedDpi == windowDpi_) return true;
         windowDpi_ = normalizedDpi;
@@ -893,12 +1096,16 @@ namespace overlay
             " scale=" + std::to_string(dpiScale_) +
             " coordinate_contract=physical_client_pixels");
         return true;
+        } catch (...) {
+            return false;
+        }
     }
 
     bool Renderer::RecoverGraphicsDevice(UINT width, UINT height) noexcept
     {
         try {
-            if (!window_ || !IsWindow(window_) || !width || !height ||
+            if (!gameWindow_ || !IsWindow(gameWindow_) || !overlayWindow_ ||
+                !IsWindow(overlayWindow_) || !width || !height ||
                 !ImGui::GetCurrentContext())
                 return false;
             auto& input = GetInputState();
@@ -907,8 +1114,8 @@ namespace overlay
                 inputBridge);
             if (!inputOwnershipBefore.Coherent()) return false;
             imguiRenderer_.Shutdown(ImGui::GetIO().Fonts);
-            ResetComposition();
-            if (!CreateGraphicsDevice() || !CreateCompositionTarget(window_) ||
+            if (!ResetComposition()) return false;
+            if (!CreateGraphicsDevice() || !CreateCompositionTarget(overlayWindow_) ||
                 !imguiRenderer_.Initialize(device_.Get(), ImGui::GetIO().Fonts) ||
                 !CreateSurface(width, height, surface_) ||
                 FAILED(visual_->SetContent(surface_.Get())) ||
@@ -924,6 +1131,9 @@ namespace overlay
             surfaceHeight_ = height;
             surfaceGeneration_ = state_.generation();
             compositionReady_ = true;
+            visualAttached_ = true;
+            LogCompositionAttachment();
+            LogNotificationLifecycle("root_attach", "device_recovery_surface_commit");
             surfaceDirty_ = true;
             forceFullDamage_ = true;
             damageTracker_.Invalidate();
@@ -938,7 +1148,7 @@ namespace overlay
 
     bool Renderer::BuildImGui()
     {
-        if (!device_ || !window_) return false;
+        if (!device_ || !gameWindow_) return false;
         const auto resourceModule = OverlayResourceModule();
 #ifdef OVERLAY_SETTINGS_FRONTEND
         std::string localeError;
@@ -952,6 +1162,9 @@ namespace overlay
             ImGui::CreateContext();
             imguiContextCreated_ = true;
             ImGuiIO& io = ImGui::GetIO();
+            // Every mod window uses NoSavedSettings; placement belongs to the
+            // main INI. Avoid ImGui's otherwise automatic CRT FILE load/save.
+            io.IniFilename = nullptr;
             int fontSizeSetting = config::OverlayFontSizeDefault;
 #ifdef OVERLAY_SETTINGS_FRONTEND
             plugin::RuntimeSettingsSnapshot settings{};
@@ -1018,7 +1231,7 @@ namespace overlay
         baseStyleCaptured_ = true;
         ImGui::GetStyle().ScaleAllSizes(dpiScale_);
         if (!imguiReady_) {
-            if (!ImGui_ImplWin32_Init(window_)) return false;
+            if (!ImGui_ImplWin32_Init(gameWindow_)) return false;
             if (!imguiRenderer_.Initialize(device_.Get(), ImGui::GetIO().Fonts)) {
                 ImGui_ImplWin32_Shutdown();
                 return false;
@@ -1200,9 +1413,15 @@ namespace overlay
         bool updated = false;
         const auto outcome = RunOptionalOverlayWork([&]() {
             if (!OwnsWindow(window)) return;
+            hostMinimized_ = minimized;
+            if (minimized) menuFrameAdmission_.Invalidate();
             const bool dpiChanged = dpi != windowDpi_;
             if (dpiChanged && !ApplyWindowDpi(dpi)) {
                 Disable("window_dpi_update_failed");
+                return;
+            }
+            if (!UpdateOverlayWindowBounds()) {
+                Disable("overlay_window_geometry_update_failed");
                 return;
             }
             if (minimized) {
@@ -1218,7 +1437,7 @@ namespace overlay
                 if (dpiChanged) forceFullDamage_ = true;
                 surfaceDirty_ = true;
                 updated = RenderImpl(surface_.Get(), width, height);
-                if (updated) StartPendingNotificationLifetimes();
+                if (updated) updated = StartPendingNotificationLifetimes();
                 return;
             }
             SurfaceUpdateToken token{};
@@ -1257,7 +1476,7 @@ namespace overlay
             surfaceDirty_ = false;
             damageTracker_.Invalidate();
             forceFullDamage_ = true;
-            StartPendingNotificationLifetimes();
+            if (!StartPendingNotificationLifetimes()) return;
             Log("OVERLAY_DCOMP_SURFACE_RESIZED generation=" +
                 std::to_string(surfaceGeneration_) + " width=" +
                 std::to_string(width) + " height=" + std::to_string(height));
@@ -1266,11 +1485,205 @@ namespace overlay
         return outcome == OptionalOverlayWorkResult::Completed && updated;
     }
 
-    void Renderer::ResetComposition() noexcept
+    bool Renderer::OnHostActivation(HWND window, bool /*active*/) noexcept
     {
+        bool updated = false;
+        const auto outcome = RunOptionalOverlayWork([&]() {
+            if (!OwnsWindow(window)) return;
+            // Queued activation can already be stale when the owner consumes it.
+            ReconcileHostActivity();
+            surfaceDirty_ = true;
+            if (!UpdateOverlayWindowBounds(true)) {
+                Disable("overlay_window_activation_update_failed");
+                return;
+            }
+            if (hostActive_ && overlayWindowVisible_)
+                StartPendingNotificationLifetimes();
+            updated = true;
+        }, [this]() noexcept { FailAfterException(); });
+        return outcome == OptionalOverlayWorkResult::Completed && updated;
+    }
+
+    bool Renderer::DisplayWindowAboveHost() const noexcept
+    {
+        if (!gameWindow_ || !overlayWindow_ ||
+            !IsWindow(gameWindow_) || !IsWindow(overlayWindow_)) return false;
+        // Geometry and WS_VISIBLE can remain unchanged when the host raises
+        // itself over this unowned display. Bound traversal if windows churn.
+        HWND above = GetWindow(gameWindow_, GW_HWNDPREV);
+        for (unsigned visited = 0; above && visited < 256; ++visited) {
+            if (above == overlayWindow_) return true;
+            above = GetWindow(above, GW_HWNDPREV);
+        }
+        return false;
+    }
+
+    bool Renderer::UpdateOverlayWindowBounds(bool forcePlacement) noexcept
+    {
+        if (!overlayWindow_ || !IsWindow(overlayWindow_)) return false;
+        const bool shouldBeVisible = visualAttached_ && hostActive_ &&
+            !hostMinimized_ && gameWindow_ && IsWindow(gameWindow_);
+        if (!shouldBeVisible) {
+            return SetOverlayWindowVisibility(false);
+        }
+
+        RECT client{};
+        POINT origin{};
+        if (!GetClientRect(gameWindow_, &client) ||
+            !ClientToScreen(gameWindow_, &origin))
+            return false;
+        const LONG width = client.right - client.left;
+        const LONG height = client.bottom - client.top;
+        if (width <= 0 || height <= 0) {
+            return SetOverlayWindowVisibility(false);
+        }
+
+        const bool overlayTopmost = (GetWindowLongPtrW(overlayWindow_, GWL_EXSTYLE) &
+            WS_EX_TOPMOST) != 0;
+        // A non-activating unowned display in the normal z-band can remain
+        // behind the foreground host even after an accepted HWND_TOP call.
+        // Promote only our visible client-sized display; inactive UI is hidden.
+        const DisplayPlacement requestedPlacement{origin.x, origin.y,
+            width, height, windowDpi_, true, true};
+        const bool placementChanged = forcePlacement || !overlayWindowVisible_ ||
+            !IsWindowVisible(overlayWindow_) ||
+            !overlayTopmost || !DisplayWindowAboveHost() ||
+            RequiresDisplayPlacementUpdate(overlayPlacement_, requestedPlacement);
+        const bool shown = CommitDisplayWindowVisibility(true,
+            [this, origin, width, height, placementChanged]() {
+                if (!placementChanged) return true;
+                return SetWindowPos(overlayWindow_, HWND_TOPMOST, origin.x,
+                    origin.y, width, height, SWP_NOACTIVATE |
+                        SWP_NOOWNERZORDER | SWP_SHOWWINDOW) != FALSE;
+            }, [this]() {
+                return IsWindow(overlayWindow_) &&
+                    IsWindowVisible(overlayWindow_);
+            });
+        if (!shown) return false;
+        overlayWindowVisible_ = true;
+        overlayPlacement_ = requestedPlacement;
+        LogDisplayState();
+        return true;
+    }
+
+    void Renderer::ReconcileHostActivity() noexcept
+    {
+        hostActive_ = ResolveHostDisplaySnapshot(gameWindow_ && IsWindow(gameWindow_),
+            GetForegroundWindow() == gameWindow_,
+            !gameWindow_ || IsIconic(gameWindow_) != FALSE);
+        if (!hostActive_) menuFrameAdmission_.Invalidate();
+    }
+
+    bool Renderer::SetOverlayWindowVisibility(bool visible) noexcept
+    {
+        if (!overlayWindow_ || !IsWindow(overlayWindow_)) return false;
+        const bool changed = overlayWindowVisible_ != visible;
+        const UINT visibilityFlag = visible ? SWP_SHOWWINDOW : SWP_HIDEWINDOW;
+        const bool accepted = CommitDisplayWindowVisibility(visible,
+            [this, visibilityFlag]() {
+                return SetWindowPos(overlayWindow_, nullptr, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                        SWP_NOOWNERZORDER | visibilityFlag) != FALSE;
+            }, [this]() {
+                return IsWindow(overlayWindow_) &&
+                    IsWindowVisible(overlayWindow_);
+            });
+        if (!accepted) return false;
+        overlayWindowVisible_ = visible;
+        LogDisplayState();
+        if (changed) {
+            LogNotificationLifecycle(visible ? "display_show" : "display_hide",
+                "display_visibility_reconciled");
+        }
+        return true;
+    }
+
+    void Renderer::LogDisplayState() noexcept
+    {
+        if (!diagnostics::Enabled() || !logger_) return;
+        const unsigned observed = (visible() ? 1u : 0u) |
+            (visualAttached_ ? 2u : 0u) | (hostActive_ ? 4u : 0u) |
+            (hostMinimized_ ? 8u : 0u) | (overlayWindowVisible_ ? 16u : 0u) |
+            (DisplayWindowAboveHost() ? 32u : 0u);
+        if (observed == diagnosticDisplayState_) return;
+        diagnosticDisplayState_ = observed;
+        try {
+            Log("OVERLAY_DISPLAY_STATE requested=" + std::to_string(visible()) +
+                " root_attached=" + std::to_string(visualAttached_) +
+                " host_active=" + std::to_string(hostActive_) +
+                " host_minimized=" + std::to_string(hostMinimized_) +
+                " display_visible=" + std::to_string(overlayWindowVisible_) +
+                " z_order_above_game=" + std::to_string((observed & 32u) != 0) +
+                " game_hwnd=" + std::to_string(reinterpret_cast<std::uintptr_t>(gameWindow_)) +
+                " foreground_hwnd=" + std::to_string(reinterpret_cast<std::uintptr_t>(GetForegroundWindow())) +
+                " display_hwnd=" + std::to_string(reinterpret_cast<std::uintptr_t>(overlayWindow_)));
+        } catch (...) {}
+    }
+
+    void Renderer::LogNotificationLifecycle(const char* event,
+        const char* reason, std::uint64_t notificationId) const noexcept
+    {
+        if (!diagnostics::Enabled() || !logger_) return;
+        try {
+            const auto now = static_cast<std::uint64_t>(GetTickCount64());
+            std::string queueState;
+            for (const auto& active : notifications_) {
+                if (!queueState.empty()) queueState.push_back(',');
+                const auto startedAt = active.lifetime.visibleAtMs();
+                const auto duration = static_cast<std::uint64_t>(
+                    active.notification.durationMs);
+                const auto deadline = startedAt &&
+                    startedAt <= (std::numeric_limits<std::uint64_t>::max)() - duration
+                    ? startedAt + duration : 0;
+                queueState += std::to_string(active.notification.id) + ':' +
+                    (startedAt ? "started" : "pending") + ':' +
+                    std::to_string(active.lifetime.AgeMs(now)) + ':' +
+                    std::to_string(deadline);
+            }
+            Log("OVERLAY_TOAST_LIFECYCLE ts_ms=" + std::to_string(now) +
+                " tid=" + std::to_string(GetCurrentThreadId()) +
+                " event=" + (event ? event : "unknown") +
+                " reason=" + (reason ? reason : "unknown") +
+                " id=" + std::to_string(notificationId) +
+                " queue_count=" + std::to_string(notifications_.size()) +
+                " queue=" + (queueState.empty() ? "-" : queueState) +
+                " startup_pending=" + std::to_string(startupNotification_.pending()) +
+                " menu_requested=" + std::to_string(visible()) +
+                " root_attached=" + std::to_string(visualAttached_) +
+                " display_visible=" + std::to_string(overlayWindowVisible_) +
+                " hwnd_visible=" + std::to_string(overlayWindow_ &&
+                    IsWindowVisible(overlayWindow_)) +
+                " host_active=" + std::to_string(hostActive_) +
+                " minimized=" + std::to_string(hostMinimized_) +
+                " generation=" + std::to_string(surfaceGeneration_) +
+                " z_above_host=" + std::to_string(DisplayWindowAboveHost()));
+        } catch (...) {
+            // Optional lifecycle diagnostics cannot affect notification state.
+        }
+    }
+
+    bool Renderer::ResetComposition() noexcept
+    {
+        menuFrameAdmission_.Invalidate();
+        const bool wasAttached = visualAttached_;
         if (compositionTarget_) {
-            compositionTarget_->SetRoot(nullptr);
-            if (compositionDevice_) compositionDevice_->Commit();
+            const HRESULT detachResult = compositionTarget_->SetRoot(nullptr);
+            if (FAILED(detachResult)) {
+                try {
+                    Log("OVERLAY_DCOMP_DETACH_FAILED hr=" +
+                        std::to_string(static_cast<std::uint32_t>(detachResult)));
+                } catch (...) {}
+                return false;
+            }
+            if (!compositionDevice_) return false;
+            const HRESULT commitResult = compositionDevice_->Commit();
+            if (FAILED(commitResult)) {
+                try {
+                    Log("OVERLAY_DCOMP_DETACH_COMMIT_FAILED hr=" +
+                        std::to_string(static_cast<std::uint32_t>(commitResult)));
+                } catch (...) {}
+                return false;
+            }
         }
         surface_.Reset();
         visual_.Reset();
@@ -1281,13 +1694,19 @@ namespace overlay
         surfaceWidth_ = 0;
         surfaceHeight_ = 0;
         compositionReady_ = false;
+        visualAttached_ = false;
+        if (wasAttached)
+            LogNotificationLifecycle("root_detach", "composition_reset");
+        return true;
     }
 
     void Renderer::DetachImGui() noexcept
     {
         if (ImGui::GetCurrentContext()) {
             auto& io = ImGui::GetIO();
-            if (imguiReady_) imguiRenderer_.Shutdown(io.Fonts);
+            // Initialize can acquire device/pipeline references before failing.
+            // Readiness is not ownership; release the backend in either state.
+            imguiRenderer_.Shutdown(io.Fonts);
             if (io.BackendPlatformUserData) ImGui_ImplWin32_Shutdown();
             if (imguiContextCreated_) ImGui::DestroyContext();
         } else {
@@ -1303,18 +1722,30 @@ namespace overlay
             std::vector<plugin::OverlayNotification> incoming;
             plugin::DrainOverlayNotifications(incoming);
             for (auto& notification : incoming) {
-                if (notifications_.size() >= 3)
+                if (notifications_.size() >= 3) {
+                    LogNotificationLifecycle("queue_evict",
+                        "active_notification_limit",
+                        notifications_.front().notification.id);
                     notifications_.erase(notifications_.begin());
+                }
+                const auto notificationId = notification.id;
                 notifications_.push_back({std::move(notification), {}});
+                LogNotificationLifecycle("queue_add", "runtime_notification",
+                    notificationId);
             }
             const auto now = static_cast<std::uint64_t>(GetTickCount64());
-            const auto oldSize = notifications_.size();
-            notifications_.erase(std::remove_if(notifications_.begin(), notifications_.end(),
-                [now](const auto& active) {
-                    return active.lifetime.IsExpired(now,
-                        active.notification.durationMs);
-                }), notifications_.end());
-            if (notifications_.size() != oldSize) surfaceDirty_ = true;
+            for (auto active = notifications_.begin();
+                active != notifications_.end();) {
+                if (!active->lifetime.IsExpired(now,
+                        active->notification.durationMs)) {
+                    ++active;
+                    continue;
+                }
+                LogNotificationLifecycle("queue_expire", "ttl_deadline",
+                    active->notification.id);
+                active = notifications_.erase(active);
+                surfaceDirty_ = true;
+            }
         } catch (...) {
             // Toasts are optional and must never affect rendering or settings.
         }
@@ -1332,12 +1763,16 @@ namespace overlay
             hint.status = plugin::OverlayNotificationStatus::Ready;
             hint.durationMs = StartupHintDurationMs;
             hint.id = 0;
-            if (notifications_.size() >= 3)
+            if (notifications_.size() >= 3) {
+                LogNotificationLifecycle("queue_evict",
+                    "startup_hint_capacity", notifications_.front().notification.id);
                 notifications_.erase(notifications_.begin());
+            }
             notifications_.push_back({std::move(hint), {}});
             startupNotification_.MarkCreated(ready(), true);
             surfaceDirty_ = true;
             Log("OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1");
+            LogNotificationLifecycle("startup_created", "ready_and_locale_resolved", 0);
         } catch (...) {
             Log("OVERLAY_STARTUP_HINT_CREATE_FAILED");
         }
@@ -1345,44 +1780,124 @@ namespace overlay
 
     void Renderer::PrepareStartupNotification() noexcept
     {
-        if (!startupNotification_.ShouldWakePresenter(ready())) return;
+        if (!startupNotification_.ShouldWakePresenter(ready(), inputBindingReady_)) return;
         try {
             plugin::RuntimeSettingsSnapshot settings{};
             if (!plugin::GetRuntimeSettingsApi().Snapshot(settings)) return;
-            if (settings.overlayLocaleAuto &&
-                !settings.overlayLocaleAutoSynchronized &&
-                !startupAutoLanguageSyncRequested_) {
-                startupAutoLanguageSyncRequested_ =
-                    RequestAutoLanguageSynchronization(window_);
-                if (!startupAutoLanguageSyncRequested_ &&
-                    !startupAutoLanguageSyncRequestFailureLogged_) {
-                    Log("OVERLAY_STARTUP_AUTO_LANGUAGE_SYNC_REQUEST_FAILED");
-                    startupAutoLanguageSyncRequestFailureLogged_ = true;
-                }
-                if (!startupAutoLanguageSyncRequested_) {
-                    const bool fallbackApplied =
+            if (ready() && inputBindingReady_ &&
+                startupReadiness_.MarkOverlayReady())
+                LogStartupGate("OVERLAY_READY",
+                    "presenter_and_game_input_binding_ready");
+
+            if (!startupReadiness_.probeStarted() &&
+                !startupReadiness_.fallbackResolved() &&
+                !startupReadiness_.gameDataObserved()) {
+                if (!startupReadiness_.BeginGameDataProbe(GetTickCount64(),
+                        StartupGameDataProbeTimeoutMs))
+                    return;
+                if (RequestStartupGameDataProbe(gameWindow_)) {
+                    LogStartupGate("WAITING",
+                        "validated_game_interface_language_probe");
+                } else {
+                    startupReadiness_.ResolveFallback();
+                    LogStartupGate("FALLBACK", "startup_probe_post_rejected");
+                    if (settings.overlayLocaleAuto &&
+                        !settings.overlayLocaleAutoSynchronized) {
                         plugin::SetDetectedOverlayLocale("en");
-                    if (!fallbackApplied) return;
-                    if (!plugin::GetRuntimeSettingsApi().Snapshot(settings)) {
-                        settings.overlayLocaleCode = "en";
-                        settings.overlayLocaleAutoSynchronized = true;
+                        if (!plugin::GetRuntimeSettingsApi().Snapshot(settings)) {
+                            settings.overlayLocaleCode = "en";
+                            settings.overlayLocaleAutoSynchronized = true;
+                        }
                     }
+                    LogStartupGateEligibility();
                 }
             }
+
             if (StartupHintMustWaitForAutoLocale(settings.overlayLocaleAuto,
                     settings.overlayLocaleAutoSynchronized,
-                    startupAutoLanguageSyncRequested_)) {
-                Log("OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE");
-                return;
+                    startupReadiness_.probePending())) {
+                if (!startupAutoLocaleWaitLogged_) {
+                    startupAutoLocaleWaitLogged_ = true;
+                    Log("OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE");
+                    LogNotificationLifecycle("startup_wait_locale",
+                        "accepted_startup_game_data_probe");
+                }
             }
+            if (!startupReadiness_.eligible())
+                return;
+
+            LogStartupGateEligibility();
             EnsureStartupNotification(settings);
         } catch (...) {
             Log("OVERLAY_STARTUP_PREPARATION_FAILED");
         }
     }
 
-    void Renderer::StartPendingNotificationLifetimes() noexcept
+    void Renderer::LogCompositionAttachment() const noexcept
     {
+        try {
+            Log(visualAttached_ ? "OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1"
+                : "OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0");
+        } catch (...) {
+            // Lifecycle observation cannot invalidate an accepted transaction.
+        }
+    }
+
+    bool Renderer::ReconcileCompositionAttachment() noexcept
+    {
+        ReconcileHostActivity();
+        const bool required = CompositionRootRequired(visible(),
+            notifications_.size(), startupNotification_.pending());
+        if (visualAttached_ == required) {
+            const bool displayRequired = required && hostActive_ && !hostMinimized_;
+            if ((displayRequired != overlayWindowVisible_ ||
+                    (displayRequired && !DisplayWindowAboveHost())) &&
+                    !UpdateOverlayWindowBounds()) {
+                Disable("overlay_window_attachment_update_failed");
+                return false;
+            }
+            LogDisplayState();
+            return true;
+        }
+        const char* reason = visible() ? "menu_requested"
+            : !notifications_.empty() ? "active_notification"
+            : startupNotification_.pending() ? "startup_pending"
+            : "no_display_demand";
+        bool committed = false;
+        try {
+            if (compositionTarget_ && compositionDevice_ && visual_) {
+                committed = CommitCompositionAttachment(visualAttached_, required,
+                    [this](bool attach) {
+                        return SUCCEEDED(compositionTarget_->SetRoot(
+                            attach ? visual_.Get() : nullptr));
+                    },
+                    [this]() { return SUCCEEDED(compositionDevice_->Commit()); });
+            }
+        } catch (...) {
+            // Keep failures inside the optional renderer boundary.
+        }
+        if (!committed) {
+            Disable("composition_attachment_commit_failed");
+            return false;
+        }
+        if (!UpdateOverlayWindowBounds()) {
+            Disable("overlay_window_attachment_update_failed");
+            return false;
+        }
+        LogCompositionAttachment();
+        LogNotificationLifecycle(required ? "root_attach" : "root_detach",
+            reason);
+        return true;
+    }
+
+    bool Renderer::StartPendingNotificationLifetimes() noexcept
+    {
+        // The current surface has been drawn/cleared and, for resize, published.
+        // Attach it before starting visible toast lifetime, or detach settled UI.
+        if (!ReconcileCompositionAttachment()) return false;
+        menuFrameAdmission_.Commit(ready() && visualAttached_ &&
+            overlayWindowVisible_ && hostActive_ && !hostMinimized_);
+        if (!overlayWindowVisible_) return true;
         const auto committedAt = static_cast<std::uint64_t>(GetTickCount64());
         for (auto& active : notifications_) {
             if (StartNotificationLifetimeAfterCommit(active.lifetime,
@@ -1392,6 +1907,9 @@ namespace overlay
                 try {
                     Log("OVERLAY_NOTIFICATION_LIFETIME_STARTED id=" +
                         std::to_string(active.notification.id));
+                    LogNotificationLifecycle("ttl_start",
+                        "submitted_draw_and_attachment_commit",
+                        active.notification.id);
                     if (active.notification.kind ==
                             plugin::OverlayNotificationKind::StartupOverlayHint &&
                         !startupHintFrameLogged_) {
@@ -1403,6 +1921,7 @@ namespace overlay
                 }
             }
         }
+        return true;
     }
 
     void Renderer::DrawNotifications()
@@ -1444,6 +1963,9 @@ namespace overlay
                 localizedTitle = Tr(localization_, loc::app::Title);
                 localizedValue = Tr(localization_, loc::notification::OpenOverlayHint,
                     {{"key", std::string(kInlineHotkeyToken)}});
+            } else if (notification.kind == plugin::OverlayNotificationKind::PersistenceFailed) {
+                localizedTitle = Tr(localization_, NotificationActionLabel(notification.action));
+                localizedValue = Tr(localization_, loc::notification::PersistenceFailed);
             } else if (notification.kind == plugin::OverlayNotificationKind::HotkeyConflict) {
                 const auto actionLabel = Tr(localization_, NotificationActionLabel(notification.action));
                 localizedTitle = Tr(localization_, loc::notification::HotkeyConflict);
@@ -1494,7 +2016,7 @@ namespace overlay
         const auto outcome = RunOptionalOverlayWork([&]() {
             if (needsRenderWork() && surface_) {
                 rendered = RenderImpl(surface_.Get(), surfaceWidth_, surfaceHeight_);
-                if (rendered) StartPendingNotificationLifetimes();
+                if (rendered) rendered = StartPendingNotificationLifetimes();
             }
         }, [this]() noexcept { FailAfterException(); });
         return outcome == OptionalOverlayWorkResult::Completed && rendered;
@@ -1567,7 +2089,7 @@ namespace overlay
                             WHEEL_DELTA, 0.0f);
                 break;
             case InputEventKind::NativeKeyboardMessage:
-                ImGui_ImplWin32_WndProcHandler(window_, event.message,
+                ImGui_ImplWin32_WndProcHandler(gameWindow_, event.message,
                     event.wParam, event.lParam);
                 break;
             case InputEventKind::Focus:
@@ -1611,13 +2133,6 @@ namespace overlay
         PrepareStartupNotification();
         UpdateNotifications();
         const bool overlayVisible = visible_.load(std::memory_order_acquire);
-        const auto activationRequest = overlayVisible
-            ? diagnostics::overlay_activation_trace::CurrentRequest() : 0;
-        if (overlayVisible)
-            diagnostics::overlay_activation_trace::RecordStage(logger_,
-                activationRequest,
-                diagnostics::overlay_activation_trace::Stage::FrameBegin,
-                "frame_begin", true, ready());
         if (!overlayVisible && notifications_.empty() && !surfaceDirty_)
             return false;
         if (ImGui::GetCurrentContext())
@@ -1659,29 +2174,84 @@ namespace overlay
         if (!ImGui::IsPopupOpen(static_cast<ImGuiID>(0), ImGuiPopupFlags_AnyPopup))
             GetInputState().ConsumeEscapePopupDismissRequest();
         ImGui::GetStyle().CellPadding.x = 6.0f * dpiScale_;
+        bool cameraStateLayoutChanged = false;
 #ifdef OVERLAY_SETTINGS_FRONTEND
 #endif
         if (overlayVisible) {
             const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
             const float maxOverlayWidth = layout_metrics::AvailableWindowWidth(
                 mainViewport->Size.x, dpiScale_);
-            ImGui::SetNextWindowPos(ImVec2(overlayPositionX_, overlayPositionY_),
-                ImGuiCond_Once);
+            const bool expandedLayout = cameraStateExpanded_ &&
+                compactOverlayHeightLogical_ > 0.0f;
+            const bool restoreCompactLayout = !expandedLayout &&
+                restoreCameraStateCompactPosition_ &&
+                cameraStateCompactPositionValid_;
+            const float compactWidth = compactOverlayWidthLogical_ > 0.0f
+                ? compactOverlayWidthLogical_ * dpiScale_
+                : (std::min)(1024.0f * dpiScale_, maxOverlayWidth);
+            const auto expandedLayoutMetrics = layout_metrics::
+                ComputeCameraStatePanelLayout(mainViewport->Size.x,
+                    compactWidth, compactOverlayHeightLogical_ * dpiScale_,
+                    640.0f * dpiScale_,
+                    ImGui::GetStyle().WindowPadding.x, expandedLayout, dpiScale_);
+            if (restoreCompactLayout) {
+                ImGui::SetNextWindowPos(cameraStateCompactPosition_,
+                    ImGuiCond_Always);
+                ImGui::SetNextWindowSize(ImVec2(expandedLayoutMetrics.windowWidth,
+                    expandedLayoutMetrics.windowHeight), ImGuiCond_Always);
+                ImGui::SetNextWindowSizeConstraints(
+                    ImVec2(expandedLayoutMetrics.windowWidth,
+                        expandedLayoutMetrics.windowHeight),
+                    ImVec2(expandedLayoutMetrics.windowWidth,
+                        expandedLayoutMetrics.windowHeight));
+                restoreCameraStateCompactPosition_ = false;
+            } else {
+                ImGui::SetNextWindowPos(ImVec2(overlayPositionX_, overlayPositionY_),
+                    ImGuiCond_Once);
+            }
             const float preferredOverlayWidth = 1024.0f * dpiScale_;
-            ImGui::SetNextWindowSizeConstraints(
-                ImVec2((std::min)(preferredOverlayWidth, maxOverlayWidth), 0.0f),
-                ImVec2(maxOverlayWidth, FLT_MAX));
+            if (expandedLayout) {
+                ImGui::SetNextWindowSize(ImVec2(expandedLayoutMetrics.windowWidth,
+                    expandedLayoutMetrics.windowHeight), ImGuiCond_Always);
+                ImGui::SetNextWindowSizeConstraints(
+                    ImVec2(expandedLayoutMetrics.windowWidth,
+                        expandedLayoutMetrics.windowHeight),
+                    ImVec2(expandedLayoutMetrics.windowWidth,
+                        expandedLayoutMetrics.windowHeight));
+            } else if (!restoreCompactLayout) {
+                ImGui::SetNextWindowSizeConstraints(
+                    ImVec2((std::min)(preferredOverlayWidth, maxOverlayWidth), 0.0f),
+                    ImVec2(maxOverlayWidth, FLT_MAX));
+            }
             const auto overlayTitle = Tr(localization_, loc::app::Title);
+            const ImGuiWindowFlags overlayWindowFlags = ImGuiWindowFlags_NoSavedSettings |
+                ImGuiWindowFlags_NoCollapse |
+                ((expandedLayout || restoreCompactLayout) ? ImGuiWindowFlags_NoResize
+                    : ImGuiWindowFlags_AlwaysAutoResize);
             ImGui::Begin(overlayTitle.c_str(), nullptr,
-                ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize |
-                ImGuiWindowFlags_NoCollapse);
+                overlayWindowFlags);
+            if (!expandedLayout && !restoreCompactLayout) {
+                const ImVec2 compactSize = ImGui::GetWindowSize();
+                compactOverlayWidthLogical_ = compactSize.x / dpiScale_;
+                compactOverlayHeightLogical_ = compactSize.y / dpiScale_;
+            }
+            const ImVec2 positionClampSize = restoreCompactLayout
+                ? ImVec2(expandedLayoutMetrics.windowWidth,
+                    expandedLayoutMetrics.windowHeight)
+                : ImGui::GetWindowSize();
             const ImVec2 clampedPosition = ClampOverlayWindowPosition(
-                ImGui::GetWindowPos(), ImGui::GetWindowSize(),
+                ImGui::GetWindowPos(), positionClampSize,
                 ImGui::GetMainViewport(), dpiScale_);
             if (clampedPosition.x != ImGui::GetWindowPos().x ||
                 clampedPosition.y != ImGui::GetWindowPos().y)
                 ImGui::SetWindowPos(clampedPosition, ImGuiCond_Always);
-            if (!overlayPositionObserved_) {
+            if (expandedLayout) {
+                // Temporary panel expansion/clamping must not rewrite the
+                // user's persisted compact-window placement.
+                lastOverlayPositionX_ = clampedPosition.x;
+                lastOverlayPositionY_ = clampedPosition.y;
+                overlayPositionObserved_ = true;
+            } else if (restoreCompactLayout || !overlayPositionObserved_) {
                 lastOverlayPositionX_ = clampedPosition.x;
                 lastOverlayPositionY_ = clampedPosition.y;
                 overlayPositionObserved_ = true;
@@ -1693,7 +2263,8 @@ namespace overlay
             }
             const bool leftMouseButtonDown =
                 ImGui::IsMouseDown(ImGuiMouseButton_Left);
-            if (placementSaveState_.ShouldAttemptSave(leftMouseButtonDown)) {
+            if (!expandedLayout && placementSaveState_.ShouldAttemptSave(
+                    leftMouseButtonDown)) {
                 const bool saved = !overlayConfigPath_.empty() &&
                     placement_config::Save(overlayConfigPath_,
                         static_cast<int>(clampedPosition.x),
@@ -1703,18 +2274,10 @@ namespace overlay
             }
 #ifdef OVERLAY_SETTINGS_FRONTEND
         plugin::OverlaySemanticSnapshot semantic{};
-        diagnostics::overlay_activation_trace::RecordStage(logger_,
-            activationRequest,
-            diagnostics::overlay_activation_trace::Stage::SemanticReadBegin,
-            "semantic_read_begin", overlayVisible, ready());
         const bool semanticReady = plugin::GetOverlaySemanticSnapshot(semantic) &&
             semantic.gameplayEnabled.valid && semantic.gameplayMode.valid &&
             semantic.cinematicAspectPolicy.valid && semantic.cinematicFovMode.valid &&
             semantic.dialogueEnabled.valid && semantic.dialogueZoomPolicy.valid;
-        diagnostics::overlay_activation_trace::RecordStage(logger_,
-            activationRequest,
-            diagnostics::overlay_activation_trace::Stage::SemanticReadEnd,
-            "semantic_read_end", overlayVisible, ready(), semanticReady);
         const bool settingsReady = semanticReady && frameSettingsAvailable;
         if (!settingsReady) {
             const auto unavailable = Tr(localization_, loc::common::Unavailable);
@@ -1758,13 +2321,27 @@ namespace overlay
                     IntrinsicOptionWidth(locale.displayName));
             }
 
-            const ImGuiTableFlags layoutFlags = ImGuiTableFlags_SizingStretchProp |
-                ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoSavedSettings;
-            if (ImGui::BeginTable("settings_runtime_layout", 2, layoutFlags)) {
-                ImGui::TableSetupColumn("settings", ImGuiTableColumnFlags_WidthStretch,
-                    0.44f);
-                ImGui::TableSetupColumn("runtime", ImGuiTableColumnFlags_WidthStretch,
-                    0.56f);
+            const ImGuiTableFlags layoutFlags = ImGuiTableFlags_BordersInnerV |
+                ImGuiTableFlags_NoSavedSettings |
+                (expandedLayout ? ImGuiTableFlags_SizingFixedFit
+                    : ImGuiTableFlags_SizingStretchProp);
+            if (ImGui::BeginTable("settings_runtime_layout",
+                    expandedLayout ? 3 : 2, layoutFlags)) {
+                if (expandedLayout) {
+                    const float leftWidth = expandedLayoutMetrics.existingColumnsWidth * 0.44f;
+                    const float runtimeWidth = expandedLayoutMetrics.existingColumnsWidth - leftWidth;
+                    ImGui::TableSetupColumn("settings", ImGuiTableColumnFlags_WidthFixed,
+                        leftWidth);
+                    ImGui::TableSetupColumn("runtime", ImGuiTableColumnFlags_WidthFixed,
+                        runtimeWidth);
+                    ImGui::TableSetupColumn("camera_state", ImGuiTableColumnFlags_WidthFixed,
+                        expandedLayoutMetrics.cameraStateWidth);
+                } else {
+                    ImGui::TableSetupColumn("settings", ImGuiTableColumnFlags_WidthStretch,
+                        0.44f);
+                    ImGui::TableSetupColumn("runtime", ImGuiTableColumnFlags_WidthStretch,
+                        0.56f);
+                }
                 ImGui::TableNextColumn();
             const auto gameplayHeader = Tr(localization_, loc::section::Gameplay);
             ImGui::SeparatorText(gameplayHeader.c_str());
@@ -1888,7 +2465,7 @@ namespace overlay
                     if (ImGui::Selectable("Auto (Game Language)", autoSelected)) {
                         if (ApplySetting(plugin::RuntimeSettingMutation::AutoLocale(true), logger_)) {
                             frameSettings.overlayLocaleAuto = true;
-                            if (!RequestAutoLanguageSynchronization(window_) && logger_)
+                            if (!RequestAutoLanguageSynchronization(gameWindow_) && logger_)
                                 logger_("OVERLAY_AUTO_LANGUAGE_SYNC_REQUEST_FAILED");
                         }
                     }
@@ -2284,10 +2861,28 @@ namespace overlay
                     !showCinematicDefault && cinematicFovMode == nullptr);
                 ImGui::EndTable();
             }
-            if (ImGui::TreeNodeEx("Camera State", ImGuiTreeNodeFlags_Framed |
-                ImGuiTreeNodeFlags_SpanAvailWidth)) {
-                DrawCameraStateView(semantic, integration);
-                ImGui::TreePop();
+            if (DrawCameraStateToggle(localization_, cameraStateExpanded_)) {
+                const bool cameraStateOpen = !cameraStateExpanded_;
+                if (cameraStateOpen) {
+                    cameraStateCompactPosition_ = clampedPosition;
+                    cameraStateCompactPositionValid_ = true;
+                } else if (cameraStateCompactPositionValid_) {
+                    restoreCameraStateCompactPosition_ = true;
+                }
+                cameraStateExpanded_ = cameraStateOpen;
+                cameraStateLayoutChanged = true;
+            }
+            if (expandedLayout) {
+                ImGui::TableNextColumn();
+                ImGui::SeparatorText("Camera State");
+                const float panelHeight = (std::max)(0.0f,
+                    ImGui::GetContentRegionAvail().y);
+                if (ImGui::BeginChild("camera_state_panel_scroll",
+                        ImVec2(0.0f, panelHeight), true,
+                        ImGuiWindowFlags_NoSavedSettings)) {
+                    DrawCameraStateView(semantic, integration);
+                }
+                ImGui::EndChild();
             }
                 ImGui::EndTable();
             }
@@ -2317,9 +2912,18 @@ namespace overlay
                         submittedNotificationIds_.size())
                     continue;
                 if (NotificationDrawListWasSubmitted(
-                        notification.frameDrawListToken, submittedDrawLists_))
+                        notification.frameDrawListToken, submittedDrawLists_)) {
                     submittedNotificationIds_[submittedNotificationCount_++] =
                         notification.notification.id;
+                    if (notification.notification.kind ==
+                            plugin::OverlayNotificationKind::StartupOverlayHint &&
+                        !startupHintDrawSubmissionLogged_) {
+                        startupHintDrawSubmissionLogged_ = true;
+                        LogNotificationLifecycle("toast_draw_submitted",
+                            "imgui_drawlist_has_vertices",
+                            notification.notification.id);
+                    }
+                }
             }
         }
         const presentation::Rect surfaceExtent{0, 0,
@@ -2353,18 +2957,9 @@ namespace overlay
             return false;
         }
         damageTracker_.Publish(currentBounds, surfaceExtent);
+        menuFrameAdmission_.DrawCompleted(visible());
         forceFullDamage_ = false;
-        surfaceDirty_ = false;
-        if (overlayVisible && !damage.empty()) {
-            diagnostics::overlay_activation_trace::RecordStage(logger_,
-                activationRequest,
-                diagnostics::overlay_activation_trace::Stage::RenderSubmitted,
-                "render_submitted", true, ready());
-            diagnostics::overlay_activation_trace::RecordStage(logger_,
-                activationRequest,
-                diagnostics::overlay_activation_trace::Stage::FirstVisibleFrame,
-                "first_visible_frame", true, ready());
-        }
+        surfaceDirty_ = cameraStateLayoutChanged;
         if (!firstFrameLogged_) {
             firstFrameLogged_ = true;
             LogDiagnostic(logger_, "OVERLAY_FIRST_FRAME");
@@ -2379,12 +2974,13 @@ namespace overlay
 
     void Renderer::Disable(const char* reason) noexcept
     {
+        menuFrameAdmission_.Request(false);
         visible_.store(false, std::memory_order_release);
         PublishOverlayPopupState(false);
         try {
             GetInputState().Close();
         } catch (...) {
-            // The atomic visibility gate is already closed; finish resource teardown.
+            // The atomic visibility gate is closed; continue owner handoff.
         }
         try {
             Log(std::string("OVERLAY_RENDER_DISABLED reason=") + reason);
@@ -2392,11 +2988,15 @@ namespace overlay
             // Diagnostics are optional; terminal cleanup is not.
         }
 #if defined(OVERLAY_STARTUP_JOURNAL)
-        diagnostics::startup_journal::MarkOnce(10, "OVERLAY_DISABLED", reason);
-        diagnostics::startup_journal::Flush();
+        try {
+            diagnostics::startup_journal::MarkOnce(10, "OVERLAY_DISABLED", reason);
+            diagnostics::startup_journal::Flush();
+        } catch (...) {
+            // A journal failure must not prevent terminal owner handoff.
+        }
 #endif
-        Shutdown();
         state_.DisableOverlay();
+        if (terminalRequest_) terminalRequest_();
     }
 
     void Renderer::FailAfterException() noexcept
@@ -2404,21 +3004,39 @@ namespace overlay
         Disable("overlay_exception");
     }
 
-    void Renderer::Shutdown() noexcept
+    bool Renderer::Shutdown() noexcept
     {
+        menuFrameAdmission_.Request(false);
+        visible_.store(false, std::memory_order_release);
         PublishOverlayPopupState(false);
         try {
-            GetInputState().CancelRebind();
+            GetInputState().Close();
         } catch (...) {
-            // Rebinding is best-effort cleanup; renderer resources still tear down.
+            // Input admission is already terminal; continue independent teardown.
         }
-        plugin::SetHotkeyRebindCaptureActive(false);
-        plugin::MarkHotkeyRebindKeyConsumed(0);
+        try {
+            plugin::SetHotkeyRebindCaptureActive(false);
+            plugin::MarkHotkeyRebindKeyConsumed(0);
+        } catch (...) {
+            // Rebind state is optional and cannot block resource finalization.
+        }
+        const bool hidden = !overlayWindow_ || !IsWindow(overlayWindow_) ||
+            SetOverlayWindowVisibility(false);
+        if (!hidden) {
+            overlayWindowVisible_ = IsWindowVisible(overlayWindow_) != FALSE;
+            try { Log("OVERLAY_DISPLAY_HIDE_UNCONFIRMED"); }
+            catch (...) {}
+        }
         DetachImGui();
-        ResetComposition();
-        window_ = nullptr;
+        if (!ResetComposition()) return false;
+        gameWindow_ = nullptr;
+        overlayWindow_ = nullptr;
+        overlayPlacement_.valid = false;
+        hostActive_ = false;
+        hostMinimized_ = false;
         surfaceGeneration_ = 0;
         firstFrameLogged_ = false;
         surfaceDirty_ = true;
+        return OwnedResourcesReleased();
     }
 }

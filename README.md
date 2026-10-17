@@ -14,7 +14,7 @@ The mod is especially useful if you play with a Gameplay FOV other than the game
 - Supports cinematic aspect policies `Auto`, `16:9`, `21:9` and `32:9`, independently of the display aspect. Set `Cinematics.Enabled=false` to leave cinematic camera output native.
 - `Cinematics.FovMode` selects `GameplayHorPlus`, which uses the game-selected FOV as its cinematic baseline, or `NativeHorPlus`, which applies Hor+ to the game's authored cinematic FOV independently of Gameplay FOV.
 - Offers three FOV-aware Dialogue zoom modes: `Adaptive`, `Reduced` and `Disabled`. Set `Dialogue.Enabled=false` to leave dialogue camera output entirely to the game; the game's default dialogue zoom targets 70° FOV.
-- Includes an in-game overlay for settings, runtime status, hotkeys and the read-only Camera State view.
+- Includes an in-game overlay for settings, runtime status, hotkeys and a read-only Camera State view in a separate, independently scrollable panel. The Overlay has its own click-through display window; the game window retains host input and discovery responsibilities.
 - Ships 18 embedded overlay languages with locale-specific font profiles; `Auto (Game Language)` follows the game's interface language.
 - Uses the configured Overlay Toggle (`Delete` by default); `Esc` dismisses the open overlay. Optional mode hotkeys are disabled by default.
 - `[Overlay] Enabled=false` disables the Overlay subsystem after a game restart without disabling Gameplay, Cinematics or Dialogue correction.
@@ -24,7 +24,7 @@ The mod is especially useful if you play with a Gameplay FOV other than the game
 
 ## In-game settings overlay
 
-The overlay brings the mod's settings and runtime status into the game. It includes localized selector help and examples, semantic readiness messages, hotkey rebinding and the read-only Camera State view.
+The overlay brings the mod's settings and runtime status into the game. It includes localized selector help and examples, semantic readiness messages, hotkey rebinding and the read-only Camera State view. Open **Camera Details** to show the independently scrollable third panel; close it to return to the compact two-column layout.
 
 **Overlay overview:** the main runtime settings are shown alongside Camera Integration and Camera State information.
 
@@ -50,14 +50,14 @@ For manual installation:
 
 1. Install [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) as `dsound.dll` in `Stalker2\\Binaries\\Win64`.
 2. Remove previous `STALKER2UltrawideFix.asi`, `STALKER2GameplayAspectFix.asi` and their old INI/log files. Do not load old and new ASIs together.
-3. Copy `STALKER2CameraTweaks.asi` and `STALKER2CameraTweaks.ini` to the same `Win64` directory.
+3. Copy `STALKER2CameraTweaks.asi` to `Stalker2\Binaries\Win64`. The mod creates `STALKER2CameraTweaks.ini` beside the ASI on first launch; existing settings are migrated where recognized.
 4. Start the game normally.
 
 The plugin creates `STALKER2CameraTweaks.log` beside the game executable. The startup log includes SHA-256 values for the loaded mod and game executable, which helps verify support reports.
 
 ## Configuration
 
-Configure the mod in-game through the overlay. Press `Delete` by default to open or close it; `Esc` dismisses the open overlay. Changes are saved to `STALKER2CameraTweaks.ini`.
+Configure the mod in-game through the overlay. Press `Delete` by default to open or close it; `Esc` dismisses the open overlay. Changes are saved to the user-owned `STALKER2CameraTweaks.ini`. The INI is generated at runtime and is not part of the release archive or Vortex copy instructions. Known older layouts are rebuilt while compatible settings are retained; structurally unreadable files are backed up before recovery.
 
 The default configuration is:
 

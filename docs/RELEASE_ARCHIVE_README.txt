@@ -1,4 +1,4 @@
-STALKER 2 CAMERA TWEAKS v3.0.0
+STALKER 2 CAMERA TWEAKS v3.2.0
 
 Gameplay, cinematic and dialogue camera/FOV adjustments for S.T.A.L.K.E.R. 2: Heart of Chornobyl (Unreal Engine 5.5.4).
 
@@ -11,7 +11,7 @@ INSTALLATION
 1. Close the game.
 2. Install Ultimate ASI Loader as dsound.dll in Stalker2\Binaries\Win64.
 3. Remove older STALKER2UltrawideFix.asi and STALKER2GameplayAspectFix.asi files so they are not loaded alongside this mod.
-4. Copy STALKER2CameraTweaks.asi and STALKER2CameraTweaks.ini into Stalker2\Binaries\Win64.
+4. Copy STALKER2CameraTweaks.asi into Stalker2\Binaries\Win64. The mod creates STALKER2CameraTweaks.ini beside the ASI on first launch and retains recognized settings when migrating older layouts. The INI is user-owned and is not included in the release archive.
 5. Start the game.
 
 Open or close the in-game Overlay with Delete (the default toggle key). Press Esc while it is open to dismiss it. Settings are saved in STALKER2CameraTweaks.ini. Manual INI changes require a game restart.

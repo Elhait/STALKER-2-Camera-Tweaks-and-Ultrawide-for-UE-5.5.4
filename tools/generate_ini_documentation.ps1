@@ -82,7 +82,7 @@ $comments.CinematicAspect = [string[]]@(
         "#   16:9 - $($values['tooltip.cinematics.aspect.16_9'])",
         "#   21:9 - $($values['tooltip.cinematics.aspect.21_9'])",
         "#   32:9 - $($values['tooltip.cinematics.aspect.32_9'])",
-        "# Example: $($values['tooltip.cinematics.aspect.forced_example'])",
+        "# $($values['tooltip.cinematics.aspect.forced_example'])",
         "# Default: Auto")
 $comments.CinematicEnabled = [string[]]@(
         "# ------------------------------------------------------------------------------",
@@ -90,8 +90,8 @@ $comments.CinematicEnabled = [string[]]@(
         "# ------------------------------------------------------------------------------",
         "# Master switch for cinematic camera corrections.",
         "# Default: true",
-        "# true - $($values['tooltip.cinematics.enabled'])",
-        "# false - preserve native cinematic camera output.")
+        "# true - Apply the selected cinematic framing and FOV corrections.",
+        "# false - Do not apply Camera Tweaks cinematic corrections; leave camera output game-controlled.")
 $comments.CinematicFov = [string[]]@(
         "# FOV correction mode:",
         "#   GameplayHorPlus - $($values['tooltip.cinematics.fov.gameplay'])",
@@ -108,8 +108,8 @@ $comments.DialogueEnabled = [string[]]@(
         "# ------------------------------------------------------------------------------",
         "# Master switch for Dialogue correction.",
         "# Default: true",
-        "# true - apply the selected mode after an accepted Dialogue start.",
-        "# false - preserve native camera output while observing Dialogue lifecycle.")
+        "# true - Apply the selected mode after an accepted Dialogue start.",
+        "# false - Do not apply Dialogue correction; keep game camera output and continue observing its lifecycle for recovery.")
 $comments.DialogueZoom = [string[]]@(
         "# Available modes:",
         "#   Adaptive - $($values['tooltip.dialogue.zoom.adaptive'])",
@@ -131,6 +131,22 @@ $comments.HotkeysEnabled = [string[]]@(
         "# Default: false",
         "# true - $($values['tooltip.hotkeys.enabled'])",
         "# false - $($values['tooltip.hotkeys.disabled'])")
+$comments.DiagnosticsEnabled = [string[]]@(
+        "# ------------------------------------------------------------------------------",
+        "# Optional read-only runtime telemetry.",
+        "# ------------------------------------------------------------------------------",
+        "# Startup-only. Restart the game after changing this value.",
+        "# true - Enable passive runtime telemetry and diagnostic log records.",
+        "# false - Disable optional telemetry; camera correction and Overlay behavior are unchanged.",
+        "# Default: false")
+$comments.OverlayEnabled = [string[]]@(
+        "# ------------------------------------------------------------------------------",
+        "# Controls the optional Overlay subsystem.",
+        "# ------------------------------------------------------------------------------",
+        "# Startup-only. Restart the game after changing this value.",
+        "# true - Initialize the Overlay so its menu and startup notifications can be shown.",
+        "# false - Skip Overlay initialization; camera corrections remain active.",
+        "# Default: true")
 $comments.HotkeyGameplayCycle = [string[]]@(
         "# $($values['tooltip.hotkeys.gameplay_cycle'])",
         "# $($values['tooltip.hotkeys.rebind'])",

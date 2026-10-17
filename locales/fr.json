@@ -158,6 +158,7 @@
       "cinematic_status": "État de présentation actuel de l’intégration caméra cinématique."
     }
   },
+  "camera_state_toggle": { "label": "Détails de la caméra", "open": "Ouvrir", "close": "Fermer" },
   "camera_state": {
     "waiting": "En attente de la première mise à jour complète de la caméra.",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} est déjà attribuée à {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "Appuyez sur {key} pour ouvrir l’overlay"
+    "open_overlay_hint": "Appuyez sur {key} pour ouvrir l’overlay",
+    "persistence_failed": "La modification est active, mais n’a pas été enregistrée. L’ancienne valeur sera rétablie au redémarrage du jeu."
   }
 }

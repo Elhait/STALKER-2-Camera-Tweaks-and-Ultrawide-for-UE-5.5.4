@@ -1,0 +1,23 @@
+[2026-10-16 19:57:38.226] Runtime identity: modSha256=72F373AB015D93D1662E2D62DCAB67B4FF681C3202D7C08F343748790BFD02E5 gameSha256=61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B.
+[2026-10-16 19:57:38.423] Zoom transition observation hooks installed: ZOOM_IN RVA=0x602a79 ZOOM_OUT RVA=0x602c1f. Read-only edge telemetry enabled.
+[2026-10-16 19:57:38.423] Configuration: Gameplay.Enabled=1 Gameplay.Mode=RuntimeCombine Cinematics.Enabled=true Cinematics.Mode=Auto Cinematic.FovMode=GameplayHorPlus Dialogue.Enabled=true Dialogue.Mode=Adaptive Diagnostics.Enabled=true.
+[2026-10-16 19:57:38.423] Gameplay aspect fix loaded. FOV is preserved from the game's settings.
+[2026-10-16 19:57:38.564] Cinematic aspect signature validated at RVA=0x6b75865.
+[2026-10-16 19:57:38.564] Global cinematic aspect store hooked: policy=Auto.
+[2026-10-16 19:57:38.763] Cinematic FOV resolver: ENTER matches=1 EXIT legacy matches=0.
+[2026-10-16 19:57:38.859] Cinematic FOV resolver: EXIT indexed fallback=ACTIVE matches=1.
+[2026-10-16 19:57:38.860] Cinematic FOV ENTER structural/decode/operand validation=PASS.
+[2026-10-16 19:57:38.860] Cinematic FOV EXIT structural/decode/operand validation=PASS mode=indexed.
+[2026-10-16 19:57:38.860] Cinematic FOV call-target validation: ENTER=PASS EXIT=PASS sameTarget=PASS.
+[2026-10-16 19:57:38.860] Cinematic FOV signatures validated at ENTER RVA=0x366daff EXIT RVA=0x366da9d consumer=0x7ff6363267c8.
+[2026-10-16 19:57:38.861] Cinematics feature initialized transactionally: policy=Auto.
+[2026-10-16 19:57:38.930] Camera-writer signature validated at RVA=0xa9f8cb.
+[2026-10-16 19:57:38.930] Installing validated gameplay camera-writer observer.
+[2026-10-16 19:57:38.931] Validated gameplay camera-writer observer installed: true correctionEnabled=true.
+[2026-10-16 19:57:39.077] Dialogue boundary hook installed: RVA=0xd09629 policy=Adaptive.
+[2026-10-16 19:57:39.077] Initialization summary: Gameplay=AVAILABLE Cinematics=AVAILABLE Dialogue=AVAILABLE.
+[2026-10-16 19:57:39.077] Worker started: hotkey.
+[2026-10-16 19:57:39.077] Hotkey worker active: OverlayToggle=Delete Enabled=false Gameplay=F9 CinematicAspect=F9 CinematicFov=F9 Dialogue=F9.
+[2026-10-16 19:57:39.077] Initialization status: Gameplay=AVAILABLE Cinematics=AVAILABLE Dialogue=AVAILABLE Hotkeys=AVAILABLE Diagnostics=AVAILABLE.
+[2026-10-16 19:58:10.898] Overlay Auto locale synchronized: game=uk font_size=15
+[2026-10-16 19:58:19.531] PERF_RUNTIME_SUMMARY diagnostics=on elapsed_ms=10 gameplay-camera-samples=0 dialogue-camera-samples=0 camera-state-publishes=0 semantic-snapshot-reads=3 cinematic-aspect-callbacks=0 cinematic-viewport-queries=0 cinematic-aspect-log-emissions=0 | lock=dialogue acquisitions=3 wait_avg_ns=1433 wait_p50_upper_ns=100 wait_p95_upper_ns=5000 wait_max_ns=4100 hold_avg_ns=66 hold_p50_upper_ns=100 hold_p95_upper_ns=100 hold_max_ns=100 log_calls=0 log_avg_ns=0 log_p50_upper_ns=0 log_p95_upper_ns=0 log_max_ns=0 | lock=camera-state acquisitions=3 wait_avg_ns=66 wait_p50_upper_ns=100 wait_p95_upper_ns=100 wait_max_ns=100 hold_avg_ns=100 hold_p50_upper_ns=100 hold_p95_upper_ns=100 hold_max_ns=100 log_calls=0 log_avg_ns=0 log_p50_upper_ns=0 log_p95_upper_ns=0 log_max_ns=0 | lock=fov-observation acquisitions=0 wait_avg_ns=0 wait_p50_upper_ns=0 wait_p95_upper_ns=0 wait_max_ns=0 hold_avg_ns=0 hold_p50_upper_ns=0 hold_p95_upper_ns=0 hold_max_ns=0 log_calls=0 log_avg_ns=0 log_p50_upper_ns=0 log_p95_upper_ns=0 log_max_ns=0 | lock=gameplay-baseline acquisitions=3 wait_avg_ns=100 wait_p50_upper_ns=100 wait_p95_upper_ns=100 wait_max_ns=100 hold_avg_ns=0 hold_p50_upper_ns=100 hold_p95_upper_ns=100 hold_max_ns=0 log_calls=0 log_avg_ns=0 log_p50_upper_ns=0 log_p95_upper_ns=0 log_max_ns=0 | lock=aspect-restoration acquisitions=0 wait_avg_ns=0 wait_p50_upper_ns=0 wait_p95_upper_ns=0 wait_max_ns=0 hold_avg_ns=0 hold_p50_upper_ns=0 hold_p95_upper_ns=0 hold_max_ns=0 log_calls=0 log_avg_ns=0 log_p50_upper_ns=0 log_p95_upper_ns=0 log_max_ns=0

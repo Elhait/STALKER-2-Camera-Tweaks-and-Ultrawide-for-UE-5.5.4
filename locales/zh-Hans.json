@@ -158,6 +158,7 @@
       "cinematic_status": "Cinematic 相机集成的当前呈现状态。"
     }
   },
+  "camera_state_toggle": { "label": "相机状态", "open": "打开", "close": "关闭" },
   "camera_state": {
     "waiting": "正在等待首次完整的镜头更新。",
     "field": {
@@ -180,6 +181,7 @@
     "binding_value": "{oldKey} → {newKey}",
     "conflict_value": "{key} 已分配给 {setting}",
     "setting_changed": "{oldValue} → {newValue}",
-    "open_overlay_hint": "按 {key} 打开覆盖层"
+    "open_overlay_hint": "按 {key} 打开覆盖层",
+    "persistence_failed": "更改已生效，未保存。重启游戏后恢复原值。"
   }
 }

@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": true,
+  "ExpectedDescendantsCleaned": true,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "27000:E:\\Work\\Visual Studio Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\vctip.exe",
+  "Output": "**********************************************************************\r\n** Visual Studio 2022 Developer Command Prompt v17.14.28\r\n** Copyright (c) 2025 Microsoft Corporation\r\n**********************************************************************\r\n-- Configuring done (0.8s)\n-- Generating done (0.5s)\n-- Build files have been written to: E:/Work/Slaker2 mods/01-Projects/STALKER-2-Ultrawide-Fix-for-UE-5.5.4/build-artifacts/cm/production-tOFF-dOFF\n[1/8] Validating localization catalogs and embedded resources\r\nlocales=18 canonical=en keys=216 registry_lookup=PASS locale_parity=PASS placeholders=PASS utf8=PASS embedded_resources=PASS generic_manager=PASS registry_selector=PASS single_asi=PASS embedded_font_profiles=PASS locale_metadata_glyphs=PASS selector_font_faces=PASS camera_state_view_boundary=PASS right_tooltip_coverage_18_locales=PASS full_row_tooltip_hitbox=PASS camera_state_toggle=PASS proggyclean_merge=PASS integer_font_sizes=PASS\r\nfont_rendering_scope=offline embedded glyph coverage; Arabic shaping/bidi/RTL and runtime visual rendering not established\r\r\n[2/8] Building CXX object CMakeFiles\\STALKER2CameraTweaks.dir\\src\\plugin\\runtime.cpp.obj\r\n[3/8] Building CXX object CMakeFiles\\STALKER2CameraTweaks.dir\\src\\config\\config_repository.cpp.obj\r\n[4/8] Building CXX object CMakeFiles\\STALKER2CameraTweaks.dir\\src\\config\\config_template.cpp.obj\r\n[5/8] Building CXX object CMakeFiles\\STALKER2CameraTweaks.dir\\src\\overlay\\composition\\composition_runtime.cpp.obj\r\n[6/8] Building CXX object CMakeFiles\\STALKER2CameraTweaks.dir\\src\\overlay\\presenter\\renderer_runtime.cpp.obj\r\n[7/8] Building CXX object CMakeFiles\\STALKER2CameraTweaks.dir\\external\\safetyhook\\safetyhook.cpp.obj\r\n[8/8] Linking CXX shared module bin\\STALKER2CameraTweaks.asi\r\nPublished E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\build-artifacts\\shutdown-hardening\\STALKER2CameraTweaks.asi\r\n",
+  "ProcessId": 26776
+}

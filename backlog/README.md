@@ -5,21 +5,29 @@ tasks. Historical research is archived under [`research/`](../research/).
 
 ## Active tasks
 
-- [Return to RUNTIME_CPP_DECOMPOSITION after v3.0](active/RUNTIME_CPP_DECOMPOSITION_POST_V3_0_RETURN.md) (deferred; resume only after v3.0 is published)
-- [Vortex override instructions in mod archive](active/VORTEX_OVERRIDE_INSTRUCTIONS_ARCHIVE_TASK.md) (deferred until RUNTIME_CPP_DECOMPOSITION is complete)
-- [18-locale overlay localization](active/LOCALIZATION_18_LOCALES_TASK_PLAN.md) (offline implementation/validation complete; closure pending user confirmation)
-- [Cinematic runtime state differential trace](active/CINEMATIC_RUNTIME_STATE_DIFFERENTIAL_TRACE_TASK_PLAN.md)
-- [Cutscene FOV downstream state](active/CUTSCENE_FOV_DOWNSTREAM_STATE_TASK_PLAN.md)
-- [Cutscene Hor+ implementation](active/CUTSCENE_HORPLUS_IMPLEMENTATION_TASK_PLAN.md)
-- [Cutscene Hor+ transition boundary](active/CUTSCENE_HORPLUS_TRANSITION_BOUNDARY_TASK_PLAN.md)
-- [Letterbox re-audit](active/LETTERBOX_REAUDIT_TASK_PLAN.md)
-- [Weapon/viewmodel FOV reference](active/WEAPON_VIEWMODEL_FOV_REFERENCE_TASK_PLAN.md)
+There are currently no active task plans. The reviewed plans were moved to
+[`research/completed/`](../research/completed/),
+[`research/deferred/`](../research/deferred/), or
+[`research/rejected/`](../research/rejected/) according to their outcomes and
+current priority. See the
+[backlog reconciliation report](../research/reports/BACKLOG_RECONCILIATION_2026-10-17.md)
+for the per-file disposition. Nothing was deleted.
 
 ## Archive
 
 - [Research archive](../research/)
 - [Current task log](TASKLOG.md)
 - [Previous task log](TASKLOG_PREVIOUS.md)
+
+## Process reference
+
+- [Reusable release preparation and publishing playbook](RELEASE_PREPARATION_TASK_PLAN.md)
+
+Completed plans are under [`research/completed/`](../research/completed/),
+deferred work under [`research/deferred/`](../research/deferred/), and rejected
+or superseded approaches under [`research/rejected/`](../research/rejected/).
+The [2026-10-17 reconciliation report](../research/reports/BACKLOG_RECONCILIATION_2026-10-17.md)
+records the disposition and cleanup.
 
 Task plans are working records. Confirmed current behavior and release evidence
 belong in [`TESTING_AND_RESEARCH.md`](../TESTING_AND_RESEARCH.md).

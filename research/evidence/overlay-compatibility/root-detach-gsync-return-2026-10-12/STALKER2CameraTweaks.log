@@ -1,0 +1,21 @@
+[2026-10-12 15:46:57.421] Runtime identity: modSha256=78357B990DC705DD3973339E0EA4FE733E2484A2DCB1461F7C33F859BC2B624E gameSha256=61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B.
+[2026-10-12 15:46:57.641] Configuration: Gameplay.Enabled=1 Gameplay.Mode=RuntimeCombine Cinematics.Enabled=true Cinematics.Mode=Auto Cinematic.FovMode=GameplayHorPlus Dialogue.Enabled=true Dialogue.Mode=Adaptive Diagnostics.Enabled=false.
+[2026-10-12 15:46:57.641] Gameplay aspect fix loaded. FOV is preserved from the game's settings.
+[2026-10-12 15:46:57.775] Cinematic aspect signature validated at RVA=0x6b75865.
+[2026-10-12 15:46:57.776] Global cinematic aspect store hooked: policy=Auto.
+[2026-10-12 15:46:57.964] Cinematic FOV resolver: ENTER matches=1 EXIT legacy matches=0.
+[2026-10-12 15:46:58.074] Cinematic FOV resolver: EXIT indexed fallback=ACTIVE matches=1.
+[2026-10-12 15:46:58.075] Cinematic FOV ENTER structural/decode/operand validation=PASS.
+[2026-10-12 15:46:58.075] Cinematic FOV EXIT structural/decode/operand validation=PASS mode=indexed.
+[2026-10-12 15:46:58.075] Cinematic FOV call-target validation: ENTER=PASS EXIT=PASS sameTarget=PASS.
+[2026-10-12 15:46:58.075] Cinematic FOV signatures validated at ENTER RVA=0x366daff EXIT RVA=0x366da9d consumer=0x7ff724a567c8.
+[2026-10-12 15:46:58.076] Cinematics feature initialized transactionally: policy=Auto.
+[2026-10-12 15:46:58.168] Camera-writer signature validated at RVA=0xa9f8cb.
+[2026-10-12 15:46:58.168] Installing validated gameplay camera-writer observer.
+[2026-10-12 15:46:58.169] Validated gameplay camera-writer observer installed: true correctionEnabled=true.
+[2026-10-12 15:46:58.308] Dialogue boundary hook installed: RVA=0xd09629 policy=Adaptive.
+[2026-10-12 15:46:58.308] Initialization summary: Gameplay=AVAILABLE Cinematics=AVAILABLE Dialogue=AVAILABLE.
+[2026-10-12 15:46:58.308] Worker started: hotkey.
+[2026-10-12 15:46:58.308] Hotkey worker active: OverlayToggle=Delete Enabled=false Gameplay=F9 CinematicAspect=F9 CinematicFov=F9 Dialogue=F9.
+[2026-10-12 15:46:58.308] Initialization status: Gameplay=AVAILABLE Cinematics=AVAILABLE Dialogue=AVAILABLE Hotkeys=AVAILABLE Diagnostics=DISABLED.
+[2026-10-12 15:47:35.075] Overlay Auto locale synchronized: game=uk font_size=15
