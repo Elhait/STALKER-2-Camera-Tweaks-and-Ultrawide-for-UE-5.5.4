@@ -44,6 +44,27 @@ namespace plugin
             !captureConsumedKey;
     }
 
+    struct RuntimeHotkeySample
+    {
+        bool observed{};
+        bool dialogue{};
+        bool cinematic{};
+        bool cinematicFov{};
+        bool gameplay{};
+    };
+
+    template<typename ReadKey>
+    RuntimeHotkeySample SampleRuntimeHotkeys(const RuntimeSettingsSnapshot& settings,
+        bool foregroundGame, ReadKey&& readKey)
+    {
+        if (!settings.hotkeysEnabled || !foregroundGame) return {};
+        return {true,
+            (readKey(settings.dialogueCycleKey) & 0x8000) != 0,
+            (readKey(settings.cinematicCycleKey) & 0x8000) != 0,
+            (readKey(settings.cinematicFovCycleKey) & 0x8000) != 0,
+            (readKey(settings.gameplayCycleKey) & 0x8000) != 0};
+    }
+
     enum class SemanticProvenance : std::uint8_t
     {
         None,

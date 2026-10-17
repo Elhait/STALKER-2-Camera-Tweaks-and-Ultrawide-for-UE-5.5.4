@@ -12,6 +12,7 @@
 #include "canonical_ini_documentation.hpp"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <cassert>
 #include <atomic>
@@ -319,6 +320,16 @@ int main()
     }
 
     ImGui::CreateContext();
+#if defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS) && defined(IMGUI_IMPL_WIN32_DISABLE_GAMEPAD) && defined(IMGUI_DISABLE_FILE_FUNCTIONS)
+    // This invokes only ImGui's compiled-out stub, never the OS shell.
+    assert(ImGui::GetPlatformIO().Platform_OpenInShellFn &&
+        !ImGui::GetPlatformIO().Platform_OpenInShellFn(ImGui::GetCurrentContext(),
+            "unused-local-test-target"));
+    assert(ImFileOpen("unused-local-test-target", "wb") == nullptr);
+#else
+    std::cerr << "Unexpected shell/file/gamepad capability enabled in settings UI\n";
+    return 1;
+#endif
     struct AtlasSnapshot {
         int width{};
         int height{};

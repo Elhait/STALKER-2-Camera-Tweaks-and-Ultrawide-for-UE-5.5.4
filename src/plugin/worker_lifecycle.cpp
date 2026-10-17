@@ -31,24 +31,15 @@ namespace plugin
             return false;
         const auto request = new (std::nothrow) StartRequest{ entry, context };
         if (!request) return false;
+        // Lifecycle control is externally serialized; workers consume only the
+        // already-published stop event and their request, never this handle list.
         const auto worker = CreateThread(nullptr, 0, ThreadStartThunk, request,
-            CREATE_SUSPENDED, nullptr);
+            0, nullptr);
         if (!worker) {
             delete request;
             return false;
         }
         workers_[workerCount_++] = worker;
-        if (ResumeThread(worker) == static_cast<DWORD>(-1)) {
-            --workerCount_;
-            // The thread is still suspended when ResumeThread fails. Keep
-            // ownership long enough to terminate and join that inaccessible
-            // thread before closing its handle.
-            TerminateThread(worker, ERROR_OPERATION_ABORTED);
-            WaitForSingleObject(worker, INFINITE);
-            delete request;
-            CloseHandle(worker);
-            return false;
-        }
         return true;
     }
 

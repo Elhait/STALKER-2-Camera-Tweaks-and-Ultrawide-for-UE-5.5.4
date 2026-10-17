@@ -132,9 +132,9 @@ if ($adapterRuns.Count -ne 1 -or $zoomRuns.Count -ne 4 -or
     $missingInputs.Add('native_adapter_or_N06_run_contract_mismatch')
 }
 $scenarioNames = @($registry.native_adapter_contract.scenario_names)
-if ($scenarioNames.Count -ne 105 -or @($scenarioNames | Sort-Object -Unique).Count -ne 105 -or
+if ($scenarioNames.Count -ne 112 -or @($scenarioNames | Sort-Object -Unique).Count -ne 112 -or
     @($registry.native_adapter_contract.diagnostic_modes).Count -ne 2 -or
-    $registry.native_adapter_contract.child_process_count -ne 210) {
+    $registry.native_adapter_contract.child_process_count -ne 224) {
     $missingInputs.Add('native_adapter_scenario_mode_inventory_mismatch')
 }
 

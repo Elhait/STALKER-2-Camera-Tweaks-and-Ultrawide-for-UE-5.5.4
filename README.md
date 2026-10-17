@@ -15,11 +15,13 @@ The mod is especially useful if you play with a Gameplay FOV other than the game
 - `Cinematics.FovMode` selects `GameplayHorPlus`, which uses the game-selected FOV as its cinematic baseline, or `NativeHorPlus`, which applies Hor+ to the game's authored cinematic FOV independently of Gameplay FOV.
 - Offers three FOV-aware Dialogue zoom modes: `Adaptive`, `Reduced` and `Disabled`. Set `Dialogue.Enabled=false` to leave dialogue camera output entirely to the game; the game's default dialogue zoom targets 70° FOV.
 - Includes an in-game overlay for settings, runtime status, hotkeys and a read-only Camera State view in a separate, independently scrollable panel. The Overlay has its own click-through display window; the game window retains host input and discovery responsibilities.
+- The Overlay waits for a suitable game window before initializing its presenter; on some launches it may become available after the game has progressed through startup.
 - Ships 18 embedded overlay languages with locale-specific font profiles; `Auto (Game Language)` follows the game's interface language.
 - Uses the configured Overlay Toggle (`Delete` by default); `Esc` dismisses the open overlay. Optional mode hotkeys are disabled by default.
 - `[Overlay] Enabled=false` disables the Overlay subsystem after a game restart without disabling Gameplay, Cinematics or Dialogue correction.
 - The standard ASI includes supported passive runtime diagnostics. Set `[Diagnostics] Enabled=true` and restart the game to enable bounded diagnostic observations and logs; when disabled, diagnostic-only work is skipped. No separate diagnostic ASI is needed for these diagnostics.
 - Creates and documents `STALKER2CameraTweaks.ini` automatically; overlay settings are saved there as well.
+- Keeps the configuration and diagnostic logs local beside the ASI; no network service is needed for normal use.
 - Resolves gameplay and cinematic hooks through guarded signatures and fails safely when validation is ambiguous or unsuccessful.
 
 ## In-game settings overlay

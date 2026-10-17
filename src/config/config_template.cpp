@@ -1244,8 +1244,7 @@ namespace config
         const auto temporary = std::filesystem::path(path.wstring() + L".tmp");
         {
             platform::win32::NativeFile file;
-            if (!file.Open(temporary.c_str(), true)) {
-                DeleteFileW(temporary.c_str());
+            if (!file.CreateExclusive(temporary.c_str())) {
                 if (log) log("Config template staging open failed; existing config preserved.");
                 return false;
             }

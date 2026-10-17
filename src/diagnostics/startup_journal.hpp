@@ -3,6 +3,8 @@
 // Bounded production startup milestones. This deliberately does not inspect
 // modules or decode instructions, and records no per-frame graphics events.
 #if defined(OVERLAY_STARTUP_JOURNAL)
+#include "../platform/process_lifetime.hpp"
+#include "../platform/win32/native_file.hpp"
 #include <Windows.h>
 #include <intrin.h>
 #include <atomic>
@@ -32,7 +34,8 @@ namespace diagnostics::startup_journal
     inline std::atomic<unsigned> onceBits{};
     inline HMODULE module{};
     inline SRWLOCK fileLock = SRWLOCK_INIT;
-    inline HANDLE file = INVALID_HANDLE_VALUE;
+    inline platform::ProcessLifetime<platform::win32::NativeFile> fileStorage;
+    inline auto& file = fileStorage.get();
     inline unsigned drained{};
     inline bool headerWritten{};
 
@@ -88,7 +91,7 @@ namespace diagnostics::startup_journal
 
     inline bool OpenFile() noexcept
     {
-        if (file != INVALID_HANDLE_VALUE) return true;
+        if (file.isOpen()) return true;
         wchar_t path[PathCapacity]{};
         const DWORD length = GetModuleFileNameW(module, path, PathCapacity);
         if (!length || length >= PathCapacity) return false;
@@ -101,15 +104,12 @@ namespace diagnostics::startup_journal
         const auto directoryLength = wcslen(path);
         if (directoryLength + _countof(filename) > PathCapacity) return false;
         wcscat_s(path, PathCapacity, filename);
-        file = CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
-            nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        return file != INVALID_HANDLE_VALUE;
+        return file.Open(path, true);
     }
 
     inline bool Write(const char* data, unsigned length) noexcept
     {
-        DWORD written{};
-        return WriteFile(file, data, length, &written, nullptr) && written == length;
+        return file.Write(std::string_view(data, length));
     }
 
     inline void Flush() noexcept

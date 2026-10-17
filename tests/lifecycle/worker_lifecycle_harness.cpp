@@ -1,6 +1,9 @@
 #include "../../src/plugin/worker_lifecycle.hpp"
 #include "../../src/platform/process_lifetime.hpp"
+BOOL WINAPI TestNativeFileWrite(HANDLE, LPCVOID, DWORD, LPDWORD, LPOVERLAPPED);
+#define NATIVE_FILE_TEST_WRITE TestNativeFileWrite
 #include "../../src/platform/win32/native_log_sink.hpp"
+#undef NATIVE_FILE_TEST_WRITE
 #include <spdlog/logger.h>
 
 #include <atomic>
@@ -10,6 +13,28 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+
+namespace {
+    std::atomic<unsigned> writeFaultPhase{};
+    std::atomic<unsigned> nativeWriteCalls{};
+}
+
+BOOL WINAPI TestNativeFileWrite(HANDLE file, LPCVOID data, DWORD size,
+    LPDWORD written, LPOVERLAPPED overlapped)
+{
+    nativeWriteCalls.fetch_add(1);
+    if (writeFaultPhase.load() == 1) {
+        writeFaultPhase.store(2);
+        return WriteFile(file, data, (std::min)(size, DWORD{8}), written, overlapped);
+    }
+    if (writeFaultPhase.load() == 2) {
+        writeFaultPhase.store(0);
+        *written = 0;
+        SetLastError(ERROR_WRITE_FAULT);
+        return FALSE;
+    }
+    return WriteFile(file, data, size, written, overlapped);
+}
 
 namespace
 {
@@ -62,6 +87,21 @@ namespace
         return lifecycle.Initialize() && lifecycle.StopAndJoin();
     }
 
+    bool TestImmediatelyCompletingWorkers()
+    {
+        std::atomic<unsigned> completions{};
+        const auto entry = +[](void* context) -> DWORD {
+            static_cast<std::atomic<unsigned>*>(context)->fetch_add(1,
+                std::memory_order_release);
+            return 0;
+        };
+        plugin::WorkerLifecycle lifecycle;
+        for (unsigned round = 0; round != 64; ++round)
+            if (!lifecycle.Initialize() || !lifecycle.Start(entry, &completions) ||
+                !lifecycle.StopAndJoin() || lifecycle.WorkerCount()) return false;
+        return completions.load(std::memory_order_acquire) == 64;
+    }
+
     bool TestHotkeyPlusDiagnosticWorkerCapacity()
     {
         plugin::WorkerLifecycle lifecycle;
@@ -94,6 +134,38 @@ namespace
             if (resident.get().destructions != &destructions) return false;
         }
         if (destructions != 0) return false;
+
+        const auto cappedPath = directory / L"bounded-log.txt";
+        {
+            platform::win32::NativeLogFile capped(256);
+            if (!capped.Open(cappedPath.c_str())) return false;
+            for (unsigned record = 0; record != 100; ++record)
+                if (!capped.Write("one complete bounded log record\r\n")) return false;
+            if (!capped.Close()) return false;
+        }
+        std::string bounded;
+        if (!platform::win32::ReadNativeFile(cappedPath.c_str(), bounded) ||
+            bounded.size() > 256 || bounded.find("LOG_LIMIT_REACHED") == std::string::npos ||
+            bounded.find("LOG_LIMIT_REACHED") != bounded.rfind("LOG_LIMIT_REACHED") ||
+            !DeleteFileW(cappedPath.c_str())) return false;
+
+        for (const bool failMarker : {false, true}) {
+            platform::win32::NativeLogFile capped(256);
+            if (!capped.Open(cappedPath.c_str())) return false;
+            if (failMarker && !capped.Write(std::string(160, 'x'))) return false;
+            const auto beforeFailure = nativeWriteCalls.load();
+            writeFaultPhase.store(1);
+            if (capped.Write(std::string(100, 'y'))) return false;
+            const auto afterFailure = nativeWriteCalls.load();
+            if (afterFailure != beforeFailure + 2) return false;
+            for (unsigned retry = 0; retry != 100; ++retry)
+                if (!capped.Write("must not issue another OS write")) return false;
+            if (nativeWriteCalls.load() != afterFailure || !capped.Close()) return false;
+            if (!platform::win32::ReadNativeFile(cappedPath.c_str(), bounded) ||
+                bounded.size() != (failMarker ? 168u : 8u) ||
+                !DeleteFileW(cappedPath.c_str())) return false;
+        }
+        std::printf("partial_log_write_budget=PASS record_and_limit_marker=PASS\n");
 
         const auto path = directory / L"shutdown-log-\u0436\u0443\u0440\u043d\u0430\u043b.txt";
         for (unsigned round = 0; round != 2; ++round) {
@@ -202,6 +274,8 @@ int wmain(int argc, wchar_t** argv)
         (L"CameraTweaks-shutdown-" + std::to_wstring(GetCurrentProcessId()));
     if (!CreateDirectoryW(directory.c_str(), nullptr)) return 1;
     const bool normal = TestNormalStartupAndControlledStop();
+    const bool immediate = TestImmediatelyCompletingWorkers();
+    std::printf("immediate_worker_publication=%s\n", immediate ? "PASS" : "FAIL");
     const bool partial = TestPartialStartupFailure();
     const bool beforeStartup = TestStopBeforeStartup();
     const bool workerCapacity = TestHotkeyPlusDiagnosticWorkerCapacity();
@@ -215,6 +289,6 @@ int wmain(int argc, wchar_t** argv)
     std::printf("native_logs_and_storage=%s real_dll_exit=%s files_removed=%s\n",
         logsAndStorage ? "PASS" : "FAIL", dllExit ? "PASS" : "FAIL",
         filesRemoved ? "PASS" : "FAIL");
-    return normal && partial && beforeStartup && workerCapacity &&
+    return normal && immediate && partial && beforeStartup && workerCapacity &&
         logsAndStorage && dllExit && filesRemoved ? 0 : 1;
 }

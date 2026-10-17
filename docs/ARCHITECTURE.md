@@ -91,6 +91,17 @@ legacy layouts while preserving compatible settings. Structurally malformed or
 unrecognized INI content is backed up before recovery; safely readable section
 assignments are retained, and a failed backup or atomic replacement leaves the
 original file untouched. A canonical no-op startup does not rewrite the file.
+INI transport accepts at most 4 MiB, rejects final-component reparse points,
+and creates the staging file exclusively. An already occupied `.tmp` name is
+not overwritten or deleted; persistence reports failure and preserves the INI.
+Log writers validate regular single-link disk files before truncation. Runtime
+and Overlay logs retain up to 16 MiB per opened session, emit a limit marker and
+suppress subsequent records. A failed record or limit-marker write also suppresses
+further writes for that session, because a failed operation may have written a
+prefix whose length is not reflected by the complete-record counter.
+The startup journal remains independently bounded
+by its fixed event capacity. Parent-directory junctions remain supported; this
+is not a security boundary against an attacker controlling the game directory.
 
 The production overlay lifecycle log is
 `STALKER2CameraTweaksOverlay.log`. The Overlay has no DXGI factory, game
@@ -98,6 +109,13 @@ swapchain, Present, Present1, ResizeBuffers or ResizeBuffers1 interception.
 It discovers the process's visible top-level game window using Win32 window
 enumeration and out-of-context window events, and waits for camera-core
 readiness before creating any presentation resources.
+The owner thread creates its message queue before publishing its thread ID.
+Window-event refreshes are coalesced in an atomic pending signal and wake the
+owner through its command event; a thread-message post is only a fallback when
+the owner event cannot be signaled. The owner rescans the process windows when
+that pending signal is consumed, so message coalescing does not discard the
+refresh request. Discovery and refresh diagnostics are transition-based and
+bounded under `[Diagnostics] Enabled=true`.
 
 A private D3D11 device owns the ImGui renderer and draws into
 `IDCompositionSurface` updates attached to an `IDCompositionTarget` for a
@@ -205,6 +223,11 @@ it does not require a separate ASI. `tools/build/build-diagnostic.cmd` is an
 optional compatibility wrapper for isolated diagnostic-profile work, not a
 second normal user build. The standalone POC/discovery and research watcher
 scripts are research entry points, not contents of the ordinary ASI.
+Production and test targets compile ImGui without its default shell/file helpers
+and optional XInput/gamepad backend. Clipboard and IME behavior remain available.
+The hotkey worker observes the four configured action keys only when hotkeys
+are enabled and the game process is foreground. Held keys are consumed when
+returning to the game so they are not dispatched as fresh presses.
 
 Production builds emit a bounded `STALKER2CameraTweaksStartup.log` startup
 journal containing process/worker startup, camera-core readiness, game-window

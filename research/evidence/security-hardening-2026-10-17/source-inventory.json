@@ -1,0 +1,1434 @@
+{
+  "scope": "Review-depth ledger, not all-file independent audit clearance",
+  "counts": {
+    "GENERATED": 1,
+    "VENDOR-USE": 51,
+    "SURFACE": 108,
+    "BOUNDARY": 41,
+    "NOT-PRODUCTION": 1,
+    "COMPILED-OUT": 1
+  },
+  "files": [
+    {
+      "path": "build-artifacts/security-hardening/release/production-tOFF-dOFF/generated/canonical_ini_documentation.hpp",
+      "sha256": "2642AB77EE962E87052842D647991648F3F499917B638769845A5549FEBDDCC2",
+      "role": "header/dependency",
+      "review": "GENERATED",
+      "nonempty_lines": 185
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_win32.cpp",
+      "sha256": "E572DE10045298BBF833AA7A15E28D2777DF57603B4E50B9C8AA4C878F1E4CFA",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 889
+    },
+    {
+      "path": "external/imgui/backends/imgui_impl_win32.h",
+      "sha256": "606DF46DB972371AC6B5F5AD94BBA75A09657DA47B259105C4845C1F8638FA0C",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 44
+    },
+    {
+      "path": "external/imgui/imconfig.h",
+      "sha256": "0884061CC43E27E1D346FE18DCD1425792EB2532D3D16610A82EB5AC751F7594",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 118
+    },
+    {
+      "path": "external/imgui/imgui_draw.cpp",
+      "sha256": "9D2D9EE6745D9B98D7F39A16DA8FFCF783F90BB8C9E931038FC8E9A15CBE3D84",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 4342
+    },
+    {
+      "path": "external/imgui/imgui_internal.h",
+      "sha256": "1363C617A743957F367AFE1C6C88345870B7AA25EE339809FB915466E4FB9575",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 3260
+    },
+    {
+      "path": "external/imgui/imgui_tables.cpp",
+      "sha256": "4EA380FA9D49CAC6CBFBC8B969969F9B0705518EC9CA340681D8C70E3EEFBC28",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 4035
+    },
+    {
+      "path": "external/imgui/imgui_widgets.cpp",
+      "sha256": "54AC29DBCBE70091F5E5FC2CB4099E6D0B9D1C939E5158F2BE983CB508714414",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 9281
+    },
+    {
+      "path": "external/imgui/imgui.cpp",
+      "sha256": "AF1CC31255FBF58D57ECC9D727CBD39A84E44FA8F11BE7FD419FA0100C5255D8",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 15293
+    },
+    {
+      "path": "external/imgui/imgui.h",
+      "sha256": "2D0180859FF85E7FE66ED9999B0F05F2FC45176773046A8F86B3B6BD190B0765",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 3421
+    },
+    {
+      "path": "external/imgui/imstb_rectpack.h",
+      "sha256": "2EFA3D5F7D003C19743B15155DAD9F46D9F9FC783A18893D703B431D3C990972",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 553
+    },
+    {
+      "path": "external/imgui/imstb_textedit.h",
+      "sha256": "77010E494CAF72C178B573569612AEC409D24380409676325A31D02DE0EC64B7",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 1302
+    },
+    {
+      "path": "external/imgui/imstb_truetype.h",
+      "sha256": "87F08919AE8E7223451D0E9D06B62829075D3E920C9E6AD436DB9D7E7427FFCE",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 4495
+    },
+    {
+      "path": "external/safetyhook/safetyhook.cpp",
+      "sha256": "C10E2E4B483C614A8E4E4E4245403CF57221E38DC1177A74518547876F9A12D4",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 1491
+    },
+    {
+      "path": "external/safetyhook/safetyhook.hpp",
+      "sha256": "690923285915B2663CBAD225E288B41543F102875CCE4C02253127EF6749DE35",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 1089
+    },
+    {
+      "path": "external/safetyhook/Zydis.c",
+      "sha256": "AD1D0ECB3935432D1F42504955D5B8740C0E7E091A3FB52BC751ADDC0D39E36C",
+      "role": "vendor",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 52528
+    },
+    {
+      "path": "external/safetyhook/Zydis.h",
+      "sha256": "ED35A8138132254E7877C86D3533E86860E53CDD955189C433FF1BE80B7FD534",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 10862
+    },
+    {
+      "path": "external/spdlog/include/spdlog/common-inl.h",
+      "sha256": "E170CA1AF147A885142C8AFDF29722AE52A40416DFD6B666758B39B5B5588D62",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 52
+    },
+    {
+      "path": "external/spdlog/include/spdlog/common.h",
+      "sha256": "DDF4FA8EE4687F364086C3F3BCA3B9113DF3622916C67776594D231418102143",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 342
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/backtracer-inl.h",
+      "sha256": "9B2795B78571295776003345D7E2B9F264FA71FABB7A15CDA7B049464A2D24C3",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 53
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/backtracer.h",
+      "sha256": "D4D613BADBE01D67BFAEFABA0A7A934F0E5F5EB3F18096E5CBA54AB2FD4DA883",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 34
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/circular_q.h",
+      "sha256": "0BC4025C81425023F4D58711D6AA6231A55EE606BB1FC88F4FB3E655E807E265",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 92
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/fmt_helper.h",
+      "sha256": "7A2E655F077C1F9CEB7D7A69214594C3721702B691B7A301BAD96F0AFFD45D06",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 126
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg_buffer-inl.h",
+      "sha256": "E41147AA63DFB99B1B2285A88740D9E7C238099AE3518B2E88798E7E5991932A",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 44
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg_buffer.h",
+      "sha256": "5A79FDFA5429D23286C58926A53DE3EE83B577DB21A4CCCBD104CEDA8DED7C50",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 24
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg-inl.h",
+      "sha256": "7EC7033B384263180C041A4AB627CC8081D7550AF6A4533F49334AF5FCE2D4F7",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 36
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/log_msg.h",
+      "sha256": "7E9A3B7B89646CC1AD36D21DE8E7D584F81DFA642760C12F40385DC0DB65E3B0",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 33
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/null_mutex.h",
+      "sha256": "1377FDE4B54417DCA1B3D162D0F18C35F9418E1DB91A333949952F1C877127B1",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 26
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/os-inl.h",
+      "sha256": "F32D377E7B58E53B1D601A7E0FEF5E2C1D137592C25DF3BB4ADBF89E015018EF",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 498
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/os.h",
+      "sha256": "DC6AF3C0FAE5B49D8A703F6EF5432F3F25CD061290E81DD0D80441BA5719CF07",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 92
+    },
+    {
+      "path": "external/spdlog/include/spdlog/details/windows_include.h",
+      "sha256": "EE78DF4FA66A4E41ED97B47305953F9AF2140718C5FAB14D921AD8B195E9931B",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 8
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/base.h",
+      "sha256": "892FCC48F31A80382F0E304E427D68D2FD62A2D78AEF142020199120DB5269FB",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 2629
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/chrono.h",
+      "sha256": "F8E2A69BD97BC5B90C9AF7FB87E010775B695D487A77E8D8CBE624E57BD2F9BF",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 2018
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/color.h",
+      "sha256": "F88BF0C4833CAED3A7F01B6D633C7B259741A26119E84C651AC1E31CFC980B72",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 580
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/format-inl.h",
+      "sha256": "E7BAF108B84E89B29915BB35733540F8F4262CD8F4B41C15754EED4D2F185F61",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 1778
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/format.h",
+      "sha256": "B4C65350362BF40E76A8E6B450587D912C7081B6EAFEAFAF3D7BCF53153E17FC",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 3939
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/ostream.h",
+      "sha256": "742416A6A88286609887FA512C4423820764AAFBB723A42A825F3193CB52B4F0",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 147
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/ranges.h",
+      "sha256": "CCAF61C9B5937E0FA97737FB047121C5FCA9DB34DE516B8EDFC1D913583E3C8E",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 732
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/bundled/xchar.h",
+      "sha256": "F0903D522C64FAAEE2C374A0B2063AC3E43D0B5006DFD3411F0E5DCCD8FF6062",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 302
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/fmt.h",
+      "sha256": "6FC4048665172D38D835203D757AA30D4136C622D26D26E881F72F96B86AA556",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 23
+    },
+    {
+      "path": "external/spdlog/include/spdlog/fmt/xchar.h",
+      "sha256": "0F5DB8046E2C81BCA4D2DD0245702366D5D4C51131A25CB0B79E5001A5002177",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 21
+    },
+    {
+      "path": "external/spdlog/include/spdlog/formatter.h",
+      "sha256": "213631628274DC6C26FCC9A3BED36A3A9A83EDEA5E6B9F027BAEA58CA9C5EFF3",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "external/spdlog/include/spdlog/logger-inl.h",
+      "sha256": "1507122F5C8BC7428FD5A606C29BC0FFF42B6F55C602311D1891E45D23AFB7A7",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 162
+    },
+    {
+      "path": "external/spdlog/include/spdlog/logger.h",
+      "sha256": "E6B8BA92B7C6B83B816871F9A663CAB4C1C21DA3C5B252904F3DAE412DFAD85D",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 309
+    },
+    {
+      "path": "external/spdlog/include/spdlog/mdc.h",
+      "sha256": "C3516A85D687F806080D81D0B63CB0353665B26D78F6CDC2C51E526AE9C492D8",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 40
+    },
+    {
+      "path": "external/spdlog/include/spdlog/pattern_formatter-inl.h",
+      "sha256": "7E05FAB1303D952801143118E33525A50D77304B3B3FEC117CCC8637C85135FB",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 1146
+    },
+    {
+      "path": "external/spdlog/include/spdlog/pattern_formatter.h",
+      "sha256": "87FFFD034B0A2139A6373BA04D9F88AE57CFAC3865138E0859F19A9E5858DA43",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 94
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/base_sink-inl.h",
+      "sha256": "7FE3E5BB453018D03E2B850384B18F8C00A1B64BE363BB22C4B9B92082D9BCC7",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 47
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/base_sink.h",
+      "sha256": "86186E0D15535B94270C94AB5EEB798D47DFE7330F4E622BF7C66DC46C820F37",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 42
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/sink-inl.h",
+      "sha256": "F8FABF0DE532BEF4788AD59F278AFBD3C4187B598F5C856370CDFA3DD564F28A",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 16
+    },
+    {
+      "path": "external/spdlog/include/spdlog/sinks/sink.h",
+      "sha256": "75E5C2B43C253CFE7C553077125E3B158E9D71CAF2765AD97BB08443EE83B56A",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 26
+    },
+    {
+      "path": "external/spdlog/include/spdlog/tweakme.h",
+      "sha256": "8E641DF000560090A11ADB04EFF3F1A18E814F6EB8F2A9A9A1F22C0DCC572F82",
+      "role": "header/dependency",
+      "review": "VENDOR-USE",
+      "nonempty_lines": 129
+    },
+    {
+      "path": "src/camera/camera_state_publication.hpp",
+      "sha256": "4AF93166FC80E823B4CDBBEA34039CF733818243AEBDE6252320C8C20CE499C6",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 452
+    },
+    {
+      "path": "src/camera/camera_state_snapshot.cpp",
+      "sha256": "B0B5EA0C268DB9CD789C2A31EE3D3AA4A86F8C8ED6D8C4780C1F74C785AC9F5F",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 284
+    },
+    {
+      "path": "src/camera/camera_state_snapshot.hpp",
+      "sha256": "158DA40460B40CA707C45773F4FB236ED0A25AF1F589E81EB4948A2BC2755988",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 196
+    },
+    {
+      "path": "src/camera/fov_observation.cpp",
+      "sha256": "55A0E6E7A7A26AA26BE14516E6E5E0CF57AFBE2A7F640F56DCF13576852EED18",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 58
+    },
+    {
+      "path": "src/camera/fov_observation.hpp",
+      "sha256": "64174502DE4A4AAAED7B1C465381FCE0D94142E115498E30D8A313D9167CFB87",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 119
+    },
+    {
+      "path": "src/camera/fov_semantics.hpp",
+      "sha256": "0AE731D35AA17E9CE3530AC7C0B5AB482483CEFC1A0DF4136766D907CC7EA16D",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "src/camera/gameplay_aspect_restoration.cpp",
+      "sha256": "8274121CE2FD5AA54FAFEFE480E29410E90D46540AC26C0BC8E2CBBC5A43940E",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 74
+    },
+    {
+      "path": "src/camera/gameplay_aspect_restoration.hpp",
+      "sha256": "F097E14BEE137F161B2125578C2683ADCA03B88AF6C8A783B1C70FA4436D7F26",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 74
+    },
+    {
+      "path": "src/camera/gameplay_baseline.cpp",
+      "sha256": "A3A6C9B76BCC9BE2AFE8E7F80B04CFA2302EE5CCAFE5B1471E168C954E584090",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 81
+    },
+    {
+      "path": "src/camera/gameplay_baseline.hpp",
+      "sha256": "3589702701A51C0DF5FE8CA837EF9F60ABDB220086D3279E3FF2EAB9B54E1718",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 46
+    },
+    {
+      "path": "src/camera/horplus.cpp",
+      "sha256": "87FB99C39D122E8CF1A8537A371386F462E024FB63DBCF0D27B63226D33E9E82",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 11
+    },
+    {
+      "path": "src/camera/horplus.hpp",
+      "sha256": "F62A5F1FB964A3581A8E72E84519FD658F373A594E46A16E2A94B7D2DC225BA7",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 5
+    },
+    {
+      "path": "src/camera/presentation_state.cpp",
+      "sha256": "002D03D5B9269DD2ECC765DC2FCE7FA8B946324D42EC7B79E0CAFB5D7418B057",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "src/camera/presentation_state.hpp",
+      "sha256": "EA8C7B6E5B22D86AE292C68C61E6C015FAD50D43F9C84A8AD30F357D5E312BA0",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 12
+    },
+    {
+      "path": "src/cinematics/cinematic_aspect.cpp",
+      "sha256": "CC4C75A1C2A90D4330F351DD5CF7FF9694D01208619BD9F6B3C28E56EA64424B",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 75
+    },
+    {
+      "path": "src/cinematics/cinematic_aspect.hpp",
+      "sha256": "B5E251560331FA646EB003BA40F3EBA01F1D1C3148B782848C79A47C51416F07",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 35
+    },
+    {
+      "path": "src/cinematics/cinematic_exit_authority.hpp",
+      "sha256": "CC4909E7E89C7E79C07CA91FCD5B0963098D8F2CD61755F2F59C061C05DE8E48",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 27
+    },
+    {
+      "path": "src/cinematics/cinematic_fov.cpp",
+      "sha256": "D6938560819957A6F1548BB2BBA109FFB1169763F99FF14E1269A6233511211D",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 349
+    },
+    {
+      "path": "src/cinematics/cinematic_fov.hpp",
+      "sha256": "24C2D87996D71AF38D7FFB5B19173C145956DA12A3EDB10BFB109F3048571FD5",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 185
+    },
+    {
+      "path": "src/cinematics/cinematic_initialization.cpp",
+      "sha256": "2ABF137F4AECCB9809BEE1F43377B69BD6C98548D3072BF0956F1FDCFCBBC88D",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 25
+    },
+    {
+      "path": "src/cinematics/cinematic_initialization.hpp",
+      "sha256": "91C5B855549C201AB11C5E7214FCBA63991BC428CCE7A9CF348B90A31D72E167",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 12
+    },
+    {
+      "path": "src/cinematics/cinematic_recovery_retirement.hpp",
+      "sha256": "91217BD3C40ED2692B227945C14165148BAAE87487319AAF628540C43E4BB95D",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 35
+    },
+    {
+      "path": "src/cinematics/cinematic_selection.cpp",
+      "sha256": "2BB4C9A5E3A84130A8548A458FD208BA4D972066A7109CBF0D4E165B419A64CC",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 22
+    },
+    {
+      "path": "src/cinematics/cinematic_selection.hpp",
+      "sha256": "C53DA33EE79347024D012969114DA9C19CAC40C91B0DF1E3F171D8C8AE7C0495",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 41
+    },
+    {
+      "path": "src/config/config_line_reader.hpp",
+      "sha256": "5A714A1351BC1CCDD5E05F98B555B95DE75335C19A31158685B474AA46CDBE21",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 41
+    },
+    {
+      "path": "src/config/config_repository.cpp",
+      "sha256": "83733097FAC805F59D38C5FBDAC1FE5B584C7810BABA5A561A679D0E5D05EA1A",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 445
+    },
+    {
+      "path": "src/config/config_repository.hpp",
+      "sha256": "6CEF90DAFA3A8E37703B1FF46D3C44B414E3C5F3AB7F7352F8C4C23B8DEEBB1B",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 32
+    },
+    {
+      "path": "src/config/config_template.cpp",
+      "sha256": "5A970E7EBC9D597A5656A5C339FE995B633EED2DC84EF2F788011F4B3692FB8B",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 1235
+    },
+    {
+      "path": "src/config/config_template.hpp",
+      "sha256": "C25B86989112B2F643B9CC9E6313BEA92A0E8A30C8CB3EECEDB632489BFE7106",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 10
+    },
+    {
+      "path": "src/config/feature_config.cpp",
+      "sha256": "CCE0231EA847FDF34DE94C31AAE112FA872845BCE90B8313D6F1EDCC5CAFC2EE",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 374
+    },
+    {
+      "path": "src/config/feature_config.hpp",
+      "sha256": "EAA2536ECB46214B4309D4B95758A15556AC5148AC1F50283328AEADD58CC5F9",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 118
+    },
+    {
+      "path": "src/diagnostics/camera_log_probe.hpp",
+      "sha256": "863691179CA9F7F21630128AB2961B0079451FF6C247350A3BB95E8308FBB0CC",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 22
+    },
+    {
+      "path": "src/diagnostics/camera_writer_identity.hpp",
+      "sha256": "ABBAB1A162111EC93BD14F56CBC2BCDFEC5D59683BEE5620C28AEC5533700E14",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 84
+    },
+    {
+      "path": "src/diagnostics/cinematic_baseline_provenance.hpp",
+      "sha256": "54A993B9B63DD075D3EEA338287606070EBA90FBE70B347609D24D216D085310",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 78
+    },
+    {
+      "path": "src/diagnostics/cinematic_continuation_trace.cpp",
+      "sha256": "0B9D321D283A27EB702BFC7E69BEF5C2BD06280E284C00F53328286034413FF8",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 192
+    },
+    {
+      "path": "src/diagnostics/cinematic_continuation_trace.hpp",
+      "sha256": "B8A3876A55AD820052A866510550CA1506F6A67EF0579F0107E80E40B678A494",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 109
+    },
+    {
+      "path": "src/diagnostics/cinematic_lifecycle_context.hpp",
+      "sha256": "CA599906683CB3861B83E50AD20A51FE2787E0460520BE07DE6E368CFDE3E1B9",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 108
+    },
+    {
+      "path": "src/diagnostics/diagnostic_runtime.cpp",
+      "sha256": "B60D0DF79EAF0C71C97915D104EE083202A2B5A5460F8E121E3A816C6A495A24",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 17
+    },
+    {
+      "path": "src/diagnostics/diagnostic_runtime.hpp",
+      "sha256": "01209BBAEF17A62292EA9DAA68A74AAC28A4C3E98B67F42C99D72B04CE413403",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 14
+    },
+    {
+      "path": "src/diagnostics/dialogue_source_provenance.cpp",
+      "sha256": "B5A651BF5CDB890B719AFB9A77AFC37FB9155383C2D02D7CBF5A4CB5CC5EE34B",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 93
+    },
+    {
+      "path": "src/diagnostics/dialogue_source_provenance.hpp",
+      "sha256": "567B05FD9BEFF04CD76F04F09F38E3DCE85FDD373A43D752B88B827C07545DA2",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 71
+    },
+    {
+      "path": "src/diagnostics/language_state/language_state_transition.hpp",
+      "sha256": "D5FCB520182500FE3BFAFB6D496E1FBFC5E5E43C5F644BD860DE83FBA0FCFF3E",
+      "role": "header/dependency",
+      "review": "NOT-PRODUCTION",
+      "nonempty_lines": 27
+    },
+    {
+      "path": "src/diagnostics/matchgameplay_prediction.hpp",
+      "sha256": "1F7022C56264A5C9950C22D34D07F6B0A5C17E3EDCA60D4C346B915ED8418636",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 70
+    },
+    {
+      "path": "src/diagnostics/performance_telemetry.cpp",
+      "sha256": "7ED6CDE08783FC791E681AE406F035A0405D932AFC80DD513859BB0863C7B509",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 201
+    },
+    {
+      "path": "src/diagnostics/performance_telemetry.hpp",
+      "sha256": "3686D116F6F5AE1509387A01B1F3D7EF174F473D0E330616C51D6618E0C3F305",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 64
+    },
+    {
+      "path": "src/diagnostics/startup_journal.hpp",
+      "sha256": "3227BF20B2522F98DEFE9C2C4EF8E88957DCBA6A95C1D08FC02F11F87C6706DA",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 140
+    },
+    {
+      "path": "src/diagnostics/startup_timeline.hpp",
+      "sha256": "35B23F1B018728F0824D26DD17ECF6F183090C397538242048381321DFD8A538",
+      "role": "header/dependency",
+      "review": "COMPILED-OUT",
+      "nonempty_lines": 420
+    },
+    {
+      "path": "src/dialogue/dialogue_fov.cpp",
+      "sha256": "907098EAA42B784C823757E61E6D1426A140CBA489BF9514999D2E233C291F3F",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 69
+    },
+    {
+      "path": "src/dialogue/dialogue_fov.hpp",
+      "sha256": "620F2E6EDE0D812982F7F503F9E029616A1685344F56EA535C21BCBD5BDBCAA5",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 8
+    },
+    {
+      "path": "src/dialogue/dialogue_state.cpp",
+      "sha256": "7071626D3F94F64D155E244FCE3FA665549F2C7AD4AF0028067FFF0B409DDCAA",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 261
+    },
+    {
+      "path": "src/dialogue/dialogue_state.hpp",
+      "sha256": "BD73EFB774FCB047638152A89DA5A1A75E9CFF3677D27A80AF389F522AF618F6",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 120
+    },
+    {
+      "path": "src/gameplay/aspect_policy.cpp",
+      "sha256": "FB2FFCA4BED5C7988F1B0F6A26522D74722434371B727EBA84C42F30A387E0AC",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "src/gameplay/aspect_policy.hpp",
+      "sha256": "60C9340B230924A3BF55A59BCA5CEE66269FDD0CB9F11DADCD90BA172C8FA710",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 7
+    },
+    {
+      "path": "src/gameplay/gameplay_camera.cpp",
+      "sha256": "D19797469F68437508FBDCECB9465462F9F2E2A0C826A9D91948FBF0F23D6E61",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 92
+    },
+    {
+      "path": "src/gameplay/gameplay_camera.hpp",
+      "sha256": "913B1F6A663473F1D9998A8E542CA79969D8E2C501413E92D2DE82601AE12B8B",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 31
+    },
+    {
+      "path": "src/gameplay/gameplay_state.cpp",
+      "sha256": "71FA6F0600B872EBE8C276DD46B3C0D76EE71FA3AD289CD1BEF27B7A824D3536",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 165
+    },
+    {
+      "path": "src/gameplay/gameplay_state.hpp",
+      "sha256": "C31F400223923F1C93D13745BF7B7FFFC19E5A78CD1DB3E485BE3D964D7A5E59",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 99
+    },
+    {
+      "path": "src/gameplay/horplus_gameplay.cpp",
+      "sha256": "6A7A02D455BC95310FF7E614626EED0938949411BA11F44E8E56D4639B3B147A",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 72
+    },
+    {
+      "path": "src/gameplay/horplus_gameplay.hpp",
+      "sha256": "E6E889D447C059D002E31AE929F059EA5435000CD2817335F1365756B20583A3",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 16
+    },
+    {
+      "path": "src/hooks/hook_set.cpp",
+      "sha256": "C48ADF0F87C87245F6CE336224D3766DD1A7654830C6789EA3C47D2BBD5DD62C",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 1
+    },
+    {
+      "path": "src/hooks/hook_set.hpp",
+      "sha256": "BD65D69CB13744ABB8D399196B2B28F190B92C283FF2C038272B8BFB06928D5D",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 27
+    },
+    {
+      "path": "src/hooks/instruction_validator.cpp",
+      "sha256": "DAF3B4D4A952FC6078462B1D4216DA17AAF6FD5C42E51B66A7DFB2A8F5DB297F",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 51
+    },
+    {
+      "path": "src/hooks/instruction_validator.hpp",
+      "sha256": "BA7C13ABCFC13820B8F848039C9EA3FEDAAB3B929DB131F79F70ADC4677990F5",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 15
+    },
+    {
+      "path": "src/hooks/signature_scanner.cpp",
+      "sha256": "089EDC6A1058DAA02F271E46F3C731ACB926B0145AE29D75F772F98391BFE41A",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 99
+    },
+    {
+      "path": "src/hooks/signature_scanner.hpp",
+      "sha256": "2D3C4B8347D2875DAAFB1129FC4A93AC5F932A05A7FE7EC96407791459145F7B",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 25
+    },
+    {
+      "path": "src/hooks/signatures/signature_definitions.hpp",
+      "sha256": "AAFB4689239988CD3E9F8D8422E8576FEC13103E60FDA16398E0BE1F1C0DF255",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 59
+    },
+    {
+      "path": "src/localization/locale_registry.hpp",
+      "sha256": "5E69C1686C08B4EF25B90509778D1347FEA58ED4B3B6192F8B84C03570C48CE9",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 67
+    },
+    {
+      "path": "src/localization/localization_resource_ids.h",
+      "sha256": "EC860DF4C3EF0009F17F7493AA9B2A9368CFF929F872F25D49AE74BA84728213",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 30
+    },
+    {
+      "path": "src/overlay/composition/composition_runtime.cpp",
+      "sha256": "3127B41A6949D9733AE9C750B495213404207AD996E57771C65F526D863AA1D6",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 1699
+    },
+    {
+      "path": "src/overlay/composition/composition_runtime.hpp",
+      "sha256": "AC81562022EDC5BE825B3163F90C0A1DB432BEB868913501466986866082D79D",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 6
+    },
+    {
+      "path": "src/overlay/composition/owner_finalizer.hpp",
+      "sha256": "BDB73A7078123B0C16183E0F4F82048E18A77CC80960F85E2BC71C563EA784FD",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 61
+    },
+    {
+      "path": "src/overlay/composition/stable_record_pool.hpp",
+      "sha256": "2FC048EA414A55B0930FE1F1E005A27977D75BCB81A8F1A942F57613072C9B69",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 53
+    },
+    {
+      "path": "src/overlay/input/game_thread_subclass.hpp",
+      "sha256": "58C72743E30288B62989B7FD466D35708EA7AD6C0C4C5F56B3F10B488A2D8FB8",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 25
+    },
+    {
+      "path": "src/overlay/input/input_state.cpp",
+      "sha256": "4D39576AAA0BF0A9A963621022949B595FE9DC4E183B17D9EC0CA28D06D10584",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 475
+    },
+    {
+      "path": "src/overlay/input/input_state.hpp",
+      "sha256": "C042DE8B4341EF9F8E3D3163F71256E7293FB355092F7C8410EEA4323F9E60EB",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 257
+    },
+    {
+      "path": "src/overlay/localization/game_language_reader_publication.hpp",
+      "sha256": "86475C5661AC80D6C300F9C32C30FD58665B2DFF0EC4389A92A829668B6CBF9F",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 48
+    },
+    {
+      "path": "src/overlay/localization/game_language_reader.cpp",
+      "sha256": "4B99634D80B4EE2ACC76EDBD98A4C12EB86F4BFCB309F0279887491050222086",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 195
+    },
+    {
+      "path": "src/overlay/localization/game_language_reader.hpp",
+      "sha256": "84A01FD2174E8F0F3A589483C1A9DCC2DE4E9CC733B230600D9123287092553A",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 21
+    },
+    {
+      "path": "src/overlay/localization/localization_catalog.cpp",
+      "sha256": "6CAA582242A1EB3E0B727D2BE2D767380058E1D13653314AAB164CA2C08066E5",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 208
+    },
+    {
+      "path": "src/overlay/localization/localization_catalog.hpp",
+      "sha256": "9AB66AB63C5F95D204FDB72B3268E86A807317578089304C4B8035A9CA909E56",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 30
+    },
+    {
+      "path": "src/overlay/localization/localization_font.cpp",
+      "sha256": "40AD97CA75507ACE80CD9E5013BC4672B290B16AF344B2E721D5D7893F39B52A",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 230
+    },
+    {
+      "path": "src/overlay/localization/localization_font.hpp",
+      "sha256": "68B884BAA9AAA077707559D9C576F09B7F7380647BC09FDEB9C7D21BA06CEC1F",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "src/overlay/localization/localization_formatter.cpp",
+      "sha256": "E3795B747D62298AF04E760C78AA40FF4E61EEB0A309A009EB014346A6C4B484",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 50
+    },
+    {
+      "path": "src/overlay/localization/localization_formatter.hpp",
+      "sha256": "7C65653198AE15965C0D2739B7E353DB75158D1ECA0EBE029F713C20CE23BB6F",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 17
+    },
+    {
+      "path": "src/overlay/localization/localization_keys.cpp",
+      "sha256": "593139599CBC24B62352204F08882998D1D46EEF27D0F564C59FB0F184AA6C4F",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 135
+    },
+    {
+      "path": "src/overlay/localization/localization_keys.hpp",
+      "sha256": "933C5932F23F346E6FA02439D15A46C686B3A9AD4E72EFF1C09FF8E34E33134C",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 254
+    },
+    {
+      "path": "src/overlay/localization/localization_manager.cpp",
+      "sha256": "DCBB3F1886C9BADC6A331128F5F6C7FF126285DA41F5B90FB61BC221DC058C89",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 108
+    },
+    {
+      "path": "src/overlay/localization/localization_manager.hpp",
+      "sha256": "84537C77D7D140823008FE04F7BE18C2F0737FB8CD791A8D92710B7A7794F070",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 36
+    },
+    {
+      "path": "src/overlay/localization/localization_resources.rc",
+      "sha256": "7933F0842CE3CB7039F991E889B060539620B3356AA4468578CC599361F6546E",
+      "role": "resource",
+      "review": "SURFACE",
+      "nonempty_lines": 30
+    },
+    {
+      "path": "src/overlay/localization/localization_validator.cpp",
+      "sha256": "56BA677D237E5799CD2170539748E78CA60B025BB45B44F2605F600CFCD18AEA",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 56
+    },
+    {
+      "path": "src/overlay/localization/localization_validator.hpp",
+      "sha256": "DCD6FEBFC32E7878806A9AB78781E4B5B40862B4CDF0A5AB2BB308CCD6EABAE0",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 16
+    },
+    {
+      "path": "src/overlay/optional_overlay_boundary.hpp",
+      "sha256": "748C77352AFE13780E97153262F03075206D449E9945C37CCCC8BD6DF0F1156F",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 53
+    },
+    {
+      "path": "src/overlay/presentation/aspect_ratio_format.hpp",
+      "sha256": "EC1A0CB4D57C1AD8CDF6C60ACA6C0AE97029811DA83957EC6A714AB9D0FCECF5",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 20
+    },
+    {
+      "path": "src/overlay/presentation/camera_integration.cpp",
+      "sha256": "701A11EEC03CE16C7C0DB2D7EB005F41731241400467775A3E925D5E8FF1B39C",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 359
+    },
+    {
+      "path": "src/overlay/presentation/camera_integration.hpp",
+      "sha256": "D9D27D7D35F0291498578CC8E866E9B08F36003AD933AF1617575521C30C1CA9",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 116
+    },
+    {
+      "path": "src/overlay/presentation/camera_state_view.cpp",
+      "sha256": "468D5AFF7A33892A16C760D11A18B874D520BFDEE6305D056FB553B76870B7F8",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 287
+    },
+    {
+      "path": "src/overlay/presentation/camera_state_view.hpp",
+      "sha256": "73C35EC43F51A0430E20881BBD0D27D402E87B7C5EC86BB2DA2C7C55E67042B9",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 8
+    },
+    {
+      "path": "src/overlay/presentation/feature_presentation.cpp",
+      "sha256": "8D861EED97BDF239249BF255EF7AAAFBC8472001D9DE2856786DE6075D6F8CD6",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 189
+    },
+    {
+      "path": "src/overlay/presentation/feature_presentation.hpp",
+      "sha256": "A4B3834A0EA210A3151998C157D7ACC3B7244323C082E98D527864B019B6E4E4",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 39
+    },
+    {
+      "path": "src/overlay/presentation/hotkey_binding_presentation.hpp",
+      "sha256": "02C6B8B62EF9F318F0B093084B77C46962385321DB7989BD0AC3382F6257CFD0",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 41
+    },
+    {
+      "path": "src/overlay/presentation/inline_hotkey_layout.hpp",
+      "sha256": "7C610D51A40BCE9AFE934633CD4E59EC770718F7A80A327BD26A4911048DAB9B",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 26
+    },
+    {
+      "path": "src/overlay/presentation/overlay_layout_metrics.cpp",
+      "sha256": "23F651FFA9815AF6B73873069F6A8B07F8D8C052AB8B1AAD132285244A52EDF3",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 72
+    },
+    {
+      "path": "src/overlay/presentation/overlay_layout_metrics.hpp",
+      "sha256": "7220B984AC9061453EE5BB25D6EF92637044E15D3026E71BEBD17EDE0CD656D6",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 26
+    },
+    {
+      "path": "src/overlay/presentation/placement_config.cpp",
+      "sha256": "D9D9092DFE6B9F0C27AC16D7F040AAC645A269F1646C3A0BEA71BDA8A92FDB4B",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 19
+    },
+    {
+      "path": "src/overlay/presentation/placement_config.hpp",
+      "sha256": "15011CA8567943B26CB1F6BFA0A8A27BF476D9D9AFDDF4F4263A29B5B85FC6BC",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 8
+    },
+    {
+      "path": "src/overlay/presentation/presentation_contracts.hpp",
+      "sha256": "33300F1AB3F15774C45D33B9FF2854AF354817F713F87C70701429405E33E1E8",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 99
+    },
+    {
+      "path": "src/overlay/presentation/selector_documentation_view.cpp",
+      "sha256": "C81F51E40CBB24C35553477BD689FB2C158F60B0946FD983D17D1372A8F433F3",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 126
+    },
+    {
+      "path": "src/overlay/presentation/selector_documentation_view.hpp",
+      "sha256": "1E6B886C39E228F8F3A59D8FE0DD21EC752C48CEE197BF8597955909A0644C0C",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 11
+    },
+    {
+      "path": "src/overlay/presentation/selector_examples_geometry.hpp",
+      "sha256": "9F739F28C3B04F17854283CD623513FAF9E1716265CBBB541EF7FA383F43E485",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 34
+    },
+    {
+      "path": "src/overlay/presentation/selector_tooltip_state.hpp",
+      "sha256": "5556CAAC557A45DC7A40757D9CE981BA0C422AC1D34B66EDC3007B7FF6F2A234",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 15
+    },
+    {
+      "path": "src/overlay/presentation/setting_tooltip_content.hpp",
+      "sha256": "BD214A2803C60C0761786ACBF9FE43E672765F37309DA891670020D87FDD58E2",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 146
+    },
+    {
+      "path": "src/overlay/presentation/tooltip_row_layout.hpp",
+      "sha256": "ABC3C31BE077C1DD8E17A1E7D48BC4158F3B60A0D78852910018A530BD32D382",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 39
+    },
+    {
+      "path": "src/overlay/presenter/composition_presenter_state.cpp",
+      "sha256": "BED5229B3FEA47A95036A34DD107E8A8C8A6324378D241E092CD8B41A6691501",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 107
+    },
+    {
+      "path": "src/overlay/presenter/composition_presenter_state.hpp",
+      "sha256": "6E192E1D13AC9D99A3971CB3F276862E5C2FF4260EA69379B26EBD50150409EE",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 88
+    },
+    {
+      "path": "src/overlay/presenter/imgui_d3d11_renderer.cpp",
+      "sha256": "3A42512DD7BE8FAE4BE1FAF4251DBA57FA46ECA7B6CDFD89928EEC59BC534945",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 500
+    },
+    {
+      "path": "src/overlay/presenter/imgui_d3d11_renderer.hpp",
+      "sha256": "531DAA7F2898FDE577E25B85CAFBE72EFB3A594E121EA8FA1DB6AF473960BF28",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 56
+    },
+    {
+      "path": "src/overlay/presenter/placement_save_state.hpp",
+      "sha256": "BF29D94C699DD7896B644F1664422E1DD9050DECA894121D9DA00AE1E2D60F06",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 35
+    },
+    {
+      "path": "src/overlay/presenter/presenter_runtime_policy.hpp",
+      "sha256": "859B53DA0525BD386F2B2070A7DB70AFAFE21FC50CDB883FC5E449E41F4EFB53",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 194
+    },
+    {
+      "path": "src/overlay/presenter/renderer_runtime.cpp",
+      "sha256": "57581E65BC3A110502FFA5840BB4DD382F912C4D2836B077CC20295DC6FDA5EC",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 2910
+    },
+    {
+      "path": "src/overlay/presenter/renderer_runtime.hpp",
+      "sha256": "97AFD0D0497F3F52B7B602785468D8E2FEBCEADC5394CD776A2C66F60C804443",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 239
+    },
+    {
+      "path": "src/overlay/presenter/renderer_state.cpp",
+      "sha256": "E9E30A8299594E57AF7B15C9A53AD0BC53384827439898DE1DB9BDA7A708AB9E",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 66
+    },
+    {
+      "path": "src/overlay/presenter/renderer_state.hpp",
+      "sha256": "836D6FADC12EA38F83E5884706F8C6D89B0740B1801206B1E0ADC74C8A40C33B",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 144
+    },
+    {
+      "path": "src/platform/process_lifetime.hpp",
+      "sha256": "0812E06E2D4375EBAAB2F70F38ED3D2C15EFE9E0EBD8D6FDBCDC261780C6CC78",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 27
+    },
+    {
+      "path": "src/platform/win32/memory.cpp",
+      "sha256": "5CAAAB35D30675DE41C16F49214518FB6997CC67195EA6027666DE0C59648462",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 43
+    },
+    {
+      "path": "src/platform/win32/memory.hpp",
+      "sha256": "67166DD581D475685278E19F0360902E9A9BFB5E9F4C319F19FE62242D85334B",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 8
+    },
+    {
+      "path": "src/platform/win32/module_residency.hpp",
+      "sha256": "9063F56C3327991FBFFC41FF409D08C2C651B78A0EB19D91C7487BB11A6AC006",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 15
+    },
+    {
+      "path": "src/platform/win32/native_file.hpp",
+      "sha256": "D8FBBF30E131FE9A3ED32D817013667E886E9996DFA3B78ADF55C6109C5B8A75",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 126
+    },
+    {
+      "path": "src/platform/win32/native_log_file.hpp",
+      "sha256": "192325CCCE29811790158590121C4A5B340D17280DEFE74B776EF580F66613AA",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 47
+    },
+    {
+      "path": "src/platform/win32/native_log_sink.hpp",
+      "sha256": "A2C7F5CBB2C46D7E79604A0AFE9DA46F0172FAC6DE981FF6219DDE5B4F9E9D92",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 31
+    },
+    {
+      "path": "src/platform/win32/sha256.cpp",
+      "sha256": "C8B07B85B9E80C5137749185D9A1F6125361328FE99EF8FCEF5E6F0BB09D6D0F",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 154
+    },
+    {
+      "path": "src/platform/win32/sha256.hpp",
+      "sha256": "98B5CE295A70CFB53694963CE979C316CF09BA5FD5C30BC4A05BF8B79C7D0A25",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "src/platform/win32/viewport.cpp",
+      "sha256": "F9F821519083924F6E5FAC930C10B7C5E77AECF2676E130F8B166277A1C05498",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 37
+    },
+    {
+      "path": "src/platform/win32/viewport.hpp",
+      "sha256": "A9BED6B2E16A671AE2849D4555B52AFF18EE3D18B2F26444203241303F087CD2",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 7
+    },
+    {
+      "path": "src/platform/win32/window.cpp",
+      "sha256": "CF02C072B0D8F1EB55AA31F0A0A40EE9B1CAB5A7EBCB2219C2DFFCEFCCCE2EB1",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 62
+    },
+    {
+      "path": "src/platform/win32/window.hpp",
+      "sha256": "D4AD0EB1C1F3BA4C5B8973A754CDC7585C6B8179FCA842DF4133DDB634598121",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 12
+    },
+    {
+      "path": "src/plugin/camera_correction_gate.hpp",
+      "sha256": "740657AD9981BA18D124BAAD06F0D78476F7C67B29979AE24B7B5C1DFBDAA68A",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 62
+    },
+    {
+      "path": "src/plugin/camera_writer_transaction.hpp",
+      "sha256": "0AA9B4925005E962CD178A133CD82B0BE4BF3377DAFCCF2E2766751448D5C6E2",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 1776
+    },
+    {
+      "path": "src/plugin/cinematic_lifecycle_transaction.hpp",
+      "sha256": "9FE3E399C6C1A90A6AD53093E81AA27E6C6BCDEB44E640AAA188AECA4082E9EB",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 464
+    },
+    {
+      "path": "src/plugin/dialogue_boundary_transaction.hpp",
+      "sha256": "ABE2BAFEF58FFDB24286DF610157E10E17B4B4711A57B92513C2E031F6034D5D",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 298
+    },
+    {
+      "path": "src/plugin/dll_entry.cpp",
+      "sha256": "DCC32DC209DB8A45D90190C43E25CB29EED48BD8927624B74C4C29460AFBBDCF",
+      "role": "dll_entry",
+      "review": "BOUNDARY",
+      "nonempty_lines": 31
+    },
+    {
+      "path": "src/plugin/feature_status.cpp",
+      "sha256": "65904A5A7AC58FE14AA5489EFBC3E43E16218F009407678E6C17D5D4E2AE2B2E",
+      "role": "production",
+      "review": "SURFACE",
+      "nonempty_lines": 19
+    },
+    {
+      "path": "src/plugin/feature_status.hpp",
+      "sha256": "8F8C2832CD6D2945FA301B80DFC0BCB0EC2F09780FAE1100AF1615D5514B225A",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 13
+    },
+    {
+      "path": "src/plugin/native_callback_admission.hpp",
+      "sha256": "8354CCA37ABB0851A7A4736473E6E93A719F577B456D70589ABB35A8314F9E9B",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 94
+    },
+    {
+      "path": "src/plugin/optional_overlay_startup.hpp",
+      "sha256": "32DB8D189C7324488B5777044588707C495AA35AD65339211973B0F5F24BAA36",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 53
+    },
+    {
+      "path": "src/plugin/runtime_internal.hpp",
+      "sha256": "7E727D38B36D40827599E690A161621744A142C2CAD4BCB4BD4D297CDF3739AA",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 17
+    },
+    {
+      "path": "src/plugin/runtime_settings.cpp",
+      "sha256": "305422471B6F19AA1C050D15507933990A12441335279F87F93DC7D54D770F50",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 108
+    },
+    {
+      "path": "src/plugin/runtime_settings.hpp",
+      "sha256": "A0F70210F5AB788BB939761FFB5416954805F94946AAA03121D2795CB33B9D57",
+      "role": "header/dependency",
+      "review": "BOUNDARY",
+      "nonempty_lines": 379
+    },
+    {
+      "path": "src/plugin/runtime.cpp",
+      "sha256": "72D86115F5A6C31456C35E519A0AEDFB6A74322AE0066063EC0A1B504A743C39",
+      "role": "runtime_owner",
+      "review": "BOUNDARY",
+      "nonempty_lines": 6607
+    },
+    {
+      "path": "src/plugin/runtime.hpp",
+      "sha256": "FC73CC50AD68C806F2191F943F612DCFCD303E9A58E8FBB6A97127C41D07B325",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 18
+    },
+    {
+      "path": "src/plugin/worker_lifecycle.cpp",
+      "sha256": "AE20F2F223F88A188528FC7A5F225972C1F53EC0933FBD41CD0988AEF31EA277",
+      "role": "production",
+      "review": "BOUNDARY",
+      "nonempty_lines": 82
+    },
+    {
+      "path": "src/plugin/worker_lifecycle.hpp",
+      "sha256": "35E1271F029FADA882CAF7FB95E813913008E8E31B78CC46EDBFAA4BA7FB57FB",
+      "role": "header/dependency",
+      "review": "SURFACE",
+      "nonempty_lines": 36
+    }
+  ]
+}

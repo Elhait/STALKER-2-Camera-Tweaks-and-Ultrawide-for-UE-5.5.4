@@ -197,6 +197,26 @@ int main()
         plugin::ShouldDispatchHotkeyAction(true, false, true, false, false),
         "hotkey_policy_gate_and_capture_consumption");
 
+    plugin::RuntimeSettingsSnapshot hotkeySettings{};
+    std::vector<int> sampledKeys;
+    const auto readKey = [&](int key) {
+        sampledKeys.push_back(key);
+        return static_cast<short>(0x8000);
+    };
+    pass &= Check(!plugin::SampleRuntimeHotkeys(hotkeySettings, true, readKey).observed &&
+        sampledKeys.empty(), "disabled_hotkeys_perform_no_key_reads");
+    hotkeySettings.hotkeysEnabled = true;
+    pass &= Check(!plugin::SampleRuntimeHotkeys(hotkeySettings, false, readKey).observed &&
+        sampledKeys.empty(), "background_game_performs_no_key_reads");
+    const auto sampled = plugin::SampleRuntimeHotkeys(hotkeySettings, true, readKey);
+    pass &= Check(sampled.observed && sampled.dialogue && sampled.cinematic &&
+        sampled.cinematicFov && sampled.gameplay && sampledKeys == std::vector<int>{
+            hotkeySettings.dialogueCycleKey, hotkeySettings.cinematicCycleKey,
+            hotkeySettings.cinematicFovCycleKey, hotkeySettings.gameplayCycleKey},
+        "foreground_sampling_is_limited_to_configured_action_keys");
+    pass &= Check(!plugin::ShouldDispatchHotkeyAction(true, false, true, true, false),
+        "held_key_on_foreground_reentry_is_not_a_new_press");
+
     plugin::RuntimeSettingsApi concurrentApi;
     ConcurrentContext contexts[2]{{1}, {2}};
     std::atomic<bool> start{false};

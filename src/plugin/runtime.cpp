@@ -6233,10 +6233,24 @@ namespace
                 (GetAsyncKeyState(hotkeySettings.overlayToggleKey) & 0x8000) != 0)
                 diagnostics::startup::ToggleProbe();
 #endif
-            const bool dialogueKey = (GetAsyncKeyState(hotkeySettings.dialogueCycleKey) & 0x8000) != 0;
-            const bool cinematicKey = (GetAsyncKeyState(hotkeySettings.cinematicCycleKey) & 0x8000) != 0;
-            const bool cinematicFovKey = (GetAsyncKeyState(hotkeySettings.cinematicFovCycleKey) & 0x8000) != 0;
-            const bool gameplayKey = (GetAsyncKeyState(hotkeySettings.gameplayCycleKey) & 0x8000) != 0;
+            DWORD foregroundProcess{};
+            const HWND foreground = GetForegroundWindow();
+            const bool foregroundGame = foreground &&
+                GetWindowThreadProcessId(foreground, &foregroundProcess) &&
+                foregroundProcess == GetCurrentProcessId();
+            const auto keys = plugin::SampleRuntimeHotkeys(hotkeySettings,
+                foregroundGame, &GetAsyncKeyState);
+            if (!keys.observed) {
+                // Do not treat a key already held while returning from another
+                // application or re-enabling hotkeys as a fresh press.
+                previousDialogueKey = previousCinematicKey =
+                    previousCinematicFovKey = previousGameplayKey = true;
+                continue;
+            }
+            const bool dialogueKey = keys.dialogue;
+            const bool cinematicKey = keys.cinematic;
+            const bool cinematicFovKey = keys.cinematicFov;
+            const bool gameplayKey = keys.gameplay;
             const bool captureActive = g_hotkeyRebindCaptureActive.load(std::memory_order_acquire);
             const int consumedKey = g_hotkeyRebindConsumedKey.load(std::memory_order_acquire);
             if (consumedKey != 0 && (GetAsyncKeyState(consumedKey) & 0x8000) == 0) {
