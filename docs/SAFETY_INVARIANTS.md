@@ -56,12 +56,7 @@
   replacement of the managed INI.
 - Auto viewport aspect uses only usable client geometry; transient degenerate
   dimensions fall back to the existing display/native path.
-- Auto overlay language is read on explicit selection and at the closed-to-open transition. Explicit selection requests synchronization through the game window procedure; the UI/render callback does not call the native reader directly. The
-  native reader validates the expected game image layout and both code
-  prologues before calling either address; returned FString data is bounded
-  and copied before releasing its game-allocated buffer. Unknown or unavailable
-  identifiers select English without changing persisted Auto mode. No polling,
-  OS locale, storefront state, or game-setting writes are used.
+- Auto overlay language is read on explicit selection and at the closed-to-open transition. Explicit selection requests synchronization through the game window procedure; the UI/render callback does not call the native reader directly. The native reader validates the loaded AMD64 PE, resolves the reader through a unique executable-section signature, and resolves the game-buffer release function through a unique executable anchor mapped to its owning entry in the PE exception table. Both addresses must validate before either is published; ambiguous, malformed, or missing metadata fails closed. Returned FString data is bounded and copied before releasing its game-allocated buffer. Unknown or unavailable identifiers select English without changing persisted Auto mode. No polling, OS locale, storefront state, or game-setting writes are used.
 - Overlay position migration is one-shot and non-destructive: legacy coordinates
   are copied into `[Overlay]` in the main INI, and the old file is left untouched
   but no longer read after the migration marker is committed.

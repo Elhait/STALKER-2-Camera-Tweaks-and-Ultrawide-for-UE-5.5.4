@@ -20,12 +20,16 @@ record names a different mod hash (`19F2…`). The repository does not establish
 that those are the same binary; therefore the runtime pass must not be
 attributed to the exact `D04A…` release artifact without matching run evidence.
 
-The standalone Auto Interface Language reader has feature-specific validation
-on Steam 2.0.6 executable SHA-256
-`61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B`. It
-validates the executable's AMD64 `.text` layout and reader/free-function
-prologues before use; failure falls back to English. This does not broaden
-resolver or runtime evidence to another game build.
+The standalone Auto Interface Language reader's original feature-specific
+runtime validation is on Steam 2.0.6 executable SHA-256
+`61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B`. The
+current resolver uses a long reader signature and a unique interior anchor for
+the matching game-buffer release function. It maps the anchor to the function
+entry through the AMD64 PE exception table, avoiding fixed RVAs and compiler-
+dependent anchor offsets. Static Ghidra checks confirmed the reader and anchor
+on retained 2.0.2 through 2.0.6 images. The newer game executable has not
+been analyzed, so compatibility with it remains unverified. Missing or
+ambiguous matches fall back to English.
 
 The workspace's current release-assets ASI is a separately built file; its
 present SHA-256 is not represented as runtime-tested by the records above.

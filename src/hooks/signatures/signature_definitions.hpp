@@ -34,6 +34,20 @@ namespace hooks::signatures
     inline constexpr char ZoomOut[] =
         "F3 0F 10 40 50 F3 0F 10 8E 3C 01 00 00 0F 2E C8";
 
+    // Ghidra-verified language reader entry signature and a distinctive
+    // interior anchor in the matching game-allocator release function. Resolve
+    // the anchor through the PE exception table to its owning function entry;
+    // compiler changes move the anchor within the function across game builds.
+    inline constexpr char GameLanguageReader[] =
+        "41 56 56 57 53 48 83 EC 28 48 89 CE E8 ?? ?? ?? ?? "
+        "48 8B 48 28 48 8B 78 30 48 85 FF 74 ?? F0 FF 47 08 "
+        "E8 ?? ?? ?? ?? 48 C7 06 00 00 00 00 48 63 58 08 4C 8B 30 "
+        "89 5E 08 48 85 DB 74 ?? 48 89 F1 89 DA 45 31 C0 "
+        "E8 ?? ?? ?? ?? 48 8B 0E 48 01 DB 4C 89 F2 49 89 D8 E8 ?? ?? ?? ??";
+    inline constexpr char GameLanguageBufferFreeAnchor[] =
+        "48 89 C1 48 C1 E1 04 49 89 34 0E 48 C1 E0 04 "
+        "4D 89 6C 06 08 4C 01 AF 38 15 00 00 FF 87 40 15 00 00";
+
     // These signatures describe the 2.0.3 -> 2.0.4 transition topology, not
     // fixed addresses. Relative call displacements and the ENTER RIP-relative
     // scalar displacement are intentionally wildcarded.

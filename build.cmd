@@ -1,7 +1,11 @@
 @echo off
 setlocal EnableExtensions
+set "BUILD_RESULT=0"
 pushd "%~dp0"
-if errorlevel 1 exit /b 1
+if errorlevel 1 (
+    set "BUILD_RESULT=1"
+    goto :finish
+)
 
 rem Each option set gets a distinct CMake/Ninja binary tree. The legacy
 rem CAMERA_TWEAKS_OBJECT_DIR now names the parent of that isolated tree.
@@ -12,7 +16,7 @@ if /I "%CAMERA_TWEAKS_STARTUP_TIMELINE%"=="1" set "TIMELINE=ON"
 set "DISCOVERY=OFF"
 if /I "%PROFILE%"=="diagnostic" if /I "%DIALOGUE_DISCOVERY_DIAGNOSTIC%"=="1" set "DISCOVERY=ON"
 
-set "CMAKE_BUILD_ROOT=build-artifacts\cm"
+set "CMAKE_BUILD_ROOT=build-artifacts\cm\candidate"
 if defined CAMERA_TWEAKS_OBJECT_DIR set "CMAKE_BUILD_ROOT=%CAMERA_TWEAKS_OBJECT_DIR%\cmake"
 set "CAMERA_TWEAKS_CMAKE_BUILD_ROOT=%CMAKE_BUILD_ROOT%"
 call "%~dp0tools\build\build-cmake-candidate.cmd"
@@ -38,4 +42,12 @@ set "BUILD_RESULT=%errorlevel%"
 
 :done
 popd
+:finish
+if "%BUILD_RESULT%"=="0" (
+    echo Build finished successfully.
+) else (
+    echo Build failed with exit code %BUILD_RESULT%.
+)
+echo Press any key to close this window...
+pause >nul
 exit /b %BUILD_RESULT%

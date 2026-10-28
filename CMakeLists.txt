@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
-project(STALKER2CameraTweaks VERSION 3.2.1 LANGUAGES C CXX)
+project(STALKER2CameraTweaks VERSION 3.2.2 LANGUAGES C CXX)
 
 # CMake's MSVC defaults inject WIN32/_WINDOWS. The legacy cl invocation did
 # not; keep only the explicitly reviewed project flags and definitions.
