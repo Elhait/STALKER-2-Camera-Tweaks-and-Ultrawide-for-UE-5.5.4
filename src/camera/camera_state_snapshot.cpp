@@ -81,10 +81,32 @@ namespace camera
         }
     }
 
+    namespace {
+        bool FovFactChanged(const CameraFovFact& a, const CameraFovFact& b) noexcept
+        {
+            return FloatChanged(a.value, b.value) || a.valid != b.valid ||
+                a.provenance != b.provenance || a.freshness != b.freshness ||
+                a.source != b.source || a.sourceValid != b.sourceValid || a.boundary != b.boundary;
+        }
+        bool FovStagesChanged(const CameraEvidenceSnapshot& a,
+            const CameraEvidenceSnapshot& b) noexcept
+        {
+            return FovFactChanged(a.neutralGameplayFov, b.neutralGameplayFov) ||
+                FovFactChanged(a.gameplayFov, b.gameplayFov) ||
+                FovFactChanged(a.nativeFov, b.nativeFov) ||
+                FovFactChanged(a.writerInputFov, b.writerInputFov) ||
+                FovFactChanged(a.currentOutputFov, b.currentOutputFov) ||
+                FovFactChanged(a.postStoreFov, b.postStoreFov) ||
+                FovFactChanged(a.postHelperFov, b.postHelperFov) ||
+                a.gameplayReferenceUsable != b.gameplayReferenceUsable;
+        }
+    }
+
     bool SnapshotChanged(const CameraStateSnapshot& current,
         const CameraStateSnapshot& previous) noexcept
     {
-        if (current.presentation.state != previous.presentation.state ||
+        if (FovStagesChanged(current.evidence, previous.evidence) ||
+            current.presentation.state != previous.presentation.state ||
             current.presentation.provenance != previous.presentation.provenance ||
             current.presentation.epoch != previous.presentation.epoch ||
             current.presentation.epochValid != previous.presentation.epochValid ||
@@ -207,7 +229,8 @@ namespace camera
     {
         // eventSequence is a per-publication counter; treating it as a visual
         // semantic change would wake the overlay for every writer sample.
-        return current.presentation.state != previous.presentation.state ||
+        return FovStagesChanged(current.evidence, previous.evidence) ||
+            current.presentation.state != previous.presentation.state ||
             current.presentation.provenance != previous.presentation.provenance ||
             current.presentation.epoch != previous.presentation.epoch ||
             current.presentation.epochValid != previous.presentation.epochValid ||

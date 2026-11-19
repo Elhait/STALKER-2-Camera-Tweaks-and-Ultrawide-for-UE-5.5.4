@@ -1,0 +1,30 @@
+{
+  "kind": "research_model_intermediate_failure_not_production_defect",
+  "fixtureFailures": [
+    {
+      "id": "T13",
+      "errors": [
+        "transfer_has_no_intermediate_gameplay"
+      ]
+    },
+    {
+      "id": "T15",
+      "errors": [
+        "transfer_has_no_intermediate_gameplay"
+      ]
+    },
+    {
+      "id": "T13",
+      "errors": [
+        "transfer_has_no_intermediate_gameplay"
+      ]
+    },
+    {
+      "id": "T15",
+      "errors": [
+        "transfer_has_no_intermediate_gameplay"
+      ]
+    }
+  ],
+  "diagnosis": "Transfer assertion was too broad for unmatched requests; additionally recovery model omitted provider-pending quarantine from fresh baseline admission. Preserve the distinction in final guards/oracle. No production conclusion."
+}

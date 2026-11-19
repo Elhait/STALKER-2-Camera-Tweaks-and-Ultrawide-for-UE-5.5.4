@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "**********************************************************************\r\n** Visual Studio 2022 Developer Command Prompt v17.14.28\r\n** Copyright (c) 2025 Microsoft Corporation\r\n**********************************************************************\r\n",
+  "ProcessId": 29548
+}

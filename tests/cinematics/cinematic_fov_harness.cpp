@@ -1,4 +1,5 @@
 #include "../../src/cinematics/cinematic_fov.hpp"
+#include "../../src/cinematics/cinematic_enter_activation.hpp"
 #include "../../src/diagnostics/cinematic_continuation_trace.hpp"
 #include "../../src/diagnostics/cinematic_baseline_provenance.hpp"
 
@@ -13,6 +14,11 @@ namespace
     {
         if (!condition) std::cerr << name << ": FAIL\n";
         return condition;
+    }
+
+    bool Near(float actual, float expected, float tolerance = 0.02f)
+    {
+        return std::isfinite(actual) && std::fabs(actual - expected) <= tolerance;
     }
 
     camera::GameplayBaseline Baseline(float native, float aspect, bool transformed)
@@ -35,49 +41,217 @@ namespace
 int main()
 {
     bool pass = true;
+
+    cinematics::CinematicEnterActivation enterActivation;
+    enterActivation.Arm(1, 7, 0xA, 90.3115f, 127.119f, true, 126.87f);
+    pass &= Check(enterActivation.Capture(true, 1, 7, 0xC, 0xA, 42,
+        90.3115f, 126.87f), "enter_activation_capture_exact_caller_generation");
+    const auto mappedMiddle = enterActivation.ObserveWriter(true, 1, 7,
+        0xA, 0xB, (90.3115f + 126.87f) * 0.5f);
+    pass &= Check(mappedMiddle.status == cinematics::EnterActivationStatus::MatchedSample &&
+        mappedMiddle.writerSource == 0xA && mappedMiddle.writerOutput == 0xB &&
+        std::fabs(mappedMiddle.sampleWeight - 0.5f) < 0.0001f &&
+        std::fabs(mappedMiddle.mappedOutput - (127.119f + 126.87f) * 0.5f) < 0.0001f,
+        "enter_activation_maps_only_admitted_writer_sample");
+    const auto movedOutput = enterActivation.ObserveWriter(true, 1, 7,
+        0xA, 0xD, 100.0f);
+    pass &= Check(movedOutput.status == cinematics::EnterActivationStatus::MatchedSample &&
+        movedOutput.writerOutput == 0xD,
+        "enter_activation_uses_per_invocation_output_admission");
+
+    enterActivation.Arm(2, 8, 0xA, 90.3115f, 127.119f, true, 126.87f);
+    pass &= Check(enterActivation.Capture(true, 2, 8, 0xC, 0xA, 43,
+        70.0f, 126.87f), "enter_activation_captures_c2_native_start");
+    const auto missingStart = enterActivation.ObserveWriter(true, 2, 8,
+        0xA, 0xB, 98.435f);
+    pass &= Check(missingStart.status == cinematics::EnterActivationStatus::MissingCorrectedStart &&
+        !missingStart.correctedStartValid && !std::isfinite(missingStart.mappedOutput),
+        "enter_activation_fails_closed_for_historical_baseline");
+    const auto c2Endpoint = enterActivation.ObserveWriter(true, 2, 8,
+        0xA, 0xB, 126.87f);
+    pass &= Check(c2Endpoint.status == cinematics::EnterActivationStatus::MissingCorrectedStart &&
+        !c2Endpoint.armed &&
+        !enterActivation.ObserveWriter(true, 2, 8, 0xA, 0xB, 126.87f).captured,
+        "enter_activation_retires_unmapped_c2_at_native_endpoint");
+
+    camera::CameraFovObservation dialogueWriterObservation{};
+    dialogueWriterObservation.boundary = camera::FovObservationBoundary::CameraWriter;
+    dialogueWriterObservation.writerContext = camera::WriterContext::DialogueLifecycleObserved;
+    dialogueWriterObservation.writerSource = {0xA, true};
+    dialogueWriterObservation.writerThreadId = 47;
+    dialogueWriterObservation.publicationSequence = 77;
+    dialogueWriterObservation.aspect = {3.55556f,
+        camera::FovProvenance::ResolvedAspect, true};
+    dialogueWriterObservation.policyAspect = {3.55556f,
+        camera::FovProvenance::ClientViewportAspect, true};
+    dialogueWriterObservation.writerFlags = 0x4;
+    dialogueWriterObservation.writerFlagsValid = true;
+    dialogueWriterObservation.inputFov = {80.1509f, camera::FovSpace::Native,
+        camera::FovProvenance::NativeRegisterInput, true};
+    dialogueWriterObservation.resultFov = {118.563f, camera::FovSpace::Transformed,
+        camera::FovProvenance::ModTransformResult, true};
+    const auto dialogueStart = cinematics::MakeDialogueWriterResultCandidate(
+        dialogueWriterObservation, 0xA, 22, 1, true);
+    auto confirmedObservation = dialogueWriterObservation;
+    confirmedObservation.writerContext =
+        camera::WriterContext::ConfirmedProviderDialogueLifecycleObserved;
+    confirmedObservation.inputFov.value = 122.087f;
+    confirmedObservation.resultFov.value = 149.071f;
+    const auto confirmedStart = cinematics::MakeDialogueWriterResultCandidate(
+        confirmedObservation, 0xA, 22, 1, true);
+    cinematics::CinematicEnterActivation confirmedActivation;
+    confirmedActivation.Arm(2, 13, 0xA, 130.311f, 153.931f, true,
+        153.931f, confirmedStart);
+    const bool confirmedCaptured = confirmedActivation.Capture(true, 2, 13,
+        0xC, 0xA, 47, 122.087f, 153.931f, 22);
+    bool confirmedTrajectory = confirmedCaptured && confirmedStart.valid;
+    for (const float weight : {0.0f, 0.03f, 0.17f, 0.49f, 0.83f, 1.0f}) {
+        const float input = 122.087f + weight * (153.931f - 122.087f);
+        const auto mapped = confirmedActivation.ObserveWriter(true, 2, 13,
+            0xA, 0xB, input);
+        const float expected = 149.071f + weight * (153.931f - 149.071f);
+        confirmedTrajectory &= mapped.correctedStartValid &&
+            mapped.correctedStartFromDialogue &&
+            std::fabs(mapped.mappedOutput - expected) < 0.02f;
+    }
+    pass &= Check(confirmedTrajectory,
+        "confirmed_provider_dialogue_maps_entire_cinematic_trajectory_without_raw_start_drop");
+    pass &= Check(dialogueStart.valid && dialogueStart.dialogueContextActive &&
+        dialogueStart.activationStartSample == 80.1509f &&
+        dialogueStart.correctedStart == 118.563f &&
+        dialogueStart.writerSequence == 77 && !dialogueWriterObservation.observedDuringGameplay,
+        "dialogue_candidate_uses_writer_input_and_qualified_writer_result");
+    enterActivation.Arm(6, 13, 0xB, 90.3115f, 127.119f, true,
+        126.87f, dialogueStart);
+    pass &= Check(enterActivation.Capture(true, 6, 13, 0xC, 0xA, 47,
+            80.1509f, 126.87f, 22),
+        "enter_activation_accepts_current_dialogue_start_for_bound_receiver");
+    const auto dialogueMappedStart = enterActivation.ObserveWriter(true, 6, 13,
+        0xA, 0xB, 80.1509f);
+    pass &= Check(dialogueMappedStart.correctedStartValid &&
+        dialogueMappedStart.correctedStartFromDialogue &&
+        dialogueMappedStart.correctedStartWriterSequence == 77 &&
+        std::fabs(dialogueMappedStart.correctedStart - 118.563f) < 0.001f &&
+        std::fabs(dialogueMappedStart.mappedOutput - 118.563f) < 0.001f,
+        "enter_activation_maps_from_dialogue_writer_result_not_authored_enter_or_gameplay_history");
+
+    auto staleDialogueCandidate = dialogueStart;
+    staleDialogueCandidate.writerThreadId = 48;
+    enterActivation.Arm(7, 14, 0xA, 90.3115f, 127.119f, true,
+        126.87f, staleDialogueCandidate);
+    enterActivation.Capture(true, 7, 14, 0xC, 0xA, 48,
+        80.1509f, 126.87f, 23);
+    const auto staleDialogueObservation = enterActivation.ObserveWriter(true, 7, 14,
+        0xA, 0xB, 80.1509f);
+    pass &= Check(!staleDialogueObservation.correctedStartValid &&
+        staleDialogueObservation.status == cinematics::EnterActivationStatus::MissingCorrectedStart,
+        "enter_activation_does_not_fall_back_to_gameplay_history_when_dialogue_provenance_stales");
+
+    cinematics::EnterActivationCorrectedStartCandidate currentSampleStart{
+        0xA, 24, 90.0f, 127.0f, true, false};
+    enterActivation.Arm(8, 15, 0xB, 90.0f, 127.0f, true,
+        126.87f);
+    enterActivation.Capture(true, 8, 15, 0xC, 0xA, 49, 90.0f, 126.87f,
+        24, currentSampleStart);
+    const auto currentSampleMappedStart = enterActivation.ObserveWriter(true,
+        8, 15, 0xA, 0xD, 90.0f);
+    pass &= Check(currentSampleMappedStart.correctedStartValid &&
+        currentSampleMappedStart.correctedStartFromCurrentSample &&
+        std::fabs(currentSampleMappedStart.mappedOutput - 127.0f) < 0.001f,
+        "enter_activation_maps_from_receiver_bound_current_native_sample");
+
+    currentSampleStart.dialogueContextActive = true;
+    enterActivation.Arm(9, 16, 0xA, 90.0f, 127.0f, true,
+        126.87f);
+    enterActivation.Capture(true, 9, 16, 0xC, 0xA, 50, 90.0f, 126.87f,
+        24, currentSampleStart);
+    const auto blockedGameplayFallback = enterActivation.ObserveWriter(true,
+        9, 16, 0xA, 0xD, 90.0f);
+    pass &= Check(!blockedGameplayFallback.correctedStartValid &&
+        blockedGameplayFallback.status == cinematics::EnterActivationStatus::MissingCorrectedStart,
+        "enter_activation_blocks_gameplay_baseline_when_dialogue_start_is_unavailable");
+
+    auto wrongContextDialogueObservation = dialogueWriterObservation;
+    wrongContextDialogueObservation.writerContext = camera::WriterContext::GameplayEligible;
+    const auto wrongContextDialogueStart = cinematics::MakeDialogueWriterResultCandidate(
+        wrongContextDialogueObservation, 0xA, 22, 1, true);
+    pass &= Check(!wrongContextDialogueStart.valid &&
+        wrongContextDialogueStart.dialogueContextActive,
+        "dialogue_candidate_rejects_gameplay_context_observation");
+
+    enterActivation.Arm(3, 9, 0xA, 90.0f, 127.0f, true, 126.0f);
+    pass &= Check(!enterActivation.Capture(false, 3, 9, 0xC, 0xA, 44,
+        90.0f, 126.0f) &&
+        !enterActivation.Capture(true, 2, 9, 0xC, 0xA, 44, 90.0f, 126.0f),
+        "enter_activation_rejects_wrong_caller_or_generation");
+    pass &= Check(enterActivation.Capture(true, 3, 9, 0xC, 0xA, 44,
+        90.0f, 126.0f), "enter_activation_captures_current_generation");
+    const auto foreignSource = enterActivation.ObserveWriter(true, 3, 9,
+        0xE, 0xB, 100.0f);
+    pass &= Check(foreignSource.status == cinematics::EnterActivationStatus::ForeignSource,
+        "enter_activation_retires_on_foreign_source");
+
+    enterActivation.Arm(4, 10, 0xA, 90.0f, 127.0f, true, 126.0f);
+    enterActivation.Capture(true, 4, 10, 0xC, 0xA, 45, 90.0f, 126.0f);
+    const auto changedSettings = enterActivation.ObserveWriter(true, 4, 11,
+        0xA, 0xB, 100.0f);
+    pass &= Check(changedSettings.status == cinematics::EnterActivationStatus::SettingsChanged,
+        "enter_activation_retires_on_settings_epoch_change");
+
+    enterActivation.Arm(5, 12, 0xA, 90.0f, 127.0f, true, 126.0f);
+    enterActivation.Capture(true, 5, 12, 0xC, 0xA, 46, 90.0f, 126.0f);
+    const auto endpoint = enterActivation.ObserveWriter(true, 5, 12,
+        0xA, 0xB, 126.0f);
+    pass &= Check(endpoint.status == cinematics::EnterActivationStatus::CompletedEndpoint &&
+        !endpoint.armed && std::fabs(endpoint.mappedOutput - 126.0f) < 0.0001f &&
+        !enterActivation.ObserveWriter(true, 5, 12, 0xA, 0xB, 126.0f).captured,
+        "enter_activation_maps_and_retires_at_native_endpoint");
     const float authored = 90.0f;
     const auto transformedBaseline = Baseline(112.623f, 3.55556f, true);
     const auto passThroughBaseline = Baseline(104.0f, 2.4f, false);
 
     const auto nativeSelection = cinematics::SelectCinematicBaseline(
         false, authored, transformedBaseline);
-    pass &= Check(nativeSelection.targetBaselineFov == authored &&
-        !nativeSelection.usedGameplayBaselineValue &&
+    pass &= Check(nativeSelection.authoredReferenceFov == authored &&
+        !nativeSelection.gameplayRetentionWitnessAvailable &&
         nativeSelection.valueOrigin == cinematics::CinematicBaselineValueOrigin::AuthoredEnter,
         "native_ignores_baseline");
 
     const auto invalidSelection = cinematics::SelectCinematicBaseline(
         true, authored, {});
-    pass &= Check(invalidSelection.targetBaselineFov == authored &&
-        !invalidSelection.usedGameplayBaselineValue,
+    pass &= Check(invalidSelection.authoredReferenceFov == authored &&
+        !invalidSelection.gameplayRetentionWitnessAvailable,
         "invalid_baseline_fallback");
 
     const auto gameplaySelection = cinematics::SelectCinematicBaseline(
         true, authored, transformedBaseline);
-    pass &= Check(gameplaySelection.targetBaselineFov == 112.623f &&
-        gameplaySelection.usedGameplayBaselineValue &&
-        gameplaySelection.valueOrigin == cinematics::CinematicBaselineValueOrigin::GameplayNativeNumericBaseline,
-        "transformed_baseline_native_target");
+    pass &= Check(gameplaySelection.targetBaselineFov == transformedBaseline.nativeFov.value &&
+        gameplaySelection.gameplayRetentionWitnessAvailable &&
+        gameplaySelection.valueOrigin ==
+            cinematics::CinematicBaselineValueOrigin::GameplayNativeNumericBaseline,
+        "gameplay_horplus_uses_current_gameplay_native_baseline");
 
     const auto passThroughSelection = cinematics::SelectCinematicBaseline(
         true, authored, passThroughBaseline);
-    pass &= Check(passThroughSelection.targetBaselineFov == 104.0f &&
-        passThroughSelection.usedGameplayBaselineValue,
-        "passthrough_baseline_native_target");
+    pass &= Check(passThroughSelection.targetBaselineFov == passThroughBaseline.nativeFov.value &&
+        passThroughSelection.gameplayRetentionWitnessAvailable &&
+        passThroughSelection.valueOrigin ==
+            cinematics::CinematicBaselineValueOrigin::GameplayNativeNumericBaseline,
+        "pass_through_gameplay_native_baseline_remains_usable");
 
     auto malformed = transformedBaseline;
     malformed.nativeFov.value = std::numeric_limits<float>::quiet_NaN();
     const auto malformedSelection = cinematics::SelectCinematicBaseline(
         true, authored, malformed);
-    pass &= Check(malformedSelection.targetBaselineFov == authored &&
-        !malformedSelection.usedGameplayBaselineValue,
+    pass &= Check(malformedSelection.authoredReferenceFov == authored &&
+        !malformedSelection.gameplayRetentionWitnessAvailable,
         "malformed_native_fallback");
 
     const auto aspectRecalculationSelection = cinematics::SelectCinematicBaseline(
-        true, authored, Baseline(96.0f, 1.77778f, false));
-    pass &= Check(aspectRecalculationSelection.targetBaselineFov == 96.0f &&
-        aspectRecalculationSelection.usedGameplayBaselineValue,
-        "aspect_recalculation_native_target");
+        false, authored, Baseline(96.0f, 1.77778f, false));
+    pass &= Check(aspectRecalculationSelection.targetBaselineFov == authored &&
+        !aspectRecalculationSelection.gameplayRetentionWitnessAvailable,
+        "native_horplus_uses_authored_enter_reference");
 
     const cinematics::SharedWriterObservation preEnterWriter{
         41, 8, 0x2000, 0x3000, 90.25f, 3.55556f, 0x05, true, true };
@@ -120,17 +294,17 @@ int main()
         enterRecord.latestWriterBeforeEnter.output == 0x3000,
         "cinematic_baseline_snapshot_publication_and_latest_writer_independently");
     diagnostics::RecordCinematicEnterBaselineSelection(
-        enterRecord, selectedBeforeDiagnostic, 127.393f, true);
+        enterRecord, selectedBeforeDiagnostic, 126.87f, true);
     const auto selectedAfterDiagnostic = cinematics::SelectCinematicBaseline(
         true, authored, transformedBaseline);
     pass &= Check(enterRecord.selectionAvailable &&
-        enterRecord.selectedBaseline.targetBaselineFov == 112.623f &&
-        enterRecord.resultingTargetOutput == 127.393f &&
+        enterRecord.selectedBaseline.targetBaselineFov == transformedBaseline.nativeFov.value &&
+        enterRecord.resultingTargetOutput == 126.87f &&
         selectedAfterDiagnostic.targetBaselineFov ==
             selectedBeforeDiagnostic.targetBaselineFov &&
         selectedAfterDiagnostic.valueOrigin == selectedBeforeDiagnostic.valueOrigin &&
-        selectedAfterDiagnostic.usedGameplayBaselineValue ==
-            selectedBeforeDiagnostic.usedGameplayBaselineValue,
+        selectedAfterDiagnostic.gameplayRetentionWitnessAvailable ==
+            selectedBeforeDiagnostic.gameplayRetentionWitnessAvailable,
         "cinematic_baseline_diagnostic_snapshot_does_not_change_selected_target");
 
     auto invalidPublication = publicationAtBaseline;
@@ -179,13 +353,13 @@ int main()
     float forced16x9 = authored;
     float forced32x9 = authored;
     pass &= Check(cinematics::TryTransformCinematicFov(authored, authored,
-        gameplaySelection.targetBaselineFov, 21.0f / 9.0f, 16.0f / 9.0f, forced21x9),
+        authored, 21.0f / 9.0f, 16.0f / 9.0f, forced21x9),
         "forced_21x9_transform");
     pass &= Check(cinematics::TryTransformCinematicFov(authored, authored,
-        gameplaySelection.targetBaselineFov, 16.0f / 9.0f, 16.0f / 9.0f, forced16x9),
+        authored, 16.0f / 9.0f, 16.0f / 9.0f, forced16x9),
         "forced_16x9_transform");
     pass &= Check(cinematics::TryTransformCinematicFov(authored, authored,
-        gameplaySelection.targetBaselineFov, 32.0f / 9.0f, 16.0f / 9.0f, forced32x9),
+        authored, 32.0f / 9.0f, 16.0f / 9.0f, forced32x9),
         "forced_32x9_transform");
     pass &= Check(std::isfinite(forced21x9) && std::isfinite(forced16x9) &&
         std::isfinite(forced32x9) && forced21x9 != forced16x9 &&
@@ -201,7 +375,7 @@ int main()
     for (const auto mode : fovModes) {
         float disabledOutput = -1.0f;
         pass &= Check(!cinematics::TryTransformSelectedCinematicFov(false, mode,
-            authored, authored, gameplaySelection.targetBaselineFov,
+            authored, authored, authored,
             32.0f / 9.0f, 16.0f / 9.0f, disabledOutput) &&
             disabledOutput == authored,
             mode == config::CinematicFovMode::NativeHorPlus
@@ -210,7 +384,7 @@ int main()
 
         float enabledOutput = authored;
         pass &= Check(cinematics::TryTransformSelectedCinematicFov(true, mode,
-            authored, authored, gameplaySelection.targetBaselineFov,
+            authored, authored, authored,
             32.0f / 9.0f, 16.0f / 9.0f, enabledOutput) &&
             std::isfinite(enabledOutput) && enabledOutput != authored,
             mode == config::CinematicFovMode::NativeHorPlus
@@ -222,6 +396,35 @@ int main()
     pass &= Check(!cinematics::TryTransformEnterFov(authored, 32.0f / 9.0f,
         false, 16.0f / 9.0f, disabledEnterOutput) && disabledEnterOutput == authored,
         "native_aspect_disabled_behavior");
+
+    constexpr double oraclePi = 3.14159265358979323846;
+    constexpr double cinematicNativeAspect = 16.0 / 9.0;
+    constexpr float oracleFovs[] = { 70.0f, 90.0f, 100.0f, 120.0f, 130.0f };
+    constexpr float oracleAspects[] = { 16.0f / 9.0f, 21.0f / 9.0f,
+        32.0f / 9.0f };
+    for (const float cinematicFov : oracleFovs) {
+        for (const float targetBaseline : oracleFovs) {
+            for (const float aspect : oracleAspects) {
+                float actual = std::numeric_limits<float>::quiet_NaN();
+                const bool transformed = cinematics::TryTransformCinematicFov(
+                    cinematicFov, 90.0f, targetBaseline, aspect,
+                    static_cast<float>(cinematicNativeAspect), actual);
+                const double matchedNative = 2.0 * std::atan(
+                    std::tan(static_cast<double>(cinematicFov) * oraclePi / 360.0) *
+                    (std::tan(static_cast<double>(targetBaseline) * oraclePi / 360.0) /
+                        std::tan(oraclePi / 4.0))) * 180.0 / oraclePi;
+                const double expected = 2.0 * std::atan(
+                    std::tan(matchedNative * oraclePi / 360.0) *
+                    (static_cast<double>(aspect) / cinematicNativeAspect)) *
+                    180.0 / oraclePi;
+                const bool expectedValid = std::isfinite(expected) &&
+                    expected > 1.0 && expected < 179.0;
+                pass &= Check(transformed == expectedValid &&
+                    Near(actual, expectedValid ? static_cast<float>(expected) : cinematicFov,
+                        0.04f), "cinematic_mapping_matches_independent_oracle");
+            }
+        }
+    }
 
     // Match production's canonical out-of-line, process-owned trace storage.
     auto continuationTrace = std::make_unique<diagnostics::CinematicContinuationTrace>();

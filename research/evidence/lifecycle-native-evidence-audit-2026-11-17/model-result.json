@@ -1,0 +1,210 @@
+{
+  "kind": "bounded_independent_constraint_and_observability_check",
+  "productionImported": false,
+  "nativeCallbacksInvoked": false,
+  "combinations": 2048,
+  "admissiblePermissionTuples": 330,
+  "rejectedPermissionTuples": 1718,
+  "observations": [
+    {
+      "name": "writer_only_new_source",
+      "latentAlternatives": [
+        "G",
+        "DR",
+        "DP",
+        "CR",
+        "CP"
+      ],
+      "requiredCorrections": [
+        "GameplayHorPlus",
+        "ReducedThenHorPlus",
+        "HorPlusWithoutSecondReduced",
+        "CinematicMapping",
+        "RetainPreparedOrMappedContinuation"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": false,
+      "commonSafeAction": "PassThrough",
+      "assumption": "No independent mode/provenance proof",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "address_change_only",
+      "latentAlternatives": [
+        "G",
+        "DR",
+        "DP",
+        "CR",
+        "CP"
+      ],
+      "requiredCorrections": [
+        "GameplayHorPlus",
+        "ReducedThenHorPlus",
+        "HorPlusWithoutSecondReduced",
+        "CinematicMapping",
+        "RetainPreparedOrMappedContinuation"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": false,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Address change adds no engine mode fact",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "dialogue_then_setter_silence",
+      "latentAlternatives": [
+        "G",
+        "DR",
+        "DP"
+      ],
+      "requiredCorrections": [
+        "GameplayHorPlus",
+        "ReducedThenHorPlus",
+        "HorPlusWithoutSecondReduced"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": false,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Invisible termination is a hypothetical alternative, not a recorded event",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "source_owned_native_recovery_proof",
+      "latentAlternatives": [
+        "G"
+      ],
+      "requiredCorrections": [
+        "GameplayHorPlus"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": true,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Conditional on a validated source-bound terminal proof",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "correlated_provider_original",
+      "latentAlternatives": [
+        "DR"
+      ],
+      "requiredCorrections": [
+        "ReducedThenHorPlus"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": true,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Conditional on valid producer/setter/writer original evidence",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "correlated_provider_setter_prepared",
+      "latentAlternatives": [
+        "DP"
+      ],
+      "requiredCorrections": [
+        "HorPlusWithoutSecondReduced"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": true,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Conditional on valid prepared setter evidence",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "cinematic_owner_without_input_origin",
+      "latentAlternatives": [
+        "CR",
+        "CP"
+      ],
+      "requiredCorrections": [
+        "CinematicMapping",
+        "RetainPreparedOrMappedContinuation"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": false,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Ownership alone does not establish original input",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "cinematic_owner_with_corrected_witness",
+      "latentAlternatives": [
+        "CP"
+      ],
+      "requiredCorrections": [
+        "RetainPreparedOrMappedContinuation"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": true,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Conditional on compatible admitted witness",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "candidate_cancel_only",
+      "latentAlternatives": [
+        "G",
+        "DR",
+        "DP"
+      ],
+      "requiredCorrections": [
+        "GameplayHorPlus",
+        "ReducedThenHorPlus",
+        "HorPlusWithoutSecondReduced"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": false,
+      "commonSafeAction": "PassThrough",
+      "assumption": "Cancelling a hypothesis adds no input provenance",
+      "engineReachabilityVerified": false
+    },
+    {
+      "name": "cancel_plus_independent_gameplay_proof",
+      "latentAlternatives": [
+        "G"
+      ],
+      "requiredCorrections": [
+        "GameplayHorPlus"
+      ],
+      "uniqueCorrectionConditionalOnAssumptions": true,
+      "commonSafeAction": "PassThrough",
+      "assumption": "The separate proof, not cancellation, narrows alternatives",
+      "engineReachabilityVerified": false
+    }
+  ],
+  "shortcutCounterexamples": [
+    {
+      "name": "cancel_implies_gameplay",
+      "violations": [
+        "admit_without_native_source_proof"
+      ]
+    },
+    {
+      "name": "new_address_implies_gameplay",
+      "violations": [
+        "admit_without_native_source_proof"
+      ]
+    },
+    {
+      "name": "prepared_value_is_native",
+      "violations": [
+        "fresh_transform_without_original_proof"
+      ]
+    },
+    {
+      "name": "planned_output_is_applied",
+      "violations": [
+        "intent_or_argument_is_not_store_confirmation"
+      ]
+    },
+    {
+      "name": "foreign_mismatch_retires_handoff",
+      "violations": [
+        "retire_without_scoped_terminal_proof"
+      ]
+    }
+  ],
+  "completionOrdering": {
+    "snapshotFirstBaselineAllowed": false,
+    "finalWorkingStateBaselineAllowed": true,
+    "conditionalOnValidNativeTerminalProof": true
+  },
+  "limits": [
+    "No engine reachability proof for latent alternatives",
+    "No independent proof that current hooks supply each named proof",
+    "No full T01-T36 transition implementation or model check",
+    "PassThrough is intervention safety, not correct FOV availability",
+    "Single-snapshot ambiguity is not identical complete native history"
+  ]
+}

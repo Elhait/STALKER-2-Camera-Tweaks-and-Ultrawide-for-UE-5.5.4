@@ -167,9 +167,12 @@ namespace plugin
         result.selection = input.selection;
         const auto& selection = result.selection;
         result.generation = selection.generation;
+        state.continuationCarryPending.store(false, std::memory_order_release);
         const bool continuationSelectionUnchanged =
             state.activeAspectPolicy.load(std::memory_order_acquire) == selection.aspectPolicy &&
             state.activeFovMode.load(std::memory_order_acquire) == selection.fovMode;
+        // Carry describes a technical activation with no writer. It neither
+        // admits nor invalidates the independently owned Gameplay reference.
         const bool baselineUsable = input.correctionEnabled &&
             camera::IsUsableGameplayBaseline(input.gameplayBaseline);
         const auto gameplayBaseline = baselineUsable
@@ -177,12 +180,10 @@ namespace plugin
         const auto baselineSource = baselineUsable &&
                 input.gameplayBaseline.source.valid
             ? input.gameplayBaseline.source.value : 0;
-        result.baselineSelection = input.correctionEnabled
-            ? cinematics::SelectCinematicBaseline(
+        result.baselineSelection = cinematics::SelectCinematicBaseline(
+            input.correctionEnabled &&
                 selection.fovMode == config::CinematicFovMode::GameplayHorPlus,
-                input.authoredFov, gameplayBaseline)
-            : cinematics::CinematicBaselineSelection{input.authoredFov,
-                cinematics::CinematicBaselineValueOrigin::AuthoredEnter, false};
+            input.authoredFov, gameplayBaseline);
         result.outputFov = input.authoredFov;
         result.transformed = input.correctionEnabled &&
             cinematics::OverrideEnabled(selection.aspectPolicy) &&
@@ -237,8 +238,8 @@ namespace plugin
         state.selectionGeneration.store(selection.generation, std::memory_order_release);
         state.selectionValid.store(true, std::memory_order_release);
 
-        const bool inheritedEmptyGenerationContinuation =
-            state.continuationCarryPending.exchange(false, std::memory_order_acq_rel);
+        // Carry alone is not recovery/source authority. The ordinary reentry
+        // checks below remain mandatory even when the reference is usable.
         const gameplay::CinematicReentrySample reentry{
             state.coordinator.load(std::memory_order_acquire),
             input.previousContinuationSource,
@@ -247,25 +248,14 @@ namespace plugin
             input.previousTransformedTarget,
             input.authoredFov,
             result.transformed ? result.outputFov : input.authoredFov,
-            input.awaitingValidatedRecovery || inheritedEmptyGenerationContinuation,
+            input.awaitingValidatedRecovery,
             result.transformed
         };
         result.continuedOwnership = input.correctionEnabled &&
-            gameplay::IsCinematicOwnershipContinuation(reentry);
-        // GameplayHorPlus can establish from the qualified Gameplay native
-        // baseline rather than the authored ENTER operand. Reentry must use
-        // that same native intent, while retaining the source, pending EXIT
-        // and transformed-target checks of the existing continuation predicate.
-        // Do not widen the strict baseline tolerance or change authored evidence.
-        if (!result.continuedOwnership && continuationSelectionUnchanged && baselineSource != 0 &&
-            result.baselineSelection.usedGameplayBaselineValue &&
-            std::isfinite(input.previousExitNativeTarget) &&
-            std::fabs(input.previousExitNativeTarget -
-                result.baselineSelection.targetBaselineFov) <= 0.05f) {
-            auto baselineReentry = reentry;
-            baselineReentry.authoredEnterFov = result.baselineSelection.targetBaselineFov;
-            result.continuedOwnership = gameplay::IsCinematicOwnershipContinuation(baselineReentry);
-        }
+            gameplay::IsCinematicReferenceContinuation(reentry, continuationSelectionUnchanged,
+                result.baselineSelection.usedGameplayBaselineValue
+                    ? result.baselineSelection.targetBaselineFov
+                    : std::numeric_limits<float>::quiet_NaN());
         state.continuationPending.store(false, std::memory_order_release);
         state.continuationInterpolationActive.store(result.continuedOwnership,
             std::memory_order_release);

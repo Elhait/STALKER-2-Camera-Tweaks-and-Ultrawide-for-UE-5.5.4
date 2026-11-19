@@ -1,0 +1,26 @@
+[
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\02-Research\\evidence\\post-exit-dataflow-2026-11-11\\blend-tick.txt",
+    "SHA256": "F24517A6C484947326FDFAAE2A8E7894087E0F554B107216E377EB0E546D79E1",
+    "Bytes": 6771,
+    "EvidenceImage": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\02-Research\\evidence\\post-exit-dataflow-2026-11-11\\target-state.txt",
+    "SHA256": "EBE764683BC2F107E77D26E1542B1DCC66D2DB14811DF89E38E071B546651821",
+    "Bytes": 3017,
+    "EvidenceImage": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\02-Research\\evidence\\post-exit-dataflow-2026-11-11\\target-arming.txt",
+    "SHA256": "DF029A9ED1B5BC3F680E59D96DAD4A0411240BD0F26A787B25F52092474F6590",
+    "Bytes": 6128,
+    "EvidenceImage": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\02-Research\\evidence\\post-exit-dataflow-2026-11-11\\writer-caller-state-type.txt",
+    "SHA256": "12E8B5BF1F5D1C37ACD3EB4F608667963030FE69F1A4B5210400E06B168C497E",
+    "Bytes": 5610,
+    "EvidenceImage": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479"
+  }
+]

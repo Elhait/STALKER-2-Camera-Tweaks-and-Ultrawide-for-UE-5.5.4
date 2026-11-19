@@ -2,6 +2,7 @@
 
 #include "camera_state_snapshot.hpp"
 #include "fov_observation.hpp"
+#include "gameplay_baseline.hpp"
 
 #include <atomic>
 #include <cmath>
@@ -35,6 +36,7 @@ namespace camera
         bool activeDialoguePolicyValid{};
         bool recoveryExcluded{};
         bool modeTransitionPending{};
+        bool zoomObserverAvailable{};
         bool zoomActive{};
         bool zoomObservationValid{};
         ZoomDirection zoomDirection{ZoomDirection::None};
@@ -58,6 +60,10 @@ namespace camera
         bool runtimeCombineReadbackValid{};
         bool runtimeCombineConfirmed{};
         bool runtimeCombineFovApplied{};
+        GameplayBaseline gameplayReference{};
+        bool gameplayReferenceProvided{};
+        bool originalInputAvailable{};
+        CameraWriterTransactionIdentity writerTransaction{};
     };
 
     struct CameraStatePublicationResult
@@ -72,6 +78,7 @@ namespace camera
         WriterObservation,
         TransformedResult,
         GameplayFov,
+        NeutralGameplayFov,
         Presentation,
         Dialogue,
         GameplayMode,
@@ -104,6 +111,10 @@ namespace camera
             snapshot.freshness.writerObservation = FreshnessAfterInvalidation(
                 snapshot.evidence.writerObservationHasEvidence);
             MarkFovFactHistorical(snapshot.evidence.nativeFov);
+            MarkFovFactHistorical(snapshot.evidence.writerInputFov);
+            MarkFovFactHistorical(snapshot.evidence.postStoreFov);
+            MarkFovFactHistorical(snapshot.evidence.postHelperFov);
+            snapshot.evidence.writerTransaction = {};
             MarkFovFactHistorical(snapshot.evidence.currentOutputFov);
             break;
         case CameraStateFreshnessGroup::TransformedResult:
@@ -112,10 +123,14 @@ namespace camera
             RetainFovFact(snapshot.evidence.horPlusTargetFov);
             break;
         case CameraStateFreshnessGroup::GameplayFov:
-            snapshot.evidence.gameplayFov.freshness =
-                snapshot.evidence.gameplayFov.valid
-                    ? SnapshotFreshness::Retained
-                    : SnapshotFreshness::Unavailable;
+            snapshot.evidence.gameplayFov.freshness = !snapshot.evidence.gameplayFov.valid
+                ? SnapshotFreshness::Unavailable
+                : snapshot.evidence.gameplayReferenceUsable ? SnapshotFreshness::Retained
+                    : SnapshotFreshness::Historical;
+            RetainFovFact(snapshot.evidence.neutralGameplayFov);
+            break;
+        case CameraStateFreshnessGroup::NeutralGameplayFov:
+            MarkFovFactHistorical(snapshot.evidence.neutralGameplayFov);
             break;
         case CameraStateFreshnessGroup::Presentation:
             snapshot.freshness.presentation = snapshot.presentation.state ==
@@ -145,6 +160,8 @@ namespace camera
             CameraStateFreshnessGroup::TransformedResult);
         MarkCameraStateGroupHistorical(snapshot, snapshotExists,
             CameraStateFreshnessGroup::GameplayFov);
+        snapshot.evidence.gameplayReferenceUsable = false;
+        MarkFovFactHistorical(snapshot.evidence.gameplayFov);
     }
 
     inline void MarkCameraPresentationTransition(CameraStateSnapshot& snapshot,
@@ -181,7 +198,7 @@ namespace camera
         MarkCameraStateGroupHistorical(snapshot, snapshotExists,
             CameraStateFreshnessGroup::Zoom);
         MarkCameraStateGroupHistorical(snapshot, snapshotExists,
-            CameraStateFreshnessGroup::GameplayFov);
+            CameraStateFreshnessGroup::NeutralGameplayFov);
     }
 
     inline bool IsUsableCameraFov(float value) noexcept
@@ -189,12 +206,35 @@ namespace camera
         return std::isfinite(value) && value > 1.0f && value < 179.0f;
     }
 
-    inline CameraStatePublicationResult PublishCameraStateSnapshotLocked(
-        CameraStatePublicationView state, const CameraStatePublicationInput& input)
+    inline void PublishGameplayReference(CameraEvidenceSnapshot& evidence,
+        const GameplayBaseline& baseline, bool provided,
+        std::uintptr_t receiver, bool liveGameplay) noexcept
     {
-        CameraStatePublicationResult result{};
-        if (!input.observationPublished) return result;
+        if (!provided) return;
+        evidence.gameplayReferenceUsable = IsUsableGameplayBaseline(baseline) &&
+            baseline.source.valid && baseline.source.value == receiver;
+        if (!baseline.valid || !baseline.nativeFov.valid) {
+            evidence.gameplayFov = {};
+            return;
+        }
+        evidence.gameplayFov = {baseline.nativeFov.value, true,
+            EvidenceProvenance::NativeNumericObservation,
+            !evidence.gameplayReferenceUsable ? SnapshotFreshness::Historical
+                : liveGameplay ? SnapshotFreshness::Current : SnapshotFreshness::Retained,
+            baseline.source.value, baseline.source.valid, baseline.observationSequence,
+            CameraFovBoundary::GameplayWriter};
+    }
 
+    inline void RetireWriterReadbacks(CameraEvidenceSnapshot& evidence) noexcept
+    {
+        evidence.postStoreFov = {};
+        evidence.postHelperFov = {};
+        evidence.writerTransaction = {};
+    }
+
+    inline void UpdateNeutralGameplayFov(CameraStatePublicationView state,
+        const CameraStatePublicationInput& input, CameraFovFact& neutral) noexcept
+    {
         const auto& observation = input.observation;
         const float nativeFov = observation.inputFov.value;
         const bool nativeValid = observation.inputFov.valid &&
@@ -219,13 +259,11 @@ namespace camera
         // source, writer-boundary, lifecycle and zoom gates remain mandatory.
         const bool neutralContext = input.presentation == PresentationState::Gameplay &&
             input.dialogue == DialogueState::Inactive && !input.recoveryExcluded &&
-            !input.modeTransitionPending && !input.zoomActive && nativeValid &&
+            !input.modeTransitionPending && input.zoomObserverAvailable &&
+            input.zoomObservationValid && !input.zoomActive && nativeValid &&
             IsUsableCameraFov(nativeFov) && validWriterAspect && validWriterSource &&
             observation.boundary == FovObservationBoundary::CameraWriter &&
             observation.observedDuringGameplay && matchingResultSemantics;
-
-        result.previous = state.valid ? state.snapshot : CameraStateSnapshot{};
-        auto next = result.previous;
 
         if (!neutralContext && !state.zoomHold.load(std::memory_order_acquire)) {
             state.neutralGameplayFovSamples = 0;
@@ -234,9 +272,14 @@ namespace camera
         }
 
         if (neutralContext) {
+            // A valid OUT can be the first known inactive observation. Without
+            // a prior neutral reference there is nothing for hold to restore;
+            // start the existing stable-sample qualification from this point.
+            if (!neutral.valid)
+                state.zoomHold.store(false, std::memory_order_release);
             if (state.zoomHold.load(std::memory_order_acquire)) {
-                if (next.evidence.gameplayFov.valid &&
-                    std::fabs(next.evidence.gameplayFov.value - nativeFov) <= 0.01f) {
+                if (neutral.valid &&
+                    std::fabs(neutral.value - nativeFov) <= 0.01f) {
                     ++state.neutralGameplayFovSamples;
                     if (state.neutralGameplayFovSamples >= 3) {
                         state.zoomHold.store(false, std::memory_order_release);
@@ -256,11 +299,11 @@ namespace camera
             }
 
             if (state.neutralGameplayFovSamples >= 3 &&
-                (!next.evidence.gameplayFov.valid ||
-                    std::fabs(next.evidence.gameplayFov.value - nativeFov) > 0.01f)) {
-                next.evidence.gameplayFov.value = nativeFov;
-                next.evidence.gameplayFov.valid = true;
-                next.evidence.gameplayFov.provenance =
+                (!neutral.valid ||
+                    std::fabs(neutral.value - nativeFov) > 0.01f)) {
+                neutral.value = nativeFov;
+                neutral.valid = true;
+                neutral.provenance =
                     EvidenceProvenance::NativeNumericObservation;
             }
         }
@@ -268,17 +311,37 @@ namespace camera
         const bool gameplayFovConfirmed = neutralContext &&
             state.neutralGameplayFovSamples >= 3;
         if (gameplayFovConfirmed) {
-            next.evidence.gameplayFov.source = input.source;
-            next.evidence.gameplayFov.sourceValid = input.source != 0;
-            next.evidence.gameplayFov.freshness = next.evidence.gameplayFov.valid
+            neutral.source = input.source;
+            neutral.sourceValid = input.source != 0;
+            neutral.freshness = neutral.valid
                 ? SnapshotFreshness::Current : SnapshotFreshness::Unavailable;
-        } else if (!neutralContext && next.evidence.gameplayFov.valid) {
-            next.evidence.gameplayFov.freshness = SnapshotFreshness::Historical;
-        } else if (next.evidence.gameplayFov.valid &&
-            (next.evidence.gameplayFov.source != input.source ||
-                std::fabs(next.evidence.gameplayFov.value - nativeFov) > 0.01f)) {
-            next.evidence.gameplayFov.freshness = SnapshotFreshness::Historical;
+        } else if (!neutralContext && neutral.valid) {
+            neutral.freshness = SnapshotFreshness::Historical;
+        } else if (neutral.valid &&
+            (neutral.source != input.source ||
+                std::fabs(neutral.value - nativeFov) > 0.01f)) {
+            neutral.freshness = SnapshotFreshness::Historical;
         }
+
+    }
+
+    inline CameraStatePublicationResult PublishCameraStateSnapshotLocked(
+        CameraStatePublicationView state, const CameraStatePublicationInput& input)
+    {
+        CameraStatePublicationResult result{};
+        if (!input.observationPublished) return result;
+
+        const auto& observation = input.observation;
+        const float nativeFov = observation.inputFov.value;
+        const bool nativeValid = observation.inputFov.valid &&
+            observation.inputFov.space == FovSpace::Native &&
+            std::isfinite(nativeFov);
+        const bool horPlusValid = observation.resultFov.valid &&
+            observation.resultFov.space == FovSpace::Transformed &&
+            std::isfinite(observation.resultFov.value);
+        result.previous = state.valid ? state.snapshot : CameraStateSnapshot{};
+        auto next = result.previous;
+        UpdateNeutralGameplayFov(state, input, next.evidence.neutralGameplayFov);
 
         next.presentation.state = input.presentation;
         next.presentation.provenance = EvidenceProvenance::ModDerivedState;
@@ -314,11 +377,23 @@ namespace camera
             (observation.aspect.valid && std::isfinite(observation.aspect.value));
         next.freshness.transformedResult = horPlusValid
             ? SnapshotFreshness::Current : SnapshotFreshness::Unavailable;
-        next.evidence.nativeFov = {nativeFov, nativeValid,
+        next.evidence.writerInputFov = {nativeFov, nativeValid,
             nativeValid ? EvidenceProvenance::NativeNumericObservation
                         : EvidenceProvenance::Unavailable,
             nativeValid ? SnapshotFreshness::Current : SnapshotFreshness::Unavailable,
             input.source, input.source != 0, 0};
+        next.evidence.writerInputFov.boundary = CameraFovBoundary::GameplayWriter;
+        if (input.originalInputAvailable && nativeValid) {
+            next.evidence.nativeFov = next.evidence.writerInputFov;
+        } else if (next.evidence.nativeFov.valid) {
+            next.evidence.nativeFov.freshness = SnapshotFreshness::Historical;
+        }
+        PublishGameplayReference(next.evidence, input.gameplayReference,
+            input.gameplayReferenceProvided, input.source,
+            observation.writerContext == WriterContext::GameplayEligible &&
+                input.presentation == PresentationState::Gameplay &&
+                input.dialogue == DialogueState::Inactive);
+        RetireWriterReadbacks(next.evidence);
         const bool outputValid = observation.resultFov.valid &&
             IsUsableCameraFov(observation.resultFov.value);
         next.evidence.currentOutputFov = {
@@ -330,6 +405,10 @@ namespace camera
                         : EvidenceProvenance::Unavailable,
             outputValid ? SnapshotFreshness::Current : SnapshotFreshness::Unavailable,
             input.source, input.source != 0, 0};
+        next.evidence.currentOutputFov.boundary = CameraFovBoundary::GameplayWriter;
+        next.evidence.writerTransaction = input.writerTransaction;
+        next.evidence.currentOutputFov.writerTransactionId = input.writerTransaction.id;
+        next.evidence.writerInputFov.writerTransactionId = input.writerTransaction.id;
         if (input.applied && horPlusValid) {
             next.evidence.horPlusTargetFov = next.evidence.currentOutputFov;
             next.evidence.horPlusTargetFov.provenance =
@@ -389,7 +468,7 @@ namespace camera
         next.gameplayMode = {input.gameplayMode,
             EvidenceProvenance::ModDerivedState, true};
         next.freshness.gameplayMode = SnapshotFreshness::Current;
-        if (input.zoomObservationValid && next.zoom.valid)
+        if (input.zoomObserverAvailable && input.zoomObservationValid && next.zoom.valid)
             next.freshness.zoom = SnapshotFreshness::Current;
         else if (next.zoom.valid)
             next.freshness.zoom = SnapshotFreshness::Historical;
@@ -398,12 +477,14 @@ namespace camera
         next.generation.eventSequence =
             state.eventSequence.fetch_add(1, std::memory_order_acq_rel) + 1;
         next.generation.eventSequenceValid = true;
-        next.evidence.nativeFov.sequence = next.generation.eventSequence;
+        next.evidence.writerInputFov.sequence = next.generation.eventSequence;
+        if (input.originalInputAvailable)
+            next.evidence.nativeFov.sequence = next.generation.eventSequence;
         next.evidence.currentOutputFov.sequence = next.generation.eventSequence;
         if (next.evidence.horPlusTargetFov.valid && input.applied)
             next.evidence.horPlusTargetFov.sequence = next.generation.eventSequence;
-        if (next.evidence.gameplayFov.valid)
-            next.evidence.gameplayFov.sequence = next.generation.eventSequence;
+        if (next.evidence.neutralGameplayFov.valid)
+            next.evidence.neutralGameplayFov.sequence = next.generation.eventSequence;
         state.snapshot = next;
         state.valid = true;
         result.published = true;
@@ -433,6 +514,13 @@ namespace camera
         PresentationState transactionOwner{PresentationState::Unknown};
         std::uintptr_t source{};
         std::uint64_t sequence{};
+        CameraFovBoundary boundary{CameraFovBoundary::DialogueSetter};
+        CameraWriterTransactionIdentity writerTransaction{};
+        bool writerInputPublication{};
+        GameplayBaseline gameplayReference{};
+        bool gameplayReferenceProvided{};
+        std::uintptr_t referenceReceiver{};
+        bool liveGameplayReference{};
     };
 
     inline void PublishCameraFovTransactionLocked(CameraStateSnapshot& snapshot,
@@ -452,25 +540,73 @@ namespace camera
         };
 
         if (transaction.transactionOwner != PresentationState::Gameplay &&
-            snapshot.evidence.gameplayFov.valid) {
+            snapshot.evidence.gameplayFov.valid &&
+            snapshot.evidence.gameplayReferenceUsable) {
             snapshot.evidence.gameplayFov.freshness = SnapshotFreshness::Retained;
             snapshot.evidence.gameplayFov.provenance =
                 EvidenceProvenance::NativeNumericObservation;
         }
-        setCurrent(snapshot.evidence.nativeFov, transaction.nativeInput,
-            transaction.nativeInputValid, transaction.nativeProvenance);
+        if (transaction.nativeProvenance == EvidenceProvenance::NativeNumericObservation &&
+            transaction.nativeInputValid) {
+            setCurrent(snapshot.evidence.nativeFov, transaction.nativeInput,
+                true, transaction.nativeProvenance);
+            snapshot.evidence.nativeFov.boundary = transaction.boundary;
+        } else if (snapshot.evidence.nativeFov.valid) {
+            snapshot.evidence.nativeFov.freshness = SnapshotFreshness::Historical;
+        }
+        if (transaction.writerInputPublication) {
+            setCurrent(snapshot.evidence.writerInputFov, transaction.nativeInput,
+                transaction.nativeInputValid, EvidenceProvenance::NativeNumericObservation);
+            snapshot.evidence.writerInputFov.boundary = CameraFovBoundary::GameplayWriter;
+        }
         setCurrent(snapshot.evidence.currentOutputFov, transaction.output,
             transaction.outputValid, transaction.outputProvenance);
+        snapshot.evidence.currentOutputFov.boundary = transaction.boundary;
+        RetireWriterReadbacks(snapshot.evidence);
+        snapshot.evidence.writerTransaction = transaction.writerTransaction;
+        snapshot.evidence.currentOutputFov.writerTransactionId = transaction.writerTransaction.id;
+        if (transaction.writerInputPublication)
+            snapshot.evidence.writerInputFov.writerTransactionId = transaction.writerTransaction.id;
+        PublishGameplayReference(snapshot.evidence, transaction.gameplayReference,
+            transaction.gameplayReferenceProvided, transaction.referenceReceiver,
+            transaction.liveGameplayReference);
         if (transaction.horPlusTargetValid)
             setCurrent(snapshot.evidence.horPlusTargetFov,
                 transaction.horPlusTarget, true, transaction.targetProvenance);
         else if (snapshot.evidence.horPlusTargetFov.valid)
             snapshot.evidence.horPlusTargetFov.freshness = SnapshotFreshness::Retained;
 
-        if (transaction.transactionOwner == PresentationState::Gameplay &&
-            snapshot.evidence.gameplayFov.valid)
-            snapshot.evidence.gameplayFov.sequence = transaction.sequence;
         snapshotValid = true;
+    }
+
+    struct CameraFovReadbackPublication
+    {
+        CameraWriterTransactionIdentity identity{};
+        CameraFovBoundary boundary{CameraFovBoundary::Unavailable};
+        float value{std::numeric_limits<float>::quiet_NaN()};
+        bool readable{};
+        bool correlated{};
+    };
+
+    inline bool PublishCameraFovReadbackLocked(CameraStateSnapshot& snapshot,
+        bool snapshotValid, const CameraFovReadbackPublication& readback) noexcept
+    {
+        if (!snapshotValid || !readback.correlated || !readback.identity.Valid() ||
+            !(readback.identity == snapshot.evidence.writerTransaction) ||
+            snapshot.evidence.currentOutputFov.writerTransactionId != readback.identity.id)
+            return false;
+        CameraFovFact* fact{};
+        if (readback.boundary == CameraFovBoundary::PrimaryPostStore)
+            fact = &snapshot.evidence.postStoreFov;
+        else if (readback.boundary == CameraFovBoundary::PostHelper)
+            fact = &snapshot.evidence.postHelperFov;
+        else return false;
+        *fact = {};
+        if (readback.readable && IsUsableCameraFov(readback.value))
+            *fact = {readback.value, true, EvidenceProvenance::NativeNumericObservation,
+                SnapshotFreshness::Current, readback.identity.receiver, true,
+                snapshot.generation.eventSequence, readback.boundary, readback.identity.id};
+        return true;
     }
 
     inline CameraStateReadResult ReadCameraStateSnapshotLocked(

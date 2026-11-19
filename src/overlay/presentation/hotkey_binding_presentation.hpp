@@ -18,7 +18,7 @@ namespace overlay
         int plugin::RuntimeSettingsSnapshot::*settingKey;
     };
 
-    inline constexpr std::array<HotkeyBindingPresentation, 5>
+    inline constexpr std::array<HotkeyBindingPresentation, 4>
         HotkeyBindingPresentations{{
             {config::HotkeyBindingId::GameplayMode, loc::setting::GameplayMode,
                 HotkeyBindingGroup::Hotkeys,
@@ -26,9 +26,6 @@ namespace overlay
             {config::HotkeyBindingId::CinematicAspect, loc::setting::CinematicAspect,
                 HotkeyBindingGroup::Hotkeys,
                 &plugin::RuntimeSettingsSnapshot::cinematicCycleKey},
-            {config::HotkeyBindingId::CinematicFov, loc::setting::CinematicFov,
-                HotkeyBindingGroup::Hotkeys,
-                &plugin::RuntimeSettingsSnapshot::cinematicFovCycleKey},
             {config::HotkeyBindingId::DialogueZoom, loc::setting::DialogueZoom,
                 HotkeyBindingGroup::Hotkeys,
                 &plugin::RuntimeSettingsSnapshot::dialogueCycleKey},

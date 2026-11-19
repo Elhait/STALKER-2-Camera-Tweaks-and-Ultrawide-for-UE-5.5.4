@@ -1,0 +1,7 @@
+{
+  "sha256": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479",
+  "hook_rva": "0xcce673",
+  "endpoints": true,
+  "countdown": true,
+  "call": true
+}

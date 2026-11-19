@@ -1,6 +1,7 @@
 #pragma once
 
 #include <safetyhook.hpp>
+#include <array>
 
 namespace hooks
 {
@@ -9,10 +10,17 @@ namespace hooks
     struct HookSet
     {
         SafetyHookMid gameplay;
+        SafetyHookMid gameplayWriterPostStore;
+        SafetyHookMid gameplayWriterPostProcess;
         SafetyHookMid cinematicEnter;
         SafetyHookMid cinematicExit;
         SafetyHookMid cinematicAspectStore;
         SafetyHookMid dialogueBoundary;
+#ifdef POST_EXIT_BLEND_OBSERVATION
+        SafetyHookMid postExitBlendActivation;
+        SafetyHookMid postExitBlendSetterReturn;
+        std::array<SafetyHookMid, 4> cinematicConsumer;
+#endif
 #ifdef POST_EXIT_GAMEPLAY_OBSERVER_DIAGNOSTIC
         SafetyHookMid postExitGameplayObserver;
 #endif

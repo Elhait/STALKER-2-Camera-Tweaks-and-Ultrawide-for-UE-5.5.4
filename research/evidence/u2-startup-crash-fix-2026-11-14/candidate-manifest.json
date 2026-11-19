@@ -1,0 +1,20 @@
+{
+  "artifact": "build-artifacts/u2-camera-state-diagnostic-crash-fix-2026-11-14/production/STALKER2CameraTweaks.asi",
+  "profile": "Production Release",
+  "size_bytes": 3927552,
+  "sha256": "81A3C0268358353658AE7C45CB13824803261546EFCAD89DE24D91DA1F17823A",
+  "pe": {
+    "signature": "PE32+ AMD64",
+    "machine": "0x8664"
+  },
+  "fix": "InstallCinematicAspect now copies to g_runtime.cinematicOriginalImmediate directly instead of an auto& reference alias.",
+  "installed_in_game": false,
+  "runtime_verified": false,
+  "tests_run": false,
+  "build": {
+    "compile": "PASS",
+    "link": "PASS",
+    "supervisor_exit": 124,
+    "supervisor_note": "Compiler and linker completed; supervisor timed out while vctip.exe remained as descendant. CleanupVerified=true; no active build processes remained."
+  }
+}

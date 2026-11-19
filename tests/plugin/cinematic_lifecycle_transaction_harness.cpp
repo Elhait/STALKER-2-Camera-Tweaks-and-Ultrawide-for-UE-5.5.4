@@ -129,6 +129,7 @@ namespace
         std::atomic<bool> continuationInterpolation{};
         std::atomic<float> continuationStart{NAN};
         cinematics::CinematicWriterAssociation association;
+        cinematics::CinematicEnterActivation enterActivation;
         cinematics::CinematicRecoveryOwner recoveryOwner;
         dialogue::PostCinematicRecoveryExclusion exclusion;
         std::atomic<bool> handoffPending{};
@@ -136,6 +137,12 @@ namespace
         std::atomic<float> handoffPreviousFov{NAN};
         std::mutex dialogueMutex;
         dialogue::Phase dialoguePhase{dialogue::Phase::Inactive};
+        bool dialoguePostExitProviderOwned{};
+        std::uintptr_t dialoguePostExitProviderCallbackSource{};
+        std::uintptr_t dialoguePostExitProviderReceiver{};
+        std::uint64_t dialoguePostExitProviderGeneration{};
+        std::uint64_t dialoguePostExitProviderSettingsEpoch{};
+        std::uint32_t dialoguePostExitProviderThreadId{};
         dialogue::PolicySnapshot activeDialoguePolicy;
         dialogue::CorrectionActivation dialogueActivation;
         float dialogueBaseline{NAN};
@@ -171,9 +178,10 @@ namespace
 
         plugin::CameraWriterCinematicStateView WriterView()
         {
-            return {activeEnabled, selectionValid, generation, fovApplied,
+            return {activeEnabled, selectionValid, generation, settingsEpoch,
+                settingsEpoch, fovApplied,
                 enterNative, transformed, continuationSource, continuationStart,
-                continuationInterpolation, association};
+                continuationInterpolation, association, enterActivation};
         }
 
         plugin::CameraWriterGameplayStateView GameplayView()
@@ -184,7 +192,14 @@ namespace
         plugin::DialogueBoundaryStateView DialogueView()
         {
             return {dialogueMutex, coordinator, exclusion, dialoguePhase,
-                activeDialoguePolicy, dialogueActivation, dialogueBaseline,
+                dialoguePostExitProviderOwned,
+                dialoguePostExitProviderCallbackSource,
+                dialoguePostExitProviderReceiver,
+                dialoguePostExitProviderGeneration,
+                dialoguePostExitProviderSettingsEpoch,
+                dialoguePostExitProviderThreadId,
+                activeDialoguePolicy,
+                dialogueActivation, dialogueBaseline,
                 dialoguePrevious, dialogueExitStart, dialogueCandidate,
                 dialogueRecovery, dialogueEnabled, dialoguePolicy,
                 dialogueSettingsEpoch, activeDialogueSettingsEpoch,
@@ -464,9 +479,9 @@ int main()
         "snapshot exposes association and owner after production writer event");
     pass &= Check(enter.baselineSelection.valueOrigin ==
             cinematics::CinematicBaselineValueOrigin::GameplayNativeNumericBaseline &&
-        enter.baselineSelection.usedGameplayBaselineValue &&
+        enter.baselineSelection.gameplayRetentionWitnessAvailable &&
         std::fabs(enter.baselineSelection.targetBaselineFov - 90.6557f) < 0.001f,
-        "ENTER event selects the numeric gameplay baseline without deriving source identity");
+        "GameplayHorPlus ENTER selects the current numeric Gameplay baseline");
 
     const auto repeatedBaseline = state.Writer(gate,
         {0xA, 0xAA, 91.1f, nativeAspect.load(), true, flags.load(), true});
@@ -607,7 +622,7 @@ int main()
     Fixture runtimeCombineRecoveryState;
     plugin::CameraCorrectionGate runtimeCombineRecoveryGate;
     const auto runtimeCombineEnter = runtimeCombineRecoveryState.Enter(true, 12,
-        90.0f, Baseline(), 3.55556f);
+        90.6557f, Baseline(), 3.55556f);
     static_cast<void>(plugin::ObserveCinematicAspectStore(
         runtimeCombineRecoveryState.View(), AspectInput(0xA)));
     FreshFieldsFixture runtimeCombineFields{
@@ -676,7 +691,7 @@ int main()
     Fixture runtimeCombineUnconfirmedState;
     plugin::CameraCorrectionGate runtimeCombineUnconfirmedGate;
     const auto runtimeCombineUnconfirmedEnter = runtimeCombineUnconfirmedState.Enter(
-        true, 13, 90.0f, Baseline(), 3.55556f);
+        true, 13, 90.6557f, Baseline(), 3.55556f);
     static_cast<void>(plugin::ObserveCinematicAspectStore(
         runtimeCombineUnconfirmedState.View(), AspectInput(0xA)));
     FreshFieldsFixture runtimeCombineUnconfirmedFields{
@@ -1220,10 +1235,8 @@ int main()
         !rapidNoOwnerSnapshot.exclusionActive,
         "X05 accepted no-owner EXIT→ENTER remains fail-closed and starts a fresh generation");
 
-    // RUNTIME-CAPTURED GENERATION CHAIN (2026-10-04): gen3 really inherits
-    // gen2's validated continuation, but has no writer invocation before its
-    // no-owner EXIT. Characterize the current state erasure and resulting
-    // gen4 121.060 pass-through; do not encode a desired policy here.
+    // A new accepted generation keeps its own authored ENTER and may continue
+    // only when the previous native/corrected endpoints describe that same intent.
     Fixture generationChain;
     plugin::CameraCorrectionGate generationChainGate;
     const auto enterWithReentry = [&](std::uintptr_t previousSource,
@@ -1233,7 +1246,7 @@ int main()
             generationChain.View(), config::CinematicAspectPolicy::Auto,
             config::CinematicFovMode::GameplayHorPlus);
         return plugin::ProcessAcceptedCinematicEnter(generationChain.View(),
-            {candidate, true, 1, 90.0f, Baseline(), 3.55556f,
+            {candidate, true, 1, 90.6557f, Baseline(), 3.55556f,
                 16.0f / 9.0f, previousSource, previousNativeTarget,
                 previousTransformedTarget, awaitingValidatedRecovery});
     };
@@ -1287,7 +1300,7 @@ int main()
     const auto chain2Snapshot = plugin::ReadCinematicLifecycleSnapshot(
         generationChain.View());
     pass &= Check(chainWriter2Departure.cinematicAction ==
-            cinematics::CinematicWriterAction::RetainContinuationTarget &&
+            cinematics::CinematicWriterAction::RetainTransformedTarget &&
         chainWriter2Departure.mutateFov &&
         std::fabs(chainWriter2Departure.outputFov - 127.393f) < 0.01f &&
         chainWriter2MidRamp.cinematicAction ==
@@ -1296,7 +1309,7 @@ int main()
         std::fabs(chainWriter2MidRamp.outputFov - 127.393f) < 0.01f &&
         chain2Snapshot.continuationActive &&
         chain2Snapshot.association.initialEstablishmentEnded,
-        "GC04 generation 2 ends Initial Establishment at 91.109 then continuation protects raw 120.42");
+        "GC04 generation 2 retains baseline-equivalent 91.109 then continuation protects raw 120.42");
     const auto chainExit2 = exitGeneration(chainEnter2.generation, 0xA,
         90.6557f, 127.393f, true);
     pass &= Check(chainExit2.accepted && chainExit2.recoveryOwnerCaptured &&
@@ -1345,7 +1358,7 @@ int main()
         generationChain.View(), AspectInput(0xA));
     const auto chain4BeforeWriter = plugin::ReadCinematicLifecycleSnapshot(
         generationChain.View());
-    pass &= Check(chainEnter4.accepted && chainEnter4.continuedOwnership &&
+    pass &= Check(chainEnter4.accepted && !chainEnter4.continuedOwnership &&
         chainEnter4.generation == 4 &&
         std::fabs(chainEnter4.outputFov - 127.393f) < 0.01f &&
         !plugin::ReadCinematicLifecycleSnapshot(generationChain.View()).continuationCarryPending &&
@@ -1353,7 +1366,7 @@ int main()
         chain4BeforeWriter.coordinator == camera::CoordinatorState::CinematicActive &&
         chain4BeforeWriter.association.aspectStoreTargetObject == 0xA &&
         !chain4BeforeWriter.association.associationValid,
-        "GC08 generation 4 re-establishes the same target and awaits its associated writer");
+        "GC08 new generation retains independent reference; carry alone is not writer authority");
     const auto chainWriter4First = generationChain.Writer(generationChainGate,
         {0xA, 0xAA, 121.060f, 3.55556f, true, 0x05, true});
     const auto chain4AfterWriter = plugin::ReadCinematicLifecycleSnapshot(
@@ -1365,21 +1378,144 @@ int main()
         chainWriter4First.associationAfterDecision.initialEstablishmentEndReason ==
             cinematics::InitialEstablishmentEndReason::AuthoredBaselineDeparture &&
         chainWriter4First.associationAfterDecision.writerObserved &&
-        chainWriter4First.continuationSourceMatch &&
+        !chainWriter4First.continuationSourceMatch &&
         chainWriter4First.cinematicAction ==
-            cinematics::CinematicWriterAction::RetainContinuationTarget &&
-        chainWriter4First.mutateFov &&
-        std::fabs(chainWriter4First.outputFov - 127.393f) < 0.01f &&
+            cinematics::CinematicWriterAction::PassThroughUnclassified &&
+        !chainWriter4First.mutateFov &&
+        std::fabs(chainWriter4First.outputFov - 121.060f) < 0.01f &&
         chain4AfterWriter.generation == 4 &&
         chain4AfterWriter.coordinator == camera::CoordinatorState::CinematicActive,
-        "GC09 first generation 4 writer ends establishment on departure but predecessor continuation retains 121.060 to target");
+        "GC09 fresh generation rejects predecessor carry as authority for the first departed raw sample");
     const auto chainWriter4Ramp = generationChain.Writer(generationChainGate,
         {0xA, 0xAA, 121.624f, 3.55556f, true, 0x05, true});
-    pass &= Check(chainWriter4Ramp.mutateFov &&
+    pass &= Check(!chainWriter4Ramp.mutateFov &&
         chainWriter4Ramp.cinematicAction ==
-            cinematics::CinematicWriterAction::RetainContinuationTarget &&
-        std::fabs(chainWriter4Ramp.outputFov - 127.393f) < 0.01f,
-        "GC10 subsequent generation 4 ramp sample remains protected by the preserved continuation");
+            cinematics::CinematicWriterAction::PassThroughUnclassified &&
+        std::fabs(chainWriter4Ramp.outputFov - 121.624f) < 0.01f,
+        "GC10 fresh generation keeps unclassified later raw samples in native space");
+
+    // The recorded scene has a Gameplay reference different from authored ENTER.
+    // Empty technical generations cannot erase that reference's production trust.
+    Fixture emptyBaselineChain;
+    plugin::CameraCorrectionGate emptyBaselineGate;
+    auto highBaseline = Baseline();
+    highBaseline.nativeFov.value = 130.3115f;
+    highBaseline.horPlusFov.value = 153.931f;
+    const auto firstHigh = emptyBaselineChain.Enter(true, 1, 90.0f,
+        highBaseline, 32.0f / 9.0f);
+    plugin::ObserveCinematicAspectStore(emptyBaselineChain.View(), AspectInput(0xA));
+    emptyBaselineChain.Writer(emptyBaselineGate,
+        {0xA, 0xAA, 130.3115f, 32.0f / 9.0f, true, 0x05, true});
+    const auto exitHigh = plugin::ProcessAcceptedCinematicExit(emptyBaselineChain.View(),
+        {camera::CoordinatorState::CinematicActive, camera::CoordinatorState::CinematicExiting,
+            firstHigh.generation, 130.3115f, true, config::GameplayMode::HorPlus,
+            0xA, firstHigh.outputFov});
+    const auto enterHigh = [&](bool recovering) {
+        const auto candidate = plugin::PrepareCinematicEnter(emptyBaselineChain.View(),
+            config::CinematicAspectPolicy::Auto, config::CinematicFovMode::GameplayHorPlus);
+        return plugin::ProcessAcceptedCinematicEnter(emptyBaselineChain.View(),
+            {candidate, true, 1, 90.0f, highBaseline, 32.0f/9.0f, 16.0f/9.0f,
+                0xA, 130.3115f, firstHigh.outputFov, recovering});
+    };
+    const auto emptyHigh = enterHigh(exitHigh.recoveryOwnerCaptured);
+    plugin::ObserveCinematicAspectStore(emptyBaselineChain.View(), AspectInput(0xA));
+    const auto exitEmptyHigh = plugin::ProcessAcceptedCinematicExit(emptyBaselineChain.View(),
+        {camera::CoordinatorState::CinematicActive, camera::CoordinatorState::CinematicExiting,
+            emptyHigh.generation, 130.3115f, true, config::GameplayMode::HorPlus,
+            0xA, emptyHigh.outputFov});
+    const auto afterEmptyHigh = enterHigh(false);
+    pass &= Check(exitEmptyHigh.preservedInheritedContinuation &&
+        afterEmptyHigh.baselineSelection.valueOrigin ==
+            cinematics::CinematicBaselineValueOrigin::GameplayNativeNumericBaseline &&
+        afterEmptyHigh.baselineSelection.gameplayRetentionWitnessAvailable &&
+        std::fabs(afterEmptyHigh.outputFov - 153.931f) < 0.01f,
+        "empty_generation_preserves_usable_high_Gameplay_reference_instead_of_authored_90");
+
+    // Fixed seeds exercise the production activation record, including any
+    // number of empty activations between admitted writer decisions.
+    for (std::uint32_t seed = 1; seed <= 32; ++seed) {
+        const float native = std::array{90.0f, 100.0f, 130.3115f}[seed % 3];
+        const float sequenceAspect = std::array{16.0f/9.0f, 21.0f/9.0f, 32.0f/9.0f}[seed % 3];
+        constexpr double pi = 3.14159265358979323846;
+        const float expected = static_cast<float>(2.0 * std::atan(
+            std::tan(native * pi / 360.0) * (sequenceAspect / (16.0/9.0))) * 180.0 / pi);
+        cinematics::CinematicEnterActivation activation;
+        activation.Arm(1, 7, 0xA, native, expected, true, expected, {}, false, sequenceAspect, 4);
+        activation.RecordWriterResult(true, 1, 7, 0xA, 0xB, 11, 1,
+            native, expected, sequenceAspect, 0x5, true);
+        std::uint32_t random = seed;
+        std::uint64_t sequence = 1;
+        cinematics::CinematicWriterAssociationSnapshot continuityOwner{};
+        continuityOwner.generationActive = true;
+        continuityOwner.aspectStoreTargetObject = 0xA;
+        for (std::uint64_t generation = 2; generation <= 24; ++generation) {
+            continuityOwner.generation = activation.Read().generation;
+            activation.RetireForReentry(continuityOwner);
+            activation.Arm(generation, 7, 0xA, native, expected, true,
+                expected, {}, true, sequenceAspect, 4);
+            random = random * 1664525u + 1013904223u;
+            if ((random & 3u) != 0) continue; // includes consecutive empty generations
+            const auto start = activation.InheritedWriterStart(
+                0xA, expected, sequenceAspect, 0x5, 11, 4, 9, 0xC);
+            pass &= Check(start.valid && start.fromCinematicWriter &&
+                std::fabs(start.correctedStart - expected) < 0.001f,
+                "fixed_seed_chain_keeps_writer_provenance_without_repeated_HorPlus");
+            if (sequence == 1)
+                pass &= Check(std::fabs(start.writerInputFov - native) < 0.001f &&
+                    std::fabs(start.activationStartSample - expected) < 0.001f,
+                    "prior_writer_input_remains_distinct_from_successor_activation_start");
+            pass &= Check(activation.Capture(true, generation, 7, 0xC, 0xA, 11,
+                expected, expected, 9, start), "fixed_seed_chain_accepts_owned_native_activation");
+            activation.ObserveWriter(true, generation, 7, 0xA, 0xB + generation, expected);
+            activation.RecordWriterResult(true, generation, 7, 0xA, 0xB + generation,
+                11, ++sequence, expected, expected, sequenceAspect, 0x5, false);
+        }
+        const auto validStart = activation.InheritedWriterStart(
+            0xA, expected, sequenceAspect, 0x5, 11, 4, 9, 0xC);
+        pass &= Check(validStart.valid, "writer_endpoint_retains_explicit_prepared_provenance");
+        pass &= Check(!activation.InheritedWriterStart(0xD, expected, sequenceAspect, 0x5, 11, 4, 9, 0xC).valid &&
+            !activation.InheritedWriterStart(0xA, expected, sequenceAspect, 0x5, 12, 4, 9, 0xC).valid &&
+            !activation.InheritedWriterStart(0xA, expected, sequenceAspect + 0.1f, 0x5, 11, 4, 9, 0xC).valid &&
+            !activation.InheritedWriterStart(0xA, expected, sequenceAspect, 0x4, 11, 4, 9, 0xC).valid &&
+            !activation.InheritedWriterStart(0xA, expected, sequenceAspect, 0x5, 11, 5, 9, 0xC).valid &&
+            !activation.InheritedWriterStart(0xA, expected, sequenceAspect, 0x5, 11, 4, 9, 0xD).valid &&
+            !activation.InheritedWriterStart(0xA, expected - 2.0f, sequenceAspect, 0x5, 11, 4, 9, 0xC).valid,
+            "continuity_rejects_receiver_thread_aspect_flags_epoch_component_or_sample_conflicts");
+        continuityOwner.generation = activation.Read().generation;
+        activation.RetireForReentry(continuityOwner);
+        activation.Arm(25, 8, 0xA, native, expected, true, expected, {}, true, sequenceAspect, 4);
+        const auto changed = activation.InheritedWriterStart(
+            0xA, expected, sequenceAspect, 0x5, 11, 4, 9, 0xC);
+        pass &= Check(changed.cinematicContextActive && !changed.valid,
+            "changed_settings_retire_witness_without_claiming_a_fresh_native_start");
+        activation.Retire();
+        activation.Arm(26, 8, 0xD, native, expected, true, expected, {}, false, sequenceAspect, 5);
+        pass &= Check(!activation.InheritedWriterStart(0xD, native, sequenceAspect, 0x5, 11, 5, 9).cinematicContextActive,
+            "fresh_Gameplay_context_does_not_inherit_a_retired_cinematic_witness");
+    }
+
+    for (unsigned conflict = 0; conflict < 5; ++conflict) {
+        cinematics::CinematicEnterActivation activation;
+        activation.Arm(1, 7, 0xA, 130.0f, 153.7f, true, 153.7f, {}, false, 3.5f, 4);
+        activation.RecordWriterResult(true, 1, 7, 0xA, 0xB, 11, 1,
+            130.0f, 153.7f, 3.5f, 0x5, true);
+        cinematics::CinematicWriterAssociationSnapshot owner{};
+        owner.generationActive = true;
+        owner.generation = 1;
+        owner.aspectStoreTargetObject = 0xA;
+        switch (conflict) {
+        case 0: owner.associationConflict = true; break;
+        case 1: owner.aspectStoreTargetObject = 0xD; break;
+        case 2: owner.generation = 2; break;
+        case 3: owner.generationActive = false; break;
+        case 4: owner.writerObserved = true; break; // no admitted output
+        }
+        activation.RetireForReentry(owner);
+        activation.Arm(2, 7, 0xA, 130.0f, 153.7f, true, 153.7f, {}, true, 3.5f, 4);
+        const auto start = activation.InheritedWriterStart(0xA, 153.7f, 3.5f, 0x5, 11, 4, 9);
+        pass &= Check(start.cinematicContextActive && !start.valid,
+            "lost_exit_ownership_never_resurrects_a_previous_writer_result");
+    }
 
     // Negative control: when the intermediate continued generation does have
     // an associated writer event, EXIT follows the ordinary owner-capture path;
@@ -1394,7 +1530,7 @@ int main()
             config::CinematicFovMode::GameplayHorPlus);
         return plugin::ProcessAcceptedCinematicEnter(
             generationChainWriterControl.View(),
-            {candidate, true, 1, 90.0f, Baseline(), 3.55556f,
+            {candidate, true, 1, 90.6557f, Baseline(), 3.55556f,
                 16.0f / 9.0f, previousSource, previousNativeTarget,
                 previousTransformedTarget, awaitingValidatedRecovery});
     };
@@ -1582,8 +1718,8 @@ int main()
     pass &= Check(fallbackEnter.accepted &&
         fallbackEnter.baselineSelection.valueOrigin ==
             cinematics::CinematicBaselineValueOrigin::AuthoredEnter &&
-        !fallbackEnter.baselineSelection.usedGameplayBaselineValue &&
-        std::fabs(fallbackEnter.baselineSelection.targetBaselineFov - 90.6557f) < 0.001f,
+        !fallbackEnter.baselineSelection.gameplayRetentionWitnessAvailable &&
+        std::fabs(fallbackEnter.baselineSelection.authoredReferenceFov - 90.6557f) < 0.001f,
         "unusable gameplay baseline selects authored ENTER numeric fallback");
 
     Fixture wrongRsiState;

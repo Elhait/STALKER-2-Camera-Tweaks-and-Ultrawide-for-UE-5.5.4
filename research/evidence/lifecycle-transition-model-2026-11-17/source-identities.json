@@ -1,0 +1,82 @@
+[
+  {
+    "Path": "research/reports/LIFECYCLE_AUTHORITY_DESIGN_2026-11-17.md",
+    "SHA256": "6B3AD0BD32AC74138126E7B53AAF1C47AEC55018165B83B36A2D8E1F0D3DA4BC",
+    "MatchesPreviousAudit": null
+  },
+  {
+    "Path": "src/camera/gameplay_baseline.cpp",
+    "SHA256": "798C582F3D1C42CEE5CCDE4FE3CCF07938DC3ECF63448E796205CADC1AE0B125",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/cinematics/cinematic_enter_activation.hpp",
+    "SHA256": "F5F3FED93ED7532AE385A85D6D87DF839980A28DD472F793071EBCA557AD5D36",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/cinematics/cinematic_fov.cpp",
+    "SHA256": "DCBB78D19D32C0C104D9EEA42AE702D9CA61432B8F212FC7EFD3280B80000660",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/diagnostics/post_exit_blend_activation_observation.hpp",
+    "SHA256": "9221186C4355D1049FE1BAA485A1E6C80A5DB065D96C855629005BACC7F8E40D",
+    "MatchesPreviousAudit": null
+  },
+  {
+    "Path": "src/dialogue/dialogue_state.cpp",
+    "SHA256": "92500C666393BE6DBA03A9F50294C5421EDC75F8F98A5F2163ED4A6C9ECEC8ED",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/dialogue/post_exit_provider_authorization.hpp",
+    "SHA256": "F35EC8C5628583D4F0B97E4D389F537E93A9CFB6C673EED24B00E34C785CC2A5",
+    "MatchesPreviousAudit": null
+  },
+  {
+    "Path": "src/dialogue/post_exit_provider_handoff.hpp",
+    "SHA256": "1921ABB71A69691F20E935D8724FFD8BFEA99D8490925BC9BDF14CDD743DDB5D",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/gameplay/gameplay_state.cpp",
+    "SHA256": "71FA6F0600B872EBE8C276DD46B3C0D76EE71FA3AD289CD1BEF27B7A824D3536",
+    "MatchesPreviousAudit": null
+  },
+  {
+    "Path": "src/hooks/hook_set.hpp",
+    "SHA256": "83F419DE19D4939B42C005928830823533A35E483613775463BE8F0613D78F0E",
+    "MatchesPreviousAudit": null
+  },
+  {
+    "Path": "src/plugin/camera_correction_gate.hpp",
+    "SHA256": "648A92CAAE52666153D8B977D11A52769D9C4782969F23D97A9C7112946454CD",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/plugin/camera_writer_transaction.hpp",
+    "SHA256": "D1E16481FBBFF49F983B02643801A6E2CBC45AD93AE24A273E6DF3A806FFEC01",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/plugin/cinematic_lifecycle_transaction.hpp",
+    "SHA256": "70CC1FCD858CFB5463628ECD306BB33252DD667A6480CEF4A95F2ACFEE618CC9",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/plugin/dialogue_boundary_transaction.hpp",
+    "SHA256": "8774AAB212B539123617083833DCF1E53DD3BC91B9C542FEE8C295AC7AA89450",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "src/plugin/runtime.cpp",
+    "SHA256": "489D6644F63636679B491B4C850ED75239D122E99C48B6ADB00031B29CB977FA",
+    "MatchesPreviousAudit": true
+  },
+  {
+    "Path": "STALKER2CameraTweaks.asi",
+    "SHA256": "67E56485DAE42842331FD034AD1A6B574E63265C69CEF54F0B779513BB714DDE",
+    "MatchesPreviousAudit": null
+  }
+]

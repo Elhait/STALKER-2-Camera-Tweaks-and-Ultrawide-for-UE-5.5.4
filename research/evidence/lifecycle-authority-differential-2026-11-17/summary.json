@@ -1,0 +1,21 @@
+{
+  "differential": "PASS",
+  "m2": "implementation started; live cutover incomplete",
+  "field_checks": {
+    "0": 139,
+    "1": 215
+  },
+  "divergences": {
+    "0": 0,
+    "1": 0
+  },
+  "common_fields": 139,
+  "diagnostics_common_results_equal": true,
+  "m1_assertions": 111,
+  "shadow_assertions": 31,
+  "ctest": "2/2 PASS",
+  "registry": "60 targets / 64 invocations / 0 missing inputs",
+  "cleanup_verified": true,
+  "runtime_and_R1_unchanged": true,
+  "live_callbacks_migrated": false
+}

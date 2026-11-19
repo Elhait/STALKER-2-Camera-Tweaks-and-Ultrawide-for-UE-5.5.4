@@ -1,0 +1,58 @@
+﻿[18:09:27.036] MFG_PROXY_UI armed mainGraphicsImports=2 graphicsProbes=0 nativeTableWrites=0
+[18:09:27.036] MFG_PROXY_UI renderer-imports result=armed imports=2 published=2 rollbackVerified=1 path=E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\WINMM.dll
+[18:09:27.153] Session diagnostics (beta): every line carries local time; first-chance faults (8 distinct sites written as they happen) and unhandled exceptions are recorded with a stack; minidump E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\RTXMFG-stalker2-win64-shipping-289237615407A3BD.crash.dmp (the first GPU driver fault at first chance: .fault.dmp beside it); "Session end" closes a normal exit. A log that stops without it was ended abruptly (fail-fast, TerminateProcess or Task Manager, a hang, or power loss).
+[18:09:27.168] Session: process 20020 started 2026-11-16 18:09:26.996 local (UTC+02:00); log opened 0.2 s later
+[18:09:27.168] System: Windows 11 (10.0.26300.9974, 26H2), CPU AMD Ryzen 7 7800X3D 8-Core Processor with 16 logical processors, RAM 31.2 GB (20.9 GB free)
+[18:09:27.168] Display adapter: AMD Radeon(TM) Graphics, driver 32.0.21042.62 dated 4-17-2026 by Advanced Micro Devices, Inc.
+[18:09:27.168] Display adapter: NVIDIA GeForce RTX 4080, driver 32.0.16.2114 (NVIDIA 621.14) dated 10-27-2026 by NVIDIA
+[18:09:27.168] Executable: E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\Stalker2-Win64-Shipping.exe, file 5.5.4.0, product "S.T.A.L.K.E.R. 2" UE5-CL-0
+[18:09:27.168] Backend module: E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\VERSION.dll, file 1.7.0.1145, product "MFG Unlocker" 1.7.0
+[18:09:27.168] NGX_RESULT_LITE enabled=1 runtimeCreateLimit=16 providerEntryLimit=16 providerResults=entry-only newHooks=0 DRED=0
+[18:09:27.331] Initial control: mode=dynamic multiplier=4x dynamicTarget=0 FPS dynamicExperimental56=0 generatedOnlyDebug=0 intervalLogging=1; config: E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\RTXMFG-Universal.json
+[18:09:27.331] NGX temporal-request interval trace enabled: E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\RTXMFG-stalker2-win64-shipping-289237615407A3BD-intervals.csv
+[18:09:27.331] Patch worker started for PID 20020
+[18:09:27.331] RTX 30 DLSS-G declaration: armed=0 gpuArchitecture=0x0 implementation=0x0 nvapiRedirected=0x0
+[18:09:27.331] Diagnostics reused per executable: log=E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\RTXMFG-stalker2-win64-shipping-289237615407A3BD.log status=E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\RTXMFG-Universal.status.json processBirth=134393189669969086 executable=E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\Stalker2-Win64-Shipping.exe
+[18:09:27.331] RTXMFG build=1.7.0 source=v1.5-flipmeter-20261006 base=intel6.6+optiscaler.1+ring2.3+dltb.2+slhost.1+flipmeter.18+hairdiscovery.1.4.2+reflexfg.2+capture.2+optixell.1+optiout.1+optipace.1+model2x.1+mvfill.1+uioff.1+uistable.1+mfgport.1+hudmatch.1+optiport.1+optcapture.1+optiportdefault.1+xefgdiscovery.1+slrestart.1+nvapipin.1+modeltoggle.1+uirefresh.1+noport.1+optiredirect.1+reflexport.1+portback.1+optionly.1+delayload.1+rtx30.3+xellungated.1+specialk.1a+themidaimports.1+modelchoice.1+xefgmodel.1+splat.2+scenechange.1+xellinput.1+rtx30sl2732.1+mfgunlocker.1+presetc.3+rtx30presetc.1+rtx30stable.1+rtx30ota.1+cudawrapped.2+l10n.8+pin.4+turing.1+sm120.1+unet.1+nvlist.1+rtx30nvapi.1+rtx30buffers.1+gpuname.1+arcnative.3+rtx30flip.2+cudaowner.1+dredtable.1+optidlssg.1+xefgflipmeter.2+releaseleak.1+flipkey.1+cap6.1+optirtx30.1+livepreset.2+routegen.1+hitch.1+xefg134.1+rtx30vulkan.1+vkholes.1+vkvsync.1+vkfps.1+srpreset.1+srpreset.2+srpreset.3+srpreset.4+seam.1+scene.1+logpath.1+rtx20dlssg.1+slinitloop.1+lean160.1+xefgrace.1+latency.1+livepresetall.1+rtx50.1+slinitfg.1+slinitfg.2+psorefused.1+ring2.4+flipqueue.2+vsync.1+coupled.1+wine.1+follow.1+prodtarget.1+menucap.1+vkpreset.1+vsync.2+gatepass.1+vkxefg.1+vkxefg.2+vkxefg.3+vkxefg.4+vkxefg.5+hostgate.1+menu16.1+amdkeep.1+rtx30presetstatus.1+vkswapext.1+presentqueue.1+lockin.1+logkeep.1+amdflip.1+amdqueue.1+presenterlead.1+cudafault.1+mailbox.1+stallguard.1+reflexgate.1+slinitfg.3+dlaalabel.1+crashhost.1+ngxforward.1+vkreflex.1+amdcount.1+hdrpq.1+amdlog.1+amdqueue.2+amdqueue.3+heldrate.1+dlss5.1+dlss5queue.1+dlss5tab.1+dlss5inputs.1+dlss5present.1+dlss5layout.1+dlss5auto.1+dlss5autolabel.1+dlss5rgbamv.1+dlss5unwrap.2+dlss5optiui.1+dlss5optichain.2+dlss5optikey.1+dlss5compare.5+dlss5unwrap.3+dlss5inputs.2+vkdlss5.1+xefgmenu.1+dlss5boost.1+dlss5boost.2+dlss5boost.3+dlss5boost.4+dlss5dots.1+diag171.1+ringcap.1+xemfgsa.1+xemfgsa.2+xemfgsa.3+xemfgsa.4+xemfgsa.5+xemfgsa.6+dlss5adv.1+hairshade.1+hairtrans.3+hairbounce.1+hairalbedo.1+hairtrans.4+hairrefl.1+hairdebug.1+hairstencil.1+hairfold.1+dlss5halfrate.1+dlss5gate.1+vkstages.1+xemfghint.1+underlinetabs.1+halfrateoff.1+firstready.1+interopmenu.3+halfgrid.1+menupoll.1+autoscale.1+autoscale.2+outputwait.1+menufallback.1+dlss5owner.1+runtimesearch.1+startwatch.1+seamstats.1+dlss5cost.1+dx11note.1+faultalive.1+exposureoff.1+amd6x.1+bimodal.1+hdrbridge.1+optiuirevert.1+deepheld.1+smallchain.1+factoryhook.1+smallchain.2+flipkeyoff.1+optimenu.1+admitoffmin.1+diag.1 outputPullMask=1 occupancyHint=0 uiInputs=framed-observations uiRecomposition=game-managed
+[18:09:27.331] OUTPUT_PULL_MASK startup attempted=0 ready=0 published=0 failure=0 publicationAttempted=0 replacementWasVisible=0 unsafePublication=0 requiresRestart=0 firstCreate=0 mayPredate=1 earlyInit=0 sourceSha256= selectedSha256=
+[18:09:27.331] NVIDIA compatibility profile: resolved=1 status=0 profile=stalker2heartofchornobyl tier=6X manifestEntries=407 fetched=2026-10-25 sha256=B11550FF03738E43BA5F724782A45A68503D1AA40546BAB9B1C3A051250B490D
+[18:09:27.331] Early DLL notification registered: 1
+[18:09:27.335] Streamline slInit control path: entryCurrent=0 iatFallback=0 resolverDiscovery=1 calls=0
+[18:09:27.335] Streamline feature-function interception installed: 0
+[18:09:27.335] Streamline D3D device interception installed: 0
+[18:09:27.335] Streamline Vulkan info interception installed: 0
+[18:09:27.335] Streamline UI tag interception installed: 0
+[18:09:27.343] Loaded-module discovery initialized: ready=0 route=pending wrappers=0/0 ngx=0/0
+[18:09:27.170] XESS {"stage":"vk_host_config","enabled":false,"standalone":false,"frames":4}
+[18:09:27.170] XESS {"stage":"d3d12_config","enabled":false,"frames":4}
+[18:09:27.343] Worker start-up: XeSS route
+[18:09:27.364] XESS {"stage":"asi_start","route":"universal_sdk","asi_sha256":"e6b6e6b70a6ed3af839c9647a32fc22660ae6b2d655062c5c072246c91fc10c7"}
+[18:09:27.364] XESS {"stage":"sdk_route_requires_optiscaler","optiscaler":false,"native_xefg":"untouched"}
+[18:09:27.366] Worker start-up: XeSS route started
+[18:09:27.366] Worker start-up: Reflex discovery
+[18:09:27.366] Worker start-up: presentation policy
+[18:09:27.366] Worker start-up: bridge status
+[18:09:27.366] Worker start-up: watching the control file
+[18:09:27.366] State: route=pending ready=0 routeFailure=1 control=dynamic 4x gameFG=0 appliedFG=0 restart=0
+[18:09:27.372] First-chance exception 0xC0000005 (access violation, reading 0x23E4CCCCD) at IPHLPAPI.DLL+0x1FA67 on thread 23588; stack: IPHLPAPI.DLL+0x1FA67 < IPHLPAPI.DLL+0x1AD5 < KERNEL32.DLL+0x2DDA7 < ntdll.dll+0xC9C5C (observed only: the code that raised it may handle it)
+[18:09:27.372] First-chance exception 0xC0000005 (access violation, reading 0x3F800000) at IPHLPAPI.DLL+0x1FA71 on thread 23588; stack: IPHLPAPI.DLL+0x1FA71 < IPHLPAPI.DLL+0x1AD5 < KERNEL32.DLL+0x2DDA7 < ntdll.dll+0xC9C5C (observed only: the code that raised it may handle it)
+[18:09:27.885] First-chance exception 0xC0000005 (access violation, reading 0xFFFFFFFFFFFFFFFF) at IPHLPAPI.DLL+0x17BAC on thread 23588; stack: IPHLPAPI.DLL+0x17BAC < IPHLPAPI.DLL+0x1E6EA < IPHLPAPI.DLL+0x1FA79 < IPHLPAPI.DLL+0x1AD5 < KERNEL32.DLL+0x2DDA7 < ntdll.dll+0xC9C5C (observed only: the code that raised it may handle it)
+[18:09:27.996] MFG_PROXY_UI factory gateway first call api=CreateDXGIFactory entry=dxgi.dll caller=WINMM.dll+0x968E6
+[18:09:28.017] MFG_PROXY_UI state=active boundary=real-factory-return nativeTableWrites=0
+[18:09:30.408] MFG_PROXY_UI factory gateway first call api=CreateDXGIFactory2 entry=dxgi.dll caller=Stalker2-Win64-Shipping.exe+0x369A0F5
+[18:09:31.023] First-chance exception 0xC0000005 (access violation, reading 0xCD8) at IPHLPAPI.DLL+0x25893 on thread 23588; stack: IPHLPAPI.DLL+0x25893 < IPHLPAPI.DLL+0xC029 < IPHLPAPI.DLL+0x1B87 < KERNEL32.DLL+0x2DDA7 < ntdll.dll+0xC9C5C (observed only: the code that raised it may handle it)
+[18:09:32.604] Session end: process exit (ExitProcess, or main returned) after 5.6 s, on thread 19860
+[18:09:32.604]   exit stack: #00 VERSION.dll+0xE7F3A  #01 VERSION.dll+0xE5735  #02 VERSION.dll+0x312C17  #03 ntdll.dll+0x12147A  #04 ntdll.dll+0x1B2E3
+[18:09:32.604]   exit stack: #05 ntdll.dll+0xCB08F  #06 ntdll.dll+0xC9D9E  #07 KERNEL32.DLL+0x417AB  #08 ucrtbase.dll+0xA0813  #09 Stalker2-Win64-Shipping.exe+0x2D7C4B0
+[18:09:32.604]   exit stack: #10 KERNEL32.DLL+0x2DDA7  #11 ntdll.dll+0xC9C5C
+[18:09:32.604]   last state (sampled 1.9 s earlier): route=pending ready=0 routeFailure=1 control=dynamic 4x gameFG=0 appliedFG=0 restart=0 | setOptions=0 getState=0 ngxCreate=0 fgCreate=0 ngxEvaluate=0 presented=0
+[18:09:32.604]   first-chance faults this session: 58 (the last 8, oldest first):
+[18:09:32.604]     2.687 s ago: 0xC0000005 (access violation, reading 0xFFFFFFFF) at IPHLPAPI.DLL+0x1FA67 on thread 23588
+[18:09:32.604]     2.687 s ago: 0xC0000005 (access violation, reading 0xFFFFFFFF) at IPHLPAPI.DLL+0x1FA67 on thread 23588
+[18:09:32.604]     2.687 s ago: 0xC0000005 (access violation, reading 0xFFFFFFFF) at IPHLPAPI.DLL+0x1FA67 on thread 23588
+[18:09:32.604]     2.187 s ago: 0xC0000005 (access violation, reading 0x23E4CCCCD) at IPHLPAPI.DLL+0x1FA67 on thread 23588
+[18:09:32.604]     2.187 s ago: 0xC0000005 (access violation, reading 0x100000101) at IPHLPAPI.DLL+0x1FA67 on thread 23588
+[18:09:32.604]     2.187 s ago: 0xC0000005 (access violation, reading 0x800000F4240) at IPHLPAPI.DLL+0x1FA67 on thread 23588
+[18:09:32.604]     2.187 s ago: 0xC0000005 (access violation, reading 0x3F800000) at IPHLPAPI.DLL+0x1FA71 on thread 23588
+[18:09:32.604]     1.578 s ago: 0xC0000005 (access violation, reading 0xCD8) at IPHLPAPI.DLL+0x25893 on thread 23588
+[18:09:32.604]   repeated hook-state lines suppressed: 0

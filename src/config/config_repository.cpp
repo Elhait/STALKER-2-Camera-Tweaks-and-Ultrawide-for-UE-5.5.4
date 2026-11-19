@@ -258,9 +258,12 @@ namespace config
             }
             if (section == "Cinematics" && key == "FovMode") {
                 CinematicFovMode mode{};
-                if (ParseCinematicFovMode(line.substr(separator + 1), mode))
+                const auto configuredMode = Trim(line.substr(separator + 1));
+                if (ParseCinematicFovMode(configuredMode, mode)) {
                     config.cinematicFovMode = mode;
-                else if (log)
+                    if (log && configuredMode != CinematicFovModeName(mode))
+                        log("Legacy Cinematics.FovMode value accepted as GameplayHorPlus; the next normal save will canonicalize it.");
+                } else if (log)
                     log("Unknown Cinematics.FovMode; using GameplayHorPlus.");
                 continue;
             }
@@ -404,6 +407,14 @@ namespace config
             if (update.section.empty() || update.key.empty()) return false;
             SetValue(lines, update.section.c_str(), update.key.c_str(), update.value);
         }
+
+        CinematicFovMode cinematicFovMode{};
+        const auto storedCinematicFovMode = ReadValue(lines, "Cinematics",
+            "FovMode", "");
+        if (!storedCinematicFovMode.empty() &&
+            ParseCinematicFovMode(storedCinematicFovMode, cinematicFovMode))
+            SetValue(lines, "Cinematics", "FovMode",
+                CinematicFovModeName(cinematicFovMode));
 
         if (lines == originalLines) return true;
 

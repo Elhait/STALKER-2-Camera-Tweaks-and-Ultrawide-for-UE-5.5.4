@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-11",
+  "canonical": {
+    "command": "test.cmd -NonGraphics",
+    "exit": 0,
+    "invocations": 62,
+    "native_fresh_processes": 224,
+    "graphics_case_omitted": true,
+    "registry_native_cases": 115
+  },
+  "focused_invocations": 11,
+  "focused_exit": 0,
+  "steady_output_cycling": {
+    "callbacks": 10000,
+    "native_input_drift": true,
+    "writer_state_records_on": 1,
+    "before_after_records_on": 2,
+    "aggregated_output_transitions": 9999
+  },
+  "complete_fixture_file": {
+    "on": {
+      "lines": 96,
+      "bytes": 36439
+    },
+    "off": {
+      "lines": 12,
+      "bytes": 1957
+    }
+  },
+  "standalone_asi_build": false,
+  "game_run": false,
+  "fps_or_timing_measurement": false,
+  "source_sha256": {
+    "src/plugin/runtime.cpp": "db5b76c1daecce7eb8b519a1e23b39baec663b864c710835c3988455cb07b369",
+    "src/diagnostics/writer_diagnostic_aggregation.hpp": "ee0d87a14b37a52bcebd4c9c724fed4d6302a6ab8660f3f77e58b5c5a56b44f8",
+    "tests/plugin/cinematic_diagnostic_aggregation_cases.hpp": "aa472677268c877f1394d0f2e7f74733575c9ba32949cf55775c685c05eb1f80",
+    "tests/plugin/runtime_native_adapter_harness.cpp": "6693e5dcf4c0f0e6c0f75ef6c1c3c3bfaee148fc1f1745a86b860b43a1ed5067",
+    "tests/diagnostics/camera_writer_identity_harness.cpp": "34fd08cd0b04052721485919358a25d70f30b7bd1acb2a15ec2e5061414a155d",
+    "tests/test_harnesses.json": "f2cd30dcaf303939dbcbbea5a2b772610528d1fd19eb53e517d96381e2b4271a",
+    "tests/runner/test_cmd_audit.ps1": "36dc7cc237bf53ea7cf024d5b985bac81546e80516ad879fbc84b1095ed482ea"
+  }
+}

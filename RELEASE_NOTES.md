@@ -1,101 +1,33 @@
-# Release Notes — 0.6.0
+# STALKER 2 Camera Tweaks v4.0
 
-## STALKER2CameraTweaks.asi
+Version 4.0 brings Gameplay, Cinematic and Dialogue camera handling under one committed lifecycle authority. It also improves camera-state reporting, runtime diagnostics and automated validation while retaining the established correction modes.
 
-Version 0.6.0 updates the unified configurable ASI for Steam 2.0.5. It keeps the existing gameplay, cinematic and dialogue features while replacing the staged gameplay correction with an atomic camera-state handoff.
+## Highlights
 
-## Included
+- **Unified camera lifecycle:** Gameplay writers, Dialogue setters, Cinematic transitions, provider handoffs, recovery, settings changes and shutdown now share one lifecycle owner. Overlay, zoom and telemetry consume committed read-only state.
+- **Safer FOV corrections:** Lifecycle decisions, one-shot writer permissions, native writes and read-back observations are distinct. Diagnostics being disabled does not change correction behavior, and unavailable read-back tracking does not prevent an otherwise authorized correction.
+- **Gameplay receiver changes:** A new receiver can receive the applicable HorPlus correction without inheriting the previous receiver's Gameplay baseline. In `RuntimeCombine`, aspect synchronization is read back before the first eligible FOV correction.
+- **Cinematic and Dialogue continuity:** Confirmed Dialogue provider handoff can apply the configured Dialogue policy after a Cinematic exits while Gameplay baseline protection remains active. Cinematic ENTER uses the selected policy and an eligible reference; prepared Dialogue output is not treated as an uncorrected native value.
+- **Camera State clarity:** The read-only panel distinguishes retained Gameplay reference, directly captured Native FOV, Writer Input, Planned Output and confirmed Effective FOV. Values without matching evidence are shown as historical or unavailable rather than inferred.
+- **More reliable logs:** Runtime, Startup and Overlay logs include process identity. A reusable `.PID.log` fallback handles sharing conflicts, and repeated writer/Cinematic entries are aggregated within bounded logs.
+- **Expanded automated checks:** Added lifecycle transition generation, native-shaped adapter and read-back checks, diagnostics parity, startup/logging coverage and release-package contract tests.
 
-- Dynamic gameplay aspect correction for 21:9 and 32:9.
-- Atomic gameplay aspect apply with the previous intermediate `0x5` replay removed from the production path.
-- Single post-cinematic `RecoveryStart` gameplay handoff on the first confirmed descending native FOV sample.
-- Eliminates the mod's additional post-cinematic flick while leaving the game's native FOV recovery untouched.
-- Re-arming after gameplay camera rebuilds, including death/load.
-- Preservation of the player's selected gameplay FOV.
-- Cinematic aspect correction using the game's runtime camera aspect.
-- Hor+ cinematic FOV correction at the live cinematic consumer boundary.
-- Custom cinematic framing modes: `Auto`, `Native`, `16:9`, `21:9` and `32:9`.
-- Automatic creation of `STALKER2CameraTweaks.ini` with safe defaults.
-- Startup SHA-256 logging for the loaded ASI and game executable.
-- Guarded signature resolution for gameplay and cinematic boundaries, with fail-closed behavior when signatures or instruction validation do not match.
-- Dialogue zoom modes: `Native`, `Adaptive`, `Reduced` and `Disabled`.
-- `Adaptive` preserves native optical zoom strength relative to the current gameplay FOV; `Reduced` applies half of that optical effect.
-- Dialogue transitions preserve native timing, including smooth EXIT recovery back to the actual gameplay FOV baseline.
-- Optional F9/F10 hotkeys select the policy for the next cinematic or dialogue; hotkeys are disabled by default.
-- Production implementation runtime-tested on Steam build 2.0.5. Resolver portability is statically validated across Steam builds 2.0.2–2.0.5; older-build runtime validation is not claimed.
+## Existing behavior retained
 
-## Configuration
+Gameplay `HorPlus`, `AspectRecalculation` and `RuntimeCombine` remain available. Cinematic aspect and FOV policies, the `GameplayHorPlus` and `NativeHorPlus` modes, and Dialogue `Native`, `Adaptive`, `Reduced` and `Disabled` policies remain configurable independently. The established FOV correction formulas were not intentionally changed as part of this release.
 
-```ini
-[Gameplay]
-; Use true to enable gameplay aspect correction, or false to disable it.
-Enabled=true
+## Game-version compatibility
 
-[Cinematics]
-; Auto, Native, 16:9, 21:9, 32:9
-AspectRatio=Auto
+The v4 resolver validates unique signature matches and relevant instruction or byte contracts, then fails closed when validation is missing, ambiguous or invalid. This prevents an unrecognized executable from being treated as compatible, but does not by itself establish support for every game version.
 
-[Dialogue]
-; Native   - keep the game's original dialogue zoom, currently targeting 70°.
-; Adaptive - preserve the native optical zoom strength relative to the current gameplay FOV.
-; Reduced  - apply half of the Adaptive optical zoom strength.
-; Disabled - keep the current gameplay FOV during dialogue.
-Zoom=Reduced
+The v4 required camera/provider resolver set statically matched on retained Steam 2.0.2–2.0.6 images and the installed image reported as 2.1. This is not a v4 in-game launch or behavior test: the installed game-directory ASI was 3.2.2.0, and earlier runtime records also used earlier artifacts. Optional Zoom observer signatures are absent on 2.0.2–2.0.4; camera correction remains available, but Camera State cannot report those zoom observations. No 2.0.0 or 2.0.1 executable image was available for checking. See the [Supported Build Manifest](docs/SUPPORTED_BUILD_MANIFEST.md) and [v4 resolver audit](research/evidence/v4-resolver-cross-build-2026-11-19/README.md) for the exact boundaries.
 
-[Hotkeys]
-; Optional runtime controls for quickly testing different settings without restarting the game.
-; Intended mainly for comparing modes and finding a preferred configuration; disable for normal use.
-; Use true to enable all runtime hotkeys, or false to disable them.
-Enabled=false
+## Validation and known limits
 
-; Key used to cycle the cinematic mode for the next cinematic.
-; Auto -> Native -> 16:9 -> 21:9 -> 32:9 -> Auto.
-; Does not affect a cinematic that is already playing.
-; Supported keys: F1-F12, 0-9 and A-Z.
-CinematicCycle=F9
+- The recorded non-graphics suite for this change set completed **64/64 invocations without failures**. One hardlink subcase was skipped after Windows returned error 5; WARP graphics checks were not run.
+- **6/6 focused CTest checks passed.** Offline tests cover selected lifecycle and receiver-replacement contracts; they do not prove every possible game callback schedule.
+- Earlier in-game observations on Steam build 2.0.6 covered Gameplay, Cinematic, Dialogue, recovery and Overlay behavior. The receiver-replacement fix has offline regression coverage but has not been confirmed in-game.
+- Occasional visible hitches were observed during transitions. Their cause and relationship to a particular change have not been established. The available writer logs do not yet correlate all camera data to the final displayed frame.
+- No claim is made that offline validation guarantees visual continuity for every cinematic or dialogue sequence.
 
-; Key used to cycle the dialogue zoom mode for the next dialogue.
-; Native -> Adaptive -> Reduced -> Disabled -> Native.
-; Does not affect a dialogue that is already in progress.
-; Supported keys: F1-F12, 0-9 and A-Z.
-DialogueCycle=F10
-```
-
-`Auto` uses the runtime camera aspect and matching Hor+ FOV. `Native` bypasses the cinematic aspect and FOV overrides. Forced ratios provide custom framing and matching FOV independently of the display; for example, `32:9` on a 16:9 display produces letterboxed cinematics.
-
-## Compatibility and validation
-
-- Runtime-validated with the Steam game build `2.0.5` using the UE 5.5.4 target.
-- Gameplay runtime-tested at 21:9 and 32:9, including aspect switching, death/load camera rebuilds and FOV preservation.
-- Cinematic runtime-tested at 21:9 and 32:9, including forced 32:9 framing at 2560x1440.
-- The cinematic and gameplay boundaries resolve through guarded signatures, but signature resolution does not guarantee support for a future game patch.
-- The plugin refuses safely when validation is missing, ambiguous or invalid.
-
-## Known limitations
-
-- Weapon/viewmodel FOV behavior is a separate game-side area and is not modified by the dialogue zoom feature.
-- `AspectRatio=Auto` was validated across runtime resolution changes during the same session. Restart the game after manually changing the configuration file.
-- Do not load `STALKER2GameplayAspectFix.asi` together with this unified ASI.
-
-## Upgrade notes
-
-Remove previous `STALKER2UltrawideFix.asi`, `STALKER2GameplayAspectFix.asi` and their old INI/log files before installing `STALKER2CameraTweaks.asi`. Copy the new ASI and INI into the game's `Stalker2\\Binaries\\Win64` directory and restart the game.
-
-## Previous version — 0.1.1
-
-Version 0.1.1 was the gameplay-only release for the Steam UE 5.5.4 build. It
-included:
-
-- Dynamic resolution of the gameplay camera writer from a complete executable
-  `.text` signature.
-- Instruction validation of the resolved `MOVSS [RBX+0x30], XMM0` camera-view
-  copy path before installing the hook.
-- The verified two-pass gameplay aspect transition while preserving the
-  player's selected FOV.
-- Safe refusal when the signature was absent, ambiguous or failed validation.
-
-The 0.1.1 release intentionally did not include cinematic aspect correction,
-cinematic FOV correction, custom cinematic framing or viewmodel FOV changes.
-It has been superseded by the unified `STALKER2CameraTweaks.asi` in version
-0.3.0. The older historical 0.1.0 archive remains separate and targets the
-earlier Steam 2.0.2 release.
+For configuration, installation and current compatibility evidence, see [README.md](README.md). The detailed change record and test boundaries are in [CHANGES_SINCE_3.2.2_to_4.md](CHANGES_SINCE_3.2.2_to_4.md) and [TESTING_AND_RESEARCH.md](TESTING_AND_RESEARCH.md).

@@ -1,0 +1,410 @@
+{
+  "kind": "independent_research_model_counterexample_not_production_defect",
+  "explanation": "The initial relation preserved the provider at completion but allowed the NEXT native-proven writer to update baseline. This contradicts rev2 §10.1 no-provider-quarantine admission requirement. Correct the research relation, not production or normative design.",
+  "counterexamples": [
+    {
+      "seedIndex": 6,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": false,
+        "depthLimit": 3,
+        "deepest": 2,
+        "states": 128,
+        "edges": 925,
+        "counterexample": {
+          "errors": [
+            "no_baseline_during_quarantine"
+          ],
+          "path": [
+            {
+              "id": "T13",
+              "src": 0,
+              "exact": true,
+              "nativeProof": true,
+              "original": true
+            },
+            {
+              "id": "T18",
+              "src": 0,
+              "exact": true
+            },
+            {
+              "id": "T28",
+              "src": 0,
+              "nativeProof": true,
+              "original": true
+            }
+          ],
+          "shortestWithinAlphabet": true
+        }
+      }
+    },
+    {
+      "seedIndex": 7,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "armed",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": false,
+        "depthLimit": 3,
+        "deepest": 1,
+        "states": 22,
+        "edges": 85,
+        "counterexample": {
+          "errors": [
+            "no_baseline_during_quarantine"
+          ],
+          "path": [
+            {
+              "id": "T13",
+              "src": 0,
+              "exact": true,
+              "nativeProof": true,
+              "original": true
+            },
+            {
+              "id": "T28",
+              "src": 0,
+              "nativeProof": true,
+              "original": true
+            }
+          ],
+          "shortestWithinAlphabet": true
+        }
+      }
+    },
+    {
+      "seedIndex": 8,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "matched",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": false,
+        "depthLimit": 3,
+        "deepest": 1,
+        "states": 24,
+        "edges": 85,
+        "counterexample": {
+          "errors": [
+            "no_baseline_during_quarantine"
+          ],
+          "path": [
+            {
+              "id": "T13",
+              "src": 0,
+              "exact": true,
+              "nativeProof": true,
+              "original": true
+            },
+            {
+              "id": "T28",
+              "src": 0,
+              "nativeProof": true,
+              "original": true
+            }
+          ],
+          "shortestWithinAlphabet": true
+        }
+      }
+    },
+    {
+      "seedIndex": 9,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "confirmed",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": {
+              "token": "call",
+              "c": 0,
+              "ge": 0,
+              "kind": "dialogue"
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": false,
+        "depthLimit": 3,
+        "deepest": 1,
+        "states": 24,
+        "edges": 85,
+        "counterexample": {
+          "errors": [
+            "no_baseline_during_quarantine"
+          ],
+          "path": [
+            {
+              "id": "T13",
+              "src": 0,
+              "exact": true,
+              "nativeProof": true,
+              "original": true
+            },
+            {
+              "id": "T28",
+              "src": 0,
+              "nativeProof": true,
+              "original": true
+            }
+          ],
+          "shortestWithinAlphabet": true
+        }
+      }
+    },
+    {
+      "seedIndex": 10,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "active",
+            "r": "complete",
+            "h": "transferred",
+            "consumed": true,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": {
+              "token": "call",
+              "c": 0,
+              "ge": 0,
+              "kind": "dialogue"
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": false,
+        "depthLimit": 3,
+        "deepest": 2,
+        "states": 189,
+        "edges": 1387,
+        "counterexample": {
+          "errors": [
+            "no_baseline_during_quarantine"
+          ],
+          "path": [
+            {
+              "id": "T26",
+              "src": 0,
+              "exact": true,
+              "terminalProof": true
+            },
+            {
+              "id": "T18",
+              "src": 0,
+              "exact": true
+            },
+            {
+              "id": "T28",
+              "src": 0,
+              "nativeProof": true,
+              "original": true
+            }
+          ],
+          "shortestWithinAlphabet": true
+        }
+      }
+    }
+  ]
+}

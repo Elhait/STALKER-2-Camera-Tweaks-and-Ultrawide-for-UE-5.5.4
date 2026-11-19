@@ -1,0 +1,42 @@
+[
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\src\\plugin\\lifecycle_authority_core.hpp",
+    "Hash": "554B40FD47C2D329A864C4373A69CE7901E00976D173F520E1C3C6E04206F508"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\src\\plugin\\lifecycle_authority_policy.hpp",
+    "Hash": "927CCA79A6DD88E7F38B08D0AEB745C782941B0C8D40A97FBF8555C31E6C98CA"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\src\\plugin\\lifecycle_authority_writer_port.hpp",
+    "Hash": "ED583068EE02528FC69FBB05CDDF4B6D4750DA3630172CBF04BBFC5D436739A0"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\lifecycle_authority_corrective_cases.hpp",
+    "Hash": "D49C54689AF996065A626066CB0BBE1D33111CCB303E3CDFF6361E7F64154621"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\lifecycle_authority_parity_cases.hpp",
+    "Hash": "33281A6861189168EEC66A37FFED6D2B5BFEC5E4BB7F253EB0715C2D7B21980B"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\lifecycle_authority_m1_harness.cpp",
+    "Hash": "12A92CB149E77715EC2602C20BA17F607CBA99568F00E397E8E848B75B2A56DA"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\camera_writer_transaction_harness.cpp",
+    "Hash": "65F2C501917E1277A74A51C133EE495C7265EA2D96CBE916F42FE19DD8205B0A"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\test_harnesses.json",
+    "Hash": "41E62C3AFD961083FD24E56BF665A74B0D0C6D58CFF5C8DACF0A194B0A57E6C7"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\runner\\test_cmd_audit.ps1",
+    "Hash": "55C1CF5B55AD01454DB009F997989350D92060A98009CB8CB486C8E8469CD18C"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\CMakeLists.txt",
+    "Hash": "5F340C24429FFBE97D784A0A964DE30902A3537A1CBA93E6B5464A37029ACDFC"
+  }
+]

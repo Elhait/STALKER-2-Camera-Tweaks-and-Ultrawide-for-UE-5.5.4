@@ -1,0 +1,22 @@
+[
+  {
+    "Path": "research/evidence/same-save-recovery-completion-2026-11-17-020947/STALKER2CameraTweaks.log",
+    "Bytes": 2091166,
+    "SHA256": "8100D1F50DF7352EA8C8DDE5F0F6A7EF76E1A4A88AD039CFD3BF3FA780B80578"
+  },
+  {
+    "Path": "research/evidence/multisave-cinematic-baseline-2026-11-17-012536/STALKER2CameraTweaks.PID.log",
+    "Bytes": 1771307,
+    "SHA256": "BAD1E13AE57D585BFFBFEFCD35821109B5BA4EC1E9C2CB64C3619AF460B115E6"
+  },
+  {
+    "Path": "research/evidence/interactive-cinematic-reentry-2026-11-16-230941/STALKER2CameraTweaks.log",
+    "Bytes": 728611,
+    "SHA256": "D9C4FF9AA8B1F42F7410BA428968DEBA843D7B4DCD5EBF54555BFAEA1DD46E60"
+  },
+  {
+    "Path": "research/evidence/camera-state-fov-runtime-2026-11-16-213855/STALKER2CameraTweaks.log",
+    "Bytes": 1548648,
+    "SHA256": "6D2E4608058AF9D19BAB25FD98F0A1B4C2FC6921B82EEFA63CAF282DE863B13B"
+  }
+]

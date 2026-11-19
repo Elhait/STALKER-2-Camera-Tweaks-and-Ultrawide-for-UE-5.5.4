@@ -1,0 +1,31 @@
+{
+  "baseline": {
+    "path": "research\\evidence\\post-exit-blend-observation-2026-11-11\\baseline-production.asi",
+    "sha256": "8488120F244D377E9B39BFF8CFF941B6C6C106021B74D8AD75E3D62B5D89FC0C",
+    "sections": {
+      ".text": "4e6c96426a039df9b90ddc68ff28e41eaf2475983bd8c870bfdcda540fc60dba",
+      ".rdata": "80b701381498bf3050ee5ad0caa4115fc27df3a7b61a00a6a6a3960aea577a52",
+      ".data": "cab42f11d5ac76ce049f09e9422988099a6ff54cdba4ce7008d3f230293546d0",
+      ".pdata": "18be7cc50ffb584e7c4b5bfbca211c5d765a679400f0502151ffac498895f483",
+      ".fptable": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+      ".rsrc": "e620a3dbf4ac6301bfa184dff1f95d5b6f1f90b788c6dc9cca1be81f9d377cab",
+      ".reloc": "a1c39fcc0c4f5935fcc7870b53d06df41f4e1b1e1a2d381539bab9625f476743"
+    },
+    "contains_trace_marker": false
+  },
+  "rebuilt_production": {
+    "path": "build-artifacts\\cm\\candidate\\production-tOFF-dOFF\\bin\\STALKER2CameraTweaks.asi",
+    "sha256": "ED44AB296A2BBE45FAAA4A06411778DDAE32F3184B7452BE5154FE4A3EC127FA",
+    "sections": {
+      ".text": "4e6c96426a039df9b90ddc68ff28e41eaf2475983bd8c870bfdcda540fc60dba",
+      ".rdata": "5ff64e5405e231cb2bff2152e8b1ff930134e41b2040da4bdaf5d2b835705534",
+      ".data": "cab42f11d5ac76ce049f09e9422988099a6ff54cdba4ce7008d3f230293546d0",
+      ".pdata": "18be7cc50ffb584e7c4b5bfbca211c5d765a679400f0502151ffac498895f483",
+      ".fptable": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+      ".rsrc": "e620a3dbf4ac6301bfa184dff1f95d5b6f1f90b788c6dc9cca1be81f9d377cab",
+      ".reloc": "a1c39fcc0c4f5935fcc7870b53d06df41f4e1b1e1a2d381539bab9625f476743"
+    },
+    "contains_trace_marker": false
+  },
+  "same_text": true
+}

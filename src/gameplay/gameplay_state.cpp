@@ -32,6 +32,19 @@ namespace gameplay
                 sample.previousTransformedTarget, sample.transformedTargetFov);
     }
 
+    bool IsCinematicReferenceContinuation(const CinematicReentrySample& sample,
+        bool selectionUnchanged, float gameplayReference) noexcept
+    {
+        if (IsCinematicOwnershipContinuation(sample)) return true;
+        if (!selectionUnchanged || !std::isfinite(gameplayReference) ||
+            !std::isfinite(sample.previousExitNativeTarget) ||
+            std::fabs(sample.previousExitNativeTarget - gameplayReference) > 0.05f)
+            return false;
+        auto referenceSample = sample;
+        referenceSample.authoredEnterFov = gameplayReference;
+        return IsCinematicOwnershipContinuation(referenceSample);
+    }
+
     CinematicExitTransition ResolveCinematicExitTransition(bool gameplayAvailable)
     {
         if (gameplayAvailable)

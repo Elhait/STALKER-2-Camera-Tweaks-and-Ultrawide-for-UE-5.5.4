@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "SHA256 2bd3f115b959a8eee7e5c4b42b0142dd0025bd437e1014f92dfc60b9afee5479 IMAGE_BASE 0x140000000\r\nFLOAT32 0x9ede384 70.0\r\n",
+  "ProcessId": 36224
+}

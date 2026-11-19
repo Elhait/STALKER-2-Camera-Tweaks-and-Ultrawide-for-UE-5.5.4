@@ -391,7 +391,8 @@ namespace
         if (separator != std::wstring::npos) logPath.resize(separator + 1);
         logPath += L"STALKER2CameraTweaksOverlay.log";
         std::scoped_lock lock{g_logMutex};
-        g_log.Open(logPath.c_str(), true);
+        if (g_log.Open(logPath.c_str(), true))
+            g_log.Write("OVERLAY_SESSION pid=" + std::to_string(GetCurrentProcessId()) + "\r\n");
         } catch (...) {
             CloseLog();
         }

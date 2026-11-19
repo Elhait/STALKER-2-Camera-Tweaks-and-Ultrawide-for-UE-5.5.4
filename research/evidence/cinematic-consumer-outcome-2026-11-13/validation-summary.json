@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-13",
+  "scope": "diagnostic consumer outcome and one-shot arming (stage 10.2)",
+  "productionFovPolicyChanged": false,
+  "buildProfile": "production, startup timeline OFF, dialogue discovery OFF; POST_EXIT_BLEND_OBSERVATION included and runtime-installed only when Diagnostics is enabled",
+  "candidate": {
+    "path": "build-artifacts/consumer-outcome/STALKER2CameraTweaks.asi",
+    "sha256": "39114C22D4A3D036F0BBAFC6471A88B9C6DC27CCBACD40FC2D130A3532FC353C",
+    "bytes": 3764224,
+    "fileVersion": "3.2.2.0",
+    "productVersion": "3.2.2",
+    "previousD1CandidatePreserved": "818C76E05A899E98A9F5D28FAF4767A82730A3106235A563E9B728043AE5EB29"
+  },
+  "tests": {
+    "targetedDiagnosticsOn": "PASS",
+    "targetedDiagnosticsOff": "PASS",
+    "nonGraphics": "PASS: 224 fresh processes, graphics_cases_omitted=1",
+    "currentImageResolver": "PASS: unique ENTER and four sites 0x35C7DA6, 0x30DB9CF, 0x30DBA00, 0x30DBADC",
+    "invocationCoverage": "nested frame LIFO, stale generation, overflow/mismatch unknown, two-thread TLS isolation, register/native-memory invariance",
+    "arming": "PowerShell parse and named EventWaitHandle OpenExisting/Set smoke PASS; fixture tests cover duplicate owner, zero wait, one-shot, re-arm rejection, close",
+    "cleanup": "all supervised process trees verified"
+  },
+  "warnings": [
+    "CMake reported near object-file path-length warnings for unrelated large test targets; Release target linked successfully.",
+    "Third-party Zydis emitted existing C4201 warnings."
+  ],
+  "notRun": [
+    "No game launch or installation.",
+    "No debugger or graphics runtime.",
+    "No full feature/runtime validation; U1/U2 remain unresolved."
+  ],
+  "manualCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File \"research\\tools\\ArmCinematicFovCapture.ps1\" [-GameProcessId <Shipping PID>]"
+}

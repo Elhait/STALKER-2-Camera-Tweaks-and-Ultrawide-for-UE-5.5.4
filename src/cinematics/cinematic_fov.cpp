@@ -14,10 +14,10 @@ namespace cinematics
         // as the baseline and prolong initial establishment.
         constexpr float kGameplayBaselineRetentionToleranceDegrees = 0.05f;
 
-        bool MatchesGameplayBaseline(float inputFov, float baselineFov) noexcept
+        bool MatchesRetentionReference(float inputFov, float referenceFov) noexcept
         {
-            return std::isfinite(inputFov) && std::isfinite(baselineFov) &&
-                std::fabs(inputFov - baselineFov) <=
+            return std::isfinite(inputFov) && std::isfinite(referenceFov) &&
+                std::fabs(inputFov - referenceFov) <=
                     kGameplayBaselineRetentionToleranceDegrees;
         }
     }
@@ -43,6 +43,7 @@ namespace cinematics
         state_.writerObserved = false;
         state_.associationValid = false;
         state_.associationConflict = false;
+        state_.lastAdmittedOutput = {};
         state_.initialEstablishmentActive = settings.enabled &&
             std::isfinite(authoredEnterFov) && authoredEnterFov > 1.0f &&
             authoredEnterFov < 179.0f && std::isfinite(targetFov) &&
@@ -63,6 +64,7 @@ namespace cinematics
         state_.initialEstablishmentEndReason = InitialEstablishmentEndReason::CinematicExit;
         state_.associatedWriterRsi = 0;
         state_.observedWriterRbx = 0;
+        state_.lastAdmittedOutput = {};
     }
 
     CinematicWriterAssociationSnapshot
@@ -86,6 +88,7 @@ namespace cinematics
                 InitialEstablishmentEndReason::AssociationConflict;
             state_.associatedWriterRsi = 0;
             state_.observedWriterRbx = 0;
+            state_.lastAdmittedOutput = {};
         }
         return SnapshotLocked();
     }
@@ -133,25 +136,43 @@ namespace cinematics
                 state_.associatedWriterRsi = source;
                 state_.observedWriterRbx = output;
                 state_.associationValid = true;
-            } else if (state_.associatedWriterRsi != source ||
-                state_.observedWriterRbx != output) {
-                state_.associationConflict = true;
-                state_.associationValid = false;
-                state_.initialEstablishmentActive = false;
-                state_.initialEstablishmentEnded = true;
-                state_.initialEstablishmentEndReason =
-                    InitialEstablishmentEndReason::AssociationConflict;
-                state_.associatedWriterRsi = 0;
-                state_.observedWriterRbx = 0;
+            } else if (state_.associatedWriterRsi == source) {
+                // Output is selected per native writer invocation. Keep the
+                // source association stable across A -> B -> A transitions.
+                state_.observedWriterRbx = output;
             }
         }
         return SnapshotLocked();
+    }
+
+    bool CinematicWriterAssociation::AdmitWriterOutput(
+        camera::CoordinatorState owner, bool correctionEnabled,
+        std::uint64_t generation, std::uintptr_t source,
+        std::uintptr_t output, std::uint64_t observationSequence)
+    {
+        std::lock_guard lock(mutex_);
+        const auto& writer = state_.latestWriter;
+        if (owner != camera::CoordinatorState::CinematicActive ||
+            !correctionEnabled || generation == 0 || !state_.generationActive ||
+            state_.generation != generation || !state_.effectiveSettings.enabled ||
+            !state_.associationValid || state_.associationConflict ||
+            state_.aspectStoreTargetObject == 0 ||
+            state_.associatedWriterRsi != state_.aspectStoreTargetObject ||
+            source == 0 || source != state_.associatedWriterRsi || output == 0 ||
+            observationSequence == 0 || writer.sequence != observationSequence ||
+            writer.source != source || writer.output != output)
+            return false;
+
+        state_.lastAdmittedOutput = {
+            true, generation, observationSequence, source, output };
+        return true;
     }
 
     bool CinematicWriterAssociation::AuthorizeInitialEstablishmentRetention(
         camera::CoordinatorState owner, bool correctionEnabled,
         bool acceptedGenerationValid, bool targetEstablished,
         std::uint64_t activeGeneration, std::uintptr_t writerRsi,
+        std::uintptr_t writerOutput, std::uint64_t observationSequence,
         float writerInputFov)
     {
         std::lock_guard lock(mutex_);
@@ -164,6 +185,15 @@ namespace cinematics
             state_.aspectStoreTargetObject == 0 ||
             state_.associatedWriterRsi != state_.aspectStoreTargetObject ||
             writerRsi == 0 || writerRsi != state_.associatedWriterRsi ||
+            writerOutput == 0 || observationSequence == 0 ||
+            state_.latestWriter.sequence != observationSequence ||
+            state_.latestWriter.source != writerRsi ||
+            state_.latestWriter.output != writerOutput ||
+            !state_.lastAdmittedOutput.valid ||
+            state_.lastAdmittedOutput.generation != activeGeneration ||
+            state_.lastAdmittedOutput.sequence != observationSequence ||
+            state_.lastAdmittedOutput.source != writerRsi ||
+            state_.lastAdmittedOutput.output != writerOutput ||
             !std::isfinite(writerInputFov))
             return false;
 
@@ -171,7 +201,7 @@ namespace cinematics
             writerInputFov, state_.authoredEnterFov);
         const bool gameplayBaselineInput = state_.gameplayBaselineSource != 0 &&
             state_.gameplayBaselineSource == writerRsi &&
-            MatchesGameplayBaseline(writerInputFov, state_.gameplayBaselineFov);
+            MatchesRetentionReference(writerInputFov, state_.gameplayBaselineFov);
         if (!authoredInput && !gameplayBaselineInput) {
             state_.initialEstablishmentActive = false;
             state_.initialEstablishmentEnded = true;
@@ -201,10 +231,16 @@ namespace cinematics
     {
         return expectedGeneration != 0 && association.generationActive &&
             association.generation == expectedGeneration &&
+            association.effectiveSettings.enabled &&
             association.associationValid && !association.associationConflict &&
             association.aspectStoreTargetObject != 0 &&
             association.associatedWriterRsi != 0 &&
-            association.associatedWriterRsi == association.aspectStoreTargetObject;
+            association.associatedWriterRsi == association.aspectStoreTargetObject &&
+            association.lastAdmittedOutput.valid &&
+            association.lastAdmittedOutput.generation == expectedGeneration &&
+            association.lastAdmittedOutput.sequence != 0 &&
+            association.lastAdmittedOutput.source == association.associatedWriterRsi &&
+            association.lastAdmittedOutput.output != 0;
     }
 
     bool CinematicRecoveryOwner::Capture(
@@ -215,7 +251,8 @@ namespace cinematics
             return false;
         std::lock_guard lock(mutex_);
         state_ = { true, expectedGeneration, association.associatedWriterRsi,
-            association.observedWriterRbx, false };
+            association.lastAdmittedOutput.output,
+            association.lastAdmittedOutput.sequence, false };
         return true;
     }
 
@@ -261,7 +298,7 @@ namespace cinematics
             return { CinematicWriterAction::PassThroughUnclassified, sample.inputFov };
         const bool semanticNativeBaseline = camera::AreFovValuesSemanticallyEquivalent(
             sample.inputFov, sample.authoredEnterFov);
-        const bool semanticGameplayBaseline = MatchesGameplayBaseline(
+        const bool semanticGameplayBaseline = MatchesRetentionReference(
             sample.inputFov, sample.gameplayBaselineFov);
         if (sample.initialEstablishmentAuthorized &&
             (semanticNativeBaseline || semanticGameplayBaseline))
@@ -310,9 +347,11 @@ namespace cinematics
     {
         if (gameplayHorPlusRequested && camera::IsUsableGameplayBaseline(gameplayBaseline)) {
             return { gameplayBaseline.nativeFov.value,
-                CinematicBaselineValueOrigin::GameplayNativeNumericBaseline, true };
+                authoredEnterFov, CinematicBaselineValueOrigin::GameplayNativeNumericBaseline,
+                true, true };
         }
-        return { authoredEnterFov, CinematicBaselineValueOrigin::AuthoredEnter, false };
+        return { authoredEnterFov, authoredEnterFov,
+            CinematicBaselineValueOrigin::AuthoredEnter, false, false };
     }
 
     bool TryTransformCinematicFov(float cinematicFov, float cinematicReferenceFov,

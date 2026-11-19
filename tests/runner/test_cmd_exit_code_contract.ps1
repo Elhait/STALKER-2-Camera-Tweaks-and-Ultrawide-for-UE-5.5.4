@@ -121,8 +121,8 @@ try {
     $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
     $runnerScript = Join-Path $PSScriptRoot 'test_harness_runner.ps1'
     $runnerCases = @(
-        [pscustomobject]@{ Name = 'registry_runner_negative_ntstatus'; Arguments = @('-1073741819'); Timeout = $null; ExpectedExit = -1073741819; ExpectedOutput = 'FAIL test_cmd_exit_status_probe exit=-1073741819' },
-        [pscustomobject]@{ Name = 'registry_runner_crash'; Arguments = @('--crash'); Timeout = $null; ExpectedExit = -1073741819; ExpectedOutput = 'FAIL test_cmd_exit_status_probe exit=-1073741819' },
+        [pscustomobject]@{ Name = 'registry_runner_negative_ntstatus'; Arguments = @('-1073741819'); Timeout = $null; ExpectedExit = 1; ExpectedOutput = 'FAIL test_cmd_exit_status_probe exit=-1073741819' },
+        [pscustomobject]@{ Name = 'registry_runner_crash'; Arguments = @('--crash'); Timeout = $null; ExpectedExit = 1; ExpectedOutput = 'FAIL test_cmd_exit_status_probe exit=-1073741819' },
         [pscustomobject]@{ Name = 'registry_runner_timeout'; Arguments = @('--sleep', '30000'); Timeout = 250; ExpectedExit = 124; ExpectedOutput = 'TIMEOUT test_cmd_exit_status_probe after 250ms; process tree cleanup verified' }
     )
     foreach ($runnerCase in $runnerCases) {
@@ -157,6 +157,52 @@ try {
         }
         Write-Output ("status_fixture={0} exit={1} cleanup=verified PASS" -f $runnerCase.Name, $runnerResult.ExitCode)
     }
+
+    $aggregateRegistryRelativePath = $fixtureRoot.Substring($projectRoot.Length + 1).Replace('\', '/') + '/aggregate-fail-then-pass.json'
+    $aggregateRegistryAbsolutePath = Join-Path $projectRoot $aggregateRegistryRelativePath
+    $aggregateRegistry = [ordered]@{
+        schema_version = 1
+        compiler_contract = @{ output_directory = 'build-artifacts/tests' }
+        runner = @(
+            @{ harness = 'test_cmd_exit_status_probe'; arguments = @('7') },
+            @{ harness = 'test_cmd_exit_status_probe'; arguments = @('0') }
+        )
+    }
+    [System.IO.File]::WriteAllText($aggregateRegistryAbsolutePath,
+        (($aggregateRegistry | ConvertTo-Json -Depth 5) + "`n"), $utf8NoBom)
+    $aggregateResult = Invoke-TestProcessTree -FileName (Get-Command powershell.exe -ErrorAction Stop).Source `
+        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $runnerScript,
+            '-RegistryPath', $aggregateRegistryRelativePath, '-OutputDirectory', $OutputDirectory) `
+        -WorkingDirectory $projectRoot -TimeoutMilliseconds 30000 -NoWindow
+    if ($aggregateResult.TimedOut -or $aggregateResult.ExitCode -ne 1 -or
+        $aggregateResult.Output -notmatch '\[1/2\] test_cmd_exit_status_probe 7' -or
+        $aggregateResult.Output -notmatch 'FAIL test_cmd_exit_status_probe exit=7' -or
+        $aggregateResult.Output -notmatch '\[2/2\] test_cmd_exit_status_probe 0' -or
+        $aggregateResult.Output -notmatch 'runner_invocations=2 passed=1 failed=1 skipped_subcases=0') {
+        throw "Aggregate runner did not continue after an independent failure while preserving nonzero status. exit=$($aggregateResult.ExitCode) timeout=$($aggregateResult.TimedOut) output=$($aggregateResult.Output)"
+    }
+    Write-Output 'status_fixture=aggregate_runner_continues_and_reports_nonzero cleanup=verified PASS'
+
+    $skipRegistryRelativePath = $fixtureRoot.Substring($projectRoot.Length + 1).Replace('\', '/') + '/visible-skip.json'
+    $skipRegistryAbsolutePath = Join-Path $projectRoot $skipRegistryRelativePath
+    $skipRegistry = [ordered]@{
+        schema_version = 1
+        compiler_contract = @{ output_directory = 'build-artifacts/tests' }
+        runner = @(@{ harness = 'test_cmd_exit_status_probe'; arguments = @('--emit-skip') })
+    }
+    [System.IO.File]::WriteAllText($skipRegistryAbsolutePath,
+        (($skipRegistry | ConvertTo-Json -Depth 5) + "`n"), $utf8NoBom)
+    $skipResult = Invoke-TestProcessTree -FileName (Get-Command powershell.exe -ErrorAction Stop).Source `
+        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $runnerScript,
+            '-RegistryPath', $skipRegistryRelativePath, '-OutputDirectory', $OutputDirectory) `
+        -WorkingDirectory $projectRoot -TimeoutMilliseconds 30000 -NoWindow
+    if ($skipResult.TimedOut -or $skipResult.ExitCode -ne 0 -or
+        $skipResult.Output -notmatch 'HARNESS_SUBCASE_SKIP: contract_fixture unavailable' -or
+        $skipResult.Output -notmatch 'SKIP test_cmd_exit_status_probe: contract_fixture unavailable' -or
+        $skipResult.Output -notmatch 'runner_invocations=1 passed=1 failed=0 skipped_subcases=1') {
+        throw "Runner hid or miscounted an explicit skipped subcase. exit=$($skipResult.ExitCode) timeout=$($skipResult.TimedOut) cleanup=$($skipResult.CleanupVerified) output=$($skipResult.Output)"
+    }
+    Write-Output 'status_fixture=runner_reports_named_skips_in_aggregate cleanup=verified PASS'
 
     $treeMarkers = 1..3 | ForEach-Object { Join-Path $fixtureRoot ("descendant-$_.pid") }
     $treeTimeout = Invoke-TestProcessTree -FileName $ProbePath `

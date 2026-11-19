@@ -1,0 +1,69 @@
+SHA256 2bd3f115b959a8eee7e5c4b42b0142dd0025bd437e1014f92dfc60b9afee5479 IMAGE_BASE 0x140000000
+
+FUNCTION rva=0x2e5450e end=0x2e54596 pivot=0x2e54582
+02e5450e push      rsi
+02e5450f sub       rsp, 0x30
+02e54513 mov       rsi, rcx
+02e54516 mov       rax, qword ptr [rip + 0x70355a3]
+02e5451d xor       rax, rsp
+02e54520 mov       qword ptr [rsp + 0x28], rax
+02e54525 mov       rcx, qword ptr [rip + 0x747408c]
+02e5452c call      0x140e11450
+02e54531 test      rax, rax
+02e54534 je        0x142e54559
+02e54536 mov       ecx, dword ptr [rax + 8]
+02e54539 bt        ecx, 0x1e
+02e5453d jb        0x142e54559
+02e5453f mov       rdx, qword ptr [rsi + 0x1f8]
+02e54546 test      rdx, rdx
+02e54549 je        0x142e54559
+02e5454b add       rax, 0x90
+02e54551 mov       rcx, rax
+02e54554 call      0x1421704b6
+02e54559 mov       rcx, qword ptr [rip + 0x7474058]
+02e54560 lea       rsi, [rsp + 0x20]
+02e54565 mov       rdx, rsi
+02e54568 call      0x140f176ba
+02e5456d mov       rcx, qword ptr [rsi]
+02e54570 test      rcx, rcx
+02e54573 je        0x142e54582
+02e54575 movss     xmm1, dword ptr [rip + 0x7089e07]
+02e5457d call      0x1430db9b8
+02e54582 mov       rcx, qword ptr [rsp + 0x28]
+02e54587 xor       rcx, rsp
+02e5458a call      0x14275db10
+02e5458f nop       
+02e54590 add       rsp, 0x30
+02e54594 pop       rsi
+02e54595 ret       
+
+FUNCTION rva=0x30dbb08 end=0x30dbb71 pivot=0x30dbb08
+030dbb08 sub       rsp, 0x38
+030dbb0c movaps    xmmword ptr [rsp + 0x20], xmm6
+030dbb11 xorps     xmm0, xmm0
+030dbb14 ucomiss   xmm0, xmm1
+030dbb17 jae       0x1430dbb6d
+030dbb19 movaps    xmm6, xmm1
+030dbb1c call      0x140cce84c
+030dbb21 test      rax, rax
+030dbb24 je        0x1430dbb51
+030dbb26 mov       ecx, dword ptr [rax + 8]
+030dbb29 bt        ecx, 0x1e
+030dbb2d jb        0x1430dbb51
+030dbb2f mov       rdx, qword ptr [rax]
+030dbb32 mov       rcx, rax
+030dbb35 call      qword ptr [rdx + 0x818]
+030dbb3b cmpneqss  xmm0, xmm6
+030dbb40 movd      eax, xmm0
+030dbb44 and       eax, 1
+030dbb47 movaps    xmm6, xmmword ptr [rsp + 0x20]
+030dbb4c add       rsp, 0x38
+030dbb50 ret       
+030dbb51 cmp       byte ptr [rip + 0x713f568], 3
+030dbb58 jb        0x1430dbb6d
+030dbb5a lea       rcx, [rip + 0x713f55f]
+030dbb61 lea       rdx, [rip + 0x551f468]
+030dbb68 call      0x14000f357
+030dbb6d xor       eax, eax
+030dbb6f jmp       0x1430dbb47
+

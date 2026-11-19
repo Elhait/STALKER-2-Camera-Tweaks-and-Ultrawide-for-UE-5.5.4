@@ -1,0 +1,11 @@
+STARTUP_JOURNAL v=1 pid=5552 qpcFrequency=10000000 capacity=48
+qpc=0 utc=0 tsc=13605568732410 tid=0 event=DLL_PROCESS_ATTACH detail=loader_lock value=0
+qpc=32297996169 utc=134393220921121343 tsc=13605572012549 tid=1844 event=INITIALIZATION_WORKER_START detail= value=0
+qpc=32299522575 utc=134393220922646661 tsc=13606213090530 tid=7928 event=OVERLAY_WORKER_START detail=composition_owner_thread value=0
+qpc=32319773975 utc=134393220942823594 tsc=13614718503875 tid=1844 event=CAMERA_CORE_READY detail=runtime_initialized value=0
+qpc=32480668538 utc=134393221103794245 tsc=13682292834839 tid=7928 event=GAME_WINDOW_SELECTED detail=visible_process_top_level_window value=1966682
+qpc=32481936584 utc=134393221105064794 tsc=13682825403215 tid=7928 event=COMPOSITION_DEVICE_READY detail=private_d3d11_device value=0
+qpc=32482135799 utc=134393221105259864 tsc=13682909071961 tid=7928 event=COMPOSITION_SURFACE_READY detail=full_draw_commit value=1
+qpc=32482135800 utc=134393221105259864 tsc=13682909072633 tid=7928 event=RENDERER_ACTIVATED detail=directcomposition_surface_committed value=1
+qpc=32482141813 utc=134393221105269867 tsc=13682911597632 tid=7928 event=OVERLAY_FIRST_FRAME detail=first_directcomposition_surface_commit value=1
+qpc=32625032889 utc=134393221248157687 tsc=13742924619372 tid=7928 event=INPUT_ACTIVATED detail=window_proc_installed value=0

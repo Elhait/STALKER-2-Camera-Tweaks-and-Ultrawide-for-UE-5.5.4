@@ -183,6 +183,8 @@ namespace overlay::loc
             inline constexpr Key HorPlusFov{"tooltip.runtime.horplus_fov"};
             inline constexpr Key HorPlusFovUnavailable{"tooltip.runtime.horplus_fov_unavailable"};
             inline constexpr Key CurrentOutputFov{"tooltip.runtime.current_output_fov"};
+            inline constexpr Key WriterInputFov{"tooltip.runtime.writer_input_fov"};
+            inline constexpr Key EffectiveFov{"tooltip.runtime.effective_fov"};
             inline constexpr Key TransitionEvidence{"tooltip.runtime.transition_evidence"};
             inline constexpr Key TransitionGeneration{"tooltip.runtime.transition_generation"};
             inline constexpr Key GameplayBoundaryAspect{"tooltip.runtime.gameplay_boundary_aspect"};
@@ -227,6 +229,13 @@ namespace overlay::loc
         inline constexpr Key NativeSource{"camera_state.field.native_source"};
         inline constexpr Key HorPlus{"camera_state.field.horplus"};
         inline constexpr Key CurrentOutput{"camera_state.field.current_output"};
+        inline constexpr Key WriterInput{"camera_state.field.writer_input"};
+        inline constexpr Key EffectiveFov{"camera_state.field.effective_fov"};
+        inline constexpr Key NeutralFov{"camera_state.field.neutral_fov"};
+        inline constexpr Key PostStoreFov{"camera_state.field.post_store_fov"};
+        inline constexpr Key PostHelperFov{"camera_state.field.post_helper_fov"};
+        inline constexpr Key Boundary{"camera_state.field.boundary"};
+        inline constexpr Key WriterTransaction{"camera_state.field.writer_transaction"};
         inline constexpr Key WriterAspect{"camera_state.field.writer_aspect"};
         inline constexpr Key GameplayPolicyAspect{"camera_state.field.gameplay_policy_aspect"};
         inline constexpr Key RuntimeCombineDetail{"camera_state.value.runtime_combine_detail"};

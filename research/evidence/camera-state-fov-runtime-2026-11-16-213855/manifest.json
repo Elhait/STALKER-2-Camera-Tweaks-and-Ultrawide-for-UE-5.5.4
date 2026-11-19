@@ -1,0 +1,48 @@
+[
+  {
+    "file": "STALKER2CameraTweaks.log",
+    "sha256": "6d2e4608058af9d19bab25fd98f0a1b4c2fc6921b82eefa63caf282de863b13b",
+    "bytes": 1548648,
+    "role": "current_pid_26108"
+  },
+  {
+    "file": "STALKER2CameraTweaksStartup.log",
+    "sha256": "71b46c7df81e0a7208298ae24a72a9e01dc0d6ea498c568b754ae20cfe45f74d",
+    "bytes": 1360,
+    "role": "current_pid_26108"
+  },
+  {
+    "file": "STALKER2CameraTweaksOverlay.log",
+    "sha256": "37a389c6481423e61b1bca5d0f204d83f55fbce6b7a600eddbbccacd9cb5254d",
+    "bytes": 30222,
+    "role": "current_pid_26108"
+  },
+  {
+    "file": "STALKER2CameraTweaks.PID.log",
+    "sha256": "7dadb5344077f9a723ac731dd022a32740d6fca3b134aba339c26a1ed17e998a",
+    "bytes": 1677122,
+    "role": "previous_pid_21296_not_current_evidence"
+  },
+  {
+    "file": "STALKER2CameraTweaksStartup.PID.log",
+    "sha256": "2e500ed17b2aac40d9a97da00b08463a0ac796d0bd49319aa4a5ae7af9f4e5a7",
+    "bytes": 1378,
+    "role": "previous_pid_21296_not_current_evidence"
+  },
+  {
+    "file": "STALKER2CameraTweaksOverlay.PID.log",
+    "sha256": "4e9879f2126a92ac95a66b90ac21c596a8a57e24b981c7870ea64b06439e0e30",
+    "bytes": 34652,
+    "role": "previous_pid_21296_not_current_evidence"
+  },
+  {
+    "screenshots_order": [
+      "Cinematic 1",
+      "inter-cinematic Dialogue",
+      "Cinematic 2",
+      "post-cinematic Gameplay",
+      "standalone Dialogue"
+    ],
+    "source": "user-labelled screenshots; no timestamp-derived pairing claimed"
+  }
+]

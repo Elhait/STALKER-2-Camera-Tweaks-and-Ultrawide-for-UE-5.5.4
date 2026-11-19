@@ -23,21 +23,21 @@ another locale's catalog glyph set.
 
 | Font/profile asset | Source binary | Cmap points | Embedded subset |
 | --- | ---: | ---: | ---: |
-| Noto Sans Mono / common | 596,428 B | 60 | 6,144 B |
-| Noto Sans Arabic / arabic | 142,140 B TTF (18,777,381 B upstream package) | 43 | 5,256 B |
-| Noto Sans CJK JP / japanese | 9,590,732 B | 300 | 72,364 B |
-| Noto Sans CJK KR / korean | 10,415,420 B | 249 | 37,872 B |
-| Noto Sans CJK SC / chinese-simplified | 17,773,132 B | 320 | 80,768 B |
-| Noto Sans CJK TC / chinese-traditional | 11,942,800 B | 324 | 95,020 B |
-| **Total embedded subsets** | — | **1,296** | **297,424 B** |
+| Noto Sans Mono / common | 596,428 B | 64 | 6,520 B |
+| Noto Sans Arabic / arabic | 142,140 B TTF (18,777,381 B upstream package) | 44 | 5,252 B |
+| Noto Sans CJK JP / japanese | 9,590,732 B | 316 | 77,176 B |
+| Noto Sans CJK KR / korean | 10,415,420 B | 264 | 40,088 B |
+| Noto Sans CJK SC / chinese-simplified | 17,773,132 B | 340 | 86,036 B |
+| Noto Sans CJK TC / chinese-traditional | 11,942,800 B | 341 | 101,564 B |
+| **Total embedded subsets** | — | **1,369** | **316,636 B** |
 
-The locale catalogs contain 1,120 unique printable Unicode codepoints; adding
-registry display names expands the full contract to 1,126 unique codepoints.
+The locale catalogs contain 1,173 unique printable Unicode codepoints; adding
+registry display names expands the full contract to 1,177 unique codepoints.
 Regional CJK subsets intentionally retain duplicate codepoints with different
 locale-specific outlines. The regenerated contract and offline tests establish
 glyph availability only, not visual correctness or Arabic shaping/bidi/RTL.
 
-## Offline atlas comparison
+## Offline atlas comparison (historical pre-semantics catalog measurement)
 
 Measured with the repository's Dear ImGui v1.91.9b atlas builder and the
 production font rasterization flags for every supported integer size. The

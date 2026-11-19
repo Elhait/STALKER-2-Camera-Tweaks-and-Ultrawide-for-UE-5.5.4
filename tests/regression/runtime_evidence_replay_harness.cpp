@@ -80,6 +80,33 @@ int main()
             }
         }
     }
+
+    // Compare production Gameplay HorPlus with an independent double-precision
+    // tangent-space oracle at the values used by the receiver-replacement
+    // regression, policy endpoints and supported FOV boundaries.
+    constexpr double pi = 3.14159265358979323846;
+    constexpr double nativeAspect = 16.0 / 9.0;
+    constexpr float contractFovs[] = { 1.01f, 70.0f, 90.0f, 100.0f,
+        120.0f, 130.0f, 130.3115f, 178.99f };
+    constexpr float contractAspects[] = { 16.0f / 9.0f, 21.0f / 9.0f,
+        32.0f / 9.0f };
+    for (const float fov : contractFovs) {
+        for (const float aspect : contractAspects) {
+            float actual = std::numeric_limits<float>::quiet_NaN();
+            const bool applied = gameplay::TryTransformHorPlus(
+                fov, aspect, 0x4, static_cast<float>(nativeAspect), actual);
+            const double expected = 2.0 * std::atan(std::tan(
+                static_cast<double>(fov) * pi / 360.0) *
+                (static_cast<double>(aspect) / nativeAspect)) * 180.0 / pi;
+            const bool expectedApplied = aspect > static_cast<float>(nativeAspect) + 0.001f &&
+                expected > 1.0 && expected < 179.0;
+            const float expectedOutput = expectedApplied
+                ? static_cast<float>(expected) : fov;
+            pass &= Check(applied == expectedApplied &&
+                Near(actual, expectedOutput, 0.025f),
+                "gameplay_horplus_matches_independent_boundary_oracle");
+        }
+    }
     float ineligibleOutput = 0.0f;
     pass &= Check(!gameplay::TryTransformHorPlus(
         gameplay.nativeFov, gameplay.aspect, 0, 1.77778f, ineligibleOutput) &&
@@ -122,6 +149,30 @@ int main()
     pass &= Check(rejectedTransformedInput.baseline.nativeFov.value == 80.0f &&
         !rejectedTransformedInput.eligible,
         "transformed_sample_cannot_become_native_baseline");
+
+    // Cross-component receiver replacement regression: an ambiguous first
+    // sample from a reloaded/new camera must retire the prior receiver's 90°
+    // baseline before Cinematic GameplayHorPlus selection can consume it.
+    constexpr std::uintptr_t previousReceiver = 0x22707d56700;
+    constexpr std::uintptr_t replacementReceiver = 0x2279302d9c0;
+    camera::GameplayBaselineStore receiverLifecycleBaseline;
+    static_cast<void>(receiverLifecycleBaseline.Project(Observation(
+        90.3115f, 127.119f, camera::FovSpace::Transformed,
+        camera::FovProvenance::ModTransformResult, 32.0f / 9.0f,
+        previousReceiver, 50), true));
+    auto replacementObservation = Observation(130.3115f, 153.931f,
+        camera::FovSpace::Transformed, camera::FovProvenance::ModTransformResult,
+        32.0f / 9.0f, replacementReceiver, 51);
+    replacementObservation.writerContext = camera::WriterContext::TransitionAmbiguous;
+    const auto afterReceiverReplacement = receiverLifecycleBaseline.Project(
+        replacementObservation, false);
+    const auto cinematicSelection = cinematics::SelectCinematicBaseline(
+        true, 126.87f, afterReceiverReplacement.baseline);
+    pass &= Check(!camera::IsUsableGameplayBaseline(afterReceiverReplacement.baseline) &&
+        !cinematicSelection.usedGameplayBaselineValue &&
+        cinematicSelection.valueOrigin ==
+            cinematics::CinematicBaselineValueOrigin::AuthoredEnter,
+        "receiver_replacement_does_not_feed_stale_baseline_to_cinematic_gameplay_horplus");
 
     camera::GameplayBaselineStore dynamicAspectBaseline;
     constexpr float dynamicAspects[] = { 1.77778f, 2.4f, 3.0f, 3.55556f, 2.4f,

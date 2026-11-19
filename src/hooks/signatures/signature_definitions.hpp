@@ -25,9 +25,37 @@ namespace hooks::signatures
     };
     inline constexpr std::size_t FovWriteOffsetInCameraWriter = 25;
 
+    // Anchor the post-copy helper call and its continuation. The call's rel32
+    // target is validated separately; the continuation is the first instruction
+    // after the helper returns, where the view output can be observed safely.
+    inline constexpr std::uint8_t CameraWriterPostProcessCall[] = {
+        0x44, 0x8A, 0x8E, 0x61, 0x02, 0x00, 0x00,
+        0x44, 0x8A, 0x86, 0x60, 0x02, 0x00, 0x00,
+        0xF3, 0x0F, 0x10, 0x8E, 0x5C, 0x02, 0x00, 0x00,
+        0x48, 0x89, 0xD9,
+        0xE8, 0x00, 0x00, 0x00, 0x00,
+        0x80, 0xBE, 0x40, 0x02, 0x00, 0x00, 0x00,
+    };
+    inline constexpr std::size_t CameraWriterPostProcessCallOffset = 25;
+
     inline constexpr char DialogueBoundary[] =
         "48 8B 0A 48 8B 01 0F 28 CE FF 90 08 06 00 00 "
         "0F 2E 76 2C 75 02 7B 1A";
+
+    inline constexpr std::uint8_t PostExitBlendSetterReturn[] = {
+        0xFF, 0x90, 0x08, 0x06, 0x00, 0x00, // CALL [RAX+0x608]
+        0x0F, 0x2E, 0x76, 0x2C,             // UCOMISS XMM6,[RSI+0x2C]
+        0x75, 0x02, 0x7B, 0x1A              // validated immediate branch pair
+    };
+
+    // Native FOV blend start capture followed by its context setup. The
+    // resolver decodes and validates every instruction/operand before use.
+    inline constexpr std::uint8_t PostExitBlendStartCapture[] = {
+        0xF3, 0x0F, 0x11, 0x46, 0x58,       // MOVSS [RSI+58], XMM0
+        0x48, 0x8D, 0x4E, 0x28,             // LEA RCX, [RSI+28] (observation point)
+        0x48, 0x8B, 0x46, 0x28,             // MOV RAX, [RSI+28]
+        0xFF, 0x50, 0x10,                   // CALL [RAX+10]
+    };
 
     inline constexpr char ZoomIn[] =
         "F3 0F 10 40 4C F3 0F 10 8E 38 01 00 00 0F 2E C8";

@@ -123,7 +123,22 @@
         "../../src/gameplay/gameplay_camera.hpp",
         "../../src/plugin/camera_writer_transaction.hpp",
         "../../src/plugin/runtime.cpp",
-        "runtime_native_evidence_cases.hpp"
+        "../../src/hooks/post_exit_blend_activation_resolver.hpp",
+        "../../src/hooks/cinematic_consumer_resolver.hpp",
+        "../../src/hooks/blend_producer_resolver.hpp",
+        "../../src/diagnostics/u2_shadow.hpp",
+        "../../src/diagnostics/dialogue_boundary_observation.hpp",
+        "../../src/hooks/post_exit_blend_post_setter_resolver.hpp",
+        "../../src/diagnostics/post_exit_blend_activation_observation.hpp",
+        "../../src/diagnostics/cinematic_consumer_observation.hpp",
+        "../../src/diagnostics/post_exit_blend_setter_pairing.hpp",
+        "runtime_native_evidence_cases.hpp",
+        "zoom_compatibility_cases.hpp",
+        "cinematic_diagnostic_aggregation_cases.hpp",
+        "post_exit_blend_observation_cases.hpp",
+        "post_exit_blend_activation_cases.hpp",
+        "cinematic_consumer_cases.hpp",
+        "u2_shadow_cases.hpp"
       ]
     },
     {
@@ -316,6 +331,9 @@
       "name": "dialogue_boundary_transaction_harness",
       "entry_source": "tests/plugin/dialogue_boundary_transaction_harness.cpp",
       "additional_sources": [
+        "src/camera/gameplay_baseline.cpp",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp",
         "src/dialogue/dialogue_state.cpp",
         "src/dialogue/dialogue_fov.cpp"
       ],
@@ -329,7 +347,8 @@
       "embedded_localization_resource": false,
       "observed_include_dependencies": [
         "../../src/plugin/dialogue_boundary_transaction.hpp",
-        "../../src/plugin/camera_writer_transaction.hpp"
+        "../../src/plugin/camera_writer_transaction.hpp",
+        "../../src/dialogue/post_exit_provider_authorization.hpp"
       ]
     },
     {
@@ -352,6 +371,7 @@
         "src/camera/gameplay_aspect_restoration.cpp",
         "src/overlay/presentation/camera_integration.cpp",
         "src/dialogue/dialogue_state.cpp",
+        "src/dialogue/dialogue_fov.cpp",
         "src/diagnostics/performance_telemetry.cpp",
         "src/diagnostics/diagnostic_runtime.cpp"
       ],
@@ -365,6 +385,15 @@
       "embedded_localization_resource": false,
       "observed_include_dependencies": [
         "../../src/plugin/camera_writer_transaction.hpp",
+        "../../src/plugin/dialogue_boundary_transaction.hpp",
+        "../../src/plugin/lifecycle_authority_writer_port.hpp",
+        "../../src/plugin/lifecycle_authority_dialogue_port.hpp",
+        "lifecycle_authority_parity_cases.hpp",
+        "lifecycle_authority_physical_cases.hpp",
+        "lifecycle_authority_cinematic_cases.hpp",
+        "lifecycle_authority_native_cinematic_cases.hpp",
+        "../../src/plugin/lifecycle_authority_cinematic_port.hpp",
+        "../../src/diagnostics/diagnostic_runtime.hpp",
         "../../src/overlay/presenter/presenter_runtime_policy.hpp",
         "../../src/plugin/cinematic_lifecycle_transaction.hpp",
         "../../src/camera/camera_state_publication.hpp",
@@ -1129,7 +1158,10 @@
       "link_libraries": [],
       "embedded_localization_resource": false,
       "observed_include_dependencies": [
-        "../../src/diagnostics/camera_writer_identity.hpp"
+        "../../src/diagnostics/camera_writer_identity.hpp",
+        "../../src/diagnostics/writer_diagnostic_aggregation.hpp",
+        "../../src/diagnostics/post_exit_blend_observation.hpp",
+        "../../src/diagnostics/camera_state_writer_log.hpp"
       ]
     },
     {
@@ -1465,6 +1497,38 @@
         "../../src/config/feature_config.hpp",
         "canonical_ini_documentation.hpp"
       ]
+    },
+    {
+      "name": "lifecycle_authority_m1_harness",
+      "entry_source": "tests/plugin/lifecycle_authority_m1_harness.cpp",
+      "additional_sources": [
+        "src/dialogue/dialogue_state.cpp",
+        "src/dialogue/dialogue_fov.cpp",
+        "src/cinematics/cinematic_fov.cpp",
+        "src/camera/gameplay_baseline.cpp",
+        "src/camera/horplus.cpp",
+        "src/gameplay/horplus_gameplay.cpp",
+        "src/gameplay/aspect_policy.cpp",
+        "src/gameplay/gameplay_state.cpp",
+        "src/gameplay/gameplay_camera.cpp",
+        "src/camera/fov_observation.cpp",
+        "src/camera/gameplay_aspect_restoration.cpp",
+        "src/hooks/signature_scanner.cpp",
+        "src/hooks/instruction_validator.cpp",
+        "external/safetyhook/Zydis.c",
+        "src/diagnostics/performance_telemetry.cpp",
+        "src/diagnostics/diagnostic_runtime.cpp"
+      ],
+      "compile_definitions": [],
+      "include_directories": [],
+      "link_libraries": [],
+      "embedded_localization_resource": false,
+      "observed_include_dependencies": [
+        "../../src/plugin/lifecycle_authority_core.hpp",
+        "../../src/plugin/lifecycle_authority_policy.hpp",
+        "lifecycle_authority_corrective_cases.hpp",
+        "../../src/dialogue/dialogue_state.hpp"
+      ]
     }
   ],
   "support_targets": [
@@ -1498,6 +1562,10 @@
     {
       "harness": "camera_writer_transaction_harness",
       "arguments": []
+    },
+    {
+      "harness": "camera_writer_transaction_harness",
+      "arguments": ["--authority-parity"]
     },
     {
       "harness": "cinematic_lifecycle_transaction_harness",
@@ -1734,11 +1802,16 @@
         "zoom-out",
         "on"
       ]
+    },
+    {
+      "harness": "lifecycle_authority_m1_harness",
+      "arguments": []
     }
   ],
   "native_adapter_contract": {
     "harness": "runtime_native_adapter_harness",
     "scenario_names": [
+      "u2-shadow",
       "writer-wide",
       "writer-native",
       "writer-combine",
@@ -1758,6 +1831,8 @@
       "lifecycle-gate-off",
       "lifecycle-chain",
       "dialogue-active",
+      "dialogue-baseline-context",
+      "dialogue-candidate-gameplay-return",
       "dialogue-off",
       "dialogue-cinematic",
       "dialogue-unreadable",
@@ -1784,6 +1859,7 @@
       "lifecycle-foreign-association",
       "recovery-foreign-source",
       "cinematic-initial-gameplay-baseline",
+      "cinematic-initial-combine-empty-generations",
       "cinematic-initial-foreign-source",
       "cinematic-initial-stale-generation",
       "cinematic-initial-missing-baseline",
@@ -1793,7 +1869,9 @@
       "cinematic-continuation-combine",
       "cinematic-continuation-chain",
       "cinematic-continuation-foreign-source",
-      "cinematic-continuation-foreign-writer",
+      "cinematic-continuation-output-b-persists",
+      "cinematic-continuation-output-roundtrip",
+      "cinematic-continuation-invalid-output",
       "cinematic-continuation-stale-generation",
       "cinematic-continuation-no-association",
       "cinematic-continuation-invalid-baseline",
@@ -1835,8 +1913,6 @@
       "evidence-safetyhook-veh-admission",
       "evidence-safetyhook-allocation-ownership",
       "evidence-safetyhook-delayed-execute",
-      "evidence-safetyhook-retry-generations",
-      "evidence-safetyhook-prewrite-route-lifetime",
       "evidence-safetyhook-rx-publication",
       "evidence-safetyhook-failed-create",
       "evidence-safetyhook-disable-postwrite",
@@ -1847,6 +1923,7 @@
       "evidence-native-callback-reset-drain",
       "evidence-partial-imgui-cleanup",
       "diagnostic-work",
+      "diagnostic-aggregation",
       "startup-fatal-early",
       "startup-fatal-partial",
       "startup-fatal-cleanup-throws",
@@ -1856,7 +1933,7 @@
       "off",
       "on"
     ],
-    "child_process_count": 224
+    "child_process_count": 234
   },
   "n06_m01_contract": {
     "harness": "n06_m01_zoom_game_derived_harness",

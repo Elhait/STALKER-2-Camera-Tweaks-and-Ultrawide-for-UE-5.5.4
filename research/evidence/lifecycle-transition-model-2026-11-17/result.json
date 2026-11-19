@@ -1,0 +1,3056 @@
+{
+  "kind": "independent_abstract_transition_relation",
+  "productionImports": false,
+  "scope": {
+    "sources": 2,
+    "sourceAllocationReuse": false,
+    "numericalFov": false,
+    "proofs": "symbolic",
+    "nativeReachability": false,
+    "fullCppEarlyReturns": false
+  },
+  "limitations": {
+    "T01": "Resource startup is abstracted to admission ready; thread lifecycle excluded",
+    "T03": "Symbolic reference permission, not FOV formula or selector order implementation",
+    "T04": "Witness compatibility supplied as symbolic evidence",
+    "T05": "No real aspect-store instruction or memory alias model",
+    "T07": "Mapping/progress accepted as symbolic inTrajectory; no float interpolation",
+    "T11": "Replacement vs interleaving is explicit input, not inferred from new pointer",
+    "T13": "nativeProof is assumed source-bound; availability not proven",
+    "T15": "AspectRecalculation shares terminal abstraction; physical aspect effects excluded",
+    "T17": "Physical atomic handoff represented by correlated intent/result",
+    "T18": "Component/thread/generation compatibility represented by exact flag",
+    "T19": "Native matching guard represented by exact flag, not trajectory arithmetic",
+    "T20": "Trajectory and writer confirmation abstracted to exact/inTrajectory",
+    "T24": "Descent/stability abstracted to descent/conflict flags",
+    "T26": "Terminal proof assumed; setter silence cannot synthesize it",
+    "T27": "Only explicit scoped incompatibility, no numeric FOV-jump detector",
+    "T28": "Native proof assumed; no numerical baseline",
+    "T29": "Relevant Gameplay setting invalidates reference; no physical pending-enable sequence",
+    "T30": "Enable/policy abstracted; activation policy latch retained",
+    "T31": "Named argument/store/partial/refused results, no native memory effects",
+    "T32": "Observation-only; zoom numerical/neutral admission not implemented",
+    "T33": "Failure injection at seven logical precommit boundaries, not every C++ return",
+    "T34": "Logical permission revoke only, not platform drain/join",
+    "T35": "Inactive: no production callers found in current inventory",
+    "T36": "Excluded legacy/experimental profile: reject, not a simulated implementation"
+  },
+  "coverage": {
+    "T01": {
+      "accepted": 1058,
+      "rejected": 0,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T02": {
+      "accepted": 8541,
+      "rejected": 403,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T03": {
+      "accepted": 197,
+      "rejected": 854,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T04": {
+      "accepted": 197,
+      "rejected": 1154,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T05": {
+      "accepted": 1994,
+      "rejected": 6916,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T06": {
+      "accepted": 650,
+      "rejected": 8513,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T07": {
+      "accepted": 51,
+      "rejected": 1287,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T08": {
+      "accepted": 206,
+      "rejected": 8685,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T09": {
+      "accepted": 1760,
+      "rejected": 7130,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T10": {
+      "accepted": 0,
+      "rejected": 1056,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T11": {
+      "accepted": 7866,
+      "rejected": 113,
+      "aborted": 105,
+      "observation": 932,
+      "inactive": 0
+    },
+    "T12": {
+      "accepted": 0,
+      "rejected": 1063,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T13": {
+      "accepted": 689,
+      "rejected": 16333,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T14": {
+      "accepted": 103,
+      "rejected": 951,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T15": {
+      "accepted": 103,
+      "rejected": 960,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T16": {
+      "accepted": 103,
+      "rejected": 957,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T17": {
+      "accepted": 103,
+      "rejected": 960,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T18": {
+      "accepted": 553,
+      "rejected": 8341,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T19": {
+      "accepted": 133,
+      "rejected": 16898,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T20": {
+      "accepted": 90,
+      "rejected": 8900,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T21": {
+      "accepted": 106,
+      "rejected": 8840,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T22": {
+      "accepted": 64,
+      "rejected": 1285,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T23": {
+      "accepted": 4422,
+      "rejected": 4472,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T24": {
+      "accepted": 2663,
+      "rejected": 14105,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T25": {
+      "accepted": 17,
+      "rejected": 1032,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T26": {
+      "accepted": 817,
+      "rejected": 8358,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T27": {
+      "accepted": 14,
+      "rejected": 1044,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T28": {
+      "accepted": 5373,
+      "rejected": 3540,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T29": {
+      "accepted": 5112,
+      "rejected": 154,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T30": {
+      "accepted": 12950,
+      "rejected": 136,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T31": {
+      "accepted": 2535,
+      "rejected": 7458,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T32": {
+      "accepted": 0,
+      "rejected": 120,
+      "aborted": 105,
+      "observation": 934,
+      "inactive": 0
+    },
+    "T33": {
+      "accepted": 0,
+      "rejected": 1049,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T34": {
+      "accepted": 1047,
+      "rejected": 0,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 0
+    },
+    "T35": {
+      "accepted": 0,
+      "rejected": 0,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 1076
+    },
+    "T36": {
+      "accepted": 0,
+      "rejected": 0,
+      "aborted": 105,
+      "observation": 0,
+      "inactive": 1052
+    }
+  },
+  "fixtureChecks": 7560,
+  "identityChecks": 135,
+  "abortChecks": 3780,
+  "fixtureFailures": [],
+  "bfs": {
+    "fault": "",
+    "completeToDepth": true,
+    "depthLimit": 6,
+    "deepest": 6,
+    "states": 7644,
+    "edges": 125328,
+    "counterexample": null
+  },
+  "seededBfs": [
+    {
+      "seedIndex": 1,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": null,
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 270,
+        "edges": 2478,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 2,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "current"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": {
+              "token": "call",
+              "c": 0,
+              "ge": 0,
+              "kind": "gameplay"
+            },
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 348,
+        "edges": 3234,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 3,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 1,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 241,
+        "edges": 2562,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 4,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 1,
+            "bound": true,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 294,
+        "edges": 2982,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 5,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 1,
+            "bound": true,
+            "admitted": true,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": {
+              "token": "call",
+              "c": 1,
+              "ge": 0,
+              "kind": "cinematic"
+            },
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 366,
+        "edges": 3318,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 6,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 1,
+            "hKey": null
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 431,
+        "edges": 3696,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 7,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "armed",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 1,
+            "hKey": {
+              "component": 1,
+              "thread": 0,
+              "gen": 1
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 381,
+        "edges": 3528,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 8,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "matched",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 1,
+            "hKey": {
+              "component": 1,
+              "thread": 0,
+              "gen": 1
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 514,
+        "edges": 4494,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 9,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "confirmed",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": {
+              "token": "call",
+              "c": 0,
+              "ge": 0,
+              "kind": "dialogue"
+            },
+            "observed": {},
+            "rg": 1,
+            "hKey": {
+              "component": 1,
+              "thread": 0,
+              "gen": 1
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 542,
+        "edges": 4620,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 10,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "active",
+            "r": "complete",
+            "h": "transferred",
+            "consumed": true,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": {
+              "token": "call",
+              "c": 0,
+              "ge": 0,
+              "kind": "dialogue"
+            },
+            "observed": {},
+            "rg": 1,
+            "hKey": {
+              "component": 1,
+              "thread": 0,
+              "gen": 1
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      },
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 3,
+        "deepest": 3,
+        "states": 414,
+        "edges": 3696,
+        "counterexample": null
+      }
+    }
+  ],
+  "allFamilyBfs": {
+    "fault": "",
+    "completeToDepth": true,
+    "depthLimit": 3,
+    "deepest": 3,
+    "states": 407,
+    "edges": 9559,
+    "counterexample": null
+  },
+  "allFamilySeededBfs": [
+    {
+      "seedIndex": 1,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 79,
+        "edges": 1452,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 2,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 120,
+        "edges": 1936,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 3,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 82,
+        "edges": 1573,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 4,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 115,
+        "edges": 1815,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 5,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 184,
+        "edges": 2299,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 6,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 127,
+        "edges": 1936,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 7,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 110,
+        "edges": 1815,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 8,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 146,
+        "edges": 2057,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 9,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 200,
+        "edges": 2541,
+        "counterexample": null
+      }
+    },
+    {
+      "seedIndex": 10,
+      "result": {
+        "fault": "",
+        "completeToDepth": true,
+        "depthLimit": 2,
+        "deepest": 2,
+        "states": 162,
+        "edges": 2299,
+        "counterexample": null
+      }
+    }
+  ],
+  "faults": [
+    {
+      "fault": "stale-entry",
+      "completeToDepth": false,
+      "depthLimit": 8,
+      "deepest": 4,
+      "states": 1623,
+      "edges": 20545,
+      "counterexample": {
+        "errors": [
+          "completion_no_repair_writer"
+        ],
+        "path": [
+          {
+            "id": "T02",
+            "src": 0,
+            "valid": true
+          },
+          {
+            "id": "T05",
+            "src": 0,
+            "exact": true
+          },
+          {
+            "id": "T06",
+            "src": 0,
+            "exact": true,
+            "original": true
+          },
+          {
+            "id": "T08",
+            "src": 0,
+            "exact": true
+          },
+          {
+            "id": "T13",
+            "src": 0,
+            "exact": true,
+            "nativeProof": true,
+            "original": true
+          }
+        ],
+        "shortestWithinAlphabet": true
+      }
+    },
+    {
+      "fault": "cancel-native",
+      "completeToDepth": false,
+      "depthLimit": 8,
+      "deepest": 1,
+      "states": 28,
+      "edges": 141,
+      "counterexample": {
+        "errors": [
+          "native_baseline_only",
+          "cancel_not_native_proof"
+        ],
+        "path": [
+          {
+            "id": "T23",
+            "src": 0,
+            "valid": true
+          },
+          {
+            "id": "T24",
+            "src": 0,
+            "exact": true,
+            "conflict": true
+          }
+        ],
+        "shortestWithinAlphabet": true
+      }
+    },
+    {
+      "fault": "mismatch-reset",
+      "completeToDepth": false,
+      "depthLimit": 8,
+      "deepest": 5,
+      "states": 4549,
+      "edges": 68219,
+      "counterexample": {
+        "errors": [
+          "foreign_mismatch_retains_handoff"
+        ],
+        "path": [
+          {
+            "id": "T02",
+            "src": 0,
+            "valid": true
+          },
+          {
+            "id": "T05",
+            "src": 0,
+            "exact": true
+          },
+          {
+            "id": "T06",
+            "src": 0,
+            "exact": true,
+            "original": true
+          },
+          {
+            "id": "T08",
+            "src": 0,
+            "exact": true
+          },
+          {
+            "id": "T18",
+            "src": 0,
+            "exact": true
+          },
+          {
+            "id": "T19",
+            "src": 0,
+            "exact": false
+          }
+        ],
+        "shortestWithinAlphabet": true
+      }
+    },
+    {
+      "fault": "global-candidate",
+      "completeToDepth": false,
+      "depthLimit": 8,
+      "deepest": 1,
+      "states": 29,
+      "edges": 146,
+      "counterexample": {
+        "errors": [
+          "foreign_candidate_no_veto"
+        ],
+        "path": [
+          {
+            "id": "T23",
+            "src": 0,
+            "valid": true
+          },
+          {
+            "id": "T28",
+            "src": 1,
+            "nativeProof": true,
+            "original": true
+          }
+        ],
+        "shortestWithinAlphabet": true
+      }
+    },
+    {
+      "fault": "late-resurrection",
+      "completeToDepth": false,
+      "depthLimit": 8,
+      "deepest": 0,
+      "states": 4,
+      "edges": 19,
+      "counterexample": {
+        "errors": [
+          "correlated_effect_only"
+        ],
+        "path": [
+          {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "store"
+          }
+        ],
+        "shortestWithinAlphabet": true
+      }
+    },
+    {
+      "fault": "partial-commit",
+      "completeToDepth": false,
+      "depthLimit": 8,
+      "deepest": 0,
+      "states": 2,
+      "edges": 2,
+      "counterexample": {
+        "errors": [
+          "no_partial_commit"
+        ],
+        "path": [
+          {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true,
+            "abortAt": 2
+          }
+        ],
+        "shortestWithinAlphabet": true
+      }
+    },
+    {
+      "fault": "quarantine-bypass",
+      "completeToDepth": false,
+      "depthLimit": 3,
+      "deepest": 1,
+      "states": 22,
+      "edges": 85,
+      "counterexample": {
+        "errors": [
+          "no_baseline_during_quarantine"
+        ],
+        "path": [
+          {
+            "id": "T13",
+            "src": 0,
+            "exact": true,
+            "nativeProof": true,
+            "original": true
+          },
+          {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          }
+        ],
+        "shortestWithinAlphabet": true
+      },
+      "seedIndex": 7,
+      "initialState": {
+        "ready": true,
+        "on": [
+          true,
+          true,
+          true
+        ],
+        "selection": 0,
+        "ge": 0,
+        "b": {
+          "src": 0,
+          "epoch": 0,
+          "trust": "retained"
+        },
+        "scopes": [
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "pending",
+            "h": "armed",
+            "consumed": false,
+            "policy": 0,
+            "p": "original",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 1,
+            "hKey": {
+              "component": 1,
+              "thread": 0,
+              "gen": 1
+            }
+          },
+          {
+            "c": 0,
+            "bound": false,
+            "admitted": false,
+            "d": "none",
+            "r": "none",
+            "h": "none",
+            "consumed": false,
+            "policy": 0,
+            "p": "unknown",
+            "w": "none",
+            "result": "unavailable",
+            "pending": null,
+            "observed": {},
+            "rg": 0,
+            "hKey": null
+          }
+        ]
+      }
+    }
+  ],
+  "streams": [
+    {
+      "domain": "focused",
+      "seed": 1,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "focused",
+      "seed": 7372,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "focused",
+      "seed": 13472,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "focused",
+      "seed": 26108,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "all-families",
+      "seed": 1,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "all-families",
+      "seed": 7372,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "all-families",
+      "seed": 13472,
+      "steps": 1200,
+      "failure": null
+    },
+    {
+      "domain": "all-families",
+      "seed": 26108,
+      "steps": 1200,
+      "failure": null
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "three_cinematics_provider_dialogue_ordinary_dialogue_no_load",
+      "steps": 32,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T02",
+            "src": 0,
+            "valid": true,
+            "gen": 1
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T03",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "baseline-reference",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T05",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T06",
+            "src": 0,
+            "exact": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "cinematic",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "CinematicMapping"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T08",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "pending",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T18",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "pending",
+          "handoff": "armed",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T19",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "pending",
+          "handoff": "matched",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T20",
+            "src": 0,
+            "exact": true,
+            "inTrajectory": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "dialogue",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "ReducedThenHorPlus"
+          },
+          "d": "none",
+          "recovery": "pending",
+          "handoff": "confirmed",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T13",
+            "src": 0,
+            "exact": true,
+            "nativeProof": true,
+            "original": true,
+            "transfer": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "dialogue",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "ReducedThenHorPlus"
+          },
+          "d": "active",
+          "recovery": "complete",
+          "handoff": "transferred",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T22",
+            "src": 0,
+            "exact": true,
+            "prepared": true,
+            "argumentPrepared": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "active",
+          "recovery": "complete",
+          "handoff": "transferred",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T02",
+            "src": 0,
+            "valid": true,
+            "gen": 2
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T03",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "baseline-reference",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T04",
+            "src": 0,
+            "exact": true,
+            "prepared": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T05",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T06",
+            "src": 0,
+            "exact": true,
+            "prepared": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "cinematic",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "PreservePrepared"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T07",
+            "src": 0,
+            "inTrajectory": true,
+            "prepared": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "cinematic",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "PreservePrepared"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T08",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "pending",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T13",
+            "src": 0,
+            "exact": true,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T23",
+            "src": 0,
+            "valid": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "candidate",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T25",
+            "src": 0,
+            "exact": true,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T23",
+            "src": 0,
+            "valid": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "candidate",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T24",
+            "src": 0,
+            "exact": true,
+            "descent": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "dialogue",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "ReducedThenHorPlus"
+          },
+          "d": "active",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T26",
+            "src": 0,
+            "exact": true,
+            "ascent": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "rearm",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T26",
+            "src": 0,
+            "exact": true,
+            "terminalProof": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T02",
+            "src": 0,
+            "valid": true,
+            "gen": 3
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T05",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T06",
+            "src": 0,
+            "exact": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "cinematic",
+            "effect": true,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "CinematicMapping"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T08",
+            "src": 0,
+            "exact": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "pending",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "retained"
+          }
+        },
+        {
+          "event": {
+            "id": "T13",
+            "src": 0,
+            "exact": true,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "complete",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "effect_refused",
+      "steps": 3,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "refused"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "effect_partial",
+      "steps": 3,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "partial"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "effect_unavailable",
+      "steps": 3,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "unavailable"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "effect_argument",
+      "steps": 3,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "argument"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "effect_store",
+      "steps": 3,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "store"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": true,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "revoke_then_late_result",
+      "steps": 5,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T30",
+            "src": 0,
+            "disable": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T29",
+            "src": 0,
+            "relevant": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "invalid"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "result": "store"
+          },
+          "status": "rejected",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "invalid"
+          }
+        }
+      ]
+    },
+    {
+      "name": "foreign_candidate_independent_source",
+      "steps": 3,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T23",
+            "src": 0,
+            "valid": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "candidate",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 1,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 1,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 1,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "replacement_no_automatic_admission",
+      "steps": 4,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T11",
+            "src": 1,
+            "replacement": true
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 1,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "invalid"
+          }
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 1,
+            "original": true
+          },
+          "status": "rejected",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 1,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "invalid"
+          }
+        }
+      ]
+    },
+    {
+      "name": "N_minus_1_result_and_named_boundaries",
+      "steps": 6,
+      "failure": null,
+      "trace": [
+        {
+          "event": {
+            "id": "T01",
+            "src": 0
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": null
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true,
+            "token": "N-1"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T28",
+            "src": 0,
+            "nativeProof": true,
+            "original": true,
+            "token": "N"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "gameplay",
+            "effect": true,
+            "baseline": "update",
+            "applied": false,
+            "source": 0,
+            "mapping": "GameplayHorPlus"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "token": "N-1",
+            "result": "store"
+          },
+          "status": "rejected",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": false,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "token": "N",
+            "result": "store",
+            "boundary": "post-store"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": true,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        },
+        {
+          "event": {
+            "id": "T31",
+            "src": 0,
+            "exact": true,
+            "token": "N",
+            "result": "store",
+            "boundary": "post-helper"
+          },
+          "status": "accepted",
+          "decision": {
+            "kind": "pass",
+            "effect": false,
+            "baseline": "retain",
+            "applied": true,
+            "source": 0,
+            "mapping": "none"
+          },
+          "d": "none",
+          "recovery": "none",
+          "handoff": "none",
+          "baseline": {
+            "src": 0,
+            "epoch": 0,
+            "trust": "current"
+          }
+        }
+      ]
+    }
+  ],
+  "conclusion": "Bounded model result only; no production, hook sufficiency or universal engine liveness proof"
+}

@@ -1,0 +1,27 @@
+[1/11] camera_writer_identity_harness
+PASS: Diagnostic OFF isolation, pair-change gating, context snapshot, and state neutrality
+[2/11] runtime_native_adapter_harness diagnostic-aggregation off
+diagnostic_aggregation callbacks=10000 file_lines=12 bytes=1957
+diagnostic-aggregation diagnostic=off: PASS
+[3/11] runtime_native_adapter_harness diagnostic-aggregation on
+diagnostic_aggregation callbacks=10000 file_lines=96 bytes=36439
+diagnostic-aggregation diagnostic=on: PASS
+[4/11] runtime_native_adapter_harness diagnostic-work off
+diagnostic_work diagnostic=off cinematic_writer_reads=0 dialogue_callbacks=0 recovery_reads=0
+diagnostic-work diagnostic=off: PASS
+[5/11] runtime_native_adapter_harness diagnostic-work on
+diagnostic_work diagnostic=on cinematic_writer_reads=6 dialogue_callbacks=1 recovery_reads=3
+diagnostic-work diagnostic=on: PASS
+[6/11] runtime_native_adapter_harness cinematic-continuation-output-roundtrip off
+cinematic-continuation-output-roundtrip diagnostic=off: PASS
+[7/11] runtime_native_adapter_harness cinematic-continuation-output-roundtrip on
+cinematic-continuation-output-roundtrip diagnostic=on: PASS
+[8/11] runtime_native_adapter_harness cinematic-continuation-output-b-persists off
+cinematic-continuation-output-b-persists diagnostic=off: PASS
+[9/11] runtime_native_adapter_harness cinematic-continuation-output-b-persists on
+cinematic-continuation-output-b-persists diagnostic=on: PASS
+[10/11] runtime_native_adapter_harness cinematic-continuation-invalid-output off
+cinematic-continuation-invalid-output diagnostic=off: PASS
+[11/11] runtime_native_adapter_harness cinematic-continuation-invalid-output on
+cinematic-continuation-invalid-output diagnostic=on: PASS
+runner_invocations=11 exit=0 non_graphics=0 WARP_case_omitted=0

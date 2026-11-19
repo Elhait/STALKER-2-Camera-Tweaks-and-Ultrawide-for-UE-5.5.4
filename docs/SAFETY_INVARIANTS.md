@@ -1,5 +1,19 @@
 # Production Safety Invariants
 
+- Each FOV correction must be explainable by input evidence captured at a
+  named boundary, policy evaluation with its required references/settings,
+  and authorization for that invocation or explicitly admitted retention
+  lifecycle. Application evidence and consumption evidence are separate facts:
+  a computed target is not a prepared native argument; a prepared argument is
+  not a confirmed store; a confirmed store is not a consumed view/projection.
+  Missing downstream evidence never authorizes repeated correction or changes
+  an earlier boundary decision. Native-register provenance describes the
+  capture boundary, not an assertion that upstream engine/mod state was
+  unmodified. Source, lifecycle generation, aspect, policy and boundary stage
+  remain distinct; mod generation is not native camera lifetime or frame ID.
+  This explanatory invariant does not require a new global FOV store,
+  universal mutation point, per-invocation logging, or output-equality repair.
+
 - Project-wide semantic FOV tolerance is ±1.0 degree, defined once as
   `camera::kSemanticFovToleranceDegrees` in `src/camera/fov_semantics.hpp`.
   Finite FOV values within that inclusive difference are semantically
@@ -13,6 +27,13 @@
   purpose-specific thresholds and must not be replaced mechanically.
 
 - Ambiguous, incomplete or structurally invalid signature matches fail closed.
+- Production module admission depends on its native contract, never the game
+  executable SHA, patch label or ability to hash the disk file. SHA is provenance.
+  Image-bound research probes must remain explicitly isolated from production.
+- Zoom IN/OUT form one committed observation capability. Before both hooks
+  activate, after failed installation, and after reset closes admission, Zoom
+  callbacks cannot publish state. Unknown Zoom observation cannot confirm a
+  neutral Gameplay FOV; prior reference evidence becomes historical.
 - Resolver decode, fixed look-ahead, relative-call and byte-window validation
   are bounded by the validated executable section span.
 - The gameplay and cinematic resolvers validate match cardinality and
@@ -24,6 +45,11 @@
   interventions, but a feature may require observation capabilities installed
   by another domain. Missing required observation capability fails the
   dependent intervention closed without invalidating unrelated features.
+- Diagnostic aggregation never changes production writer identity epochs,
+  source/generation ownership, register output or recovery decisions. Repeated
+  output transitions may aggregate, but source changes, conflicts and exact
+  correction-decision transitions remain visible independently of FOV deltas.
+  Summary flush uses existing safe lifecycle/control boundaries, never loader-lock I/O.
 - Runtime diagnostics are persistent infrastructure: useful bounded camera,
   lifecycle, ownership, source and compatibility instrumentation remains in
   the ordinary production ASI under Diagnostic Mode after the motivating issue
@@ -49,6 +75,14 @@
 - Cinematic aspect-store failure skips the custom/native store path and
   resumes after the replaced instruction; this is intentional fail-closed
   behavior.
+- Cinematic source ownership is scoped to the accepted generation and its
+  confirmed aspect-store target. Output identity is admitted per validated
+  native writer invocation; a destination transition alone does not invalidate
+  the source. EXIT records only the last admitted output for that generation
+  and source as historical metadata. Recovery remains generation/source-bound
+  and never dereferences or requires equality with the cached output. A real
+  aspect-target conflict, stale generation, disabled correction or invalid
+  invocation cannot acquire output admission.
 - Cinematic hooks are created disabled and are enabled only after the required
   component installation commit; observation-only lifecycle installation does
   not enable presentation intervention.
@@ -113,6 +147,12 @@
   out-of-range, or insufficiently source-validated samples pass through
   unchanged. HorPlus resumes normal gameplay transformation when native
   recovery is validated; later native gameplay changes remain eligible.
+- Gameplay baseline admission remains limited to `GameplayEligible` samples.
+  A confirmed post-cinematic recovery-exclusion sample or provider transition
+  from the same writer receiver may retain the last trusted Gameplay baseline,
+  but cannot replace it. Unclassified same-receiver ambiguity still retires
+  baseline currency, and a writer-receiver change always makes the old baseline
+  unusable until a new eligible sample is published.
 - Overlay is an optional independent DirectComposition consumer. It never
   patches DXGI exports or game swapchain methods and never owns game
   backbuffers, devices or queues. Its private D3D11 work targets only its own

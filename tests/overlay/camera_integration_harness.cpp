@@ -296,10 +296,9 @@ int main()
     projected = overlay::ProjectCameraIntegration(snapshot);
     pass &= Check(projected.potential.aspect == overlay::CameraValueMatch::Matched &&
         projected.potential.fov == overlay::CameraValueMatch::Matched &&
-        projected.potential.overall ==
-            overlay::OverallIntegrationAssessment::Seamless &&
+        projected.potential.overall == overlay::OverallIntegrationAssessment::Seamless &&
         projected.overall == overlay::OverallIntegrationAssessment::Seamless,
-        "potential_assessment_uses_current_settings_and_live_gameplay_baseline");
+        "gameplay_horplus_potential_uses_current_gameplay_baseline");
 
     snapshot.cinematicAspectPolicy.value =
         config::CinematicAspectPolicy::Forced16x9;

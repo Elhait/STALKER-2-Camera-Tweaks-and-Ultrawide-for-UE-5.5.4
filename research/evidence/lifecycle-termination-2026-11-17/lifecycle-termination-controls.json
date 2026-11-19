@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": true,
+  "ExpectedDescendantsCleaned": true,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "19576:E:\\Work\\Visual Studio Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\vctip.exe",
+  "Output": "**********************************************************************\r\n** Visual Studio 2022 Developer Command Prompt v17.14.28\r\n** Copyright (c) 2025 Microsoft Corporation\r\n**********************************************************************\r\n[0/1] Re-running CMake...\r\n-- Configuring done (0.7s)\n-- Generating done (0.5s)\n-- Build files have been written to: E:/Work/Slaker2 mods/01-Projects/STALKER-2-Ultrawide-Fix-for-UE-5.5.4/build-artifacts/cm/test-suite\n[1/4] Building CXX object CMakeFiles\\dialogue_boundary_transaction_harness.dir\\src\\diagnostics\\performance_telemetry.cpp.obj\r\n[2/4] Building CXX object CMakeFiles\\dialogue_boundary_transaction_harness.dir\\src\\diagnostics\\diagnostic_runtime.cpp.obj\r\n[3/4] Linking CXX executable tests\\dialogue_boundary_transaction_harness.exe\r\nPASS: Dialogue boundary transaction\r\n",
+  "ProcessId": 24508
+}

@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "PASS: hardening assertions=66\r\nPASS: M16 assertions=98\r\nPASS: lifecycle_authority_m1_harness assertions=98\r\n",
+  "ProcessId": 26712
+}

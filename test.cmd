@@ -1,9 +1,15 @@
 @echo off
 setlocal
 set "FAIL_CODE="
+set "TEST_RESULT=0"
+set "PUSHD_DONE=0"
 set "ROOT=%~dp0"
 pushd "%ROOT%"
-if not "%errorlevel%"=="0" exit /b 1
+if errorlevel 1 (
+    set "TEST_RESULT=1"
+    goto :finish
+)
+set "PUSHD_DONE=1"
 
 set "VSDEVCMD="
 if defined VSINSTALLDIR if exist "%VSINSTALLDIR%Common7\Tools\VsDevCmd.bat" set "VSDEVCMD=%VSINSTALLDIR%Common7\Tools\VsDevCmd.bat"
@@ -46,12 +52,21 @@ set "TMP=%TEMP%"
 PowerShell -NoProfile -ExecutionPolicy Bypass -File tests\runner\test_cmd_orchestrator.ps1 -RegistryPath tests\test_harnesses.json %*
 if not "%errorlevel%"=="0" goto :fail
 
-popd
-exit /b 0
+goto :finish
 
 :fail
 if not defined FAIL_CODE set "FAIL_CODE=%errorlevel%"
 if "%FAIL_CODE%"=="0" set "FAIL_CODE=1"
 echo test.cmd failed with exit code %FAIL_CODE%.>&2
-popd
-exit /b %FAIL_CODE%
+set "TEST_RESULT=%FAIL_CODE%"
+
+:finish
+if "%PUSHD_DONE%"=="1" popd
+if "%TEST_RESULT%"=="0" (
+    echo Test run finished with no failures. Review PASS and SKIP totals above.
+) else (
+    echo Tests failed with exit code %TEST_RESULT%.
+)
+echo Press any key to close this window...
+pause >nul
+exit /b %TEST_RESULT%

@@ -13,23 +13,101 @@ precision, projection singularity, interpolation range, sample stability, and
 test-output tolerances separate; a difference larger than 1.0 degree is a
 reason to investigate, not proof of a transition.
 
+## Camera State FOV publication
+
+Pending Dialogue candidates are hypotheses, not confirmed camera ownership.
+The primary writer can terminate a stationary candidate without another setter
+callback when its validated receiver, Dialogue settings epoch and cinematic
+generation match, its start/target and current native sample agree with a
+still-current production Gameplay reference, and aspect/context gates agree.
+This runs before writer classification so the hypothesis cannot invalidate that
+same trusted reference first. No elapsed-time/sample-count expiration, foreign
+baseline reuse or reconstruction of an already non-current baseline is involved.
+Active Dialogue, genuine descent, exclusion and unknown ownership retain their
+existing guards. This terminal boundary does not identify save/world lifetime.
+
+Writer classification captured before a recovery transaction is provisional.
+When that transaction completes source-owned native recovery and commits
+Gameplay with exclusion cleared, its Gameplay observation uses GameplayEligible
+rather than the retired RecoveryOwned tag. Provider handoffs and uncompleted or
+foreign recovery cannot use this admission path. This ordering keeps the fresh
+native reference usable even if a setter arrives immediately after completion,
+before any further Gameplay writer. If cinematic recovery finishes before the
+exclusion sees a validated departure and return, the returning writer uses the
+newly released scope in the same transaction.
+
+Camera State projects production evidence; it does not select or reconstruct FOV.
+`gameplayFov` is the admitted Gameplay reference from Authority, independently of
+`neutralGameplayFov`, which retains its zoom-neutral qualification. A confirmed
+transition can retain a usable reference; receiver replacement or a production
+invalidation cannot be repaired by UI history. Settings invalidate this reference
+only through its production owner, not an invented overlay epoch.
+
+`nativeFov` is an original capture at a named boundary (Gameplay writer, Dialogue
+setter, authored Cinematic ENTER). A retained ENTER target is not a live native
+blend trajectory. Prepared `writerInputFov` may already contain upstream mod
+correction and cannot refresh an unknown original capture.
+
+The legacy `currentOutputFov` member represents **Planned Output**. Effective FOV
+comes only from existing diagnostic post-store/post-helper observations matched
+by writer transaction, receiver, output object, thread and observation generation.
+That generation is instrumentation identity, not a native receiver lifetime.
+Both readback boundaries remain separately inspectable. Snapshot sequence and
+numeric equality are not correlation. No readback with Diagnostics OFF means
+Effective is Unavailable; it does not disable correction. No field claims final
+rendered projection or global writer coverage.
+
+## Cinematic writer ownership
+
+Cinematic source ownership belongs to the accepted generation and its
+confirmed aspect-store target. The validated native source-to-output copy
+admits the destination for that invocation; output identity may change between
+calls and is not a persistent camera identity. Initial establishment and
+continuation use the same per-call admission evidence. EXIT may snapshot the
+last admitted destination only when its generation and source still match;
+that value is historical metadata, not proof that the destination remains
+active or allocated. Gameplay recovery is authorized by generation/source and
+uses the current writer invocation, never a cached cinematic destination.
+A conflicting aspect-store target, stale generation, disabled correction or
+invalid output fails closed without replacing the last admitted evidence.
+
+Cinematic activation generation does not itself define a new Gameplay reference.
+A generation with no writer cannot retire a still-usable Gameplay reference. Conversely, a carried activation is not recovery or writer authority.
+The CinematicEnterActivation record retains one admitted writer decision as
+start provenance, bound to receiver, generation, settings epochs, aspect, flags,
+thread and observed component. EXIT checks association before carrying it;
+successor capture checks its context and sample before using the prior corrected
+output. Settings/aspect conflicts or lost association retire this evidence.
+Prepared endpoints remain prepared after the native blend finishes; they are
+not transformed again solely because a new technical generation starts. Unknown
+starts do not gain a fresh-native claim. No camera pointer cached here is
+subsequently dereferenced, and no time window or scene-specific rule is used.
+
 ## Runtime ownership
 
-The translation-unit-private `RuntimeState` in `src/plugin/runtime.cpp` is the
-primary integration and lifetime owner for production runtime state: module identity,
-configuration, workers, installed hooks, feature availability,
-cinematic/gameplay transition state, dialogue state and runtime telemetry. It
-is intentionally not a public `plugin::RuntimeState` type. Callback functions
-use local `g_*` aliases to fields in that owner; those aliases are not
-callbacks or separate ownership boundaries. Lifecycle fields are changed through one
-externally serialized Runtime control path; worker code only observes the stop
-event.
+The translation-unit-private `RuntimeState` owns the ASI lifetime, native
+callback admission, physical engine adapters, feature availability, workers
+and presentation delivery. Its `lifecycle_authority::Authority` owns committed
+camera ownership, effective camera settings, Gameplay reference, Cinematic
+activation and recovery, Dialogue and provider handoff. Native callbacks submit
+captured facts through their ports under `CameraCorrectionGate`. Settings use
+the same gate, and shutdown retires Authority after callback and worker drain.
 
-Domain modules own reusable calculations, policies and resolver primitives.
-The translation-unit-private `RuntimeState` owns their integration, lifecycle
-and cross-domain coordination. A separate coordinator type is not required
-unless it can own an independent state machine without receiving the entire
-runtime as callbacks.
+Writer PRE prepares at most one FOV argument for its native store. Optional
+post-store and post-helper callbacks submit named observations for the same
+invocation. They have no correction permission. Overlay, zoom and telemetry
+read committed projections. Zoom and transition observations retain their own
+provenance and never establish lifecycle ownership.
+
+An accepted native Cinematic ENTER ends previous Dialogue permissions and
+resets their candidate and recovery data. An interleaved writer for a
+different receiver cannot move this terminal boundary. When scope storage is
+full, Authority can reclaim retired records independently of receiver order.
+Active claims, the baseline, the current selection, the latest writer and
+pending effects keep their scope records.
+
+The previous adapter's writable stores and control paths compile only for test
+characterization. The ordinary production build has one camera lifecycle owner.
 
 ## Persistent runtime diagnostics
 
@@ -102,6 +180,37 @@ prefix whose length is not reflected by the complete-record counter.
 The startup journal remains independently bounded
 by its fixed event capacity. Parent-directory junctions remain supported; this
 is not a security boundary against an attacker controlling the game directory.
+
+Zoom observation uses paired unique signatures and decoded load/compare
+operands in the executable section. Both hooks are created disabled and the
+observer admission opens only after both activate. Callbacks serialize through
+the existing camera correction gate and recheck admission; reset closes
+admission before the existing native callback drain and resource cleanup.
+Diagnostics selection and Zoom observer availability are logged independently.
+Neutral Gameplay FOV presentation requires an available observer and a valid
+inactive observation. Before the first valid Zoom OUT, this reference can remain
+unavailable; a valid OUT starts stable qualification if no prior reference exists.
+This observational reference is separate from the production GameplayBaselineStore.
+
+Cinematic writer diagnostics distinguish source ownership from output destination.
+Same-source RBX transitions accumulate in fixed-size Runtime-owned counters rather
+than individual identity records. Full writer/BEFORE/AFTER samples follow semantic
+decision changes (including the transaction's exact mutateFov result), source,
+ownership and validity changes. Output-pointer cycling or numeric FOV drift alone
+does not select a full sample. Summaries retain first/last/extrema numeric values
+and counts, and publish on source/lifecycle changes, new generations, EXIT,
+disable and existing controlled cleanup. The independent continuation trace stays
+available. No extra process-termination hook is used; ExitProcess does not promise
+a final cleanup summary, so lifecycle boundaries preserve the primary evidence.
+With Diagnostic Mode enabled, the camera-writer store trace correlates up to eight
+camera-writer invocations while Cinematic is active per accepted generation across
+PRE, an adjacent post-store observation, and the immediately following same-thread
+invocation for the same source and output. The post-store point is resolved from the validated writer instruction
+sequence and installed only when its patch span cannot overlap the primary writer
+hook. It confirms the output field immediately after that store; it does not prove
+that the render path later consumes the field or that no same-value intervening
+write occurred. If the validated site or non-overlap condition is unavailable,
+only this optional trace is omitted; camera behavior is unchanged.
 
 The production overlay lifecycle log is
 `STALKER2CameraTweaksOverlay.log`. The Overlay has no DXGI factory, game

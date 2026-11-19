@@ -118,12 +118,17 @@ foreach ($entry in $runnerEntries) {
         if ($argument -match '\s') { $runErrors.Add("argument_must_be_separate_token:$($entry.harness):$argument") }
     }
 }
-if ($harnesses.Count -ne 59 -or $harnessNames.Count -ne 59 -or $duplicateHarnessNames.Count -ne 0 -or
-    $duplicateOutputs.Count -ne 0 -or $runnerEntries.Count -ne 62 -or
+if ($harnesses.Count -ne 60 -or $harnessNames.Count -ne 60 -or $duplicateHarnessNames.Count -ne 0 -or
+    $duplicateOutputs.Count -ne 0 -or $runnerEntries.Count -ne 64 -or
     $missingHarnesses.Count -ne 0 -or $unknownHarnesses.Count -ne 0 -or $runErrors.Count -ne 0) {
     $missingInputs.Add('canonical_harness_or_runner_inventory_mismatch')
 }
 $adapterRuns = @($runnerEntries | Where-Object harness -eq 'runtime_native_adapter_harness')
+$parityRuns = @($runnerEntries | Where-Object {
+    $_.harness -eq 'camera_writer_transaction_harness' -and
+    ($_.arguments -join ' ') -eq '--authority-parity'
+})
+if ($parityRuns.Count -ne 1) { $missingInputs.Add('authority_parity_run_contract_mismatch') }
 $zoomRuns = @($runnerEntries | Where-Object harness -eq 'n06_m01_zoom_game_derived_harness')
 $expectedZoomArguments = @('zoom-in off', 'zoom-in on', 'zoom-out off', 'zoom-out on')
 $actualZoomArguments = @($zoomRuns | ForEach-Object { $_.arguments -join ' ' })
@@ -132,9 +137,14 @@ if ($adapterRuns.Count -ne 1 -or $zoomRuns.Count -ne 4 -or
     $missingInputs.Add('native_adapter_or_N06_run_contract_mismatch')
 }
 $scenarioNames = @($registry.native_adapter_contract.scenario_names)
-if ($scenarioNames.Count -ne 112 -or @($scenarioNames | Sort-Object -Unique).Count -ne 112 -or
+$caseBlock = [regex]::Match($adapterSource, 'const char\* cases\[\] = \{([\s\S]*?)\};').Groups[1].Value
+$actualScenarioNames = @([regex]::Matches($caseBlock, '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
+if ($actualScenarioNames.Count -eq 0 -or
+    @($scenarioNames | Sort-Object -Unique).Count -ne $scenarioNames.Count -or
+    @($actualScenarioNames | Sort-Object -Unique).Count -ne $actualScenarioNames.Count -or
+    @(Compare-Object $scenarioNames $actualScenarioNames).Count -ne 0 -or
     @($registry.native_adapter_contract.diagnostic_modes).Count -ne 2 -or
-    $registry.native_adapter_contract.child_process_count -ne 224) {
+    $registry.native_adapter_contract.child_process_count -ne ($scenarioNames.Count * 2)) {
     $missingInputs.Add('native_adapter_scenario_mode_inventory_mismatch')
 }
 
@@ -148,7 +158,7 @@ if ($legacyCompileLines.Count -gt 0) {
     $legacyCompileNames = @($legacyCompileLines | ForEach-Object {
         [regex]::Match($_, '/OUT:build-artifacts\\tests\\([^\\]+)\.exe').Groups[1].Value
     })
-    if ($legacyCompileNames.Count -ne 59 -or @(Compare-Object ($legacyCompileNames | Sort-Object) ($harnessNames | Sort-Object)).Count -ne 0) {
+    if ($legacyCompileNames.Count -ne 60 -or @(Compare-Object ($legacyCompileNames | Sort-Object) ($harnessNames | Sort-Object)).Count -ne 0) {
         $missingInputs.Add('legacy_compile_contract_parity')
     }
     foreach ($compileLine in $legacyCompileLines) {

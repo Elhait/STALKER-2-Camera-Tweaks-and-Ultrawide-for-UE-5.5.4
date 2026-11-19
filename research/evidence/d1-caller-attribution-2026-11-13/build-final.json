@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": true,
+  "ExpectedDescendantsCleaned": true,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "31352:E:\\Work\\Visual Studio Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\vctip.exe",
+  "Output": "ninja: Entering directory `build-artifacts/cm/test-suite'\r\n[1/3] Validating localization catalogs and embedded resources\r\nlocales=18 canonical=en keys=216 registry_lookup=PASS locale_parity=PASS placeholders=PASS utf8=PASS embedded_resources=PASS generic_manager=PASS registry_selector=PASS single_asi=PASS embedded_font_profiles=PASS locale_metadata_glyphs=PASS selector_font_faces=PASS camera_state_view_boundary=PASS right_tooltip_coverage_18_locales=PASS full_row_tooltip_hitbox=PASS camera_state_toggle=PASS proggyclean_merge=PASS integer_font_sizes=PASS\r\nfont_rendering_scope=offline embedded glyph coverage; Arabic shaping/bidi/RTL and runtime visual rendering not established\r\r\n[2/3] Building CXX object CMakeFiles\\runtime_native_adapter_harness.dir\\tests\\plugin\\runtime_native_adapter_harness.cpp.obj\r\n[3/3] Linking CXX executable tests\\runtime_native_adapter_harness.exe\r\n",
+  "ProcessId": 25296
+}

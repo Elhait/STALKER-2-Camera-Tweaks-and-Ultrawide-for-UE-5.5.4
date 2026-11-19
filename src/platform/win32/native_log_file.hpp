@@ -4,6 +4,35 @@
 
 namespace platform::win32
 {
+    // Overlapping game launches must not compete for one diagnostic file.
+    // Keep the canonical path when available; use one reusable fallback slot
+    // for sharing conflicts. Never overwrite a slot held by a live owner.
+    // Configuration/staging NativeFile callers retain their strict semantics.
+    inline bool OpenProcessLogFile(NativeFile& file, const wchar_t* path) noexcept
+    {
+        const bool canonicalOpened = file.Open(path, true);
+        if (!canonicalOpened && GetLastError() != ERROR_SHARING_VIOLATION) return false;
+        try {
+            std::wstring fallback(path);
+            if (fallback.ends_with(L".log")) fallback.resize(fallback.size() - 4);
+            fallback += L".PID.log";
+            if (canonicalOpened) {
+                // Best effort only: a live NativeFile owner denies delete
+                // sharing. Cleanup failure must not disable the canonical log.
+                DeleteFileW(fallback.c_str());
+                return true;
+            }
+            if (!file.Open(fallback.c_str(), true)) return false;
+            OutputDebugStringW((L"STALKER2CameraTweaks: process log fallback: " +
+                fallback + L"\n").c_str());
+            return true;
+        } catch (...) {
+            if (canonicalOpened) return true;
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            return false;
+        }
+    }
+
     // Session-local limit: retain the beginning and one explicit marker, then
     // suppress further records without repeated I/O or logger-error recursion.
     class NativeLogFile final
@@ -13,7 +42,7 @@ namespace platform::win32
             : maximumBytes_(maximumBytes) {}
         bool Open(const wchar_t* path, bool write = true) noexcept
         {
-            if (!write || !file_.Open(path, true)) return false;
+            if (!write || !OpenProcessLogFile(file_, path)) return false;
             written_ = 0;
             suppressed_ = false;
             return true;

@@ -30,6 +30,15 @@ namespace cinematics
         bool flagsValid{};
     };
 
+    struct AdmittedWriterOutput
+    {
+        bool valid{};
+        std::uint64_t generation{};
+        std::uint64_t sequence{};
+        std::uintptr_t source{};
+        std::uintptr_t output{};
+    };
+
     struct SharedWriterPairTransition
     {
         bool initialized{};
@@ -58,6 +67,7 @@ namespace cinematics
         std::uintptr_t aspectStoreTargetObject{};
         std::uintptr_t conflictingAspectStoreTargetObject{};
         std::uintptr_t associatedWriterRsi{};
+        // Latest output observed with the confirmed source; not admission.
         std::uintptr_t observedWriterRbx{};
         bool writerObserved{};
         bool associationValid{};
@@ -67,10 +77,11 @@ namespace cinematics
         InitialEstablishmentEndReason initialEstablishmentEndReason{
             InitialEstablishmentEndReason::None};
         SharedWriterObservation latestWriter{};
+        AdmittedWriterOutput lastAdmittedOutput{};
     };
 
-    // Generation-scoped RSI association authorizes only initial establishment;
-    // it does not authorize continuation or recovery mutation.
+    // Generation-scoped source association and per-invocation output admission
+    // authorize cinematic retention. Cached outputs are historical metadata.
     class CinematicWriterAssociation
     {
     public:
@@ -86,10 +97,15 @@ namespace cinematics
             std::uintptr_t output, float rawFov, float aspect, bool aspectValid,
             std::uint8_t flags, bool flagsValid,
             SharedWriterPairTransition* pairTransition = nullptr);
+        bool AdmitWriterOutput(camera::CoordinatorState owner,
+            bool correctionEnabled, std::uint64_t generation,
+            std::uintptr_t source, std::uintptr_t output,
+            std::uint64_t observationSequence);
         bool AuthorizeInitialEstablishmentRetention(
             camera::CoordinatorState owner, bool correctionEnabled,
             bool acceptedGenerationValid, bool targetEstablished,
             std::uint64_t activeGeneration, std::uintptr_t writerRsi,
+            std::uintptr_t writerOutput, std::uint64_t observationSequence,
             float writerInputFov);
         CinematicWriterAssociationSnapshot Read() const;
 
@@ -106,7 +122,8 @@ namespace cinematics
         bool valid{};
         std::uint64_t generation{};
         std::uintptr_t writerRsi{};
-        std::uintptr_t observedWriterRbx{};
+        std::uintptr_t lastAdmittedWriterOutput{};
+        std::uint64_t lastAdmittedWriterSequence{};
         bool recoveryComplete{};
 
         constexpr bool HasRecoveryAuthority() const noexcept
@@ -138,6 +155,7 @@ namespace cinematics
     {
         RetainTransformedTarget,
         RetainContinuationTarget,
+        RetainMappedActivationSample,
         PassThroughInterpolation,
         PassThroughUnclassified,
     };
@@ -185,9 +203,11 @@ namespace cinematics
     struct CinematicBaselineSelection
     {
         float targetBaselineFov{};
+        float authoredReferenceFov{};
         CinematicBaselineValueOrigin valueOrigin{
             CinematicBaselineValueOrigin::AuthoredEnter};
         bool usedGameplayBaselineValue{};
+        bool gameplayRetentionWitnessAvailable{};
     };
 
     CinematicBaselineSelection SelectCinematicBaseline(bool gameplayHorPlusRequested,

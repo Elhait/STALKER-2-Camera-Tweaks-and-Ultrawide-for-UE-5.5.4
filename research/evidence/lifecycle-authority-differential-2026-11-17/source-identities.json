@@ -1,0 +1,22 @@
+[
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\src\\plugin\\runtime.cpp",
+    "Hash": "489D6644F63636679B491B4C850ED75239D122E99C48B6ADB00031B29CB977FA"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\src\\plugin\\lifecycle_authority_core.hpp",
+    "Hash": "52703CBF5B718B2BDC694F01A39A321A162BCA70D5B96CC3C7A276178B7A0A46"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\lifecycle_authority_parity_cases.hpp",
+    "Hash": "2303136403A71C4AB2BECFFFFC0FB8FF2C2FE765FAC1825037175741A584F2B7"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\camera_writer_transaction_harness.cpp",
+    "Hash": "634E3E21372F4F2471723AB4CA2EA31607BB413756E12AD52D1B28B7BE1C89E0"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\tests\\plugin\\lifecycle_authority_m1_harness.cpp",
+    "Hash": "912443E46A6CE1346E0EF12FDFDF8D26C5D3DB692934F26A5C2CA964B403FD9E"
+  }
+]

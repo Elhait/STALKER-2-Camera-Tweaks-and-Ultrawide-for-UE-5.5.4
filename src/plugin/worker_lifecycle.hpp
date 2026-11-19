@@ -38,7 +38,7 @@ namespace plugin
         static DWORD WINAPI ThreadStartThunk(void* parameter) noexcept;
 
         HANDLE stopEvent_{};
-        HANDLE workers_[4]{};
+        HANDLE workers_[5]{};
         std::size_t workerCount_{};
     };
 }

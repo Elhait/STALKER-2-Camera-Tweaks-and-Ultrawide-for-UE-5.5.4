@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "shadow_match generation=5 provider=armer-setter-writer policy=Reduced output=153.925 target=149.071 (captured)\r\nshadow_match PID7372 completion=GameplayNativeNumericBaseline native=130.311 target=153.931 (captured contract)\r\nshadow_divergence new_receiver current=GameplayEligible authority=Unknown baseline=Invalid\r\nPASS: lifecycle_authority_shadow_replay assertions=31\r\n",
+  "ProcessId": 22028
+}

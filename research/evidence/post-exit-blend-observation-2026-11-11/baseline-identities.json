@@ -1,0 +1,14 @@
+[
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\STALKER2CameraTweaks.asi",
+    "SHA256": "8488120F244D377E9B39BFF8CFF941B6C6C106021B74D8AD75E3D62B5D89FC0C"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\build-artifacts\\cm\\candidate\\production-tOFF-dOFF\\bin\\STALKER2CameraTweaks.asi",
+    "SHA256": "8488120F244D377E9B39BFF8CFF941B6C6C106021B74D8AD75E3D62B5D89FC0C"
+  },
+  {
+    "Path": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\build-artifacts\\cm\\candidate\\diagnostic-tOFF-dOFF\\bin\\STALKER2CameraTweaksDiagnostic.asi",
+    "SHA256": "C8124010DBE23DD62A7F930F37B8332024D32077CE6CDA3CEA5370FD279002CA"
+  }
+]

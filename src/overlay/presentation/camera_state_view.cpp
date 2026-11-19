@@ -1,4 +1,5 @@
 #include "camera_state_view.hpp"
+#include "../localization/localization_manager.hpp"
 #include "aspect_ratio_format.hpp"
 #include "camera_integration.hpp"
 
@@ -120,7 +121,7 @@ namespace overlay
     }
 
     void DrawCameraStateView(const plugin::OverlaySemanticSnapshot& semantic,
-        const CameraIntegrationStatus& integration)
+        const CameraIntegrationStatus& integration, const LocalizationManager& localization)
     {
         const auto& state = semantic.cameraState;
         if (!semantic.cameraStateValid) {
@@ -192,11 +193,28 @@ namespace overlay
         ImGui::SeparatorText("FOV");
         if (!BeginFields("camera_state_fov")) return;
         const auto gameplayFov = Number(integration.gameplayFov, integration.gameplayFovValid);
-        DrawField("Gameplay FOV", gameplayFov.c_str());
+        DrawField(localization.Text(loc::camera_state::GameplayFov).c_str(), gameplayFov.c_str());
         DrawField("Provenance", camera::EvidenceProvenanceName(state.evidence.gameplayFov.provenance));
         DrawField("Freshness", Freshness(integration.gameplayFovFreshness));
+        const auto drawFact = [&](loc::Key key, const camera::CameraFovFact& fact) {
+            DrawField(localization.Text(key).c_str(), Number(fact.value, fact.valid).c_str());
+            DrawField("Provenance", camera::EvidenceProvenanceName(fact.provenance));
+            DrawField("Freshness", Freshness(fact.freshness));
+            DrawField(localization.Text(loc::camera_state::Boundary).c_str(),
+                camera::CameraFovBoundaryName(fact.boundary));
+            DrawField("Source", Source(fact.sourceValid, fact.source).c_str());
+        };
+        drawFact(loc::camera_state::NeutralFov, state.evidence.neutralGameplayFov);
+        drawFact(loc::camera_state::WriterInput, state.evidence.writerInputFov);
+        drawFact(loc::camera_state::PostStoreFov, state.evidence.postStoreFov);
+        drawFact(loc::camera_state::PostHelperFov, state.evidence.postHelperFov);
+        drawFact(loc::camera_state::EffectiveFov, camera::EffectiveCameraFov(state.evidence));
+        DrawField(localization.Text(loc::camera_state::WriterTransaction).c_str(),
+            Counter(state.evidence.writerTransaction.Valid(), state.evidence.writerTransaction.id).c_str());
         const auto nativeFov = Number(integration.nativeFov, integration.nativeFovValid);
-        DrawField("Native FOV", nativeFov.c_str());
+        DrawField(localization.Text(loc::camera_state::Native).c_str(), nativeFov.c_str());
+        DrawField(localization.Text(loc::camera_state::Boundary).c_str(),
+            camera::CameraFovBoundaryName(state.evidence.nativeFov.boundary));
         DrawField("Provenance", camera::EvidenceProvenanceName(state.evidence.nativeFov.provenance));
         DrawField("Freshness", Freshness(integration.nativeFovFreshness));
         const auto targetFov = Number(integration.horPlusTargetFov, integration.horPlusTargetFovValid);
@@ -204,7 +222,7 @@ namespace overlay
         DrawField("Provenance", camera::EvidenceProvenanceName(state.evidence.horPlusTargetFov.provenance));
         DrawField("Freshness", Freshness(integration.horPlusTargetFovFreshness));
         const auto outputFov = Number(integration.currentOutputFov, integration.currentOutputFovValid);
-        DrawField("Current Output FOV", outputFov.c_str());
+        DrawField(localization.Text(loc::camera_state::CurrentOutput).c_str(), outputFov.c_str());
         DrawField("Provenance", camera::EvidenceProvenanceName(state.evidence.currentOutputFov.provenance));
         DrawField("Freshness", Freshness(integration.currentOutputFovFreshness));
         const auto writerAspect = Aspect(state.evidence.aspect, state.evidence.aspectValid);

@@ -1,0 +1,11 @@
+{
+  "ExitCode": 1,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "FAIL: foreign_writer_without_owner_departure_preserves_pending_recovery\r\nFAIL: owner_to_new_receiver_retires_recovery_before_same_writer_gameplay\r\nFAIL: foreign_writer_without_owner_departure_preserves_pending_recovery\r\nFAIL: owner_to_new_receiver_retires_recovery_before_same_writer_gameplay\r\nFAIL: Authority native Cinematic boundaries OFF/ON\r\n",
+  "ProcessId": 27760
+}

@@ -294,20 +294,35 @@ namespace
             [](std::string) {});
     }
 
-    bool TestStagingNameOwnership(const std::filesystem::path& directory)
+    struct StagingOwnershipResult
+    {
+        bool passed{};
+        bool hardlinkSkipped{};
+    };
+
+    StagingOwnershipResult TestStagingNameOwnership(
+        const std::filesystem::path& directory)
     {
         const auto path = directory / L"owned-staging.ini";
         const auto staging = std::filesystem::path(path.wstring() + L".tmp");
         const auto victim = directory / L"unrelated.txt";
         const std::string original = "[Gameplay]\nEnabled=true\n";
         const std::string sentinel = "unrelated data must survive";
-        if (!WriteText(path, original) || !WriteText(staging, sentinel)) return false;
+        if (!WriteText(path, original) || !WriteText(staging, sentinel)) return {};
         const bool occupied = !Persist(path, "false") && !Synchronize(path) &&
             ReadText(path) == original && ReadText(staging) == sentinel;
-        if (!DeleteFileW(staging.c_str()) || !WriteText(victim, sentinel) ||
-            !CreateHardLinkW(staging.c_str(), victim.c_str(), nullptr)) {
-            std::printf("hardlink_fixture_setup_error=%lu occupied=%d\n", GetLastError(), occupied);
-            return false;
+        if (!DeleteFileW(staging.c_str()) || !WriteText(victim, sentinel)) return {};
+        if (!CreateHardLinkW(staging.c_str(), victim.c_str(), nullptr)) {
+            const DWORD error = GetLastError();
+            if (error == ERROR_ACCESS_DENIED || error == ERROR_NOT_SUPPORTED ||
+                error == ERROR_INVALID_FUNCTION || error == ERROR_PRIVILEGE_NOT_HELD) {
+                std::printf("HARNESS_SUBCASE_SKIP: hardlink_ownership unavailable_error=%lu\n",
+                    error);
+                return {occupied, true};
+            }
+            std::printf("hardlink_fixture_setup_error=%lu occupied=%d\n",
+                error, occupied);
+            return {};
         }
         const bool linked = !Persist(path, "false") && !Synchronize(path) &&
             ReadText(path) == original && ReadText(victim) == sentinel &&
@@ -318,7 +333,7 @@ namespace
             ReadText(victim) == sentinel;
         std::printf("staging_ownership_details occupied=%d linked=%d write_refused=%d\n",
             occupied, linked, writeRefused);
-        return occupied && linked && writeRefused;
+        return {occupied && linked && writeRefused, false};
     }
 
     bool TestOversizedConfigIsNotReadOrRewritten(const std::filesystem::path& directory)
@@ -1127,17 +1142,29 @@ namespace
 
     bool TestCinematicFovModeConfig(const std::filesystem::path& path)
     {
-        if (!WriteText(path, "[Cinematics]\nFovMode=GameplayHorPlus\n")) return false;
         config::FeatureConfig configuration{};
-        if (!config::LoadFeatureConfig(path, configuration,
-            [](const std::filesystem::path&) { return false; },
-            [](std::string) {})) return false;
-        if (configuration.cinematicFovMode != config::CinematicFovMode::GameplayHorPlus)
-            return false;
+        const auto noSynchronization = [](const std::filesystem::path&) { return false; };
+        for (const auto* legacyValue : {"GameplayHorPlus", "MatchGameplay"}) {
+            const std::string legacy = std::string("[Gameplay]\nMode=RuntimeCombine\n[Cinematics]\nFovMode=") +
+                legacyValue + "\n";
+            if (!WriteText(path, legacy) ||
+                !config::LoadFeatureConfig(path, configuration,
+                    noSynchronization, [](std::string) {}) ||
+                configuration.cinematicFovMode != config::CinematicFovMode::GameplayHorPlus ||
+                ReadText(path) != legacy)
+                return false;
+            if (!config::PersistConfigValue(path, "Gameplay", "Enabled", "false",
+                [](std::string) {})) return false;
+            const auto canonical = ReadText(path);
+            if (canonical.find("FovMode=GameplayHorPlus") == std::string::npos ||
+                canonical.find("Mode=RuntimeCombine") == std::string::npos ||
+                canonical.find("Enabled=false") == std::string::npos)
+                return false;
+        }
         if (!WriteText(path, "[Cinematics]\nFovMode=invalid\n")) return false;
         configuration = {};
         if (!config::LoadFeatureConfig(path, configuration,
-            [](const std::filesystem::path&) { return false; },
+            noSynchronization,
             [](std::string) {})) return false;
         if (configuration.cinematicFovMode != config::CinematicFovMode::GameplayHorPlus)
             return false;
@@ -1791,10 +1818,12 @@ int main()
     }
 
     const auto path = directory / "config.ini";
-    const bool secureStaging = TestStagingNameOwnership(directory);
+    const auto secureStaging = TestStagingNameOwnership(directory);
     const bool boundedRead = TestOversizedConfigIsNotReadOrRewritten(directory);
-    std::printf("staging_name_ownership_and_hardlinks=%s oversized_config_refused=%s\n",
-        secureStaging ? "PASS" : "FAIL", boundedRead ? "PASS" : "FAIL");
+    std::printf("staging_name_ownership=%s hardlink_subcase=%s oversized_config_refused=%s\n",
+        secureStaging.passed ? "PASS" : "FAIL",
+        secureStaging.hardlinkSkipped ? "SKIP" : secureStaging.passed ? "PASS" : "FAIL",
+        boundedRead ? "PASS" : "FAIL");
     const auto initialPath = directory / "initial.ini";
     const auto readOnlyPath = directory / "read-only.ini";
     const auto noOpPath = directory / "no-op.ini";
@@ -1875,7 +1904,7 @@ int main()
         userCommentsRemoved ? "PASS" : "FAIL",
         modifiedLegacyReplaced ? "PASS" : "FAIL",
         styleNormalization ? "PASS" : "FAIL");
-    return secureStaging && boundedRead && normal && midReadFailure && duplicateOverlayPlacement && logicalSettings && multiValueAtomic && staging && replacement && readOnly && templateNormal && templateStaging &&
+    return secureStaging.passed && boundedRead && normal && midReadFailure && duplicateOverlayPlacement && logicalSettings && multiValueAtomic && staging && replacement && readOnly && templateNormal && templateStaging &&
         templateReplacement && templateRepair && unknownRecovery && bomMigration && diagnostics && overlayLanguage &&
         overlayEnabled && overlayFontSize && cinematicFovMode && cinematicMigrationRoundTrips &&
         dialogueMigrationRoundTrips &&

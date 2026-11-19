@@ -1,0 +1,14 @@
+{
+  "runtime_log_sha256": "D55E48C02A2F9C49617989188EFF192D0848401CF9509F08021DF256BD29DB77",
+  "artifact_sha256": "D206A6AF12882E8EE4C9E50E17D0CCD6211344EBA0EB878DE6983FC4343A66A5",
+  "artifact_size_bytes": 3911168,
+  "focused_tests": [
+    "camera_writer_transaction_harness",
+    "dialogue_boundary_transaction_harness",
+    "dialogue_fov_harness",
+    "runtime_native_adapter_harness"
+  ],
+  "runtime_test_required": true,
+  "control_dialogue_repeated": false,
+  "notes": "The user-reported provider-to-Dialogue endpoint jump is addressed by exact provider activation-bound writer continuation. Visual acceptance is still pending."
+}

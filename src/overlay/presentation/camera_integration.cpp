@@ -231,6 +231,13 @@ namespace overlay
             result.nativeWriterAspect = snapshot.cameraState.evidence.aspect;
             result.horPlusTargetFov = evidence.horPlusTargetFov.value;
             result.currentOutputFov = evidence.currentOutputFov.value;
+            result.writerInputFov = evidence.writerInputFov.value;
+            result.writerInputFovValid = IsUsableFovFact(evidence.writerInputFov);
+            result.writerInputFovFreshness = evidence.writerInputFov.freshness;
+            const auto effective = camera::EffectiveCameraFov(evidence);
+            result.effectiveFov = effective.value;
+            result.effectiveFovValid = effective.valid;
+            result.effectiveFovFreshness = effective.freshness;
             result.gameplayFovFreshness = evidence.gameplayFov.freshness;
             result.nativeFovFreshness = evidence.nativeFov.freshness;
             result.horPlusTargetFovFreshness = evidence.horPlusTargetFov.freshness;

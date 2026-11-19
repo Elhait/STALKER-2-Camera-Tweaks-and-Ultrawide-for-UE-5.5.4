@@ -1,0 +1,41 @@
+[2026-11-16 18:09:27.353] Runtime identity: modSha256=491829BABFC0830498072A53ACAE5944147AB124BD8976750E26CA9FA1A716AE gameSha256=2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479.
+[2026-11-16 18:09:27.354] Worker started: camera-state diagnostic log.
+[2026-11-16 18:09:27.354] CAMERA_STATE_DIAGNOSTIC capability=available queue_capacity=8192 writer_site=primary_camera_fov_store.
+[2026-11-16 18:09:27.616] Zoom observer available: native-contract=validated ZOOM_IN RVA=0x531af1 ZOOM_OUT RVA=0x531c9e.
+[2026-11-16 18:09:27.616] Configuration: Gameplay.Enabled=1 Gameplay.Mode=RuntimeCombine Cinematics.Enabled=true Cinematics.Mode=Auto Cinematic.FovMode=GameplayHorPlus Dialogue.Enabled=true Dialogue.Mode=Reduced Diagnostics.Enabled=true.
+[2026-11-16 18:09:27.616] Gameplay aspect fix loaded. FOV is preserved from the game's settings.
+[2026-11-16 18:09:27.767] Cinematic aspect signature validated at RVA=0x6b12525.
+[2026-11-16 18:09:27.767] Global cinematic aspect store hooked: policy=Auto.
+[2026-11-16 18:09:27.953] Cinematic FOV resolver: ENTER matches=1 EXIT legacy matches=0.
+[2026-11-16 18:09:28.054] Cinematic FOV resolver: EXIT indexed fallback=ACTIVE matches=1.
+[2026-11-16 18:09:28.054] Cinematic FOV ENTER structural/decode/operand validation=PASS.
+[2026-11-16 18:09:28.054] Cinematic FOV EXIT structural/decode/operand validation=PASS mode=indexed.
+[2026-11-16 18:09:28.055] Cinematic FOV call-target validation: ENTER=PASS EXIT=PASS sameTarget=PASS.
+[2026-11-16 18:09:28.055] Cinematic FOV signatures validated at ENTER RVA=0x35c7da1 EXIT RVA=0x35c7d3f consumer=0x7ff78511ff7c.
+[2026-11-16 18:09:28.056] BLEND_CALL_RETURN_MAPPING enter_original=0x7ff781be7da6 enter_relocated=0x7ff77e5e0005 exit_original=0x7ff781be7d44 exit_relocated=0x7ff77e5d0005 validation=exact_E8_same_target zero_means_unavailable=1.
+[2026-11-16 18:09:28.263] POST_EXIT_BLEND_ACTIVATION_CAPABILITY resolver=validated matches=1 availability=production-owner-handoff new_native_points=0.
+[2026-11-16 18:09:28.373] CAMERA_STATE_DIAGNOSTIC_SUMMARY phase=periodic transactions=0 postStores=0 postProcessCorrelated=0 postProcessIdentityMismatches=0 postProcessReadbackUnavailable=0 readbackMismatches=0 acceptedEvents=0 droppedQueueFull=0 droppedContended=0 coalescedPostProcessTransactions=0 eventsWithoutWorker=0 pending=0.
+[2026-11-16 18:09:28.523] U2_SHADOW_CAPABILITY producer_resolver=validated-provider-call-path matches=1 producer_return=0x7ff781474582 operand_observed=70 mapping=conditional_affine_only branch=unobserved rendered_start=unobserved new_hooks=0.
+[2026-11-16 18:09:28.524] CINEMATIC_CONSUMER_CAPABILITY resolver=validated-linked-call-branches spans_valid=1 additional_points=4 partial_paths=OutcomeUnobserved.
+[2026-11-16 18:09:28.528] POST_EXIT_BLEND_ACTIVATION_CAPABILITY hook=available.
+[2026-11-16 18:09:28.532] FOV_CAPTURE_CONTROL available=1 event=Local\STALKER2CameraTweaks.FovCapture.20020 mode=manual_one_shot next_accepted_enter=1 seconds=60 combined_records=192.
+[2026-11-16 18:09:28.532] U2_CONTROL_CAPABILITY available=1 event=Local\STALKER2CameraTweaks.U2Control.20020 phases=2 records_per_phase=128 seconds_per_phase=20 consume=dialogue_callback.
+[2026-11-16 18:09:28.532] Cinematics feature initialized transactionally: policy=Auto.
+[2026-11-16 18:09:28.699] Camera-writer signature validated at RVA=0x9cd2eb.
+[2026-11-16 18:09:28.699] CAMERA_POST_PROCESS capability=resolved helperRva=0x9ce0ee observationRva=0x9cd3f6.
+[2026-11-16 18:09:28.699] Installing validated gameplay camera-writer observer.
+[2026-11-16 18:09:28.703] CAMERA_WRITER_STORE_TRACE capability=available site=validated_instruction_after_fov_store hook_span=8.
+[2026-11-16 18:09:28.705] CAMERA_POST_PROCESS capability=available helperRva=0x9ce0ee observationRva=0x9cd3f6 site=helper_return outputReadback=enabled.
+[2026-11-16 18:09:28.705] CAMERA_STATE_WRITER_COVERAGE siteId=1 name=primary_camera_fov_store entry=validated postStore=verified-site-available postProcess=helper-return-available globalCoverage=unknown otherWriterSites=not-excluded.
+[2026-11-16 18:09:28.706] Validated gameplay camera-writer observer installed: true correctionEnabled=true.
+[2026-11-16 18:09:28.848] POST_EXIT_BLEND_CAPABILITY layout=validated availability=ini-gated new_native_points=2 activation_epoch_observer=bounded post_setter_observer=bounded record_limit=192.
+[2026-11-16 18:09:29.062] POST_EXIT_BLEND_POST_SETTER_CAPABILITY resolver=validated matches=1 availability=ini-gated.
+[2026-11-16 18:09:29.068] POST_EXIT_BLEND_POST_SETTER_CAPABILITY hook=available.
+[2026-11-16 18:09:29.068] Dialogue boundary hook installed: RVA=0xcce673 policy=Reduced.
+[2026-11-16 18:09:29.068] Initialization summary: Gameplay=AVAILABLE Cinematics=AVAILABLE Dialogue=AVAILABLE.
+[2026-11-16 18:09:29.068] Worker started: hotkey.
+[2026-11-16 18:09:29.068] Hotkey worker active: OverlayToggle=Delete Enabled=false Gameplay=F9 CinematicAspect=F9 CinematicFov=F9 Dialogue=F9.
+[2026-11-16 18:09:29.068] Initialization status: Gameplay=AVAILABLE Cinematics=AVAILABLE Dialogue=AVAILABLE Hotkeys=AVAILABLE Diagnostics=AVAILABLE ZoomObserver=AVAILABLE.
+[2026-11-16 18:09:29.417] CAMERA_STATE_DIAGNOSTIC_SUMMARY phase=periodic transactions=0 postStores=0 postProcessCorrelated=0 postProcessIdentityMismatches=0 postProcessReadbackUnavailable=0 readbackMismatches=0 acceptedEvents=0 droppedQueueFull=0 droppedContended=0 coalescedPostProcessTransactions=0 eventsWithoutWorker=0 pending=0.
+[2026-11-16 18:09:30.431] CAMERA_STATE_DIAGNOSTIC_SUMMARY phase=periodic transactions=0 postStores=0 postProcessCorrelated=0 postProcessIdentityMismatches=0 postProcessReadbackUnavailable=0 readbackMismatches=0 acceptedEvents=0 droppedQueueFull=0 droppedContended=0 coalescedPostProcessTransactions=0 eventsWithoutWorker=0 pending=0.
+[2026-11-16 18:09:31.434] CAMERA_STATE_DIAGNOSTIC_SUMMARY phase=periodic transactions=0 postStores=0 postProcessCorrelated=0 postProcessIdentityMismatches=0 postProcessReadbackUnavailable=0 readbackMismatches=0 acceptedEvents=0 droppedQueueFull=0 droppedContended=0 coalescedPostProcessTransactions=0 eventsWithoutWorker=0 pending=0.

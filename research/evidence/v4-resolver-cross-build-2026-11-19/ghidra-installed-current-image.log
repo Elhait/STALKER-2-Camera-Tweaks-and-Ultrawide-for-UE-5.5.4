@@ -1,0 +1,63 @@
+INFO  Using log config file: jar:file:/E:/Work/Slaker2%20mods/Instruments/ghidra_12.1.3_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: E:\Work\Slaker2 mods\02-Research\Ghidra\workspace\user-profile\AppData\Roaming\ghidra\ghidra_12.1.3_PUBLIC\application.log (LoggingInitialization)  
+INFO  Loading user preferences: E:\Work\Slaker2 mods\02-Research\Ghidra\workspace\user-profile\AppData\Roaming\ghidra\ghidra_12.1.3_PUBLIC\preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (747 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: SHA1PRNG (SecureRandomFactory)  
+INFO  Trust manager disabled, cacerts have not been set (DefaultTrustManagerFactory)  
+INFO  Headless startup complete (2420 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 59 extension points (20 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\WildcardAssembler\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\FileFormats\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\SystemEmulation\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\Base\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Processors\8051\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Processors\DATA\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Processors\PIC\ghidra_scripts
+    E:\Work\Slaker2 mods\02-Research\Ghidra\temp-v4-current-image\scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\SwiftDemangler\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Processors\Atmel\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\Decompiler\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\MicrosoftCodeAnalyzer\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\BytePatterns\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\PyGhidra\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\GnuDemangler\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Debug\Debugger\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Processors\JVM\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Debug\Debugger-rmi-trace\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\FunctionID\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\VersionTracking\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\BSim\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\DecompilerDependent\ghidra_scripts
+    E:\Work\Slaker2 mods\Instruments\ghidra_12.1.3_PUBLIC\Ghidra\Features\PDB\ghidra_scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Opening existing project: E:\Work\Slaker2 mods\02-Research\Ghidra\temp-v4-current-image\V4Current (HeadlessAnalyzer)  
+INFO  Opening project: E:\Work\Slaker2 mods\02-Research\Ghidra\temp-v4-current-image\V4Current (HeadlessProject)  
+INFO  REPORT: Processing read-only project file: /Stalker2-Win64-Shipping.exe (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: ValidateV4ResolverSet20261119.java  (HeadlessAnalyzer)  
+INFO  SCRIPT: E:\Work\Slaker2 mods\02-Research\Ghidra\temp-v4-current-image\scripts\ValidateV4ResolverSet20261119.java (HeadlessAnalyzer)  
+INFO  ValidateV4ResolverSet20261119.java> PROGRAM=Stalker2-Win64-Shipping.exe HASH=2bd3f115b959a8eee7e5c4b42b0142dd0025bd437e1014f92dfc60b9afee5479 EXPECTED=2bd3f115b959a8eee7e5c4b42b0142dd0025bd437e1014f92dfc60b9afee5479 IMAGE_BASE=140000000 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> IDENTITY=PASS TEXT_START=140001000 TEXT_SIZE=130738688 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> GAMEPLAY_WRITER=1 RVA=0x9cd2d2 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> WRITER_POSTPROCESS_DIAGNOSTIC=1 RVA=0x9cd3d8 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> DIALOGUE=1 RVA=0xcce66a (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> POST_SETTER_DIAGNOSTIC=1 RVA=0xcce673 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> POST_EXIT_ACTIVATION=1 RVA=0x30dbd68 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> ZOOM_IN=1 RVA=0x531ae4 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> ZOOM_OUT=1 RVA=0x531c91 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> LANGUAGE_READER=1 RVA=0x575c52c (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> LANGUAGE_FREE_ANCHOR=1 RVA=0x1fedd5d (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> CINEMATIC_ASPECT=1 RVA=0x6b1250c (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> CINEMATIC_ENTER=1 RVA=0x35c7d99 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> CINEMATIC_EXIT_LEGACY=0 RVA=- (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> CINEMATIC_EXIT_INDEXED=1 RVA=0x35c7d35 (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> GAMEPLAY_INSTRUCTION_CONTRACT=PASS (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> CINEMATIC_CALL_AND_VCALL_CONTRACT=PASS selectedExit=indexed (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> CORE_REQUIRED=PASS (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> DIALOGUE_PROVIDER_ACTIVATION=PRESENT (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> ZOOM_PAIR=PRESENT (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> OPTIONAL_DIAGNOSTICS=POSTPROCESS_AND_SETTER_PRESENT (GhidraScript)  
+INFO  ValidateV4ResolverSet20261119.java> LANGUAGE_RESOLVER=PRESENT (GhidraScript)  

@@ -1,0 +1,153 @@
+-- The C compiler identification is MSVC 19.44.35224.0
+-- The CXX compiler identification is MSVC 19.44.35224.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: E:/Work/Visual Studio Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: E:/Work/Visual Studio Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (1.9s)
+-- Generating done (0.7s)
+-- Build files have been written to: E:/Work/Slaker2 mods/01-Projects/STALKER-2-Ultrawide-Fix-for-UE-5.5.4/build-artifacts/cm/u2-shadow-final
+[1/131] Compiling embedded locale and font resources
+[2/131] Compiling ASI version information
+[3/131] Validating localization catalogs and embedded resources
+locales=18 canonical=en keys=215 registry_lookup=PASS locale_parity=PASS placeholders=PASS utf8=PASS embedded_resources=PASS generic_manager=PASS registry_selector=PASS single_asi=PASS embedded_font_profiles=PASS locale_metadata_glyphs=PASS selector_font_faces=PASS camera_state_view_boundary=PASS right_tooltip_coverage_18_locales=PASS full_row_tooltip_hitbox=PASS camera_state_toggle=PASS proggyclean_merge=PASS integer_font_sizes=PASS
+font_rendering_scope=offline embedded glyph coverage; Arabic shaping/bidi/RTL and runtime visual rendering not established
+[4/131] Generating canonical INI documentation header
+[5/131] Building CXX object CMakeFiles\dialogue_source_provenance_harness.dir\tests\diagnostics\dialogue_source_provenance_harness.cpp.obj
+[6/131] Building CXX object CMakeFiles\dialogue_source_provenance_harness.dir\src\diagnostics\dialogue_source_provenance.cpp.obj
+[7/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\plugin\runtime_settings.cpp.obj
+[8/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\plugin\worker_lifecycle.cpp.obj
+[9/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\plugin\feature_status.cpp.obj
+[10/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\config\feature_config.cpp.obj
+[11/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\config\config_repository.cpp.obj
+[12/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\config\config_template.cpp.obj
+[13/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\diagnostics\diagnostic_runtime.cpp.obj
+[14/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\diagnostics\cinematic_continuation_trace.cpp.obj
+[15/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\diagnostics\dialogue_source_provenance.cpp.obj
+[16/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\diagnostics\performance_telemetry.cpp.obj
+[17/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\hooks\signature_scanner.cpp.obj
+[18/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\hooks\instruction_validator.cpp.obj
+[19/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\hooks\hook_set.cpp.obj
+[20/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\gameplay\gameplay_state.cpp.obj
+[21/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\gameplay\gameplay_camera.cpp.obj
+[22/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\gameplay\aspect_policy.cpp.obj
+[23/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\gameplay\horplus_gameplay.cpp.obj
+[24/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\cinematics\cinematic_fov.cpp.obj
+[25/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\cinematics\cinematic_selection.cpp.obj
+[26/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\cinematics\cinematic_aspect.cpp.obj
+[27/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\cinematics\cinematic_initialization.cpp.obj
+[28/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\dialogue\dialogue_fov.cpp.obj
+[29/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\dialogue\dialogue_state.cpp.obj
+[30/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\camera\camera_state_snapshot.cpp.obj
+[31/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\camera\fov_observation.cpp.obj
+[32/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\camera\gameplay_baseline.cpp.obj
+[33/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\camera\gameplay_aspect_restoration.cpp.obj
+[34/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\camera\presentation_state.cpp.obj
+[35/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\camera\horplus.cpp.obj
+[36/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\platform\win32\memory.cpp.obj
+[37/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\platform\win32\sha256.cpp.obj
+[38/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\platform\win32\window.cpp.obj
+[39/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\platform\win32\viewport.cpp.obj
+[40/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presentation\camera_integration.cpp.obj
+[41/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presentation\feature_presentation.cpp.obj
+[42/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presentation\camera_state_view.cpp.obj
+[43/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presentation\selector_documentation_view.cpp.obj
+[44/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presentation\overlay_layout_metrics.cpp.obj
+[45/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presentation\placement_config.cpp.obj
+[46/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\localization_catalog.cpp.obj
+[47/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\localization_formatter.cpp.obj
+[48/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\localization_validator.cpp.obj
+[49/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\localization_manager.cpp.obj
+[50/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\localization_font.cpp.obj
+[51/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\localization_keys.cpp.obj
+[52/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\localization\game_language_reader.cpp.obj
+[53/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\composition\composition_runtime.cpp.obj
+[54/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presenter\composition_presenter_state.cpp.obj
+[55/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\input\input_state.cpp.obj
+[56/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presenter\renderer_state.cpp.obj
+[57/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presenter\renderer_runtime.cpp.obj
+[58/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\src\overlay\presenter\imgui_d3d11_renderer.cpp.obj
+[59/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\external\safetyhook\safetyhook.cpp.obj
+[60/131] Building C object CMakeFiles\runtime_adapter_test_dependencies.dir\external\safetyhook\Zydis.c.obj
+E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\external\safetyhook\Zydis.h(5146): warning C4201: нестандартное расширение: структура (объединение) без имени
+E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\external\safetyhook\Zydis.h(6026): warning C4201: нестандартное расширение: структура (объединение) без имени
+[61/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\external\imgui\imgui.cpp.obj
+[62/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\external\imgui\imgui_draw.cpp.obj
+[63/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\external\imgui\imgui_tables.cpp.obj
+[64/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\external\imgui\imgui_widgets.cpp.obj
+[65/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\external\imgui\backends\imgui_impl_win32.cpp.obj
+[66/131] Building CXX object CMakeFiles\runtime_adapter_test_dependencies.dir\tests\plugin\runtime_owner_binding_probe.cpp.obj
+[67/131] Building CXX object CMakeFiles\runtime_native_adapter_harness.dir\tests\plugin\runtime_native_adapter_harness.cpp.obj
+[68/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\plugin\runtime.cpp.obj
+[69/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\plugin\runtime_settings.cpp.obj
+[70/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\plugin\worker_lifecycle.cpp.obj
+[71/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\plugin\feature_status.cpp.obj
+[72/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\plugin\dll_entry.cpp.obj
+[73/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\config\feature_config.cpp.obj
+[74/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\config\config_repository.cpp.obj
+[75/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\config\config_template.cpp.obj
+[76/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\diagnostics\diagnostic_runtime.cpp.obj
+[77/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\diagnostics\cinematic_continuation_trace.cpp.obj
+[78/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\diagnostics\dialogue_source_provenance.cpp.obj
+[79/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\diagnostics\performance_telemetry.cpp.obj
+[80/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\hooks\signature_scanner.cpp.obj
+[81/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\hooks\instruction_validator.cpp.obj
+[82/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\hooks\hook_set.cpp.obj
+[83/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\gameplay\gameplay_state.cpp.obj
+[84/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\gameplay\gameplay_camera.cpp.obj
+[85/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\gameplay\aspect_policy.cpp.obj
+[86/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\gameplay\horplus_gameplay.cpp.obj
+[87/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\cinematics\cinematic_fov.cpp.obj
+[88/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\cinematics\cinematic_selection.cpp.obj
+[89/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\cinematics\cinematic_aspect.cpp.obj
+[90/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\cinematics\cinematic_initialization.cpp.obj
+[91/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\dialogue\dialogue_fov.cpp.obj
+[92/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\dialogue\dialogue_state.cpp.obj
+[93/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\camera\camera_state_snapshot.cpp.obj
+[94/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\camera\fov_observation.cpp.obj
+[95/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\camera\gameplay_baseline.cpp.obj
+[96/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\camera\gameplay_aspect_restoration.cpp.obj
+[97/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\camera\presentation_state.cpp.obj
+[98/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\camera\horplus.cpp.obj
+[99/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\platform\win32\memory.cpp.obj
+[100/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\platform\win32\sha256.cpp.obj
+[101/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\platform\win32\window.cpp.obj
+[102/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\platform\win32\viewport.cpp.obj
+[103/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presentation\camera_integration.cpp.obj
+[104/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presentation\feature_presentation.cpp.obj
+[105/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presentation\camera_state_view.cpp.obj
+[106/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presentation\selector_documentation_view.cpp.obj
+[107/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presentation\overlay_layout_metrics.cpp.obj
+[108/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presentation\placement_config.cpp.obj
+[109/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\localization_catalog.cpp.obj
+[110/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\localization_formatter.cpp.obj
+[111/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\localization_validator.cpp.obj
+[112/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\localization_manager.cpp.obj
+[113/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\localization_font.cpp.obj
+[114/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\localization_keys.cpp.obj
+[115/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\localization\game_language_reader.cpp.obj
+[116/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\composition\composition_runtime.cpp.obj
+[117/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presenter\composition_presenter_state.cpp.obj
+[118/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\input\input_state.cpp.obj
+[119/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presenter\renderer_state.cpp.obj
+[120/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presenter\renderer_runtime.cpp.obj
+[121/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\src\overlay\presenter\imgui_d3d11_renderer.cpp.obj
+[122/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\external\safetyhook\safetyhook.cpp.obj
+[123/131] Building C object CMakeFiles\STALKER2CameraTweaks.dir\external\safetyhook\Zydis.c.obj
+E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\external\safetyhook\Zydis.h(5146): warning C4201: нестандартное расширение: структура (объединение) без имени
+E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\external\safetyhook\Zydis.h(6026): warning C4201: нестандартное расширение: структура (объединение) без имени
+[124/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\external\imgui\imgui.cpp.obj
+[125/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\external\imgui\imgui_draw.cpp.obj
+[126/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\external\imgui\imgui_tables.cpp.obj
+[127/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\external\imgui\imgui_widgets.cpp.obj
+[128/131] Building CXX object CMakeFiles\STALKER2CameraTweaks.dir\external\imgui\backends\imgui_impl_win32.cpp.obj
+[129/131] Linking CXX shared module bin\STALKER2CameraTweaks.asi
+[130/131] Linking CXX executable tests\runtime_native_adapter_harness.exe
+[131/131] Linking CXX executable tests\dialogue_source_provenance_harness.exe
+Published E:\Work\Slaker2 mods\01-Projects\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\build-artifacts\candidate-u2-shadow\STALKER2CameraTweaks.asi

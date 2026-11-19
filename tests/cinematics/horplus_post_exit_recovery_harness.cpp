@@ -260,19 +260,30 @@ namespace
         cinematics::CinematicWriterAssociationSnapshot association{};
         association.generationActive = true;
         association.generation = 41;
+        association.effectiveSettings.enabled = true;
         association.aspectStoreTargetObject = sourceA;
         association.associatedWriterRsi = sourceA;
         association.observedWriterRbx = 0xC300;
         association.associationValid = true;
+        association.lastAdmittedOutput = { true, 41, 9, sourceA, 0xC300 };
 
         cinematics::CinematicRecoveryOwner owner;
         pass &= Check(owner.Capture(association, 41) && owner.MatchesSource(sourceA),
             "accepted_exit_captures_the_generation_scoped_associated_rsi");
         auto snapshot = owner.Read();
         pass &= Check(snapshot.valid && snapshot.generation == 41 &&
-            snapshot.writerRsi == sourceA && snapshot.observedWriterRbx == 0xC300 &&
+            snapshot.writerRsi == sourceA && snapshot.lastAdmittedWriterOutput == 0xC300 &&
+            snapshot.lastAdmittedWriterSequence == 9 &&
             !snapshot.recoveryComplete,
-            "recovery_owner_keeps_generation_rsi_and_rbx_metadata");
+            "recovery_owner_keeps_generation_source_and_historical_admitted_output");
+
+        auto withRejectedLatestObservation = association;
+        withRejectedLatestObservation.latestWriter = { 10, 4, sourceB, 0xD400 };
+        cinematics::CinematicRecoveryOwner historicalOwner;
+        pass &= Check(historicalOwner.Capture(withRejectedLatestObservation, 41) &&
+            historicalOwner.Read().writerRsi == sourceA &&
+            historicalOwner.Read().lastAdmittedWriterOutput == 0xC300,
+            "rejected_latest_source_does_not_replace_generation_scoped_admitted_output");
 
         const auto foreignSample = [&](float input, std::uint8_t flags,
             bool& wouldMutate, bool& wouldComplete) {
@@ -341,6 +352,14 @@ namespace
         invalid.associatedWriterRsi = sourceB;
         pass &= Check(!owner.Capture(invalid, 41),
             "association_source_target_conflict_fails_closed");
+        invalid = association;
+        invalid.lastAdmittedOutput.generation = 40;
+        pass &= Check(!owner.Capture(invalid, 41),
+            "stale_admitted_output_generation_cannot_capture_exit_owner");
+        invalid = association;
+        invalid.lastAdmittedOutput.output = 0;
+        pass &= Check(!owner.Capture(invalid, 41),
+            "missing_admitted_output_cannot_capture_exit_owner");
 
         // The same source gate used before AspectRecalculation endpoint and
         // atomic handoff paths must reject B without touching either output.
@@ -369,10 +388,12 @@ namespace
         cinematics::CinematicWriterAssociationSnapshot association{};
         association.generationActive = true;
         association.generation = generation;
+        association.effectiveSettings.enabled = true;
         association.aspectStoreTargetObject = sourceA;
         association.associatedWriterRsi = sourceA;
         association.observedWriterRbx = 0xC300;
         association.associationValid = true;
+        association.lastAdmittedOutput = { true, generation, 13, sourceA, 0xC300 };
         cinematics::CinematicRecoveryOwner owner;
         pass &= Check(owner.Capture(association, generation),
             "completion_gate_test_captures_owner_a");
@@ -446,10 +467,12 @@ namespace
         cinematics::CinematicWriterAssociationSnapshot association{};
         association.generationActive = true;
         association.generation = 52;
+        association.effectiveSettings.enabled = true;
         association.aspectStoreTargetObject = sourceA;
         association.associatedWriterRsi = sourceA;
         association.observedWriterRbx = outputA;
         association.associationValid = true;
+        association.lastAdmittedOutput = { true, 52, 17, sourceA, outputA };
         cinematics::CinematicRecoveryOwner owner;
         pass &= Check(owner.Capture(association, 52),
             "writer_change_test_captures_owner_a");

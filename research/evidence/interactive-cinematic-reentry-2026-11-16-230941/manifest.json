@@ -1,0 +1,12 @@
+[
+  {
+    "current_run": true,
+    "sha256": "D9C4FF9AA8B1F42F7410BA428968DEBA843D7B4DCD5EBF54555BFAEA1DD46E60",
+    "file": "STALKER2CameraTweaks.log"
+  },
+  {
+    "current_run": false,
+    "sha256": "7DADB5344077F9A723AC731DD022A32740D6FCA3B134ABA339C26A1ED17E998A",
+    "file": "STALKER2CameraTweaks.PID.log"
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "Internal ctest changing into directory: E:/Work/Slaker2 mods/01-Projects/STALKER-2-Ultrawide-Fix-for-UE-5.5.4/build-artifacts/cm/test-suite\nTest project E:/Work/Slaker2 mods/01-Projects/STALKER-2-Ultrawide-Fix-for-UE-5.5.4/build-artifacts/cm/test-suite\n    Start 2: lifecycle_authority_m1\n1/3 Test #2: lifecycle_authority_m1 ................   Passed    2.16 sec\n    Start 3: lifecycle_authority_parity\n2/3 Test #3: lifecycle_authority_parity ............   Passed    1.65 sec\n    Start 4: lifecycle_authority_m2_transactions\n3/3 Test #4: lifecycle_authority_m2_transactions ...   Passed    0.64 sec\n\n100% tests passed, 0 tests failed out of 3\n\nTotal Test time (real) =   4.46 sec\n",
+  "ProcessId": 12488
+}

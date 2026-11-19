@@ -2603,6 +2603,10 @@ namespace overlay
             const auto gameplayFovValue = formatFovFact(integration.gameplayFov,
                 integration.gameplayFovValid, integration.gameplayFovFreshness);
 
+            const auto writerInputValue = formatFovFact(integration.writerInputFov,
+                integration.writerInputFovValid, integration.writerInputFovFreshness);
+            const auto effectiveValue = formatFovFact(integration.effectiveFov,
+                integration.effectiveFovValid, integration.effectiveFovFreshness);
             static constexpr TooltipOption nativeFovTooltip[] = {
                 {{}, loc::camera_state::Native, loc::tooltip::runtime::NativeFov},
                 {{}, loc::common::Unavailable, loc::tooltip::runtime::NativeFovUnavailable},
@@ -2756,13 +2760,19 @@ namespace overlay
                     !gameplayPolicyAspect.has_value());
 
                 DrawRuntimeTelemetrySubheading("FOV");
-                DrawRuntimeTelemetryRow("Gameplay FOV", gameplayFovValue.c_str(),
+                DrawRuntimeTelemetryRow(localization_.Text(loc::camera_state::GameplayFov), gameplayFovValue.c_str(),
                     localization_, gameplayFovTooltip, !integration.gameplayFovValid);
-                DrawRuntimeTelemetryRow("Native FOV", nativeFovValue.c_str(),
+                DrawRuntimeTelemetryRow(localization_.Text(loc::camera_state::Native), nativeFovValue.c_str(),
                     localization_, nativeFovTooltip, !integration.nativeFovValid);
+                DrawRuntimeTelemetryRow(localization_.Text(loc::camera_state::WriterInput),
+                    writerInputValue.c_str(), localization_, loc::tooltip::runtime::WriterInputFov,
+                    !integration.writerInputFovValid);
+                DrawRuntimeTelemetryRow(localization_.Text(loc::camera_state::EffectiveFov),
+                    effectiveValue.c_str(), localization_, loc::tooltip::runtime::EffectiveFov,
+                    !integration.effectiveFovValid);
                 DrawRuntimeTelemetryRow("HorPlus Target", horPlusFovValue.c_str(),
                     localization_, horPlusFovTooltip, !integration.horPlusTargetFovValid);
-                DrawRuntimeTelemetryRow("Current Output FOV",
+                DrawRuntimeTelemetryRow(localization_.Text(loc::camera_state::CurrentOutput),
                     currentOutputFovValue.c_str(),
                     localization_, loc::tooltip::runtime::CurrentOutputFov,
                     !integration.currentOutputFovValid);
@@ -2880,7 +2890,7 @@ namespace overlay
                 if (ImGui::BeginChild("camera_state_panel_scroll",
                         ImVec2(0.0f, panelHeight), true,
                         ImGuiWindowFlags_NoSavedSettings)) {
-                    DrawCameraStateView(semantic, integration);
+                    DrawCameraStateView(semantic, integration, localization_);
                 }
                 ImGui::EndChild();
             }

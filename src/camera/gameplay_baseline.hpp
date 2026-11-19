@@ -16,6 +16,7 @@ namespace camera
         FovWriterSourceToken source{};
         std::uint64_t observationSequence{};
         bool valid{};
+        bool current{true};
     };
 
     enum class GameplayBaselineProjectionDisposition : std::uint8_t

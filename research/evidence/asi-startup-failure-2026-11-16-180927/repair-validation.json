@@ -1,0 +1,14 @@
+{
+  "regression_before": "FAIL overlapping_startup_log_ownership",
+  "regression_after": "PASS",
+  "canonical_command": "test.cmd -NonGraphics",
+  "passed": 62,
+  "failed": 0,
+  "hardlink_subcase": "SKIP error=5",
+  "warp": "not exercised",
+  "release_sha256": "0E6F2A6943F9531E31DDFD3D05A269C80C05BB8D958F6C01353E8C40F599C2C7",
+  "build_exit": 0,
+  "process_tree_cleanup_verified": true,
+  "installed_into_game": false,
+  "runtime_confirmation": "pending"
+}

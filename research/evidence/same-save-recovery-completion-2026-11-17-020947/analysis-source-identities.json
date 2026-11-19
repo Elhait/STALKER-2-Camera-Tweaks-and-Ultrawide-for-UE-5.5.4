@@ -1,0 +1,30 @@
+[
+  {
+    "Path": "src/plugin/runtime.cpp",
+    "SHA256": "489D6644F63636679B491B4C850ED75239D122E99C48B6ADB00031B29CB977FA"
+  },
+  {
+    "Path": "src/plugin/camera_writer_transaction.hpp",
+    "SHA256": "D1E16481FBBFF49F983B02643801A6E2CBC45AD93AE24A273E6DF3A806FFEC01"
+  },
+  {
+    "Path": "src/plugin/dialogue_boundary_transaction.hpp",
+    "SHA256": "8774AAB212B539123617083833DCF1E53DD3BC91B9C542FEE8C295AC7AA89450"
+  },
+  {
+    "Path": "src/camera/gameplay_baseline.cpp",
+    "SHA256": "798C582F3D1C42CEE5CCDE4FE3CCF07938DC3ECF63448E796205CADC1AE0B125"
+  },
+  {
+    "Path": "src/cinematics/cinematic_enter_activation.hpp",
+    "SHA256": "F5F3FED93ED7532AE385A85D6D87DF839980A28DD472F793071EBCA557AD5D36"
+  },
+  {
+    "Path": "tests/plugin/runtime_native_adapter_harness.cpp",
+    "SHA256": "2AE334730CFF544400487500E13E7D5EF0D8A40D32581A04E8DBC056D4DFF108"
+  },
+  {
+    "Path": "tests/plugin/cinematic_lifecycle_transaction_harness.cpp",
+    "SHA256": "D62697C618EFB7D3BF41B47B58B95E58C209D1D433CC0454863FF68C8BB4378F"
+  }
+]

@@ -7,8 +7,11 @@
 #include "../camera/fov_semantics.hpp"
 #include "../camera/camera_state_publication.hpp"
 #include "../cinematics/cinematic_fov.hpp"
+#include "../cinematics/cinematic_enter_activation.hpp"
 #include "../cinematics/cinematic_recovery_retirement.hpp"
 #include "../dialogue/dialogue_state.hpp"
+#include "../dialogue/dialogue_fov.hpp"
+#include "../dialogue/post_exit_provider_handoff.hpp"
 #include "camera_correction_gate.hpp"
 #include "runtime_settings.hpp"
 #include "../gameplay/horplus_gameplay.hpp"
@@ -19,6 +22,7 @@
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace plugin
@@ -317,6 +321,18 @@ namespace plugin
         // Independent window observation; never a Gameplay HorPlus authority.
         float currentViewportAspect{std::numeric_limits<float>::quiet_NaN()};
         bool currentViewportAspectValid{};
+        bool dialogueCorrectionEnabled{};
+        config::DialogueZoomPolicy dialoguePolicy{config::DialogueZoomPolicy::Native};
+        std::uint64_t dialogueSettingsEpoch{};
+        std::uint32_t threadId{};
+        dialogue::PostExitProviderWriterEvidence postExitProviderEvidence{};
+        bool providerDialogueContinuation{};
+        float providerDialogueBaseline{std::numeric_limits<float>::quiet_NaN()};
+        float providerDialogueNativeTarget{std::numeric_limits<float>::quiet_NaN()};
+        float providerDialogueTarget{std::numeric_limits<float>::quiet_NaN()};
+        bool providerDialogueInputAlreadyCorrected{};
+        camera::WriterContext writerContext{camera::WriterContext::GameplayEligible};
+        std::uint64_t writerTransactionId{};
     };
 
     // Runtime-owned Cinematic state consulted by the writer transaction. It
@@ -327,6 +343,8 @@ namespace plugin
         std::atomic<bool>& activeCorrectionEnabled;
         std::atomic<bool>& selectionValid;
         std::atomic<std::uint64_t>& generation;
+        std::atomic<std::uint64_t>& activeSettingsEpoch;
+        std::atomic<std::uint64_t>& settingsEpoch;
         std::atomic<bool>& targetEstablished;
         std::atomic<float>& authoredEnterFov;
         std::atomic<float>& transformedTargetFov;
@@ -334,6 +352,7 @@ namespace plugin
         std::atomic<float>& continuationStartFov;
         std::atomic<bool>& continuationInterpolationActive;
         cinematics::CinematicWriterAssociation& association;
+        cinematics::CinematicEnterActivation& enterActivation;
     };
 
     struct CameraWriterFreshAspectFlags
@@ -641,6 +660,7 @@ namespace plugin
     struct CameraWriterResult
     {
         bool processed{};
+        camera::WriterContext writerContext{camera::WriterContext::TransitionAmbiguous};
         cinematics::CinematicWriterAssociationSnapshot previous{};
         cinematics::CinematicWriterAssociationSnapshot current{};
         cinematics::SharedWriterPairTransition pairTransition{};
@@ -661,8 +681,11 @@ namespace plugin
         cinematics::CinematicWriterAction cinematicAction{
             cinematics::CinematicWriterAction::PassThroughUnclassified};
         bool cinematicHandled{};
+        bool cinematicOutputAdmitted{};
         bool initialEstablishmentAuthorized{};
         bool continuationSourceMatch{};
+        bool enterActivationMappingApplied{};
+        cinematics::EnterActivationSnapshot enterActivationObservation{};
         float continuationStartFov{std::numeric_limits<float>::quiet_NaN()};
         bool continuationInterpolationActive{};
         cinematics::CinematicWriterAssociationSnapshot associationAfterDecision{};
@@ -673,10 +696,143 @@ namespace plugin
         bool noOwnerRecoveryCleanup{};
         bool aspectRecoveryEndpoint{};
         AtomicExitHandoffResult atomicExitHandoff{};
+        bool postExitProviderHandoffApplied{};
+        bool postExitProviderRecoveryCompleted{};
+        float postExitProviderCorrectedStart{
+            std::numeric_limits<float>::quiet_NaN()};
+        float postExitProviderHandoffTarget{
+            std::numeric_limits<float>::quiet_NaN()};
         dialogue::PostCinematicRecoveryExclusion::Observation
             recoveryExclusionObservation{
                 dialogue::PostCinematicRecoveryExclusion::Observation::Inactive};
+        std::uint64_t writerTransactionId{};
     };
+
+    struct PostExitProviderWriterMapping
+    {
+        float output{};
+        float correctedStart{};
+        float correctedTarget{};
+    };
+
+    inline std::optional<PostExitProviderWriterMapping> ResolvePostExitProviderWriterMapping(
+        const CameraWriterInput& input, const dialogue::PostExitProviderActivation& activation,
+        float nativeBaseline, float exitTarget, float cinematicTarget,
+        const CameraWriterEngineOperations& engineOperations, bool atomicAspectRestoreApplied = false)
+    {
+        const auto fields = ReadCameraWriterAspectFlags(engineOperations,
+            input.sourceIdentity, true);
+        if (!fields.aspectReadable || !fields.flagsReadable ||
+            !IsValidCameraWriterAspect(fields.aspect) ||
+            (fields.flags != 0x4 && fields.flags != 0x5))
+            return {};
+
+        float effectiveAspect = fields.aspect;
+        if (input.gameplayMode == config::GameplayMode::RuntimeCombine) {
+            if (!input.currentViewportAspectValid ||
+                !IsValidCameraWriterAspect(input.currentViewportAspect) ||
+                (!atomicAspectRestoreApplied &&
+                    std::fabs(fields.aspect - input.currentViewportAspect) > 0.001f))
+                return {};
+            effectiveAspect = input.currentViewportAspect;
+        }
+
+        const float dialoguePolicyTarget = dialogue::ResolveDialogueDestinationTarget(
+            activation.dialoguePolicy, nativeBaseline, activation.nativeTarget);
+        if (!IsValidCameraWriterFov(dialoguePolicyTarget)) return {};
+        const auto correctedTarget = gameplay::EvaluateHorPlus(dialoguePolicyTarget,
+            effectiveAspect, fields.flags, input.nativeAspect);
+        if (!correctedTarget.applied) return {};
+
+        gameplay::HorPlusRecoverySample recoveryStart{};
+        recoveryStart.source = input.sourceIdentity;
+        recoveryStart.validatedSource = input.sourceIdentity;
+        recoveryStart.inputFov = activation.nativeStart;
+        recoveryStart.exitNativeTarget = exitTarget;
+        recoveryStart.cachedCinematicFov = cinematicTarget;
+        recoveryStart.aspect = fields.aspect;
+        recoveryStart.policyAspect = effectiveAspect;
+        recoveryStart.policyAspectValid = true;
+        recoveryStart.flags = fields.flags;
+        recoveryStart.cameraReadable = true;
+        recoveryStart.gameplayEnabled = true;
+        const float correctedStart = gameplay::ResolveHorPlusRecoveryInterpolationFov(
+            recoveryStart, input.nativeAspect);
+        if (!IsValidCameraWriterFov(correctedStart)) return {};
+
+        const float output = dialogue::MapProjectionTransitionSample(
+            input.incomingFov, activation.nativeStart, activation.nativeTarget,
+            correctedStart, correctedTarget.outputFov);
+        if (!IsValidCameraWriterFov(output)) return {};
+
+        return PostExitProviderWriterMapping{output, correctedStart, correctedTarget.outputFov};
+    }
+
+    inline bool TryMapPostExitProviderDialogueSample(
+        const CameraWriterRecoveryStateView& state,
+        const CameraWriterInput& input,
+        const CameraWriterEngineOperations& engineOperations,
+        const CameraWriterGameplayStateView* gameplayState,
+        CameraWriterResult& result,
+        bool atomicAspectRestoreApplied = false)
+    {
+        const auto& evidence = input.postExitProviderEvidence;
+        const auto& activation = evidence.activation;
+        const auto owner = state.recoveryOwner.Read();
+        const auto coordinator = state.coordinator.load(std::memory_order_acquire);
+        const bool activeCinematicRecovery =
+            coordinator == camera::CoordinatorState::CinematicExiting &&
+            owner.HasRecoveryAuthority();
+        const bool completedCinematicRecovery =
+            coordinator == camera::CoordinatorState::Gameplay &&
+            owner.valid && owner.recoveryComplete &&
+            input.writerContext == camera::WriterContext::ProviderTransitionObserved;
+        if (!evidence.valid || !input.dialogueCorrectionEnabled ||
+            activation.dialoguePolicy == config::DialogueZoomPolicy::Native ||
+            !input.gameplayEnabled ||
+            (input.gameplayMode != config::GameplayMode::HorPlus &&
+                input.gameplayMode != config::GameplayMode::RuntimeCombine) ||
+            !gameplayState ||
+            (!activeCinematicRecovery && !completedCinematicRecovery) ||
+            owner.generation != activation.generation ||
+            !state.postCinematicExclusion.IsActive() ||
+            owner.writerRsi != input.sourceIdentity ||
+            activation.receiver != input.sourceIdentity ||
+            activation.threadId != input.threadId ||
+            activation.dialogueSettingsEpoch != input.dialogueSettingsEpoch ||
+            !IsValidCameraWriterFov(evidence.sample) ||
+            std::fabs(evidence.sample - input.incomingFov) > 0.001f)
+            return false;
+
+        const auto baseline = gameplayState->baseline.Read();
+        if (!camera::IsUsableGameplayBaseline(baseline) ||
+            !baseline.source.valid || baseline.source.value != input.sourceIdentity ||
+            baseline.observationSequence == 0)
+            return false;
+
+        const auto mapping = ResolvePostExitProviderWriterMapping(input, activation,
+            baseline.nativeFov.value, state.exitTargetFov.load(std::memory_order_acquire),
+            state.exitCinematicTransformedFov.load(std::memory_order_acquire),
+            engineOperations, atomicAspectRestoreApplied);
+        if (!mapping) return false;
+        const float output = mapping->output;
+        result.outputFov = output;
+        result.mutateFov = std::fabs(output - input.incomingFov) > 0.0001f;
+        result.disposition = CameraWriterDisposition::FinalOutput;
+        result.postExitProviderHandoffApplied = true;
+        result.postExitProviderCorrectedStart = mapping->correctedStart;
+        result.postExitProviderHandoffTarget = mapping->correctedTarget;
+        result.horPlusRecoveryProcessed = true;
+        result.horPlusRecovery.action = gameplay::HorPlusRecoveryAction::TransformRecoveryInterpolation;
+        result.horPlusRecovery.outputFov = output;
+        if (std::fabs(input.incomingFov - activation.nativeTarget) <=
+                (std::max)(input.recoveryEndpointTolerance, 0.25f)) {
+            result.postExitProviderRecoveryCompleted = true;
+            result.recoveryRetired = true;
+            result.coordinatorAfter = camera::CoordinatorState::Gameplay;
+        }
+        return true;
+    }
 
     struct GameplayWriterPolicyResult
     {
@@ -1036,7 +1192,8 @@ namespace plugin
         const auto contextChange = gameplay::EvaluateGameplayContextChange(
             result.previousSource, result.previousFov, input.sourceIdentity,
             input.incomingFov, input.dialogueContextFovJump);
-        if (contextChange.InvalidatesDialogue() && operations.resetDialogueIfActive)
+        if (contextChange.InvalidatesDialogue() &&
+            !input.providerDialogueContinuation && operations.resetDialogueIfActive)
             result.dialogueContextInvalidated = operations.resetDialogueIfActive(
                 operations.context, result.previousSource, result.previousFov,
                 input.sourceIdentity, input.incomingFov);
@@ -1061,19 +1218,41 @@ namespace plugin
             IsValidCameraWriterAspect(result.policyAspect) &&
             (!runtimeCombine || result.runtimeCombineConfirmed);
         result.policyAspectValid = policyAspectValid;
+        float gameplayPolicyInput = input.incomingFov;
+        bool providerDialogueMapped = false;
+        if (input.providerDialogueContinuation &&
+            !input.providerDialogueInputAlreadyCorrected &&
+            input.dialogueCorrectionEnabled &&
+            input.dialoguePolicy != config::DialogueZoomPolicy::Native &&
+            IsValidCameraWriterFov(input.providerDialogueBaseline) &&
+            IsValidCameraWriterFov(input.providerDialogueNativeTarget) &&
+            IsValidCameraWriterFov(input.providerDialogueTarget)) {
+            const float mapped = dialogue::TransformProjectionSample(
+                input.incomingFov, input.providerDialogueBaseline,
+                input.providerDialogueNativeTarget,
+                input.providerDialogueTarget);
+            if (IsValidCameraWriterFov(mapped)) {
+                gameplayPolicyInput = mapped;
+                providerDialogueMapped = true;
+            }
+        }
         const auto policy = ResolveGameplayWriterPolicy(true, coordinator,
             runtimeCombine ? config::GameplayMode::HorPlus : input.gameplayMode,
-            input.incomingFov,
+            gameplayPolicyInput,
             policyAspectValid ? result.policyAspect
                 : std::numeric_limits<float>::quiet_NaN(),
             result.flags, input.nativeAspect);
         result.eligible = policy.transform.eligible;
-        result.applied = policy.transform.applied;
+        result.applied = policy.transform.applied ||
+            (providerDialogueMapped &&
+                std::fabs(gameplayPolicyInput - input.incomingFov) > 0.001f);
         result.outputFov = policy.transform.outputFov;
         result.reason = runtimeCombine && !result.runtimeCombineConfirmed
             ? "RUNTIME_ASPECT_UNCONFIRMED"
             : (result.applied ? "GAMEPLAY_FOV_CHANGED" :
                 (result.eligible ? "TRANSFORM_RESULT_REJECTED" : "INPUT_BYPASS"));
+        if (providerDialogueMapped && !policy.transform.applied)
+            result.reason = "PROVIDER_DIALOGUE_MAPPED";
         result.runtimeCombineFovOutput = result.outputFov;
         result.runtimeCombineFovApplied = result.applied;
 
@@ -1082,6 +1261,7 @@ namespace plugin
             result.outputFov > 1.0f && result.outputFov < 179.0f &&
             std::isfinite(result.aspect) && result.aspect > 0.0f) {
             camera::CameraFovObservation observation{};
+            observation.writerContext = input.writerContext;
             observation.boundary = camera::FovObservationBoundary::CameraWriter;
             observation.inputFov = {result.inputFov, camera::FovSpace::Native,
                 camera::FovProvenance::NativeRegisterInput, true};
@@ -1106,8 +1286,10 @@ namespace plugin
             observation.writerSource = {result.source, result.source != 0};
             observation.writerFlags = result.flags;
             observation.writerFlagsValid = true;
+            observation.writerThreadId = input.threadId;
             observation.observedDuringGameplay =
-                coordinator == camera::CoordinatorState::Gameplay;
+                coordinator == camera::CoordinatorState::Gameplay &&
+                input.writerContext == camera::WriterContext::GameplayEligible;
             result.observation = state.fovObservation.Publish(observation);
             result.observationPublished = true;
             result.baselineProjection = state.baseline.Project(
@@ -1211,6 +1393,7 @@ namespace plugin
             IsValidCameraWriterAspect(fields.aspect) && !ownAutoRestore &&
             !pendingOwnAutoRestore) {
             camera::CameraFovObservation observation{};
+            observation.writerContext = input.writerContext;
             observation.boundary = camera::FovObservationBoundary::CameraWriter;
             observation.inputFov = {input.incomingFov, camera::FovSpace::Native,
                 camera::FovProvenance::NativeRegisterInput, true};
@@ -1221,8 +1404,10 @@ namespace plugin
             observation.writerSource = {input.sourceIdentity, true};
             observation.writerFlags = fields.flags;
             observation.writerFlagsValid = true;
+            observation.writerThreadId = input.threadId;
             observation.observedDuringGameplay =
-                coordinator == camera::CoordinatorState::Gameplay;
+                coordinator == camera::CoordinatorState::Gameplay &&
+                input.writerContext == camera::WriterContext::GameplayEligible;
             result.observation = state.fovObservation.Publish(observation);
             result.observationPublished = true;
             result.baselineProjection = state.baseline.Project(result.observation, true);
@@ -1298,8 +1483,10 @@ namespace plugin
         CameraWriterGameplayOperations gameplayOperations = {})
     {
         CameraWriterResult result{};
+        result.writerTransactionId = input.writerTransactionId;
         result.inputFov = input.incomingFov;
         result.outputFov = input.incomingFov;
+        result.writerContext = input.writerContext;
         if (!gate.IsHeldByCurrentThread()) return result;
         auto& observation = result;
         observation.processed = true;
@@ -1377,8 +1564,20 @@ namespace plugin
                 observation.coordinatorAfter, observation.recoveryOwnerAfter,
                 engineOperations, dialogueReset, gameplayState);
             if (result.atomicExitHandoff.handled) {
+                if (result.atomicExitHandoff.event ==
+                        AtomicExitHandoffEvent::Applied &&
+                    TryMapPostExitProviderDialogueSample(state, input,
+                        engineOperations, gameplayState, result, true))
+                    return result;
                 result.disposition = CameraWriterDisposition::FinalOutput;
                 result.continuation = CameraWriterContinuation::ReturnCinematic;
+                return result;
+            }
+
+            if (TryMapPostExitProviderDialogueSample(state, input,
+                    engineOperations, gameplayState, result)) {
+                if (result.postExitProviderRecoveryCompleted)
+                    ClearCameraWriterRecoveryState(state);
                 return result;
             }
 
@@ -1630,10 +1829,22 @@ namespace plugin
             std::memory_order_acquire);
         const auto generation = cinematicState.generation.load(
             std::memory_order_acquire);
+        const auto writerObservationSequence =
+            observation.current.latestWriter.sequence;
+        result.cinematicOutputAdmitted =
+            correctionEnabled && generationValid &&
+            cinematicState.association.AdmitWriterOutput(
+                observation.coordinatorAfter, correctionEnabled, generation,
+                input.sourceIdentity, input.outputObjectIdentity,
+                writerObservationSequence);
+        if (result.cinematicOutputAdmitted)
+            result.writerContext = camera::WriterContext::CinematicOwned;
         result.initialEstablishmentAuthorized = correctionEnabled &&
             cinematicState.association.AuthorizeInitialEstablishmentRetention(
                 observation.coordinatorAfter, true, generationValid,
-                targetEstablished, generation, input.sourceIdentity, input.incomingFov);
+                targetEstablished, generation, input.sourceIdentity,
+                input.outputObjectIdentity, writerObservationSequence,
+                input.incomingFov);
         result.associationAfterDecision = cinematicState.association.Read();
         auto continuationSource = cinematicState.continuationSource.load(
             std::memory_order_acquire);
@@ -1642,24 +1853,20 @@ namespace plugin
         result.continuationInterpolationActive =
             cinematicState.continuationInterpolationActive.load(std::memory_order_acquire);
         const auto& association = result.associationAfterDecision;
-        // The newly accepted Gameplay-baseline continuation is not a source-only
-        // authorization. Every retained sample must still belong to this accepted
-        // generation and its confirmed aspect-store / RSI / RBX association.
-        const bool gameplayBaselineContinuation = result.continuationInterpolationActive &&
-            association.effectiveSettings.fovMode == config::CinematicFovMode::GameplayHorPlus &&
-            !camera::AreFovValuesSemanticallyEquivalent(result.continuationStartFov,
-                cinematicState.authoredEnterFov.load(std::memory_order_acquire));
-        if (gameplayBaselineContinuation &&
+        // Continuation shares the same per-invocation output admission as initial
+        // establishment. RBX may transition between native writer calls.
+        if (result.continuationInterpolationActive &&
             (!generationValid || !association.generationActive ||
              association.generation != generation || !association.effectiveSettings.enabled ||
              !association.associationValid || association.associationConflict ||
              association.aspectStoreTargetObject != input.sourceIdentity ||
              association.associatedWriterRsi != input.sourceIdentity ||
-             association.observedWriterRbx != input.outputObjectIdentity ||
-             association.gameplayBaselineSource == 0 ||
-             association.gameplayBaselineSource != continuationSource ||
-             !std::isfinite(association.gameplayBaselineFov) ||
-             std::fabs(result.continuationStartFov - association.gameplayBaselineFov) > 0.05f))
+             !result.cinematicOutputAdmitted ||
+             !association.lastAdmittedOutput.valid ||
+             association.lastAdmittedOutput.generation != generation ||
+             association.lastAdmittedOutput.sequence != writerObservationSequence ||
+             association.lastAdmittedOutput.source != input.sourceIdentity ||
+             association.lastAdmittedOutput.output != input.outputObjectIdentity))
             continuationSource = 0;
         result.continuationSourceMatch = continuationSource != 0 &&
             continuationSource == input.sourceIdentity;
@@ -1689,6 +1896,32 @@ namespace plugin
             result.mutateFov = true;
         }
         if (dispatch.handled) {
+            result.enterActivationObservation =
+                cinematicState.enterActivation.ObserveWriter(
+                    result.cinematicOutputAdmitted, generation,
+                    cinematicState.settingsEpoch.load(std::memory_order_acquire),
+                    input.sourceIdentity, input.outputObjectIdentity, input.incomingFov);
+            if (result.enterActivationObservation.status ==
+                    cinematics::EnterActivationStatus::MatchedSample ||
+                result.enterActivationObservation.status ==
+                    cinematics::EnterActivationStatus::CompletedEndpoint) {
+                if (!std::isfinite(result.enterActivationObservation.mappedOutput)) {
+                    result.disposition = CameraWriterDisposition::FinalOutput;
+                    result.continuation = CameraWriterContinuation::ReturnCinematic;
+                    return result;
+                }
+                result.outputFov = result.enterActivationObservation.mappedOutput;
+                result.mutateFov = true;
+                result.cinematicAction =
+                    cinematics::CinematicWriterAction::RetainMappedActivationSample;
+                result.enterActivationMappingApplied = true;
+            }
+            cinematicState.enterActivation.RecordWriterResult(
+                result.cinematicOutputAdmitted, generation,
+                cinematicState.settingsEpoch.load(std::memory_order_acquire),
+                input.sourceIdentity, input.outputObjectIdentity, input.threadId,
+                writerObservationSequence, input.incomingFov, result.outputFov,
+                input.aspect, input.flags, result.mutateFov);
             result.disposition = CameraWriterDisposition::FinalOutput;
             result.continuation = CameraWriterContinuation::ReturnCinematic;
             return result;
@@ -1700,13 +1933,60 @@ namespace plugin
         if (observation.coordinatorAfter == camera::CoordinatorState::CinematicExiting)
             return result;
 
+        // A matched provider trajectory can outlive the cinematic recovery
+        // endpoint. Keep its captured Dialogue policy authoritative while the
+        // completed recovery owner and baseline-protection exclusion remain
+        // active; otherwise these samples fall through to Gameplay HorPlus.
+        if (input.postExitProviderEvidence.valid && gameplayState &&
+            TryMapPostExitProviderDialogueSample(state, input, engineOperations,
+                gameplayState, result)) {
+            if (result.postExitProviderRecoveryCompleted) {
+                const auto cleanup = ClearCameraWriterRecoveryState(state);
+                observation.handoffCancelled = cleanup.handoffCancelled;
+                observation.exclusionCleared = cleanup.exclusionCleared;
+                observation.recoveryOwnerAfter = state.recoveryOwner.Read();
+                observation.coordinatorAfter = state.coordinator.load(
+                    std::memory_order_acquire);
+            }
+            return result;
+        }
+
         if (gameplayState) {
+            auto gameplayInput = input;
+            // Classification was captured before the recovery transaction.
+            // A source-owned native endpoint can complete recovery in this
+            // invocation; publish that committed Gameplay context, rather than
+            // invalidating its reference with the now-retired RecoveryOwned tag.
+            // Provider handoffs and an outstanding exclusion remain separate.
+            if (gameplayInput.writerContext == camera::WriterContext::RecoveryOwned &&
+                result.horPlusRecovery.completed &&
+                result.horPlusRecovery.action == gameplay::HorPlusRecoveryAction::ResumeGameplay &&
+                observation.coordinatorAfter == camera::CoordinatorState::Gameplay &&
+                observation.recoveryOwnerBefore.HasRecoveryAuthority() &&
+                observation.recoveryOwnerBefore.writerRsi == input.sourceIdentity &&
+                !state.postCinematicExclusion.IsActive() &&
+                !input.postExitProviderEvidence.valid && !input.providerDialogueContinuation) {
+                gameplayInput.writerContext = camera::WriterContext::GameplayEligible;
+                result.writerContext = gameplayInput.writerContext;
+            }
+            if (observation.exclusionObservation ==
+                dialogue::PostCinematicRecoveryExclusion::Observation::Suppressed) {
+                // The post-cinematic endpoint guard also owns baseline
+                // admission. Keep the live Gameplay transform running, but
+                // retain the trusted same-receiver baseline without admitting
+                // these samples as new Gameplay state.
+                if (gameplayInput.writerContext !=
+                    camera::WriterContext::ProviderTransitionObserved)
+                    gameplayInput.writerContext =
+                        camera::WriterContext::PostCinematicRecoveryExcluded;
+                result.writerContext = gameplayInput.writerContext;
+            }
             if (input.gameplayMode == config::GameplayMode::AspectRecalculation)
                 result.gameplay = ProcessGameplayAspectRecalculationWriter(
-                    *gameplayState, input, observation.coordinatorAfter,
+                    *gameplayState, gameplayInput, observation.coordinatorAfter,
                     engineOperations, gameplayOperations);
             else
-                result.gameplay = ProcessGameplayHorPlusWriter(*gameplayState, input,
+                result.gameplay = ProcessGameplayHorPlusWriter(*gameplayState, gameplayInput,
                     observation.coordinatorAfter, engineOperations,
                     gameplayOperations);
         }

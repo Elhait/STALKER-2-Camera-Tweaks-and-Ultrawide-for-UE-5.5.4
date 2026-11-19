@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "blend_observation callbacks=10000 file_lines=13 bytes=8346\r\ndiagnostic_work diagnostic=on cinematic_writer_reads=6 dialogue_callbacks=1 recovery_reads=3\r\ndiagnostic-work diagnostic=on: PASS\r\n",
+  "ProcessId": 25928
+}

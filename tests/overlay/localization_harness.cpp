@@ -142,8 +142,8 @@ int main()
         config::CinematicAspectPolicy::Auto, config::CinematicAspectPolicy::Forced16x9,
         config::CinematicAspectPolicy::Forced21x9,
         config::CinematicAspectPolicy::Forced32x9};
-    constexpr config::CinematicFovMode fovValues[]{
-        config::CinematicFovMode::NativeHorPlus, config::CinematicFovMode::GameplayHorPlus};
+    constexpr config::CinematicFovMode fovValues[]{config::CinematicFovMode::NativeHorPlus,
+        config::CinematicFovMode::GameplayHorPlus};
     constexpr config::DialogueZoomPolicy dialogueValues[]{
         config::DialogueZoomPolicy::Adaptive, config::DialogueZoomPolicy::Reduced,
         config::DialogueZoomPolicy::Disabled};
@@ -207,7 +207,8 @@ int main()
     assert(matches(fovOptions[0], fovNativeDescriptions,
         overlay::loc::tooltip::cinematics::FovNativeExamplesContext, fovNativeExamples));
     assert(matches(fovOptions[1], fovGameplayDescriptions,
-        overlay::loc::tooltip::cinematics::FovGameplayExamplesContext, fovGameplayExamples));
+        overlay::loc::tooltip::cinematics::FovGameplayExamplesContext,
+        fovGameplayExamples));
     assert(dialogueOptions.size() == 3);
     assert(matches(dialogueOptions[0], dialogueAdaptiveDescriptions,
         dialogueContext, dialogueAdaptiveExamples));

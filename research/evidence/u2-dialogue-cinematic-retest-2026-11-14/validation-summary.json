@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "runtime_log": {
+    "path": "runtime.log",
+    "size_bytes": 866482,
+    "sha256": "DEF468228D2556563655D4F6BB86A20AE89DDFF36AB60230E5328F1C18C9E6B2"
+  },
+  "loaded_asi_sha256": "D206A6AF12882E8EE4C9E50E17D0CCD6211344EBA0EB878DE6983FC4343A66A5",
+  "game_sha256": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479",
+  "finding": "Dialogue corrected-start candidate was sampled from authored ENTER XMM0=90 instead of the observed Dialogue writer input matched by the blend start at 80.1509; generation2 writer remained PassThroughUnclassified.",
+  "implementation": "Use a source-, receiver-, thread-, lifecycle-, settings-, aspect- and flags-qualified Dialogue writer result as C0; later blend start must match the observation input.",
+  "validation": {
+    "cinematic_fov_harness": "PASS",
+    "camera_writer_transaction_harness": "PASS",
+    "dialogue_boundary_transaction_harness": "PASS",
+    "runtime_native_adapter_harness": "PASS; 230 fresh processes; Diagnostics OFF/ON",
+    "non_graphics_registry": "Audit/configure/build/exit contract PASS; canonical suite stopped at invocation 10/62 due Windows hardlink fixture error 5 (occupied=1).",
+    "release_asi": "PASS; one Production ASI; PE32+ x64",
+    "rendered_runtime": "PENDING"
+  }
+}
+

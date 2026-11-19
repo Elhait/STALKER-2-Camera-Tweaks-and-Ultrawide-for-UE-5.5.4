@@ -1,0 +1,47 @@
+[
+  {
+    "Case": "u2-shadow",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "consumer_fixture path=0 stage=unhooked\r\nconsumer_fixture path=0 stage=hooked\r\nconsumer_fixture path=1 stage=unhooked\r\nconsumer_fixture path=1 stage=hooked\r\nconsumer_fixture path=2 stage=unhooked\r\nconsumer_fixture path=2 stage=hooked\r\nconsumer_fixture path=3 stage=unhooked\r\nconsumer_fixture path=3 stage=hooked\r\nconsumer_fixture path=4 stage=unhooked\r\nconsumer_fixture path=4 stage=hooked\r\nconsumer_fixture path=5 stage=unhooked\r\nconsumer_fixture path=5 stage=hooked\r\nconsumer_fixture path=6 stage=unhooked\r\nconsumer_fixture path=6 stage=hooked\r\nconsumer_fixture path=7 stage=unhooked\r\nconsumer_fixture path=7 stage=hooked\r\npost_exit_record_count=12\r\nblend_observation callbacks=10000 file_lines=13 bytes=11583\r\nu2-shadow diagnostic=on: PASS\r\n",
+      "ProcessId": 6264
+    }
+  },
+  {
+    "Case": "u2-shadow",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "blend_observation callbacks=10000 file_lines=0 bytes=0\r\nu2-shadow diagnostic=off: PASS\r\n",
+      "ProcessId": 22068
+    }
+  },
+  {
+    "Case": "diagnostic-work",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": -1073741819,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "",
+      "ProcessId": 27968
+    }
+  }
+]

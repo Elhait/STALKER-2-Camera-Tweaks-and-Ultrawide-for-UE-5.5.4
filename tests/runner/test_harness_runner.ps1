@@ -42,6 +42,10 @@ if (-not [string]::IsNullOrWhiteSpace($env:CAMERA_TWEAKS_TEST_SUITE_TIMEOUT_MS))
     $suiteTimeoutMilliseconds = $parsedSuiteTimeout
 }
 $suiteClock = [Diagnostics.Stopwatch]::StartNew()
+$passedInvocations = 0
+$failedInvocations = [System.Collections.Generic.List[string]]::new()
+$skippedSubcases = [System.Collections.Generic.List[string]]::new()
+$suiteTimedOut = $false
 
 for ($index = 0; $index -lt $entries.Count; ++$index) {
     $remainingSuiteMilliseconds = $suiteTimeoutMilliseconds - [int]$suiteClock.ElapsedMilliseconds
@@ -52,8 +56,10 @@ for ($index = 0; $index -lt $entries.Count; ++$index) {
     $entry = $entries[$index]
     $executable = Join-Path $outputDirectory ($entry.harness + '.exe')
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
-        Write-Error "Harness executable is missing: $executable"
-        exit 2
+        $message = "FAIL $($entry.harness): executable is missing: $executable"
+        Write-Output $message
+        $failedInvocations.Add($entry.harness)
+        continue
     }
 
     $arguments = @($entry.arguments)
@@ -75,17 +81,41 @@ for ($index = 0; $index -lt $entries.Count; ++$index) {
             }
         } elseif ($entryTimeoutMilliseconds -lt $timeoutMilliseconds) {
             Write-Output ("SUITE_TIMEOUT after {0}ms at {1}; process tree cleanup verified" -f $suiteTimeoutMilliseconds, $entry.harness)
+            $failedInvocations.Add("$($entry.harness):suite_timeout")
+            $suiteTimedOut = $true
+            break
         } else {
             Write-Output ("TIMEOUT {0} after {1}ms; process tree cleanup verified" -f $entry.harness, $timeoutMilliseconds)
         }
-        exit 124
+        $failedInvocations.Add("$($entry.harness):timeout")
+        continue
     }
     $exitCode = $result.ExitCode
     if ($exitCode -ne 0) {
         Write-Output ("FAIL {0} exit={1}" -f $entry.harness, $exitCode)
-        exit $exitCode
+        $failedInvocations.Add("$($entry.harness):exit_$exitCode")
+        continue
+    }
+    ++$passedInvocations
+    if ($result.Output -match '(?m)^HARNESS_SUBCASE_SKIP: ([^\r\n]+)') {
+        foreach ($match in [regex]::Matches($result.Output,
+                '(?m)^HARNESS_SUBCASE_SKIP: ([^\r\n]+)')) {
+            $skip = "$($entry.harness): $($match.Groups[1].Value.Trim())"
+            $skippedSubcases.Add($skip)
+            Write-Output "SKIP $skip"
+        }
     }
 }
 
-Write-Output ("runner_invocations={0} exit=0 non_graphics={1} WARP_case_omitted={1}" -f $entries.Count,[int][bool]$NonGraphics)
+$summary = "runner_invocations={0} passed={1} failed={2} skipped_subcases={3} non_graphics={4} WARP_case_omitted={4}" -f `
+    $entries.Count, $passedInvocations, $failedInvocations.Count,
+    $skippedSubcases.Count, [int][bool]$NonGraphics
+Write-Output $summary
+if ($failedInvocations.Count -gt 0) {
+    Write-Output ("failed_targets=" + ($failedInvocations -join ';'))
+    if ($suiteTimedOut -or (@($failedInvocations | Where-Object { $_ -match ':timeout$' }).Count -gt 0)) {
+        exit 124
+    }
+    exit 1
+}
 exit 0

@@ -1,0 +1,37 @@
+[
+  {
+    "Name": "native-archive-identities.json",
+    "SHA256": "00C06AA485200BBC6042600D98C8200B7140CCD0FB9439AB8F0AD64156642663",
+    "Bytes": 1272
+  },
+  {
+    "Name": "provider-quarantine-red.json",
+    "SHA256": "68A3CFC847CF3493AB2294DC830814B578A994960506C9082B7DD5AE104702C5",
+    "Bytes": 9464
+  },
+  {
+    "Name": "research-model-red-result.json",
+    "SHA256": "8C48A25E3589B0FAD8B0D7FB79D4DBAFD10C9D3B0A1E4A492765C676BE2358A3",
+    "Bytes": 770
+  },
+  {
+    "Name": "result.json",
+    "SHA256": "F9A8447BD5E80AD31008DD3AE26FDA6D76277C29CF8B2603416F4E9B9E35C32D",
+    "Bytes": 70550
+  },
+  {
+    "Name": "source-identities.json",
+    "SHA256": "4A3964A5CF506335977116534689B976AD9E19034C6DEF25EC8FF9ED30A1639B",
+    "Bytes": 2938
+  },
+  {
+    "Name": "transition_model.js",
+    "SHA256": "E5F520535514C041E0422164131DC9E09D2160D0DE415D986E6C4C8DDAA529ED",
+    "Bytes": 22949
+  },
+  {
+    "Name": "transition-coverage.md",
+    "SHA256": "7709C4386E0523712DDDE9054BF8371B882D67C1CCD24A6D5B8CAFF5CA7FC88C",
+    "Bytes": 4490
+  }
+]

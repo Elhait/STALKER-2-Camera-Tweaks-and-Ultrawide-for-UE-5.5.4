@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "{\r\n  \"image\": \"E:\\\\Steam\\\\steamapps\\\\common\\\\S.T.A.L.K.E.R. 2 Heart of Chornobyl\\\\Stalker2\\\\Binaries\\\\Win64\\\\Stalker2-Win64-Shipping.exe\",\r\n  \"sha256\": \"2bd3f115b959a8eee7e5c4b42b0142dd0025bd437e1014f92dfc60b9afee5479\",\r\n  \"text_size\": 130738376,\r\n  \"anchors\": {\r\n    \"CameraWriter\": [\r\n      {\r\n        \"rva\": \"0x9cd2eb\",\r\n        \"instruction_bytes\": \"f3 0f 11 43 30 f3 0f 10 86 54\"\r\n      }\r\n    ],\r\n    \"CameraWriterPostProcessCall\": [\r\n      {\r\n        \"rva\": \"0x9cd3f1\",\r\n        \"instruction_bytes\": \"e8 f8 0c 00 00 80 be 40 02 00\"\r\n      }\r\n    ],\r\n    \"CinematicAspectSetter\": [\r\n      {\r\n        \"rva\": \"0x6b12525\",\r\n        \"instruction_bytes\": \"c7 80 54 02 00 00 39 8e e3 3f\"\r\n      }\r\n    ],\r\n    \"CinematicEnter\": [\r\n      {\r\n        \"rva\": \"0x35c7da1\",\r\n        \"instruction_bytes\": \"e8 d6 81 53 03 48 89 f1 e8 cc\"\r\n      }\r\n    ],\r\n    \"CinematicExit\": [],\r\n    \"CinematicExitIndexed\": [\r\n      {\r\n        \"rva\": \"0x35c7d3f\",\r\n        \"instruction_bytes\": \"e8 38 82 53 03 48 89 f1 e8 2e\"\r\n      }\r\n    ],\r\n    \"DialogueBoundary\": [\r\n      {\r\n        \"rva\": \"0xcce670\",\r\n        \"instruction_bytes\": \"0f 28 ce ff 90 08 06 00 00 0f\"\r\n      }\r\n    ],\r\n    \"PostExitBlendStartCapture\": [\r\n      {\r\n        \"rva\": \"0x30dbd6d\",\r\n        \"instruction_bytes\": \"48 8d 4e 28 48 8b 46 28 ff 50\"\r\n      }\r\n    ]\r\n  },\r\n  \"checks\": {\r\n    \"writer_movss_rbx_30_xmm0\": true,\r\n    \"aspect_store_rax_254_ten_bytes\": true,\r\n    \"dialogue_xmm6_to_xmm1\": true,\r\n    \"enter_call\": true,\r\n    \"exit_call\": true,\r\n    \"armer_component_lea\": true\r\n  }\r\n}\r\n",
+  "ProcessId": 19716
+}

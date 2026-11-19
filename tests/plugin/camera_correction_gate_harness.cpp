@@ -147,8 +147,11 @@ int main()
 
     bool deferredRanAfterUnlock = false;
     bool deferredCouldReenter = false;
+    pass &= Check(plugin::CanEnterCameraCallback(gate), "callback admitted outside gate");
     {
         auto operation = gate.Acquire();
+        pass &= Check(!plugin::CanEnterCameraCallback(gate),
+            "nested callback is rejected before recursive gate acquisition");
         pass &= Check(gate.DeferUntilReleased([&] {
             deferredRanAfterUnlock = true;
             auto reentrantOperation = gate.Acquire();
@@ -157,6 +160,7 @@ int main()
     }
     pass &= Check(deferredRanAfterUnlock && deferredCouldReenter,
         "deferred_work_runs_only_after_correction_gate_unlock");
+    pass &= Check(plugin::CanEnterCameraCallback(gate), "callback admission restored after gate release");
 
     std::cout << (pass ? "PASS" : "FAIL") << ": camera correction gate\n";
     return pass ? 0 : 1;

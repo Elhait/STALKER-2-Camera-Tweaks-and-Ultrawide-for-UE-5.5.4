@@ -93,7 +93,7 @@ $comments.CinematicEnabled = [string[]]@(
         "# true - Apply the selected cinematic framing and FOV corrections.",
         "# false - Do not apply Camera Tweaks cinematic corrections; leave camera output game-controlled.")
 $comments.CinematicFov = [string[]]@(
-        "# FOV correction mode:",
+        "# Available modes:",
         "#   GameplayHorPlus - $($values['tooltip.cinematics.fov.gameplay'])",
         "# $($values['common.examples']) - $($values['tooltip.cinematics.fov.gameplay_examples_context']):",
         "# $($values['tooltip.cinematics.fov.gameplay_example_90'])",

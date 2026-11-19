@@ -1,0 +1,18 @@
+{
+  "independent_reds": [
+    "repeated_writer_reads_retain_confirmed_setter_corrected_provenance",
+    "confirmed_provider_dialogue_maps_entire_cinematic_trajectory_without_raw_start_drop"
+  ],
+  "focused_harnesses": "Dialogue boundary, Cinematic FOV, camera writer PASS",
+  "canonical_command": "test.cmd",
+  "passed": 62,
+  "failed": 0,
+  "skipped_subcases": "hardlink ownership error=5",
+  "warp_omitted": 0,
+  "native_adapter_fresh_processes": 230,
+  "release_sha256": "5919E133D791A016BBF2978C6447E093B6A8DA9457BB1E6B24A51584B0A85549",
+  "build_exit": 0,
+  "cleanup_verified": true,
+  "installed_into_game": false,
+  "runtime_confirmation": "pending"
+}

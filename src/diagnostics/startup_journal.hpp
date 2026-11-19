@@ -4,7 +4,7 @@
 // modules or decode instructions, and records no per-frame graphics events.
 #if defined(OVERLAY_STARTUP_JOURNAL)
 #include "../platform/process_lifetime.hpp"
-#include "../platform/win32/native_file.hpp"
+#include "../platform/win32/native_log_file.hpp"
 #include <Windows.h>
 #include <intrin.h>
 #include <atomic>
@@ -104,7 +104,7 @@ namespace diagnostics::startup_journal
         const auto directoryLength = wcslen(path);
         if (directoryLength + _countof(filename) > PathCapacity) return false;
         wcscat_s(path, PathCapacity, filename);
-        return file.Open(path, true);
+        return platform::win32::OpenProcessLogFile(file, path);
     }
 
     inline bool Write(const char* data, unsigned length) noexcept

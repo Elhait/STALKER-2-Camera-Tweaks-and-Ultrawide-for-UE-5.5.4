@@ -1,0 +1,66 @@
+{
+  "FileVersion": "3.2.2.0",
+  "SHA256": "DFC1B098D610AE3E5BE14C6BE38CA3B190A34AA6AD7F6C858EED392B0F8D74F7",
+  "GameRuntime": "not executed",
+  "GameImageSHA256": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479",
+  "FocusedRuns": 16,
+  "FocusedPassed": 16,
+  "ShadowMapping": "conditional-affine hypothesis, branch and rendered FOV unobserved",
+  "CleanupVerified": true,
+  "SourceHashes": [
+    {
+      "SHA256": "F482B4CBC452EE5A1F5852D20D177CA9D27D393896E9B3A9005B5AD6EA528D97",
+      "Path": "src/plugin/runtime.cpp"
+    },
+    {
+      "SHA256": "29B751D8B721EC97B4BDD0C322801A9E7E610CD7FEA2292BEFAC8E807A5EE033",
+      "Path": "src/diagnostics/u2_shadow.hpp"
+    },
+    {
+      "SHA256": "A1CC03D59D589BB8B45FBE067E4C9F9C71FFC8EC7AFDE026086B332EAEE4AB4C",
+      "Path": "src/hooks/blend_producer_resolver.hpp"
+    },
+    {
+      "SHA256": "6A62B24BE6CDD81277F48608560A373A30DA710087951D5EAAF6AAEA31B0B876",
+      "Path": "src/hooks/cinematic_consumer_resolver.hpp"
+    },
+    {
+      "SHA256": "9221186C4355D1049FE1BAA485A1E6C80A5DB065D96C855629005BACC7F8E40D",
+      "Path": "src/diagnostics/post_exit_blend_activation_observation.hpp"
+    },
+    {
+      "SHA256": "E35A19326235DD23AB475AF60607B85FF342BCB5CEA96BFE66E09701C01CB7A9",
+      "Path": "src/diagnostics/post_exit_blend_observation.hpp"
+    },
+    {
+      "SHA256": "FF9E390D32D6B9285ACC5D9E5B70A0DB8F75BFF363A8E51AE23AA35F3628D6EC",
+      "Path": "src/diagnostics/cinematic_consumer_observation.hpp"
+    },
+    {
+      "SHA256": "67F0205A9682DFE7B0A7ACDB4CBB117CE81A12E666A7612C9C775510F5B5BA3D",
+      "Path": "src/diagnostics/dialogue_boundary_observation.hpp"
+    },
+    {
+      "SHA256": "F05DD16094C5A05C26732463BD526BCC8158096FB4AD2BCC4EC3882A9F59E564",
+      "Path": "tests/plugin/u2_shadow_cases.hpp"
+    },
+    {
+      "SHA256": "CC19C76B493B149F601CC55228369D8E412DD54E82E5F87BF193F13135A4F6D1",
+      "Path": "tests/plugin/runtime_native_adapter_harness.cpp"
+    },
+    {
+      "SHA256": "BCC42B26977879F947304C6278EE4951C08B0759E1763B619150BF7091717C2E",
+      "Path": "tests/test_harnesses.json"
+    },
+    {
+      "SHA256": "EA11C071899A575BA65BF39FD04C4B563C9E84A7BE3498B987BE501B38012AAC",
+      "Path": "research/tools/ArmCinematicFovCapture.ps1"
+    }
+  ],
+  "FullNonGraphics": "not executed",
+  "Artifact": "build-artifacts\\candidate-u2-shadow\\STALKER2CameraTweaks.asi",
+  "CleanBuildRoot": "build-artifacts/cm/u2-shadow-final",
+  "NativeHooksAdded": 0,
+  "Bytes": 3842560,
+  "Profile": "production"
+}

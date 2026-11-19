@@ -1,0 +1,52 @@
+[
+  {
+    "Path": "src/plugin/runtime.cpp",
+    "SHA256": "489D6644F63636679B491B4C850ED75239D122E99C48B6ADB00031B29CB977FA",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/plugin/camera_writer_transaction.hpp",
+    "SHA256": "D1E16481FBBFF49F983B02643801A6E2CBC45AD93AE24A273E6DF3A806FFEC01",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/plugin/dialogue_boundary_transaction.hpp",
+    "SHA256": "8774AAB212B539123617083833DCF1E53DD3BC91B9C542FEE8C295AC7AA89450",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/plugin/cinematic_lifecycle_transaction.hpp",
+    "SHA256": "70CC1FCD858CFB5463628ECD306BB33252DD667A6480CEF4A95F2ACFEE618CC9",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/dialogue/post_exit_provider_handoff.hpp",
+    "SHA256": "1921ABB71A69691F20E935D8724FFD8BFEA99D8490925BC9BDF14CDD743DDB5D",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/dialogue/dialogue_state.cpp",
+    "SHA256": "92500C666393BE6DBA03A9F50294C5421EDC75F8F98A5F2163ED4A6C9ECEC8ED",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/cinematics/cinematic_fov.cpp",
+    "SHA256": "DCBB78D19D32C0C104D9EEA42AE702D9CA61432B8F212FC7EFD3280B80000660",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/cinematics/cinematic_enter_activation.hpp",
+    "SHA256": "F5F3FED93ED7532AE385A85D6D87DF839980A28DD472F793071EBCA557AD5D36",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/camera/gameplay_baseline.cpp",
+    "SHA256": "798C582F3D1C42CEE5CCDE4FE3CCF07938DC3ECF63448E796205CADC1AE0B125",
+    "Unchanged": true
+  },
+  {
+    "Path": "src/plugin/camera_correction_gate.hpp",
+    "SHA256": "648A92CAAE52666153D8B977D11A52769D9C4782969F23D97A9C7112946454CD",
+    "Unchanged": true
+  }
+]

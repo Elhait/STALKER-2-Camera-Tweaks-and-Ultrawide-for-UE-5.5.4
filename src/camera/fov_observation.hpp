@@ -9,6 +9,12 @@
 
 namespace camera
 {
+    enum class WriterContext : std::uint8_t {
+        GameplayEligible, CinematicOwned, RecoveryOwned, DialogueLifecycleObserved,
+        ConfirmedProviderDialogueLifecycleObserved, ProviderTransitionObserved,
+        PostCinematicRecoveryExcluded,
+        TransitionAmbiguous
+    };
     enum class FovObservationBoundary : std::uint8_t
     {
         CameraWriter,
@@ -65,10 +71,12 @@ namespace camera
         FovWriterSourceToken writerSource{};
         std::uint8_t writerFlags{};
         bool writerFlagsValid{};
+        std::uint32_t writerThreadId{};
         std::uint64_t publicationSequence{};
         ScalarSample policyAspect{};
         ScalarSample currentViewportAspect{};
         bool observedDuringGameplay{};
+        WriterContext writerContext{WriterContext::GameplayEligible};
     };
 
     // The two production observations captured on one accepted camera

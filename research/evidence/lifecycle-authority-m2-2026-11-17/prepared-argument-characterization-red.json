@@ -1,0 +1,11 @@
+{
+  "ExitCode": 1,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "PASS: hardening assertions=66\r\nPASS: M16 assertions=98\r\nFAIL: cinematic_prepared_target_is_not_transformed_twice\r\nFAIL: corrective bindings assertions=111\r\nFAIL: lifecycle_authority_m1_harness assertions=111\r\n",
+  "ProcessId": 32764
+}

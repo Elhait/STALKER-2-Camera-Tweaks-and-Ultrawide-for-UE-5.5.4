@@ -1,0 +1,15 @@
+{
+  "stage": "M1-isolated-relation",
+  "checker": "authority_m1.js::runM1Regressions",
+  "execution": "functions.exec V8 isolate",
+  "checks": 18,
+  "failures": [],
+  "passed": true,
+  "scopeLimits": [
+    "research-only symbolic events",
+    "native causalBindingVerified is explicit input, not discovered",
+    "no production imports or live callbacks",
+    "no C++ ABI, FOV formulas, numeric trajectories, or runtime integration",
+    "effect execution modeled as correlated result event"
+  ]
+}

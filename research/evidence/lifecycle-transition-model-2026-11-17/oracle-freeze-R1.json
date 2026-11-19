@@ -1,0 +1,29 @@
+{
+  "identity": "LifecycleTransitionOracle-R1",
+  "status": "Frozen qualified research oracle, not implementation approval",
+  "date": "2026-11-17",
+  "model": {
+    "path": "transition_model.js",
+    "sha256": "E5F520535514C041E0422164131DC9E09D2160D0DE415D986E6C4C8DDAA529ED"
+  },
+  "result": {
+    "path": "result.json",
+    "sha256": "F9A8447BD5E80AD31008DD3AE26FDA6D76277C29CF8B2603416F4E9B9E35C32D"
+  },
+  "scope": "Symbolic scoped ownership/provenance/permission transitions within reported finite domains",
+  "known_uncovered_cases": [
+    "Native proof extraction and positive Gameplay role for a new source",
+    "Terminal Active Dialogue proof after setter callbacks cease",
+    "Distinct arming-event identity when component/thread/cinematic generation repeat: hKey at model lines 44-47 and 88 does not encode a separate episode",
+    "Concrete native ABI, allocation reuse, numerical trajectories and all C++ early returns",
+    "Excluded legacy or experimental mutating profiles"
+  ],
+  "mismatch_protocol": [
+    "Preserve minimal input history, source/artifact/profile identities, expected and actual decisions",
+    "Classify divergence as production defect, native-evidence binding defect, oracle defect or out-of-domain observation",
+    "Do not convert symbolic exact/nativeProof/original to true from address or numeric equality",
+    "Do not change R1 or expected results merely to match production",
+    "A justified model correction requires separately reviewed revision, rationale, retained counterexample and new result manifest",
+    "Do not silently broaden R1 coverage claims"
+  ]
+}

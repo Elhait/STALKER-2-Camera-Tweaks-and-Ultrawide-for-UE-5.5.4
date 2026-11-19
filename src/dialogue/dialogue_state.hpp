@@ -44,10 +44,28 @@ namespace dialogue
         bool IsPending() const noexcept;
         float Baseline() const noexcept;
         bool HasContext() const noexcept;
+        bool IsStationaryAtReference(float reference, float tolerance) const noexcept;
+        void BindReceiver(std::uintptr_t receiver, std::uint64_t epoch,
+            std::uintptr_t callbackSource = 0, std::uint64_t generation = 0,
+            bool validated = true) noexcept;
+        std::uintptr_t Receiver(std::uint64_t epoch) const noexcept;
+        bool AffectsReceiver(std::uintptr_t receiver, std::uint64_t epoch,
+            std::uint64_t generation = 0) const noexcept;
+        bool HasReceiverBinding(std::uintptr_t receiver, std::uint64_t epoch,
+            std::uint64_t generation = 0) const noexcept;
+        bool HasReceiverIdentity(std::uintptr_t receiver,
+            std::uintptr_t callbackSource, std::uint64_t generation) const noexcept;
 
     private:
         bool pending_{};
         std::uintptr_t source_{};
+        std::uintptr_t receiver_{};
+        std::uintptr_t conflictingReceiver_{};
+        bool receiverIdentityConflict_{};
+        std::uint64_t receiverEpoch_{};
+        std::uint64_t receiverGeneration_{};
+        bool receiverConflict_{};
+        bool receiverValidated_{};
         float nativeTarget_{std::numeric_limits<float>::quiet_NaN()};
         float baseline_{std::numeric_limits<float>::quiet_NaN()};
         float previous_{std::numeric_limits<float>::quiet_NaN()};

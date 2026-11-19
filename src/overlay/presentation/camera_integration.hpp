@@ -79,6 +79,11 @@ namespace overlay
         float nativeWriterAspect{};
         float horPlusTargetFov{};
         float currentOutputFov{};
+        float writerInputFov{}, effectiveFov{};
+        bool writerInputFovValid{}, effectiveFovValid{};
+        camera::SnapshotFreshness writerInputFovFreshness{camera::SnapshotFreshness::Unavailable};
+        camera::SnapshotFreshness effectiveFovFreshness{camera::SnapshotFreshness::Unavailable};
+
         float horPlusPolicyAspect{};
         float gameplayBoundaryFov{};
         float cinematicEnterFov{};

@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": true,
+  "ExpectedDescendantsCleaned": true,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "6120:E:\\Work\\Visual Studio Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\vctip.exe",
+  "Output": "[1/4] Building CXX object CMakeFiles\\camera_writer_transaction_harness.dir\\tests\\plugin\\camera_writer_transaction_harness.cpp.obj\r\n[2/4] Building CXX object CMakeFiles\\lifecycle_authority_m1_harness.dir\\tests\\plugin\\lifecycle_authority_m1_harness.cpp.obj\r\n[3/4] Linking CXX executable tests\\camera_writer_transaction_harness.exe\r\n[4/4] Linking CXX executable tests\\lifecycle_authority_m1_harness.exe\r\n",
+  "ProcessId": 31228
+}

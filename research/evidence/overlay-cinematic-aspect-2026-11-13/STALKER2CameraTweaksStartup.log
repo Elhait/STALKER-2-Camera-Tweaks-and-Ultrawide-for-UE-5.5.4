@@ -1,0 +1,5 @@
+STARTUP_JOURNAL v=1 pid=36216 qpcFrequency=10000000 capacity=48
+qpc=0 utc=0 tsc=7640578404497 tid=0 event=DLL_PROCESS_ATTACH detail=loader_lock value=0
+qpc=18084089633 utc=134390587837197648 tsc=7640579224927 tid=28804 event=INITIALIZATION_WORKER_START detail= value=0
+qpc=18085808977 utc=134390587838919388 tsc=7641301334033 tid=31312 event=OVERLAY_WORKER_START detail=composition_owner_thread value=0
+qpc=18101927685 utc=134390587855035774 tsc=7648071043219 tid=28804 event=CAMERA_CORE_READY detail=runtime_initialized value=0

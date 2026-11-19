@@ -1,13 +1,43 @@
 #include "dialogue_fov.hpp"
+#include "../config/feature_config.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace dialogue
 {
+    float ResolveDialogueDestinationTarget(config::DialogueZoomPolicy policy,
+        float baseline, float nativeTarget) noexcept
+    {
+        const auto validFov = [](float value) noexcept {
+            return std::isfinite(value) && value > 1.0f && value < 179.0f;
+        };
+        switch (policy) {
+        case config::DialogueZoomPolicy::Native:
+            return validFov(nativeTarget) ? nativeTarget
+                : std::numeric_limits<float>::quiet_NaN();
+        case config::DialogueZoomPolicy::Adaptive:
+            return validFov(baseline) ? AdaptiveTarget(baseline)
+                : std::numeric_limits<float>::quiet_NaN();
+        case config::DialogueZoomPolicy::Reduced:
+            return validFov(baseline) ? ReducedTarget(baseline)
+                : std::numeric_limits<float>::quiet_NaN();
+        case config::DialogueZoomPolicy::Disabled:
+            return validFov(baseline) ? baseline
+                : std::numeric_limits<float>::quiet_NaN();
+        }
+        return std::numeric_limits<float>::quiet_NaN();
+    }
+
     float TransformProjectionSample(float incoming, float baseline, float target)
     {
-        constexpr float nativeDialogueTarget = 70.0f;
+        return TransformProjectionSample(incoming, baseline, 70.0f, target);
+    }
+
+    float TransformProjectionSample(float incoming, float baseline,
+        float nativeDialogueTarget, float target)
+    {
         constexpr float projectionIntervalTolerance = 0.25f;
         constexpr float radiansPerDegree = 0.01745329251994329577f;
         const float intervalLow = baseline < nativeDialogueTarget ? baseline : nativeDialogueTarget;
@@ -43,6 +73,38 @@ namespace dialogue
             progress * (baselineProjection - targetProjection);
         const float output = 2.0f * std::atan(outputProjection) / radiansPerDegree;
         return std::isfinite(output) ? output : incoming;
+    }
+
+    float MapProjectionTransitionSample(float incoming, float nativeStart,
+        float nativeTarget, float outputStart, float outputTarget) noexcept
+    {
+        constexpr float radiansPerDegree = 0.01745329251994329577f;
+        const float values[]{incoming, nativeStart, nativeTarget, outputStart, outputTarget};
+        for (const float value : values)
+            if (!std::isfinite(value) || value <= 1.0f || value >= 179.0f)
+                return std::numeric_limits<float>::quiet_NaN();
+
+        const float sourceStart = std::tan(nativeStart * 0.5f * radiansPerDegree);
+        const float sourceTarget = std::tan(nativeTarget * 0.5f * radiansPerDegree);
+        const float sourceSample = std::tan(incoming * 0.5f * radiansPerDegree);
+        const float outputStartProjection = std::tan(outputStart * 0.5f * radiansPerDegree);
+        const float outputTargetProjection = std::tan(outputTarget * 0.5f * radiansPerDegree);
+        const float sourceSpan = sourceTarget - sourceStart;
+        if (!std::isfinite(sourceSpan) || std::fabs(sourceSpan) <= 1.0e-6f ||
+            !std::isfinite(sourceSample) ||
+            !std::isfinite(outputStartProjection) ||
+            !std::isfinite(outputTargetProjection))
+            return std::numeric_limits<float>::quiet_NaN();
+
+        const float progress = (sourceSample - sourceStart) / sourceSpan;
+        if (!std::isfinite(progress) || progress < -0.002f || progress > 1.002f)
+            return std::numeric_limits<float>::quiet_NaN();
+        const float outputProjection = outputStartProjection +
+            std::clamp(progress, 0.0f, 1.0f) *
+                (outputTargetProjection - outputStartProjection);
+        const float output = 2.0f * std::atan(outputProjection) / radiansPerDegree;
+        return std::isfinite(output) && output > 1.0f && output < 179.0f
+            ? output : std::numeric_limits<float>::quiet_NaN();
     }
 
     float AdaptiveTarget(float baseline)

@@ -71,13 +71,7 @@ namespace cinematics
     float ResolveAspect(config::CinematicAspectPolicy policy, float nativeAspect,
         float cinemaAspect, float wideAspect, AutoAspectResolver autoResolver)
     {
-        switch (policy) {
-        case config::CinematicAspectPolicy::Forced16x9: return nativeAspect;
-        case config::CinematicAspectPolicy::Forced21x9: return cinemaAspect;
-        case config::CinematicAspectPolicy::Forced32x9: return wideAspect;
-        case config::CinematicAspectPolicy::Auto: return autoResolver ? autoResolver() : nativeAspect;
-        case config::CinematicAspectPolicy::Native: return nativeAspect;
-        }
-        return nativeAspect;
+        return ResolveAspect(policy, nativeAspect, cinemaAspect, wideAspect,
+            policy == config::CinematicAspectPolicy::Auto && autoResolver ? autoResolver() : nativeAspect);
     }
 }

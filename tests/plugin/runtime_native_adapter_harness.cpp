@@ -7,9 +7,12 @@
 #include "../../src/plugin/camera_writer_transaction.hpp"
 #include "../../src/platform/win32/sha256.hpp"
 #include "../../src/overlay/presenter/renderer_runtime.hpp"
+#include "../../src/overlay/presentation/camera_integration.hpp"
 #include <atomic>
+#include <barrier>
 #include <limits>
 #include <new>
+#include "../../external/safetyhook/safetyhook.hpp"
 namespace overlay {
     struct RendererOwnershipTestAccess {
         static bool VerifyEmptyShutdown(bool menuVisible, bool partialImGui,
@@ -56,6 +59,8 @@ namespace overlay {
     };
 }
 namespace {
+    unsigned zoomEnableFailureOrdinal{};
+    bool RuntimeAdapterZoomEnable(safetyhook::MidHook&, unsigned);
     thread_local unsigned sha256AllocationFaultPoint{};
     std::atomic<bool> nativeResetCallbackEntered{};
     std::atomic<bool> nativeResetCallbackRelease{};
@@ -84,12 +89,20 @@ namespace gameplay {
 #define ReadClientViewportAspect RuntimeAdapterFixtureAutoViewport
 #define NotifyOverlayCameraStatePublished RuntimeAdapterFixtureWake
 #define ReadMemory RuntimeAdapterFixtureReadMemory
+#define RUNTIME_ADAPTER_ZOOM_ENABLE(hook, ordinal) RuntimeAdapterZoomEnable((hook), (ordinal))
 #define RUNTIME_ADAPTER_ZOOM_SAFE_READ(address, value) RuntimeAdapterFixtureZoomSafeRead((address), (value))
 #define RUNTIME_ADAPTER_INITIALIZE_THREAD_CALL(parameter) RuntimeAdapterFixtureInitializeThreadCall((parameter))
 #define RUNTIME_ADAPTER_INITIALIZATION_FAILURE_CLEANUP() RuntimeAdapterFixtureInitializationFailureCleanup()
 #define WriteAspectOnly RuntimeAdapterFixtureWriteAspectOnly
+#define POST_EXIT_BLEND_OBSERVATION
+#define DIALOGUE_BOUNDARY_PROVENANCE_DIAGNOSTIC
+#ifndef RUNTIME_AUTHORITY_CUTOVER_FIXTURE
+#define RUNTIME_LEGACY_LIFECYCLE_CHARACTERIZATION
+#endif
 #include "../../src/plugin/runtime.cpp"
+#undef RUNTIME_LEGACY_LIFECYCLE_CHARACTERIZATION
 #undef WriteAspectOnly
+#undef RUNTIME_ADAPTER_ZOOM_ENABLE
 #undef RUNTIME_ADAPTER_ZOOM_SAFE_READ
 #undef RUNTIME_ADAPTER_INITIALIZE_THREAD_CALL
 #undef RUNTIME_ADAPTER_INITIALIZATION_FAILURE_CLEANUP
@@ -305,6 +318,8 @@ namespace {
         source.Put(kFlagsOffset, std::uint8_t{4});
         source.Put(kCameraWorldFovOffset, 90.0f);
         source.Put(0x234, 90.0f); source.Put(0x2C, 70.0f);
+        g_runtime.zoomObserverAvailable.store(true);
+        g_runtime.snapshotZoomObservationValid.store(true);
     }
     plugin::OverlaySemanticSnapshot ReadFacts() {
         plugin::OverlaySemanticSnapshot snapshot{};
@@ -468,6 +483,37 @@ namespace {
         }
         if (scenario == "writer-combine-readonly") Near(source.Get<float>(kAspectOffset), kNativeAspect, "Refused write changed aspect");
         if (scenario == "writer-gate-off" || scenario == "writer-stopping" || scenario == "writer-unreadable") Check(!g_cameraStateSnapshotValid, "Rejected callback published");
+        if (scenario == "writer-wide" || scenario == "writer-combine") {
+            const auto plan = ReadFacts().cameraState.evidence;
+            Check(!camera::EffectiveCameraFov(plan).valid,
+                "Plan incorrectly claimed an effective readback");
+            // Emulate the native store, then call the actual observation adapters.
+            output.Put(0x30, context.xmm0.f32[0]);
+            ObserveCameraWriterPostStore(context);
+            const auto stored = ReadFacts().cameraState.evidence;
+            const auto effective = camera::EffectiveCameraFov(stored);
+            Check(effective.valid == diagnostics::Enabled(),
+                "Actual post-store publication did not respect Diagnostics gate");
+            if (diagnostics::Enabled()) {
+                Check(stored.writerTransaction.id != 0 &&
+                    effective.writerTransactionId == stored.writerTransaction.id &&
+                    effective.boundary == camera::CameraFovBoundary::PrimaryPostStore,
+                    "Actual store lost writer transaction or observation boundary");
+                Near(effective.value, context.xmm0.f32[0], "Actual store readback");
+            }
+            output.Put(0x30, context.xmm0.f32[0] - 1.0f);
+            ObserveCameraWriterPostProcess(context);
+            const auto post = ReadFacts();
+            const auto projected = overlay::ProjectCameraIntegration(post);
+            Check(projected.effectiveFovValid == diagnostics::Enabled(),
+                "Overlay Effective projection disagreed with observer gate");
+            if (diagnostics::Enabled()) {
+                Near(projected.effectiveFov, context.xmm0.f32[0] - 1.0f,
+                    "Post-helper readback was replaced with Planned Output");
+                Near(post.cameraState.evidence.postStoreFov.value, context.xmm0.f32[0],
+                    "Post-helper overwrote the independent post-store observation");
+            }
+        }
     }
     void Aspect(const std::string& scenario) {
         Memory source, output; Setup(source);
@@ -544,7 +590,12 @@ namespace {
                 Check(g_cinematicSelectionGeneration == expected && g_coordinator == CoordinatorState::CinematicActive, "Continuation generation/owner");
                 Check(ReadFacts().cameraTransitionBoundary.value.cinematicValid, "Continuation evidence lost");
                 Check(ReadFacts().cameraTransitionBoundary.value.lifecycleGeneration == expected, "Evidence generation differs");
-                Check(ReadFacts().cameraTransitionBoundary.value.gameplayValid, "Continuation lost original Gameplay operand");
+                const bool gameplayBoundaryValid =
+                    ReadFacts().cameraTransitionBoundary.value.gameplayValid;
+                Check(expected == 4 ? !gameplayBoundaryValid : gameplayBoundaryValid,
+                    expected == 4
+                        ? "Fresh generation inherited stale Gameplay boundary evidence"
+                        : "Validated continuation lost original Gameplay boundary evidence");
                 if (expected != 3) {
                     ApplyCinematicAspectStore(context);
                     auto sample = Context(source, output, g_cinematicTransformedFov.load());
@@ -604,7 +655,7 @@ namespace {
             auto sample = Context(source, output, 95.1311f);
             Writer(sample);
         }
-        auto enter = Context(source, output, 90.0f);
+        auto enter = Context(source, output, 95.1311f);
         TraceCinematicEnter(enter);
         ApplyCinematicAspectStore(enter);
         const float target = g_cinematicTransformedFov.load();
@@ -616,7 +667,7 @@ namespace {
         const bool invalidExit = scenario == "cinematic-continuation-no-validated-exit";
         if (invalidExit) g_cinematicWriterAssociation.InvalidateGeneration(1);
         auto exit = Context(source, output,
-            scenario == "cinematic-continuation-exit-departure" ? 95.2186f : 95.1311f);
+            scenario == "cinematic-continuation-exit-departure" ? 96.2f : 95.1311f);
         TraceCinematicExit(exit);
         Check(g_cinematicContinuationPending == !invalidExit &&
             g_coordinator == CoordinatorState::CinematicExiting,
@@ -631,7 +682,7 @@ namespace {
             Check(ApplyRuntimeSetting(plugin::RuntimeSettingMutation::CinematicAspect(
                 config::CinematicAspectPolicy::Forced16x9), nullptr).accepted,
                 "Production Cinematic policy handler rejected change");
-        enter = Context(source, output, 90.0f);
+        enter = Context(source, output, 95.1311f);
         TraceCinematicEnter(enter);
         ApplyCinematicAspectStore(enter);
         Check(g_cinematicSelectionGeneration == 2 && g_coordinator == CoordinatorState::CinematicActive,
@@ -647,22 +698,28 @@ namespace {
             Near(ReadFacts().cameraState.evidence.currentOutputFov.value, expected,
                 "Published writer output differs from selected-policy output");
         }
-        if (scenario == "cinematic-continuation-invalid-baseline" ||
-            scenario == "cinematic-continuation-native-mode" ||
-            scenario == "cinematic-continuation-target-change" ||
+        if (scenario == "cinematic-continuation-target-change" ||
             scenario == "cinematic-continuation-policy-change" || invalidExit ||
             scenario == "cinematic-continuation-exit-departure") {
             Check(!g_cinematicContinuationInterpolationActive,
                 "Unconfirmed baseline or changed intent armed continuation");
-            auto rejected = Context(source, output, 95.2186f);
+            const float unclassifiedRaw = invalidExit ||
+                scenario == "cinematic-continuation-exit-departure"
+                ? 97.0f : 95.2186f;
+            auto rejected = Context(source, output, unclassifiedRaw);
             Writer(rejected);
-            Near(rejected.xmm0.f32[0], 95.2186f,
+            Near(rejected.xmm0.f32[0], unclassifiedRaw,
                 "Unconfirmed baseline or changed intent retained old target");
             return;
         }
         auto first = Context(source, output, 95.1311f);
         Writer(first);
         Near(first.xmm0.f32[0], target, "Generation 2 initial writer regressed");
+        if (scenario == "cinematic-continuation-invalid-baseline") {
+            Check(!g_cinematicContinuationInterpolationActive,
+                "Missing Gameplay witness authorized cross-generation continuation");
+            return;
+        }
         float incoming = 95.2186f;
         Memory* writerSource = &source;
         Memory* writerOutput = &output;
@@ -672,7 +729,11 @@ namespace {
             foreignSource.Put(kCameraWorldFovOffset, incoming);
             writerSource = &foreignSource;
         }
-        if (scenario == "cinematic-continuation-foreign-writer") writerOutput = &foreignOutput;
+        if (scenario == "cinematic-continuation-output-b-persists" ||
+            scenario == "cinematic-continuation-output-roundtrip")
+            writerOutput = &foreignOutput;
+        const auto admittedBeforeRejectedCall =
+            g_cinematicWriterAssociation.Read().lastAdmittedOutput;
         if (scenario == "cinematic-continuation-stale-generation") g_cinematicSelectionGeneration = 3;
         if (scenario == "cinematic-continuation-no-association") {
             // Reproduce a writer arriving before the generation's aspect-store association.
@@ -680,24 +741,66 @@ namespace {
                 {true, config::CinematicAspectPolicy::Auto, config::CinematicFovMode::GameplayHorPlus},
                 95.1311f, source.Address());
         }
-        if (scenario == "cinematic-continuation-outside-low") incoming = 95.0f;
+        if (scenario == "cinematic-continuation-outside-low") incoming = 94.0f;
         if (scenario == "cinematic-continuation-outside-high") incoming = target + 0.1f;
         if (scenario == "cinematic-continuation-correction-off") g_activeCinematicsEnabled = false;
         const bool accepted = scenario == "cinematic-continuation-baseline" ||
-            scenario == "cinematic-continuation-combine" || scenario == "cinematic-continuation-chain";
+            scenario == "cinematic-continuation-combine" ||
+            scenario == "cinematic-continuation-chain" ||
+            scenario == "cinematic-continuation-invalid-baseline" ||
+            scenario == "cinematic-continuation-native-mode";
         auto sample = Context(*writerSource, *writerOutput, incoming);
+        if (scenario == "cinematic-continuation-invalid-output") sample.rbx = 0;
         auto before = sample;
         Writer(sample);
         UnchangedContext(before, sample, true);
-        Near(sample.xmm0.f32[0], accepted ? target : incoming,
+        const bool outputTransitionAccepted =
+            scenario == "cinematic-continuation-output-b-persists" ||
+            scenario == "cinematic-continuation-output-roundtrip";
+        Near(sample.xmm0.f32[0], accepted || outputTransitionAccepted ? target : incoming,
             "Gameplay-baseline continuation output/negative guard");
         Near(ReadFacts().cameraState.evidence.currentOutputFov.value,
-            accepted ? target : incoming, "Continuation output publication differs from register");
+            accepted || outputTransitionAccepted ? target : incoming,
+            "Continuation output publication differs from register");
         Check(g_coordinator == CoordinatorState::CinematicActive,
             "Continuation decision changed camera ownership");
-        if (!accepted) return;
+        if (scenario == "cinematic-continuation-invalid-output") {
+            const auto afterRejectedCall =
+                g_cinematicWriterAssociation.Read().lastAdmittedOutput;
+            Check(afterRejectedCall.valid == admittedBeforeRejectedCall.valid &&
+                afterRejectedCall.generation == admittedBeforeRejectedCall.generation &&
+                afterRejectedCall.sequence == admittedBeforeRejectedCall.sequence &&
+                afterRejectedCall.source == admittedBeforeRejectedCall.source &&
+                afterRejectedCall.output == admittedBeforeRejectedCall.output,
+                "Rejected zero-output invocation replaced last admitted evidence");
+            auto exitAfterRejectedOutput = Context(source, output, 95.1311f);
+            TraceCinematicExit(exitAfterRejectedOutput);
+            Check(g_cinematicRecoveryOwner.Read().valid &&
+                g_cinematicRecoveryOwner.Read().lastAdmittedWriterOutput ==
+                    admittedBeforeRejectedCall.output &&
+                g_cinematicRecoveryOwner.Read().lastAdmittedWriterOutput == output.Address(),
+                "EXIT after rejected output did not retain only historical A evidence");
+            return;
+        }
+        if (scenario == "cinematic-continuation-foreign-source") {
+            sample = Context(source, output, incoming);
+            Writer(sample);
+            Near(sample.xmm0.f32[0], target,
+                "Rejected foreign source poisoned source association/continuation");
+            Check(g_cinematicWriterAssociation.Read().associationValid &&
+                !g_cinematicWriterAssociation.Read().associationConflict,
+                "Rejected foreign source invalidated cinematic ownership");
+            return;
+        }
+        if (!accepted && !outputTransitionAccepted) return;
+        if (scenario == "cinematic-continuation-output-roundtrip") {
+            sample = Context(source, output, 95.2186f);
+            Writer(sample);
+            Near(sample.xmm0.f32[0], target,
+                "A-to-B-to-A output transition lost continuation");
+        }
         for (float fov : {95.1534f, 95.2186f, 100.0f, 120.0f, target}) {
-            sample = Context(source, output, fov);
+            sample = Context(source, *writerOutput, fov);
             Writer(sample);
             Near(sample.xmm0.f32[0], target, "Validated continuation ramp lost target");
         }
@@ -712,9 +815,18 @@ namespace {
             TraceCinematicEnter(enter);
             ApplyCinematicAspectStore(enter);
             Check(g_cinematicSelectionGeneration == 4, "Empty-generation chain lost generation");
+            const float freshTarget = g_cinematicTransformedFov.load();
+            Near(freshTarget, target,
+                "Writer-empty activation discarded the still-usable Gameplay reference");
+            Check(g_matchGameplayPreEnterPairValid && camera::IsUsableGameplayBaseline(g_gameplayBaselineStore.Read()),
+                "Successor generation lost independent Gameplay reference provenance");
             sample = Context(source, output, 95.2186f);
             Writer(sample);
-            Near(sample.xmm0.f32[0], target, "Empty-generation continuation lost target");
+            Near(sample.xmm0.f32[0], 95.2186f,
+                "Unqualified raw sample inherited the empty-generation target");
+            Check(!g_cinematicContinuationInterpolationActive,
+                "Empty-generation carry reauthorized predecessor continuation");
+            return;
         }
         auto dialogue = Context(source, output, 70.0f);
         before = dialogue;
@@ -722,7 +834,7 @@ namespace {
         UnchangedContext(before, dialogue);
         Check(g_coordinator == CoordinatorState::CinematicActive,
             "Disabled Dialogue took Cinematic ownership");
-        sample = Context(source, output, 100.0f);
+        sample = Context(source, *writerOutput, 100.0f);
         Writer(sample);
         Near(sample.xmm0.f32[0], target, "Disabled Dialogue broke Cinematic continuation");
         exit = Context(source, output, 95.1311f);
@@ -731,10 +843,18 @@ namespace {
         UnchangedContext(before, exit);
         Check(g_coordinator == CoordinatorState::CinematicExiting,
             "Final EXIT lost recovery ownership");
+        if (scenario == "cinematic-continuation-output-b-persists")
+            Check(g_cinematicRecoveryOwner.Read().lastAdmittedWriterOutput ==
+                    writerOutput->Address(),
+                "EXIT did not capture the last admitted B output as historical metadata");
         sample = Context(source, output, 95.1311f);
         Writer(sample);
         Near(sample.xmm0.f32[0], camera::HorPlus(95.1311f, fixtureViewport, kNativeAspect),
             "Recovery did not resume Gameplay HorPlus");
+        if (scenario == "cinematic-continuation-output-b-persists")
+            Check(!g_cinematicRecoveryOwner.Read().valid ||
+                g_cinematicRecoveryOwner.Read().lastAdmittedWriterOutput != output.Address(),
+                "Gameplay recovery incorrectly required the cached cinematic output");
         Check(g_coordinator == CoordinatorState::Gameplay,
             "Validated native recovery did not complete");
         Near(ReadFacts().cameraState.evidence.nativeFov.value, 95.1311f,
@@ -743,12 +863,20 @@ namespace {
     void CinematicInitialGameplayBaseline(const std::string& scenario) {
         Memory source, output, foreignSource;
         Setup(source);
-        fixtureViewport = 3.0f;
-        g_runtimeGameplayMode = config::GameplayMode::HorPlus;
+        const bool combineReentry = scenario == "cinematic-initial-combine-empty-generations";
+        const bool nativeReferenceWithWitness =
+            scenario == "cinematic-initial-own-reference-witness";
+        const float gameplayNativeWitness = combineReentry ? 130.3115f :
+            nativeReferenceWithWitness ? 70.0f : 95.1311f;
+        fixtureViewport = combineReentry ? 32.0f / 9.0f : 3.0f;
+        g_runtimeGameplayMode = combineReentry ? config::GameplayMode::RuntimeCombine
+            : config::GameplayMode::HorPlus;
         g_runtimeCinematicPolicy = config::CinematicAspectPolicy::Auto;
-        g_runtimeCinematicFovMode = config::CinematicFovMode::GameplayHorPlus;
+        g_runtimeCinematicFovMode = nativeReferenceWithWitness
+            ? config::CinematicFovMode::NativeHorPlus
+            : config::CinematicFovMode::GameplayHorPlus;
         source.Put(kAspectOffset, fixtureViewport);
-        source.Put(kCameraWorldFovOffset, 95.1311f);
+        source.Put(kCameraWorldFovOffset, gameplayNativeWitness);
 
         const bool noBaseline = scenario == "cinematic-initial-missing-baseline";
         const bool invalidBaseline = scenario == "cinematic-initial-invalid-baseline";
@@ -758,7 +886,7 @@ namespace {
                     std::numeric_limits<float>::quiet_NaN());
             for (unsigned i = 0; i < 4; ++i) {
                 auto sample = Context(source, output,
-                    invalidBaseline ? std::numeric_limits<float>::quiet_NaN() : 95.1311f);
+                    invalidBaseline ? std::numeric_limits<float>::quiet_NaN() : gameplayNativeWitness);
                 Writer(sample);
             }
             if (!invalidBaseline) {
@@ -766,11 +894,11 @@ namespace {
                 Check(camera::IsUsableGameplayBaseline(baseline) &&
                     baseline.source.valid && baseline.source.value == source.Address(),
                     "Production Gameplay baseline fixture was not qualified for this source");
-                Near(baseline.nativeFov.value, 95.1311f,
+                Near(baseline.nativeFov.value, gameplayNativeWitness,
                     "Production baseline fixture native FOV");
             }
         }
-        source.Put(kCameraWorldFovOffset, 95.1311f);
+        source.Put(kCameraWorldFovOffset, gameplayNativeWitness);
 
         auto enter = Context(source, output, 90.0f);
         auto before = enter;
@@ -780,9 +908,10 @@ namespace {
             g_cinematicSelectionGeneration == 1,
             "Initial Gameplay-baseline ENTER did not accept generation 1");
         const float target = g_cinematicTransformedFov.load();
-        const float expectedTarget = noBaseline || invalidBaseline
-            ? camera::HorPlus(90.0f, fixtureViewport, kNativeAspect)
-            : camera::HorPlus(95.1311f, fixtureViewport, kNativeAspect);
+        const float expectedReference = !noBaseline && !invalidBaseline &&
+            !nativeReferenceWithWitness ? gameplayNativeWitness : 90.0f;
+        const float expectedTarget = camera::HorPlus(expectedReference,
+            fixtureViewport, kNativeAspect);
         Near(target, expectedTarget, "Initial Gameplay-baseline cinematic target");
         ApplyCinematicAspectStore(enter);
 
@@ -804,22 +933,83 @@ namespace {
         if (scenario == "cinematic-initial-stale-generation")
             g_cinematicSelectionGeneration.store(2, std::memory_order_release);
 
-        auto firstWriter = Context(source, output, 95.1311f);
+        if (combineReentry || scenario == "cinematic-initial-gameplay-baseline") {
+            const auto nativeStart = CaptureCurrentNativeEnterStartCandidate(
+                source.Address(), gameplayNativeWitness, gameplayNativeWitness, 0xC);
+            Check(g_runtime.cinematicEnterActivation.Capture(true,
+                g_cinematicSelectionGeneration.load(), g_activeCinematicSettingsEpoch.load(),
+                0xC, source.Address(), GetCurrentThreadId(), gameplayNativeWitness, target,
+                g_dialogueSettingsEpoch.load(), nativeStart), "Initial native activation capture refused");
+        }
+        auto firstWriter = Context(source, output, gameplayNativeWitness);
         before = firstWriter;
         Writer(firstWriter);
         UnchangedContext(before, firstWriter, true);
-        const bool accepted = scenario == "cinematic-initial-gameplay-baseline";
+        const bool accepted = combineReentry || scenario == "cinematic-initial-gameplay-baseline" ||
+            nativeReferenceWithWitness;
         if (accepted) {
             Near(firstWriter.xmm0.f32[0], target,
-                "Confirmed Gameplay baseline was not replaced by cinematic target");
+                "Own cinematic ENTER reference was not applied over its retention witness");
             Near(ReadFacts().cameraState.evidence.currentOutputFov.value, target,
                 "Production output publication missed initial cinematic target");
             const auto association = g_cinematicWriterAssociation.Read();
             Check(association.initialEstablishmentActive &&
                 association.associationValid && association.generation == 1,
-                "Accepted Gameplay baseline damaged generation-scoped establishment");
+                "Accepted own-reference retention damaged generation-scoped establishment");
+            if (combineReentry || scenario == "cinematic-initial-gameplay-baseline") {
+                // A later native activation can inherit the cinematic-corrected field.
+                source.Put(kCameraWorldFovOffset, target);
+                auto endpoint = Context(source, output, target);
+                Writer(endpoint);
+                endpoint = Context(source, output, target);
+                Writer(endpoint);
+                const auto inherited = CaptureCurrentNativeEnterStartCandidate(
+                    source.Address(), target, target, 0xC);
+                Check(!inherited.valid || std::fabs(inherited.correctedStart - target) < 0.001f,
+                    "Inherited cinematic-corrected start received a second HorPlus");
+                g_gameplayRecoveryObservationAvailable = true;
+                // Real lifecycle adapters, no writer at all in most activations.
+                // Both diagnostic runs must preserve the same policy and output.
+                for (unsigned step = 0; step < 16; ++step) {
+                    auto exit = Context(source, output, gameplayNativeWitness);
+                    TraceCinematicExit(exit);
+                    auto next = Context(source, output, 90.0f);
+                    TraceCinematicEnter(next);
+                    ApplyCinematicAspectStore(next);
+                    Near(g_cinematicTransformedFov.load(), target,
+                        "Empty runtime generation lost GameplayHorPlus target");
+                    if (step % 3 != 0) continue;
+                    const auto successorStart = CaptureCurrentNativeEnterStartCandidate(
+                        source.Address(), target, target, 0xC);
+                    Check(successorStart.valid && successorStart.fromCinematicWriter,
+                        "Runtime reentry lost the predecessor's admitted writer provenance");
+                    Check(g_runtime.cinematicEnterActivation.Capture(true,
+                        g_cinematicSelectionGeneration.load(), g_activeCinematicSettingsEpoch.load(),
+                        0xC, source.Address(), GetCurrentThreadId(), target, target,
+                        g_dialogueSettingsEpoch.load(), successorStart),
+                        "Runtime inherited activation capture refused");
+                    auto successorWriter = Context(source, output, target);
+                    Writer(successorWriter);
+                    Near(successorWriter.xmm0.f32[0], target,
+                        "Repeated runtime reentry accumulated correction");
+                    Check(g_dialoguePhase == DialoguePhase::Inactive,
+                        "Embedded cinematic interaction activated Dialogue policy");
+                }
+                const auto conflicted = g_cinematicWriterAssociation.ObserveAspectStoreTarget(
+                    g_cinematicSelectionGeneration.load(), foreignSource.Address());
+                Check(conflicted.associationConflict, "Conflict fixture did not revoke association");
+                auto conflictExit = Context(source, output, gameplayNativeWitness);
+                TraceCinematicExit(conflictExit);
+                auto conflictEnter = Context(source, output, 90.0f);
+                TraceCinematicEnter(conflictEnter);
+                ApplyCinematicAspectStore(conflictEnter);
+                const auto revoked = CaptureCurrentNativeEnterStartCandidate(
+                    source.Address(), target, target, 0xC);
+                Check(revoked.cinematicContextActive && !revoked.valid,
+                    "Conflicted predecessor writer was resurrected as continuity evidence");
+            }
         } else {
-            Near(firstWriter.xmm0.f32[0], 95.1311f,
+            Near(firstWriter.xmm0.f32[0], gameplayNativeWitness,
                 "Unqualified Gameplay baseline was mutated");
             const auto association = g_cinematicWriterAssociation.Read();
             if (scenario == "cinematic-initial-stale-generation")
@@ -856,14 +1046,196 @@ namespace {
         }
         Check(g_coordinator == (scenario == "dialogue-cinematic" ? CoordinatorState::CinematicActive : CoordinatorState::Gameplay), "Dialogue changed coordinator");
     }
+    void DialogueCandidateGameplayReturn() {
+        Memory source, output, vtable, nextSource, nextOutput;
+        Setup(source);
+        fixtureViewport = 32.0f / 9.0f;
+        g_runtimeGameplayMode = config::GameplayMode::RuntimeCombine;
+        g_runtimeCinematicPolicy = config::CinematicAspectPolicy::Auto;
+        g_runtimeCinematicFovMode = config::CinematicFovMode::GameplayHorPlus;
+        g_gameplayRecoveryObservationAvailable = true;
+        source.Put(0, vtable.Address());
+        vtable.Put(0x608, reinterpret_cast<std::uintptr_t>(&DialogueCandidateGameplayReturn));
+        source.Put(kCameraWorldFovOffset, 130.308f);
+        auto seed = Context(source, output, 130.308f);
+        Writer(seed);
+        Check(camera::IsUsableGameplayBaseline(g_gameplayBaselineStore.Read()),
+            "Return witness was not admitted");
+        source.Put(0x2C, 130.311f);
+        auto candidate = Context(source, output, 130.311f);
+        DialogueCallback(candidate);
+        Check(g_dialoguePhase == Phase::Candidate,
+            "Stable recovery callback did not reproduce pending Candidate");
+        Check(g_dialogueCandidate.HasReceiverBinding(source.Address(),
+                g_dialogueSettingsEpoch.load(), g_cinematicSelectionGeneration.load()),
+            "Candidate fixture lacks the actual validated receiver evidence");
+        // No further setter callback: the writer must finish the stationary
+        // hypothesis from a current Gameplay witness, before baseline projection.
+        source.Put(kCameraWorldFovOffset, 130.311f);
+        auto resumed = Context(source, output, 130.311f);
+        Writer(resumed);
+        Check(g_dialoguePhase == Phase::Inactive &&
+                camera::IsUsableGameplayBaseline(g_gameplayBaselineStore.Read()),
+            "Stationary Candidate survived a proven Gameplay return without more setters");
+        nextSource.Put(kAspectOffset, fixtureViewport);
+        nextSource.Put(kFlagsOffset, std::uint8_t{4});
+        nextSource.Put(kCameraWorldFovOffset, 130.311f);
+        auto nextWriter = Context(nextSource, nextOutput, 130.311f);
+        Writer(nextWriter);
+        const auto fresh = g_gameplayBaselineStore.Read();
+        Check(camera::IsUsableGameplayBaseline(fresh) && fresh.source.value == nextSource.Address(),
+            "Old Candidate blocked admission for the next Gameplay receiver");
+        auto enter = Context(nextSource, nextOutput, 90.0f);
+        TraceCinematicEnter(enter);
+        Near(g_cinematicTransformedFov.load(), camera::HorPlus(130.311f, fixtureViewport, kNativeAspect),
+            "Next cinematic fell back to authored 90 after pending Dialogue");
+        nextSource.Put(0, vtable.Address());
+        const auto writerAt = [&](float native, std::uint8_t flags) {
+            nextSource.Put(kCameraWorldFovOffset, native);
+            nextSource.Put(kFlagsOffset, flags);
+            auto writer = Context(nextSource, nextOutput, native);
+            Writer(writer);
+            return writer.xmm0.f32[0];
+        };
+        const auto exitToGameplay = [&](float native) {
+            ApplyCinematicAspectStore(enter);
+            const float cinematicTarget = g_cinematicTransformedFov.load();
+            writerAt(cinematicTarget, 5);
+            auto exit = Context(nextSource, nextOutput, native);
+            TraceCinematicExit(exit);
+            writerAt(cinematicTarget, 4);
+            writerAt(native, 4);
+            Check(g_coordinator == CoordinatorState::Gameplay &&
+                    !g_postCinematicDialogueExclusion.IsActive() &&
+                    !g_cinematicRecoveryOwner.Read().HasRecoveryAuthority(),
+                "Completed cinematic recovery retained authority/exclusion");
+            const auto completedReference = g_gameplayBaselineStore.Read();
+            const auto completedWriter = g_fovObservationStore.ReadLatest(
+                camera::FovObservationBoundary::CameraWriter);
+            Check(camera::IsUsableGameplayBaseline(completedReference) &&
+                    completedReference.source.value == nextSource.Address() &&
+                    completedWriter &&
+                    completedWriter->writerContext == camera::WriterContext::GameplayEligible &&
+                    completedWriter->publicationSequence == completedReference.observationSequence,
+                "Recovery completion committed Gameplay with a non-current baseline");
+            // Recorded ordering: a neutral setter follows the exact completion
+            // writer, before any additional Gameplay sample can repair admission.
+            nextSource.Put(0x2C, native);
+            auto neutral = Context(nextSource, nextOutput, native);
+            DialogueCallback(neutral);
+            writerAt(native, 4);
+            Check(g_dialoguePhase == Phase::Inactive &&
+                    camera::IsUsableGameplayBaseline(g_gameplayBaselineStore.Read()),
+                "Immediate post-recovery Candidate blocked the next scene");
+        };
+        exitToGameplay(130.311f);
+        // One process, no save-load/reset calls: repeated cinematics, embedded
+        // choices, writer-empty reentry, ordinary Dialogue and native FOV changes.
+        for (const float native : {90.3115f, 100.3115f, 130.3115f}) {
+            writerAt(native, 4);
+            const double radians = double(native) * 3.14159265358979323846 / 180.0;
+            const float expected = float(2.0 * std::atan(std::tan(radians/2.0) * 2.0)
+                * 180.0 / 3.14159265358979323846);
+            enter = Context(nextSource, nextOutput, 90.0f);
+            TraceCinematicEnter(enter);
+            Near(g_cinematicTransformedFov.load(), expected,
+                "Later same-session cinematic lost the current Gameplay reference");
+            ApplyCinematicAspectStore(enter);
+            writerAt(native, 5);
+            auto choice = Context(nextSource, nextOutput, 70.0f);
+            nextSource.Put(0x2C, 70.0f);
+            DialogueCallback(choice);
+            Check(g_coordinator == CoordinatorState::CinematicActive &&
+                    g_dialoguePhase == Phase::Inactive,
+                "Embedded choice acquired Dialogue ownership");
+            auto exit = Context(nextSource, nextOutput, native);
+            TraceCinematicExit(exit);
+            enter = Context(nextSource, nextOutput, 90.0f);
+            TraceCinematicEnter(enter); // compatible reentry; no intervening writer
+            Near(g_cinematicTransformedFov.load(), expected,
+                "Short reentry reset GameplayHorPlus");
+            exitToGameplay(native);
+            nextSource.Put(0x2C, 70.0f);
+            auto dialogue = Context(nextSource, nextOutput, native);
+            DialogueCallback(dialogue);
+            dialogue = Context(nextSource, nextOutput, 70.0f);
+            DialogueCallback(dialogue);
+            Check(g_dialoguePhase == Phase::Active,
+                "Real descent was incorrectly retired as a stationary Candidate");
+            const float expectedDialogue = dialogue::ResolveDialogueDestinationTarget(
+                g_runtimeDialoguePolicy.load(), native, 70.0f);
+            Near(dialogue.xmm1.f32[0], expectedDialogue, "Actual Dialogue policy target");
+            nextSource.Put(0x2C, native);
+            for (unsigned step = 0; step != 12 && g_dialoguePhase != Phase::Inactive; ++step) {
+                dialogue = Context(nextSource, nextOutput, native);
+                DialogueCallback(dialogue);
+            }
+            Check(g_dialoguePhase == Phase::Inactive && !g_activeDialoguePolicy.IsValid(),
+                "Completed Dialogue retained policy ownership");
+            writerAt(native, 4);
+            DialogueCallback(dialogue);
+            writerAt(native, 4); // no further setter is needed for this candidate
+            Check(g_dialoguePhase == Phase::Inactive &&
+                    camera::IsUsableGameplayBaseline(g_gameplayBaselineStore.Read()),
+                "Same-save lifecycle leaked a post-Dialogue candidate into the next scene");
+        }
+    }
+    void DialogueBaselineContextIntegration() {
+        Memory source, output;
+        Setup(source);
+        g_runtimeDialogueEnabled.store(true, std::memory_order_release);
+        g_runtimeDialoguePolicy.store(config::DialogueZoomPolicy::Reduced,
+            std::memory_order_release);
+        source.Put(kCameraWorldFovOffset, 70.0005f);
+        source.Put(0x234, 70.0005f);
+        source.Put(0x2C, 70.0f);
+
+        auto seedWriter = Context(source, output, 70.0005f);
+        Writer(seedWriter);
+        const auto seed = g_gameplayBaselineStore.Read();
+        Check(camera::IsUsableGameplayBaseline(seed) && seed.current &&
+            std::fabs(seed.nativeFov.value - 70.0005f) < 0.001f,
+            "Gameplay seed baseline was not established");
+
+        auto candidate = Context(source, output);
+        candidate.xmm6.f32[0] = 70.030342f;
+        DialogueCallback(candidate);
+        auto accepted = Context(source, output);
+        accepted.xmm6.f32[0] = 70.0005f;
+        DialogueCallback(accepted);
+        const float dialogueOutput = accepted.xmm1.f32[0];
+        Check(g_dialoguePhase == Phase::Active && std::isfinite(dialogueOutput) &&
+            std::fabs(dialogueOutput - 60.9227f) < 0.02f,
+            "Reduced Dialogue transition did not produce the recorded setter output");
+
+        source.Put(kCameraWorldFovOffset, dialogueOutput);
+        auto writer = Context(source, output, dialogueOutput);
+        Writer(writer);
+        const auto after = g_gameplayBaselineStore.Read();
+        const float expectedGameplayOutput = camera::HorPlus(dialogueOutput,
+            fixtureViewport, kNativeAspect);
+        Check(g_dialoguePhase == Phase::Inactive && !after.current &&
+            std::fabs(after.nativeFov.value - seed.nativeFov.value) < 0.001f,
+            "Writer-triggered Dialogue reset admitted the mod setter output as baseline");
+        Near(writer.xmm0.f32[0], expectedGameplayOutput,
+            "Ambiguous baseline context disabled the independent Gameplay correction");
+    }
+    #include "zoom_compatibility_cases.hpp"
     void Zoom(const std::string& scenario) {
         Memory source, output; Setup(source);
+        if (scenario == "zoom") ZoomResolverAndInstallation();
         source.Put(0x4C, 70.0f); source.Put(0x50, 90.0f); source.Put(0x138, 1.0f); source.Put(0x13C, 2.0f);
         if (scenario == "zoom-unreadable") source.Protect(PAGE_NOACCESS);
         const bool throwingIn = scenario == "zoom-in-throw";
         const bool throwingOut = scenario == "zoom-out-throw";
         throwOnZoomSafeRead = throwingIn;
         auto context = Context(source, output); auto before = context;
+        g_runtime.zoomObserverAvailable.store(false);
+        const auto sequenceBefore = g_runtime.snapshotZoomSequence.load();
+        ZoomInCallback(context); UnchangedContext(before, context);
+        Check(g_runtime.snapshotZoomSequence == sequenceBefore && !g_snapshotZoomActive &&
+            g_zoomInHits == 0, "Uncommitted/rolled-back observer callback published state");
+        g_runtime.zoomObserverAvailable.store(true);
         ZoomInCallback(context); UnchangedContext(before, context);
         Check(g_snapshotZoomActive && g_snapshotZoomHold &&
             g_zoomInHits == (diagnosticMode ? 1u : 0u), "Zoom IN observation/diagnostic counter gate");
@@ -967,7 +1339,9 @@ namespace {
         Near(cinematic.cameraState.evidence.gameplayFov.value, baseline.value, "Retained baseline value changed");
         Near(cinematic.cameraState.evidence.nativeFov.value, 90.0f, "Cinematic native observation");
         Near(cinematic.cameraState.evidence.horPlusTargetFov.value, cinematicTarget, "Cinematic target publication");
-        Check(cinematic.cameraState.evidence.nativeFov.freshness == camera::SnapshotFreshness::Current &&
+        Check(cinematic.cameraState.evidence.nativeFov.freshness == camera::SnapshotFreshness::Historical &&
+            cinematic.cameraState.evidence.nativeFov.boundary == camera::CameraFovBoundary::CinematicEnter &&
+            cinematic.cameraState.evidence.writerInputFov.freshness == camera::SnapshotFreshness::Current &&
             cinematic.cameraState.evidence.horPlusTargetFov.freshness == camera::SnapshotFreshness::Current &&
             cinematic.cameraState.evidence.currentOutputFov.freshness == camera::SnapshotFreshness::Current,
             "Cinematic live roles not Current");
@@ -1118,6 +1492,11 @@ namespace {
         Check(g_coordinator == CoordinatorState::Gameplay,
             "Dialogue lifecycle altered camera coordinator");
     }
+    #include "cinematic_consumer_cases.hpp"
+    #include "post_exit_blend_observation_cases.hpp"
+    #include "post_exit_blend_activation_cases.hpp"
+    #include "u2_shadow_cases.hpp"
+    #include "cinematic_diagnostic_aggregation_cases.hpp"
     void DiagnosticWork() {
         Memory source, output;
         Setup(source);
@@ -1185,6 +1564,7 @@ namespace {
             Check(snapshot.storedSamples == 1 && snapshot.totalSamples == 1,
                 "Enabled continuation trace did not record the actual adapter sample");
         }
+        PostExitBlendObservationCases();
         std::cout << "diagnostic_work diagnostic=" << (diagnosticMode ? "on" : "off")
             << " cinematic_writer_reads=" << writerReads
             << " dialogue_callbacks=" << (diagnosticMode ? 1 : 0)
@@ -1546,24 +1926,215 @@ extern "C" void RuntimeAdapterFixtureWake() noexcept {
     if (currentContext) xmm1AtWake = currentContext->xmm1.f32[0];
     nativeEvents.push_back({NativeEffect::Wake, 0, true});
 }
+#ifdef RUNTIME_AUTHORITY_CUTOVER_FIXTURE
+int main(int argc, char** argv)
+{
+    try {
+        Check(argc == 2, "expected Diagnostics off/on");
+        diagnosticMode = std::string_view(argv[1]) == "on";
+        diagnostics::SetEnabled(diagnosticMode);
+        fixtureViewport = 32.0f / 9.0f;
+        Memory receiver, output, provider, vtable, stack;
+        fixtureSource = receiver.Address();
+        receiver.Put(kAspectOffset, fixtureViewport);
+        receiver.Put(kFlagsOffset, std::uint8_t{4});
+        receiver.Put(kCameraWorldFovOffset, 130.311f);
+        receiver.Put(0, vtable.Address());
+        vtable.Put(0x608, reinterpret_cast<std::uintptr_t>(&Writer));
+        Check(g_nativeCallbackAdmission.Open(), "native admission must open");
+        {
+            auto guard = g_cameraCorrectionGate.Acquire();
+            config::FeatureConfig config;
+            config.gameplayEnabled = config.cinematicsEnabled = config.dialogueEnabled = true;
+            config.gameplayMode = config::GameplayMode::RuntimeCombine;
+            config.cinematicAspectPolicy = config::CinematicAspectPolicy::Auto;
+            config.cinematicFovMode = config::CinematicFovMode::GameplayHorPlus;
+            config.dialogueZoomPolicy = config::DialogueZoomPolicy::Reduced;
+            Check(g_cameraLifecycle.Initialize(g_cameraCorrectionGate, config), "authority startup");
+        }
+        g_runtimeInitializationComplete = true;
+        g_cameraWriterHookGate = g_cinematicHookGate = true;
+        g_gameplayRecoveryObservationAvailable = true;
+        g_dialogueNonNativeCapabilityAvailable = g_dialogueBoundaryHookAvailable = true;
+        nativeEvents.reserve(256);
+        const auto write = [&](float fov, float expected) {
+            auto context = Context(receiver, output, fov);
+            const auto before = context;
+            Writer(context);
+            UnchangedContext(before, context, true);
+            Near(context.xmm0.f32[0], expected, "writer argument");
+            return context;
+        };
+
+        constexpr float gameplay = 130.311f;
+        constexpr float cinematic = 153.931f;
+        constexpr float dialogue = 149.071f;
+        // Wrong legacy values are intentional. The live adapter must use
+        // Authority's settings, revision and ownership.
+        g_runtimeGameplayEnabled = false;
+        g_runtimeGameplayMode = config::GameplayMode::AspectRecalculation;
+        // Exercise the generated SafetyHook trampoline at the exact five-byte
+        // MOVSS writer shape. The body executes the native store once.
+        {
+            Memory executable;
+            constexpr std::uint8_t instructions[] = {
+                0x56, 0x53,                   // push rsi; push rbx
+                0x48, 0x8B, 0xF1,             // mov rsi, rcx
+                0x48, 0x8B, 0xDA,             // mov rbx, rdx
+                0x0F, 0x28, 0xC2,             // movaps xmm0, xmm2
+                0xF3, 0x0F, 0x11, 0x43, 0x30, // movss [rbx+30h], xmm0
+                0x90, 0x90, 0x90, 0x90, 0x90, // post-store hook span
+                0x5B, 0x5E, 0xC3              // pop rbx; pop rsi; ret
+            };
+            std::memcpy(executable.bytes, instructions, sizeof(instructions));
+            executable.Protect(PAGE_EXECUTE_READ);
+            Check(FlushInstructionCache(GetCurrentProcess(), executable.bytes, sizeof(instructions)),
+                "flush native fixture instructions");
+            auto* code = executable.bytes;
+            auto primary = safetyhook::MidHook::create(code + 11, SafeMidHookEntry<&ReplayManualTransition>,
+                safetyhook::MidHook::StartDisabled);
+            Check(primary && primary->original_bytes().size() == 5, "native primary MOVSS hook span");
+            auto post = safetyhook::MidHook::create(code + 16, SafeMidHookEntry<&ObserveCameraWriterPostStore>,
+                safetyhook::MidHook::StartDisabled);
+            Check(post && bool(post->enable()), "native post-store hook");
+            g_runtime.postStoreObservationAvailable = diagnosticMode;
+            Check(bool(primary->enable()), "native primary enable");
+            using NativeWriter = void (*)(void*, void*, float);
+            reinterpret_cast<NativeWriter>(code)(receiver.bytes, output.bytes, gameplay);
+            Near(output.Get<float>(0x30), cinematic, "native MOVSS stores Authority's XMM0 lane");
+            const auto evidence = ReadFacts().cameraState.evidence;
+            Check(evidence.postStoreFov.valid == diagnosticMode, "diagnostic readback availability");
+            if (diagnosticMode) Near(evidence.postStoreFov.value, cinematic, "physical post-store FOV");
+            g_runtime.postStoreObservationAvailable = false;
+        }
+        Near(ReadFacts().cameraState.evidence.gameplayFov.value, gameplay, "gameplay reference publication");
+        const auto enter = [&] {
+            auto context = Context(receiver, output, 90);
+            const auto before = context;
+            SafeMidHookEntry<&TraceCinematicEnter>(context);
+            UnchangedContext(before, context, true);
+            Near(context.xmm0.f32[0], cinematic, "Cinematic GameplayHorPlus");
+            const auto aspectBefore = context;
+            nativeEvents.clear();
+            SafeMidHookEntry<&ApplyCinematicAspectStore, &PassThroughCinematicAspectStore>(context);
+            UnchangedContext(aspectBefore, context, false, false, true);
+            Check(context.rip == aspectBefore.rip + kCinematicStoreInstructionLength, "aspect RIP advance");
+            Check(std::count_if(nativeEvents.begin(), nativeEvents.end(), [](const NativeEvent& event) {
+                return event.effect == NativeEffect::WriteAspect;
+            }) == 1, "Cinematic aspect effect executed twice or skipped");
+        };
+        enter();
+        write(90, cinematic);
+        auto exit = Context(receiver, output, gameplay);
+        const auto beforeExit = exit;
+        SafeMidHookEntry<&TraceCinematicExit>(exit);
+        UnchangedContext(beforeExit, exit);
+        Check(ReadFacts().coordinator.value == plugin::OverlayCoordinatorState::CinematicExiting,
+            "Cinematic EXIT must publish recovery");
+
+        // The game's cinematic recovery can finish several seconds before
+        // the provider armer, with another writer tick before the first setter.
+        write(gameplay, cinematic);
+        Check(ReadFacts().coordinator.value == plugin::OverlayCoordinatorState::Gameplay,
+            "cinematic recovery must precede the delayed provider");
+        write(gameplay, cinematic);
+        provider.Put(0x54, 70.0f);
+        provider.Put(0x58, gameplay);
+        auto armer = Context(receiver, output);
+        armer.rsi = provider.Address();
+        armer.rdi = receiver.Address();
+        armer.rsp = stack.Address();
+        g_runtime.postExitBlendProducerReturn = 0x123456;
+        g_runtime.postExitBlendActivationAvailable = true;
+        stack.Put(diagnostics::kBlendArmerReturnSlotOffset, g_runtime.postExitBlendProducerReturn);
+        const auto beforeArm = armer;
+        SafeMidHookEntry<&TracePostExitBlendStartCapture>(armer);
+        UnchangedContext(beforeArm, armer);
+        auto beforeSetter = Context(receiver, output, gameplay);
+        Writer(beforeSetter);
+        const bool keptEntryFov = std::fabs(beforeSetter.xmm0.f32[0] - cinematic) < 0.005f;
+
+        const auto setter = [&](float incoming) {
+            auto context = Context(receiver, output, incoming);
+            context.rsi = provider.Address() + 0x28;
+            context.xmm1.f32[0] = incoming;
+            const auto before = context;
+            SafeMidHookEntry<&TraceDialogueBoundary>(context);
+            UnchangedContext(before, context, false, true);
+            return context.xmm1.f32[0];
+        };
+        Near(setter(130.264f), 130.264f, "pre-confirmation setter remains native");
+        auto first = Context(receiver, output, 130.264f);
+        Writer(first);
+        Check(first.xmm0.f32[0] > 152.0f, "provider starts at corrected Cinematic continuity");
+        write(70, dialogue);
+        const float prepared = setter(70);
+        Near(prepared, 122.087f, "provider setter must prepare Reduced");
+        write(prepared, dialogue);
+        Check(ReadFacts().dialoguePhase.value == plugin::OverlayDialoguePhase::Active,
+            "committed Dialogue ownership publication");
+        provider.Put(0x54, gameplay);
+        for (const float sample : {75.0f, 110.0f, 129.8f, 130.277f, 130.292f, gameplay}) {
+            auto returning = Context(receiver, output, setter(sample));
+            Writer(returning);
+        }
+        auto resumed = Context(receiver, output, gameplay);
+        Writer(resumed);
+        const auto resumedFacts = ReadFacts();
+        const bool resumedGameplay = std::fabs(resumed.xmm0.f32[0] - cinematic) < 0.005f &&
+            resumedFacts.dialoguePhase.value == plugin::OverlayDialoguePhase::Inactive &&
+            resumedFacts.cameraState.evidence.gameplayFov.freshness == camera::SnapshotFreshness::Current;
+        if (!keptEntryFov) std::cerr << "Delayed provider entry dropped to " << beforeSetter.xmm0.f32[0] << '\n';
+        if (!resumedGameplay) std::cerr << "Gameplay after provider return was " << resumed.xmm0.f32[0] << '\n';
+        Check(keptEntryFov && resumedGameplay, "delayed provider must preserve entry and restore Gameplay");
+
+        enter();
+        write(cinematic, cinematic);
+
+        Check(ApplyRuntimeSetting(plugin::RuntimeSettingMutation::CinematicsEnabled(false), nullptr).accepted,
+            "runtime Cinematic setting");
+        auto passThrough = Context(receiver, output, 90);
+        Writer(passThrough);
+        Near(passThrough.xmm0.f32[0], 90, "Cinematic setting revokes correction immediately");
+        plugin::RuntimeSettingsSnapshot settings;
+        Check(ReadRuntimeSettings(settings, nullptr) && !settings.cinematicsEnabled,
+            "Runtime settings must read back committed gate");
+        ResetAllRuntimeResources();
+        auto stopped = Context(receiver, output, 90);
+        const auto beforeStop = stopped;
+        Writer(stopped);
+        UnchangedContext(beforeStop, stopped);
+        Check(!ReadRuntimeSettings(settings, nullptr), "reset closes public lifecycle readback");
+        std::cout << "Authority runtime cutover passed Diagnostics " << argv[1] << '\n';
+        return 0;
+    } catch (const std::exception& error) {
+        std::cerr << "Authority runtime cutover failed: " << error.what() << '\n';
+        return 1;
+    }
+}
+#else
 int main(int argc, char** argv) {
     if (argc == 1 || (argc == 2 && std::string_view(argv[1]) == "--non-graphics")) {
         const bool nonGraphics = argc == 2;
-        const char* cases[] = {"writer-wide", "writer-native", "writer-combine", "writer-combine-readonly",
+        const char* cases[] = {"u2-shadow", "writer-wide", "writer-native", "writer-combine", "writer-combine-readonly",
             "writer-combine-invalid-viewport", "writer-aspect", "writer-off", "writer-gate-off", "writer-stopping",
             "writer-unreadable", "aspect-wide", "aspect-off", "aspect-readonly", "aspect-unreadable",
             "lifecycle", "lifecycle-off", "lifecycle-gate-off", "lifecycle-chain", "dialogue-active", "dialogue-off",
+            "dialogue-baseline-context", "dialogue-candidate-gameplay-return",
             "dialogue-cinematic", "dialogue-unreadable", "zoom", "zoom-unreadable", "zoom-in-throw", "zoom-out-throw", "settings-wake", "serialization", "writer-invalid-fov",
             "writer-combine-readback-failure", "historical-target", "serialization-dialogue", "serialization-enter", "serialization-exit",
             "serialization-aspect", "serialization-settings", "serialization-reader", "recovery",
             "settings-api", "dialogue-exiting", "dialogue-rearm-source-change", "dialogue-disabled-in-flight",
             "lifecycle-foreign-association", "recovery-foreign-source",
-            "cinematic-initial-gameplay-baseline", "cinematic-initial-foreign-source",
+            "cinematic-initial-gameplay-baseline", "cinematic-initial-combine-empty-generations", "cinematic-initial-foreign-source",
             "cinematic-initial-stale-generation", "cinematic-initial-missing-baseline",
             "cinematic-initial-invalid-baseline", "restoration-logging",
             "cinematic-continuation-baseline", "cinematic-continuation-combine",
             "cinematic-continuation-chain", "cinematic-continuation-foreign-source",
-            "cinematic-continuation-foreign-writer", "cinematic-continuation-stale-generation",
+            "cinematic-continuation-output-b-persists",
+            "cinematic-continuation-output-roundtrip",
+            "cinematic-continuation-invalid-output",
+            "cinematic-continuation-stale-generation",
             "cinematic-continuation-no-association", "cinematic-continuation-invalid-baseline",
             "cinematic-continuation-native-mode", "cinematic-continuation-target-change",
             "cinematic-continuation-outside-low", "cinematic-continuation-outside-high",
@@ -1587,7 +2158,7 @@ int main(int argc, char** argv) {
             "evidence-reset-native-hook", "evidence-install-transaction-order",
             "evidence-sha256-allocation-ownership", "evidence-native-callback-reset-drain",
             "evidence-partial-imgui-cleanup",
-            "diagnostic-work",
+            "diagnostic-work", "diagnostic-aggregation",
             "startup-fatal-early", "startup-fatal-partial",
             "startup-fatal-cleanup-throws", "startup-fatal-retained-worker"};
         wchar_t executable[MAX_PATH]{};
@@ -1650,7 +2221,10 @@ int main(int argc, char** argv) {
     try {
         const std::string scenario = argv[1];
         diagnosticMode = argc > 2 && std::string(argv[2]) == "on";
-        if (scenario == "diagnostic-work") DiagnosticWork();
+        if (scenario == "consumer-resolver-image") CinematicConsumerImageCase();
+        else if (scenario == "u2-shadow") U2ShadowCases();
+        else if (scenario == "diagnostic-work") DiagnosticWork();
+        else if (scenario == "diagnostic-aggregation") DiagnosticAggregation();
         else if (scenario == "evidence-sha256-allocation-ownership") Sha256AllocationOwnership();
         else if (scenario == "evidence-partial-imgui-cleanup") PartialImGuiCleanup();
         else if (scenario == "evidence-native-callback-reset-drain") NativeCallbackResetDrain();
@@ -1664,6 +2238,8 @@ int main(int argc, char** argv) {
         else if (scenario.starts_with("cinematic-continuation-")) CinematicGameplayBaselineContinuation(scenario);
         else if (scenario == "dialogue-exiting" || scenario == "dialogue-rearm-source-change" ||
             scenario == "dialogue-disabled-in-flight") DialogueLifecycle(scenario);
+        else if (scenario == "dialogue-candidate-gameplay-return") DialogueCandidateGameplayReturn();
+        else if (scenario == "dialogue-baseline-context") DialogueBaselineContextIntegration();
         else if (scenario.starts_with("dialogue-")) Dialogue(scenario);
         else if (scenario.starts_with("zoom")) Zoom(scenario);
         else if (scenario == "settings-wake") SettingsAndWake();
@@ -1676,3 +2252,5 @@ int main(int argc, char** argv) {
         std::cout << scenario << " diagnostic=" << (diagnosticMode ? "on" : "off") << ": PASS\n"; return 0;
     } catch (const std::exception& error) { std::cerr << argv[1] << ": FAIL: " << error.what() << '\n'; return 1; }
 }
+
+#endif

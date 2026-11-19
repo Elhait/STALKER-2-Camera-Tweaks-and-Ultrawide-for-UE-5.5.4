@@ -126,6 +126,10 @@ int RunDescendantFixture(int argc, wchar_t** argv) {
 }
 
 int wmain(int argc, wchar_t** argv) {
+    if (argc == 2 && std::wcscmp(argv[1], L"--emit-skip") == 0) {
+        std::wprintf(L"HARNESS_SUBCASE_SKIP: contract_fixture unavailable\n");
+        return 0;
+    }
     if (argc >= 2 && std::wcscmp(argv[1], L"--crash") == 0) {
         SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
         RaiseException(EXCEPTION_ACCESS_VIOLATION, EXCEPTION_NONCONTINUABLE, 0, nullptr);

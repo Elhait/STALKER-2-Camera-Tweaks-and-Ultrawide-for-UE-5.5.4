@@ -10,9 +10,10 @@ universal production allowlist.
 
 | Steam build | Evidence scope | Game executable SHA-256 | Runtime mod artifact identity | Record and boundary |
 | --- | --- | --- | --- | --- |
-| 2.0.2–2.0.4 | Historical 0.4.0 production resolver-contract portability only; unique matches and relevant instruction contracts were validated on identity-matched images. This does not establish the complete current resolver set or runtime support. | Per-image identities are recorded in the cross-patch resolver task evidence. | Not applicable | [`CROSS_PATCH_PRODUCTION_RESOLVER_VALIDATION_TASK_PLAN.md`](../research/completed/CROSS_PATCH_PRODUCTION_RESOLVER_VALIDATION_TASK_PLAN.md). |
-| 2.0.5 | Production runtime evidence for the tested scenarios. | `E7B481A97C02D80581FAB0BECE940214A88EBE30211088A00129845A039F9293` | `69021D8758069F7EFE098B3C562A41E326A6DB0BF4BA88B789FB38854217DFB2` in the recorded run; not an identity allowlist. | [`RELEASE_PREPARATION_v0.5.2.md`](../research/reports/RELEASE_PREPARATION_v0.5.2.md). This does not establish every scenario or later binary. |
-| 2.0.6 | Combined production runtime pass and tested feature scenarios; separately, the Auto Interface Language reader passed its bounded locale sequence. | `61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B` | Combined runtime log records `19F2F31C20BB5D47CD12D2D3D773774985A5D771E6F7F8730A6363983161DA72`. | [`GLOBAL_HORPLUS_RUNTIME_PASS.md`](../research/reports/GLOBAL_HORPLUS_RUNTIME_PASS.md) and the v1.0.0 compatibility summary in [`TESTING_AND_RESEARCH.md`](../TESTING_AND_RESEARCH.md). The report's scenarios are the scope of the claim, not blanket coverage of all gameplay. |
+| 2.0.2–2.0.4 | v4 required camera/provider resolver set statically matched with expected uniqueness and byte/instruction contracts. Optional Zoom IN/OUT observer signatures are absent; correction hooks remain available, but Camera State lacks those zoom observations. Not a v4 runtime launch test. | Per-image identities and raw results are recorded in the [v4 resolver audit](../research/evidence/v4-resolver-cross-build-2026-11-19/README.md). | Not applicable | [v4 resolver audit](../research/evidence/v4-resolver-cross-build-2026-11-19/README.md). |
+| Installed current image (reported as Steam 2.1) | v4 required camera/provider resolver set and optional Zoom observer statically matched with expected uniqueness and contracts. The v4 ASI was not launched in-game on this image. | Recorded in the [v4 resolver audit](../research/evidence/v4-resolver-cross-build-2026-11-19/README.md). | The installed game-directory ASI was 3.2.2.0, not v4. | [v4 resolver audit](../research/evidence/v4-resolver-cross-build-2026-11-19/README.md). |
+| 2.0.5 | v4 required camera/provider resolver set and optional Zoom observer statically matched. Separate production runtime evidence exists for selected scenarios using an earlier artifact; it is not v4 runtime evidence. | `E7B481A97C02D80581FAB0BECE940214A88EBE30211088A00129845A039F9293`; v4 audit identities are linked separately. | `69021D8758069F7EFE098B3C562A41E326A6DB0BF4BA88B789FB38854217DFB2` in the recorded earlier run; not an identity allowlist. | [v4 resolver audit](../research/evidence/v4-resolver-cross-build-2026-11-19/README.md) and [`RELEASE_PREPARATION_v0.5.2.md`](../research/reports/RELEASE_PREPARATION_v0.5.2.md). This does not establish every scenario or v4 runtime support. |
+| 2.0.6 | v4 required camera/provider resolver set and optional Zoom observer statically matched. Combined production runtime evidence and tested feature scenarios exist for an earlier artifact; it is not v4 runtime evidence. | `61BC1E030740CEBC30CF1DAD0C86CF65E39E12FF0500225821D684181E08D56B`; v4 audit identities are linked separately. | Combined earlier runtime log records `19F2F31C20BB5D47CD12D2D3D773774985A5D771E6F7F8730A6363983161DA72`. | [v4 resolver audit](../research/evidence/v4-resolver-cross-build-2026-11-19/README.md), [`GLOBAL_HORPLUS_RUNTIME_PASS.md`](../research/reports/GLOBAL_HORPLUS_RUNTIME_PASS.md) and the v1.0.0 compatibility summary in [`TESTING_AND_RESEARCH.md`](../TESTING_AND_RESEARCH.md). This does not establish every scenario or v4 runtime support. |
 
 The v1.0.0 release-candidate hash `D04A43E28DB5DFFD10D88B6F30BEF8FEC2A560E1CD9949FEA31FAF485DA0E7BC`
 is recorded in `TESTING_AND_RESEARCH.md`, but the combined 2.0.6 runtime
@@ -27,9 +28,10 @@ current resolver uses a long reader signature and a unique interior anchor for
 the matching game-buffer release function. It maps the anchor to the function
 entry through the AMD64 PE exception table, avoiding fixed RVAs and compiler-
 dependent anchor offsets. Static Ghidra checks confirmed the reader and anchor
-on retained 2.0.2 through 2.0.6 images. The newer game executable has not
-been analyzed, so compatibility with it remains unverified. Missing or
-ambiguous matches fall back to English.
+on retained 2.0.2 through 2.0.6 images and on the installed current image
+reported as 2.1. This is static resolver evidence only; function-entry mapping
+and runtime language behavior on the current image were not validated. Missing
+or ambiguous matches fall back to English.
 
 The workspace's current release-assets ASI is a separately built file; its
 present SHA-256 is not represented as runtime-tested by the records above.
@@ -50,6 +52,7 @@ update workflow and runtime regression before support is claimed.
 | Cinematic EXIT FOV boundary (legacy) | `signatures::CinematicExit`; `ResolveCinematicFovCallsites` in `src/plugin/runtime.cpp` | Used first; exactly one match; Zydis validates `MOVSS XMM0,[RDI+0x38]`, a relative call and `ExitVcallPair` bytes | EXIT FOV sample at `[RDI+0x38]` |
 | Cinematic EXIT FOV boundary (indexed fallback) | `signatures::CinematicExitIndexed`; `ResolveCinematicFovCallsites` in `src/plugin/runtime.cpp` | Used only when the legacy EXIT signature has no matches; exactly one match; Zydis validates `MOVSS XMM0,[RBX+RAX*4+0x38]`, a relative call and `ExitVcallPair` bytes | Indexed EXIT FOV sample at `[RBX+RAX*4+0x38]` |
 | Dialogue boundary | `signatures::DialogueBoundary`; `InstallDialogueBoundary` in `src/plugin/runtime.cpp` | Exactly one match; validation is performed at the actual match `+9` hook location with a concrete six-byte `memcmp`. No Zydis decode is claimed. | Callback reads input FOV/value from `XMM6` and writes the transformed result to `XMM1`; boundary bytes are `FF 90 08 06 00 00` |
+| Zoom IN/OUT observation | `signatures::ZoomIn` / `ZoomOut`; `ResolveZoomTransitions` in `src/hooks/zoom_transition_resolver.hpp` | One match each; bounded `.text` span and decoded MOVSS/MOVSS/UCOMISS operands; paired commit before callback publication. No SHA gate. | IN loads `[RAX+0x4C]` to XMM0 and `[RSI+0x138]` to XMM1; OUT uses `0x50` / `0x13C`; hook precedes `UCOMISS XMM1,XMM0`. Fields read by the observer remain native-layout assumptions requiring image/runtime evidence. |
 
 ENTER and EXIT call targets must resolve to the same executable target and be
 executable. The indexed EXIT form is a fallback topology, not an additional

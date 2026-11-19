@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <initializer_list>
 
 namespace camera
 {
@@ -127,6 +128,35 @@ namespace camera
 
     // A semantic FOV fact is independently valid and can remain Retained
     // across camera-owner changes without being presented as a live sample.
+    enum class CameraFovBoundary : std::uint8_t
+    {
+        Unavailable, GameplayWriter, DialogueSetter, CinematicEnter,
+        PrimaryPostStore, PostHelper,
+    };
+
+    inline const char* CameraFovBoundaryName(CameraFovBoundary boundary) noexcept
+    {
+        switch (boundary) {
+        case CameraFovBoundary::GameplayWriter: return "CameraWriter";
+        case CameraFovBoundary::DialogueSetter: return "DialogueSetter";
+        case CameraFovBoundary::CinematicEnter: return "CinematicEnter";
+        case CameraFovBoundary::PrimaryPostStore: return "PrimaryPostStore";
+        case CameraFovBoundary::PostHelper: return "PostHelper";
+        default: return "Unavailable";
+        }
+    }
+
+    struct CameraWriterTransactionIdentity
+    {
+        std::uint64_t id{};
+        std::uintptr_t receiver{};
+        std::uintptr_t output{};
+        std::uint32_t thread{};
+        std::uint64_t lifecycle{};
+        bool operator==(const CameraWriterTransactionIdentity&) const = default;
+        bool Valid() const noexcept { return id && receiver && output && thread; }
+    };
+
     struct CameraFovFact
     {
         float value{std::numeric_limits<float>::quiet_NaN()};
@@ -136,6 +166,8 @@ namespace camera
         std::uintptr_t source{};
         bool sourceValid{};
         std::uint64_t sequence{};
+        CameraFovBoundary boundary{CameraFovBoundary::Unavailable};
+        std::uint64_t writerTransactionId{};
     };
 
     struct CameraEvidenceSnapshot
@@ -144,6 +176,13 @@ namespace camera
         CameraFovFact nativeFov{};
         CameraFovFact horPlusTargetFov{};
         CameraFovFact currentOutputFov{};
+        // currentOutputFov is the existing planned-output fact, not readback.
+        CameraFovFact neutralGameplayFov{};
+        CameraFovFact writerInputFov{};
+        CameraFovFact postStoreFov{};
+        CameraFovFact postHelperFov{};
+        CameraWriterTransactionIdentity writerTransaction{};
+        bool gameplayReferenceUsable{};
         float aspect{std::numeric_limits<float>::quiet_NaN()};
         std::uint8_t flags{};
         bool aspectValid{};
@@ -173,6 +212,25 @@ namespace camera
         bool runtimeCombineConfirmed{};
         bool runtimeCombineFovApplied{};
     };
+
+    // Select the latest named observation of the current planned transaction.
+    // Both underlying readbacks remain inspectable; neither is rendered FOV.
+    inline CameraFovFact EffectiveCameraFov(const CameraEvidenceSnapshot& evidence) noexcept
+    {
+        const auto& identity = evidence.writerTransaction;
+        if (!identity.Valid() || !evidence.currentOutputFov.valid ||
+            evidence.currentOutputFov.freshness != SnapshotFreshness::Current ||
+            evidence.currentOutputFov.source != identity.receiver ||
+            evidence.currentOutputFov.writerTransactionId != identity.id)
+            return {};
+        for (const auto* fact : {&evidence.postHelperFov, &evidence.postStoreFov}) {
+            if (fact->valid && fact->freshness == SnapshotFreshness::Current &&
+                fact->writerTransactionId == identity.id &&
+                fact->sourceValid && fact->source == identity.receiver)
+                return *fact;
+        }
+        return {};
+    }
 
     struct SourceProvenance
     {

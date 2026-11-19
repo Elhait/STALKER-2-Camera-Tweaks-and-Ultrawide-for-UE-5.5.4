@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "M15_DIVERGENCE diagnostics_off production_corrects=1 transaction_id=0 authority_prepare=0\r\nM15_PROPOSAL adapter_owned_id_prepare=1\r\nM15_DIVERGENCE single_writer_admission_revision=2 prepare_revision=3\r\nM15_WINDOW_FIXTURE diagnostics=0 closed=512 pending=0 live_binding=unverified\r\nM15_DIVERGENCE no_terminal diagnostics=0 accepted=128 next_correction=refused\r\nM15_WINDOW_FIXTURE diagnostics=1 closed=512 pending=0 live_binding=unverified\r\nM15_DIVERGENCE no_terminal diagnostics=1 accepted=128 next_correction=refused\r\nPASS: M15 binding counterexamples; readiness=NO-GO (expected divergences)\r\n",
+  "ProcessId": 23416
+}

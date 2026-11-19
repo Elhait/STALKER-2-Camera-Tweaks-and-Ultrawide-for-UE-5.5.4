@@ -1,0 +1,242 @@
+[
+  {
+    "Case": "u2-shadow",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "consumer_fixture path=0 stage=unhooked\r\nconsumer_fixture path=0 stage=hooked\r\nconsumer_fixture path=1 stage=unhooked\r\nconsumer_fixture path=1 stage=hooked\r\nconsumer_fixture path=2 stage=unhooked\r\nconsumer_fixture path=2 stage=hooked\r\nconsumer_fixture path=3 stage=unhooked\r\nconsumer_fixture path=3 stage=hooked\r\nconsumer_fixture path=4 stage=unhooked\r\nconsumer_fixture path=4 stage=hooked\r\nconsumer_fixture path=5 stage=unhooked\r\nconsumer_fixture path=5 stage=hooked\r\nconsumer_fixture path=6 stage=unhooked\r\nconsumer_fixture path=6 stage=hooked\r\nconsumer_fixture path=7 stage=unhooked\r\nconsumer_fixture path=7 stage=hooked\r\npost_exit_record_count=12\r\nblend_observation callbacks=10000 file_lines=13 bytes=11583\r\nu2-shadow diagnostic=on: PASS\r\n",
+      "ProcessId": 39140
+    }
+  },
+  {
+    "Case": "u2-shadow",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "blend_observation callbacks=10000 file_lines=0 bytes=0\r\nu2-shadow diagnostic=off: PASS\r\n",
+      "ProcessId": 26052
+    }
+  },
+  {
+    "Case": "diagnostic-work",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "consumer_fixture path=0 stage=unhooked\r\nconsumer_fixture path=0 stage=hooked\r\nconsumer_fixture path=1 stage=unhooked\r\nconsumer_fixture path=1 stage=hooked\r\nconsumer_fixture path=2 stage=unhooked\r\nconsumer_fixture path=2 stage=hooked\r\nconsumer_fixture path=3 stage=unhooked\r\nconsumer_fixture path=3 stage=hooked\r\nconsumer_fixture path=4 stage=unhooked\r\nconsumer_fixture path=4 stage=hooked\r\nconsumer_fixture path=5 stage=unhooked\r\nconsumer_fixture path=5 stage=hooked\r\nconsumer_fixture path=6 stage=unhooked\r\nconsumer_fixture path=6 stage=hooked\r\nconsumer_fixture path=7 stage=unhooked\r\nconsumer_fixture path=7 stage=hooked\r\npost_exit_record_count=12\r\nblend_observation callbacks=10000 file_lines=13 bytes=11583\r\ndiagnostic_work diagnostic=on cinematic_writer_reads=6 dialogue_callbacks=1 recovery_reads=3\r\ndiagnostic-work diagnostic=on: PASS\r\n",
+      "ProcessId": 33268
+    }
+  },
+  {
+    "Case": "diagnostic-work",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "blend_observation callbacks=10000 file_lines=0 bytes=0\r\ndiagnostic_work diagnostic=off cinematic_writer_reads=0 dialogue_callbacks=0 recovery_reads=0\r\ndiagnostic-work diagnostic=off: PASS\r\n",
+      "ProcessId": 21232
+    }
+  },
+  {
+    "Case": "recovery",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "recovery diagnostic=on: PASS\r\n",
+      "ProcessId": 40720
+    }
+  },
+  {
+    "Case": "recovery",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "recovery diagnostic=off: PASS\r\n",
+      "ProcessId": 33712
+    }
+  },
+  {
+    "Case": "recovery-foreign-source",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "recovery-foreign-source diagnostic=on: PASS\r\n",
+      "ProcessId": 18860
+    }
+  },
+  {
+    "Case": "recovery-foreign-source",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "recovery-foreign-source diagnostic=off: PASS\r\n",
+      "ProcessId": 26776
+    }
+  },
+  {
+    "Case": "cinematic-initial-gameplay-baseline",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "cinematic-initial-gameplay-baseline diagnostic=on: PASS\r\n",
+      "ProcessId": 37740
+    }
+  },
+  {
+    "Case": "cinematic-initial-gameplay-baseline",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "cinematic-initial-gameplay-baseline diagnostic=off: PASS\r\n",
+      "ProcessId": 21660
+    }
+  },
+  {
+    "Case": "cinematic-continuation-combine",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "cinematic-continuation-combine diagnostic=on: PASS\r\n",
+      "ProcessId": 408
+    }
+  },
+  {
+    "Case": "cinematic-continuation-combine",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "cinematic-continuation-combine diagnostic=off: PASS\r\n",
+      "ProcessId": 38568
+    }
+  },
+  {
+    "Case": "dialogue-exiting",
+    "Mode": "on",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "dialogue-exiting diagnostic=on: PASS\r\n",
+      "ProcessId": 984
+    }
+  },
+  {
+    "Case": "dialogue-exiting",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "dialogue-exiting diagnostic=off: PASS\r\n",
+      "ProcessId": 34844
+    }
+  },
+  {
+    "Case": "consumer-resolver-image",
+    "Mode": "off",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "producer_return_rva=0x2e54582 operand_observed=70 classification=structural\r\nconsumer_site=0 rva=0x35c7da6\r\nconsumer_site=1 rva=0x30db9cf\r\nconsumer_site=2 rva=0x30dba00\r\nconsumer_site=3 rva=0x30dbadc\r\nconsumer-resolver-image diagnostic=off: PASS\r\n",
+      "ProcessId": 40064
+    }
+  },
+  {
+    "Case": "dialogue-source-provenance",
+    "Mode": "pure",
+    "Result": {
+      "ExitCode": 0,
+      "TimedOut": false,
+      "DescendantsOutlivedRoot": false,
+      "ExpectedDescendantsCleaned": false,
+      "CleanupVerified": true,
+      "OutputTruncated": false,
+      "RemainingProcesses": "",
+      "Output": "dialogue_source_provenance=PASS\r\n",
+      "ProcessId": 7796
+    }
+  }
+]

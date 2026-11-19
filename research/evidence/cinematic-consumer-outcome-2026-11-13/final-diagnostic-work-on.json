@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "consumer_fixture path=0 stage=unhooked\r\nconsumer_fixture path=0 stage=hooked\r\nconsumer_fixture path=1 stage=unhooked\r\nconsumer_fixture path=1 stage=hooked\r\nconsumer_fixture path=2 stage=unhooked\r\nconsumer_fixture path=2 stage=hooked\r\nconsumer_fixture path=3 stage=unhooked\r\nconsumer_fixture path=3 stage=hooked\r\nconsumer_fixture path=4 stage=unhooked\r\nconsumer_fixture path=4 stage=hooked\r\nconsumer_fixture path=5 stage=unhooked\r\nconsumer_fixture path=5 stage=hooked\r\nconsumer_fixture path=6 stage=unhooked\r\nconsumer_fixture path=6 stage=hooked\r\nconsumer_fixture path=7 stage=unhooked\r\nconsumer_fixture path=7 stage=hooked\r\npost_exit_record_count=12\r\nblend_observation callbacks=10000 file_lines=13 bytes=8359\r\ndiagnostic_work diagnostic=on cinematic_writer_reads=6 dialogue_callbacks=1 recovery_reads=3\r\ndiagnostic-work diagnostic=on: PASS\r\n",
+  "ProcessId": 23364
+}

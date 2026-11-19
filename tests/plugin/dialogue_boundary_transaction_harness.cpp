@@ -1,5 +1,7 @@
 #include "../../src/plugin/dialogue_boundary_transaction.hpp"
 #include "../../src/plugin/camera_writer_transaction.hpp"
+#include "../../src/dialogue/post_exit_provider_authorization.hpp"
+#include "../../src/dialogue/post_exit_provider_handoff.hpp"
 
 #include <condition_variable>
 #include <iostream>
@@ -20,6 +22,12 @@ namespace
         std::atomic<camera::CoordinatorState> coordinator{camera::CoordinatorState::Gameplay};
         dialogue::PostCinematicRecoveryExclusion exclusion;
         dialogue::Phase phase{dialogue::Phase::Inactive};
+        bool postExitProviderOwned{};
+        std::uintptr_t postExitProviderCallbackSource{};
+        std::uintptr_t postExitProviderReceiver{};
+        std::uint64_t postExitProviderGeneration{};
+        std::uint64_t postExitProviderSettingsEpoch{};
+        std::uint32_t postExitProviderThreadId{};
         dialogue::PolicySnapshot activePolicy;
         dialogue::CorrectionActivation activation;
         float baseline{NAN};
@@ -39,19 +47,25 @@ namespace
 
         plugin::DialogueBoundaryStateView View()
         {
-            return {mutex, coordinator, exclusion, phase, activePolicy, activation,
+            return {mutex, coordinator, exclusion, phase, postExitProviderOwned,
+                postExitProviderCallbackSource, postExitProviderReceiver,
+                postExitProviderGeneration, postExitProviderSettingsEpoch,
+                postExitProviderThreadId,
+                activePolicy, activation,
                 baseline, previous, exitStart, candidate, recovery, enabled,
                 selectedPolicy, settingsEpoch, activeEpoch, snapshotSource,
                 snapshotTarget, snapshotTargetValid};
         }
 
         plugin::DialogueBoundaryResult Event(float fov, std::uintptr_t source,
-            float target = 70.0f, bool targetValid = true)
+            float target = 70.0f, bool targetValid = true, std::uintptr_t receiver = 0)
         {
             auto gate = correctionGate.Acquire();
             std::lock_guard lock(mutex);
-            return plugin::ProcessDialogueBoundary(View(),
-                {fov, source, target, targetValid, 0.01f, 0.02f, 3});
+            plugin::DialogueBoundaryInput input{fov, source, target, targetValid,
+                0.01f, 0.02f, 3, false, receiver};
+            input.threadId = 7;
+            return plugin::ProcessDialogueBoundary(View(), input);
         }
 
         plugin::CameraCorrectionGate correctionGate;
@@ -104,6 +118,403 @@ namespace
 int main()
 {
     bool pass = true;
+    // Writer-bound termination is justified by a current production reference,
+    // never callback silence, elapsed time, or FOV equality on another source.
+    for (unsigned control = 0; control != 21; ++control) {
+        Fixture stationary;
+        plugin::DialogueBoundaryInput callback{130.311f, 0x77,
+            control == 10 ? 70.0f : 130.311f, true, 0.01f, 0.02f, 3,
+            false, control == 16 ? 0u : 0xAu, 0, 0xA};
+        plugin::ProcessDialogueBoundary(stationary.View(), callback);
+        camera::GameplayBaseline reference{};
+        reference.nativeFov = {130.308f, camera::FovSpace::Native,
+            camera::FovProvenance::NativeRegisterInput, true};
+        reference.aspect = 32.0f / 9.0f;
+        reference.source = {0xA, true};
+        reference.observationSequence = 1;
+        reference.valid = reference.current = true;
+        if (control == 2) reference.current = false;
+        if (control == 3) reference.source.valid = false;
+        if (control == 4) reference.observationSequence = 0;
+        if (control == 5) ++stationary.settingsEpoch;
+        if (control == 7) stationary.exclusion.Arm(130.311f);
+        if (control == 9) stationary.phase = dialogue::Phase::Active;
+        if (control == 14) stationary.postExitProviderOwned = true;
+        if (control == 15) stationary.activePolicy.Capture(config::DialogueZoomPolicy::Reduced);
+        if (control == 17) stationary.coordinator = camera::CoordinatorState::CinematicActive;
+        const auto previousPhase = stationary.phase;
+        auto gate = stationary.correctionGate.Acquire();
+        std::lock_guard lock(stationary.mutex);
+        const bool retired = plugin::RetireStationaryDialogueCandidateOnGameplayWriter(
+            stationary.View(), reference, control == 1 ? 0xB : 0xA,
+            control == 11 ? 122.0f : control == 13 ? NAN : 130.311f,
+            control == 12 ? 16.0f/9.0f : 32.0f/9.0f, control != 18,
+            control == 6 ? 1 : 0, control == 8,
+            control == 19 ? -1.0f : control == 20 ? NAN : 0.02f);
+        if (retired != (control == 0)) std::cerr << "stationary control=" << control << '\n';
+        pass &= Check(retired == (control == 0) &&
+            stationary.phase == (retired ? dialogue::Phase::Inactive : previousPhase),
+            "stationary Candidate termination requires current identity/provenance and preserves real transitions");
+    }
+    const cinematics::CinematicRecoveryOwnerSnapshot completedOwner{
+        true, 7, 0xA, 0, 0, true};
+    const cinematics::CinematicRecoveryOwnerSnapshot activeOwner{
+        true, 7, 0xA, 0, 0, false};
+    pass &= Check(dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, completedOwner, 7, 0xA) &&
+        !completedOwner.HasRecoveryAuthority(),
+        "completed recovery metadata identifies same-generation provider without recovery authority");
+    pass &= Check(dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::CinematicExiting, true, activeOwner, 7, 0xA),
+        "active recovery owner authorizes provider handoff during Cinematic EXIT");
+    pass &= Check(!dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, false, completedOwner, 7, 0xA) &&
+        !dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, completedOwner, 8, 0xA) &&
+        !dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, completedOwner, 7, 0xB) &&
+        !dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::CinematicActive, true, completedOwner, 7, 0xA) &&
+        !dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::CinematicExiting, true, completedOwner, 7, 0xA) &&
+        !dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, activeOwner, 7, 0xA),
+        "provider owner authorization fails closed for stale identity or lifecycle state");
+    dialogue::PostExitProviderHandoff recoveredProvider;
+    const auto recoveredProviderOwner = completedOwner;
+    const auto recoveredActivation = dialogue::PostExitProviderActivation{
+        7, 3, 0x100, 0xA, 9, 130.311f, 70.0f, 130.311f,
+        config::DialogueZoomPolicy::Reduced};
+    const bool recoveredArmerAuthorized =
+        dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, recoveredProviderOwner,
+            7, 0xA);
+    const bool recoveredArmed = recoveredProvider.ObserveArmer(
+        recoveredArmerAuthorized, recoveredActivation);
+    const bool recoveredSetterAuthorized =
+        dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, recoveredProviderOwner,
+            7, 0xA);
+    const bool recoveredSetterMatched = recoveredProvider.ObserveSetterSample(
+        recoveredSetterAuthorized, 0x100, 0xA, 9, 7, 3,
+        130.311f, 70.0f, 70.0f, 70.0f);
+    const bool recoveredWriterAuthorized =
+        dialogue::IsPostExitProviderOwnerAuthorized(
+            camera::CoordinatorState::Gameplay, true, recoveredProviderOwner,
+            7, 0xA);
+    const auto recoveredWriterSample = recoveredProvider.TakeWriterSample(
+        recoveredWriterAuthorized, 0xA, 9, 7, 3, 70.0f);
+    pass &= Check(recoveredArmed && recoveredSetterMatched &&
+        recoveredWriterSample.valid && recoveredWriterSample.activation.generation == 7 &&
+        recoveredWriterSample.activation.receiver == 0xA,
+        "completed-recovery provider handoff matches armer, setter and writer identity");
+    dialogue::PostExitProviderHandoff interleavedProvider;
+    pass &= Check(interleavedProvider.ObserveArmer(true, recoveredActivation),
+        "interleaved provider activation armed");
+    dialogue::PostExitProviderReject interleavedSetterReject{};
+    const bool unrelatedSetterMatched = interleavedProvider.ObserveSetterSample(
+        true, 0x101, 0xA, 9, 7, 3, 130.311f, 130.311f,
+        130.311f, 130.311f, 0.001f, &interleavedSetterReject);
+    const auto unrelatedSetterReject = interleavedSetterReject;
+    const bool providerSetterMatchedAfterUnrelated = interleavedProvider.ObserveSetterSample(
+        true, 0x100, 0xA, 9, 7, 3, 130.311f, 70.0f,
+        70.0f, 70.0f, 0.001f, &interleavedSetterReject);
+    const auto providerWriterAfterUnrelated = interleavedProvider.TakeWriterSample(
+        true, 0xA, 9, 7, 3, 70.0f);
+    pass &= Check(!unrelatedSetterMatched && interleavedProvider.Active() &&
+        unrelatedSetterReject == dialogue::PostExitProviderReject::ComponentMismatch &&
+        providerSetterMatchedAfterUnrelated && providerWriterAfterUnrelated.valid,
+        "unrelated EXIT setter cannot retire an armed provider handoff");
+
+    Fixture receiverBinding;
+    receiverBinding.Event(70.1f, 0x77, 70.0f, true, 0xA);
+    const auto bindingActive = receiverBinding.Event(70.0f, 0x77, 70.0f, true, 0xA);
+    const auto boundView = receiverBinding.View();
+    pass &= Check(bindingActive.action == plugin::DialogueBoundaryAction::AcceptedStart &&
+        plugin::ClassifyDialogueWriterContext(boundView, 0xA, 1) ==
+            camera::WriterContext::DialogueLifecycleObserved &&
+        plugin::ClassifyDialogueWriterContext(boundView, 0xB, 1) ==
+            camera::WriterContext::TransitionAmbiguous,
+        "Dialogue ownership is receiver-scoped and foreign sources remain ambiguous");
+    pass &= Check(receiverBinding.candidate.Receiver(2) == 0,
+        "receiver is unavailable after settings epoch changes");
+    pass &= Check(!receiverBinding.candidate.HasReceiverBinding(0xA, 1, 1) &&
+        plugin::ClassifyDialogueWriterContext(boundView, 0xA, 1, 1) ==
+            camera::WriterContext::TransitionAmbiguous &&
+        plugin::ClassifyDialogueWriterContext(boundView, 0xB, 1, 1) ==
+            camera::WriterContext::TransitionAmbiguous,
+        "generation change invalidates ownership and keeps active Dialogue ambiguous");
+    receiverBinding.Event(69.9f, 0x77, 70.0f, true, 0xB);
+    pass &= Check(receiverBinding.candidate.Receiver(1) == 0,
+        "receiver change invalidates binding");
+    plugin::ResetDialogueBoundaryState(receiverBinding.View());
+    pass &= Check(plugin::ClassifyDialogueWriterContext(receiverBinding.View(),
+            0xA, 1, 0, true) == camera::WriterContext::TransitionAmbiguous &&
+        plugin::ClassifyDialogueWriterContext(receiverBinding.View(), 0xA, 1) ==
+            camera::WriterContext::GameplayEligible,
+        "completed provider endpoint defers baseline without sticky ambiguity");
+    pass &= Check(receiverBinding.candidate.Receiver(1) == 0,
+        "dialogue reset retires receiver binding");
+    receiverBinding.Event(70.1f, 0x77, 70.0f, true, 0xA);
+    receiverBinding.Event(70.0f, 0x77, 70.0f, true, 0xA);
+    const auto receiverRearm = receiverBinding.Event(70.1f, 0x77, 70.0f, true, 0xA);
+    pass &= Check(receiverRearm.phaseAfter == dialogue::Phase::RearmPending &&
+        plugin::ClassifyDialogueWriterContext(receiverBinding.View(), 0xA, 1) ==
+            camera::WriterContext::TransitionAmbiguous,
+        "rearm remains source-scoped and ambiguous");
+    plugin::ResetDialogueBoundaryState(receiverBinding.View());
+    receiverBinding.Event(70.1f, 0x77, 70.0f, true, 0xB);
+    pass &= Check(receiverBinding.candidate.Receiver(1) == 0xB &&
+        !receiverBinding.candidate.AffectsReceiver(0xA, 1),
+        "new candidate after reset does not inherit prior receiver");
+    plugin::ResetDialogueBoundaryState(receiverBinding.View());
+    const auto unverified = plugin::ProcessDialogueBoundary(receiverBinding.View(),
+        {70.1f, 0x77, 70.0f, true, 0.01f, 0.02f, 3, false, 0, 0, 0xA});
+    pass &= Check(unverified.action == plugin::DialogueBoundaryAction::CandidateCaptured &&
+        plugin::ClassifyDialogueWriterContext(receiverBinding.View(), 0xA, 1) ==
+            camera::WriterContext::TransitionAmbiguous &&
+        plugin::ClassifyDialogueWriterContext(receiverBinding.View(), 0xB, 1) ==
+            camera::WriterContext::TransitionAmbiguous,
+        "unverified Dialogue receiver keeps writer context ambiguous");
+    plugin::ResetDialogueBoundaryState(receiverBinding.View());
+    static_cast<void>(plugin::ProcessDialogueBoundary(receiverBinding.View(),
+        {70.1f, 0x77, 70.0f, true, 0.01f, 0.02f, 3, false, 0, 0, 0}));
+    const auto laterValidated = plugin::ProcessDialogueBoundary(receiverBinding.View(),
+        {70.0f, 0x77, 70.0f, true, 0.01f, 0.02f, 3, false, 0xA});
+    pass &= Check(laterValidated.action == plugin::DialogueBoundaryAction::AcceptedStart &&
+        plugin::ClassifyDialogueWriterContext(receiverBinding.View(), 0xA, 1) ==
+            camera::WriterContext::DialogueLifecycleObserved,
+        "missing receiver does not prevent later validated binding");
+    // A completed provider transition is admitted once as Dialogue using the
+    // last trusted Gameplay baseline; its native ~70-degree endpoint is never
+    // recaptured as the Dialogue baseline or admitted to Gameplay.
+    dialogue::PostExitProviderHandoff provider;
+    const dialogue::PostExitProviderActivation handled{1, 1, 0x1000, 0x2000,
+        7, 126.16f, 70.0f, 126.16f, config::DialogueZoomPolicy::Reduced};
+    pass &= Check(provider.ObserveArmer(true, handled), "provider armed");
+    provider.CompleteRecovery();
+    {
+        dialogue::PostExitProviderHandoff correctedProvider;
+        correctedProvider.ObserveArmer(true, handled);
+        correctedProvider.CompleteRecovery();
+        correctedProvider.ConsumeDialogueAdmission(0x1000, 0x2000, 7, 1, 1,
+            126.16f, 70.0f);
+        correctedProvider.RecordCorrectedDialogueSetterSample(122.092f);
+        const bool first = correctedProvider.MatchesCorrectedDialogueSetterSample(
+            0x2000, 7, 1, 1, 122.092f);
+        const bool repeated = correctedProvider.MatchesCorrectedDialogueSetterSample(
+            0x2000, 7, 1, 1, 122.092f);
+        pass &= Check(first && repeated,
+            "repeated_writer_reads_retain_confirmed_setter_corrected_provenance");
+        pass &= Check(!correctedProvider.MatchesCorrectedDialogueSetterSample(
+                0x2001, 7, 1, 1, 122.092f) &&
+            !correctedProvider.MatchesCorrectedDialogueSetterSample(
+                0x2000, 8, 1, 1, 122.092f) &&
+            !correctedProvider.MatchesCorrectedDialogueSetterSample(
+                0x2000, 7, 2, 1, 122.092f) &&
+            !correctedProvider.MatchesCorrectedDialogueSetterSample(
+                0x2000, 7, 1, 2, 122.092f),
+            "corrected_setter_record_does_not_authorize_foreign_writer_identity");
+        pass &= Check(!correctedProvider.MatchesCorrectedDialogueSetterSample(
+                0x2000, 7, 1, 1, 70.0f) &&
+            !correctedProvider.MatchesCorrectedDialogueSetterSample(
+                0x2000, 7, 1, 1, 122.092f),
+            "raw_field_update_retires_corrected_record_without_numeric_resurrection");
+    }
+    Fixture residual;
+    residual.exclusion.Arm(126.16f);
+    residual.selectedPolicy.store(config::DialogueZoomPolicy::Reduced);
+    bool firstProviderAdmission = true;
+    for (const float sample : {70.1051f, 70.0283f, 70.0005f, 70.0f}) {
+        const bool admitted = provider.ConsumeDialogueAdmission(0x1000, 0x2000,
+            7, 1, 1, 126.16f, 70.0f);
+        plugin::DialogueBoundaryInput providerInput{sample, 0x1028, 70.0f, true,
+            0.01f, 0.02f, 3, admitted, 0x2000, 1, 0x2000, 90.3115f,
+            firstProviderAdmission, config::DialogueZoomPolicy::Reduced, admitted};
+        providerInput.threadId = 7;
+        const auto result = plugin::ProcessDialogueBoundary(residual.View(),
+            providerInput);
+        firstProviderAdmission = false;
+        const auto reducedTarget = dialogue::ReducedTarget(90.3115f);
+        const auto expectedOutput = dialogue::TransformProjectionSample(
+            sample, 90.3115f, reducedTarget);
+        pass &= Check(!provider.Active() && result.mutateXmm1 &&
+            std::fabs(result.outputFov - expectedOutput) < 0.01f &&
+            residual.baseline == 90.3115f && residual.phase == dialogue::Phase::Active &&
+            (admitted == (result.action ==
+                plugin::DialogueBoundaryAction::ProviderDialogueStarted)),
+            "confirmed provider endpoint admits Dialogue policy during Gameplay exclusion");
+        pass &= Check(provider.BlocksGameplayBaselineAdmission(0x2000, 7, 1, 1,
+                sample, 0.02f) &&
+            plugin::ClassifyDialogueWriterContext(residual.View(), 0x2000, 1, 1) ==
+                camera::WriterContext::DialogueLifecycleObserved,
+            "provider-derived Dialogue remains excluded from Gameplay baseline admission");
+    }
+
+    // Once accepted, a policy-settings epoch change must not erase provider
+    // ownership or replace its captured policy. It remains source/thread/
+    // generation scoped, and ordinary Dialogue still uses the strict binding.
+    dialogue::PostExitProviderHandoff retainedProvider;
+    const dialogue::PostExitProviderActivation retainedActivation{9, 1,
+        0x1100, 0x2200, 17, 126.16f, 70.0f, 126.16f,
+        config::DialogueZoomPolicy::Reduced};
+    pass &= Check(retainedProvider.ObserveArmer(true, retainedActivation),
+        "retained provider arming accepted");
+    retainedProvider.CompleteRecovery();
+    Fixture retainedLifecycle;
+    retainedLifecycle.exclusion.Arm(126.16f);
+    plugin::DialogueBoundaryInput retainedStart{70.1f, 0x1130, 70.0f, true,
+        0.01f, 0.02f, 3, true, 0x2200, 9, 0x2200, 90.3115f, true,
+        config::DialogueZoomPolicy::Reduced, true};
+    retainedStart.threadId = 17;
+    const auto retainedStartResult = plugin::ProcessDialogueBoundary(
+        retainedLifecycle.View(), retainedStart);
+    retainedLifecycle.settingsEpoch.store(5, std::memory_order_release);
+    retainedLifecycle.selectedPolicy.store(config::DialogueZoomPolicy::Adaptive,
+        std::memory_order_release);
+    plugin::DialogueBoundaryInput policyChanged{70.09f, 0x1130, 70.0f, true,
+        0.01f, 0.02f, 3, false, 0x2200, 9, 0x2200};
+    policyChanged.threadId = 17;
+    const auto policyChangedResult = plugin::ProcessDialogueBoundary(
+        retainedLifecycle.View(), policyChanged);
+    const bool retainedIdentity = plugin::IsConfirmedProviderDialogueLifecycle(
+        retainedLifecycle.View(), retainedActivation, 0x2200, 17, 9);
+    pass &= Check(retainedStartResult.action ==
+            plugin::DialogueBoundaryAction::ProviderDialogueStarted &&
+        policyChangedResult.phaseAfter == dialogue::Phase::Active &&
+        retainedLifecycle.activePolicy.IsValid() &&
+        retainedLifecycle.activePolicy.Value() == config::DialogueZoomPolicy::Reduced &&
+        retainedIdentity && plugin::ClassifyDialogueWriterContext(
+            retainedLifecycle.View(), 0x2200, 5, 9, false, retainedIdentity) ==
+                camera::WriterContext::ConfirmedProviderDialogueLifecycleObserved,
+        "confirmed provider identity and captured policy survive Dialogue settings epoch change");
+    pass &= Check(!plugin::IsConfirmedProviderDialogueLifecycle(
+            retainedLifecycle.View(), retainedActivation, 0x2201, 17, 9) &&
+        !plugin::IsConfirmedProviderDialogueLifecycle(
+            retainedLifecycle.View(), retainedActivation, 0x2200, 18, 9) &&
+        !plugin::IsConfirmedProviderDialogueLifecycle(
+            retainedLifecycle.View(), retainedActivation, 0x2200, 17, 10),
+        "confirmed provider ownership rejects receiver, thread, and generation mismatches");
+    auto wrongActivationEpoch = retainedActivation;
+    wrongActivationEpoch.dialogueSettingsEpoch++;
+    pass &= Check(!plugin::IsConfirmedProviderDialogueLifecycle(
+            retainedLifecycle.View(), wrongActivationEpoch, 0x2200, 17, 9),
+        "provider activation epoch must match the accepted lifecycle epoch");
+    plugin::DialogueBoundaryInput providerExitInput{90.3115f, 0x1028, 90.3115f,
+        true, 0.01f, 0.02f, 3, false, 0x2000, 1, 0x2000};
+    providerExitInput.threadId = 7;
+    const auto providerExit = plugin::ProcessDialogueBoundary(residual.View(),
+        providerExitInput);
+    const auto providerRecovery = plugin::ProcessDialogueBoundary(residual.View(),
+        providerExitInput);
+    pass &= Check(providerExit.action == plugin::DialogueBoundaryAction::RecoveryStarted &&
+        providerRecovery.action == plugin::DialogueBoundaryAction::RecoveryCompleted &&
+        residual.phase == dialogue::Phase::Inactive &&
+        plugin::ClassifyDialogueWriterContext(residual.View(), 0x2000, 1, 1) ==
+            camera::WriterContext::GameplayEligible,
+        "provider-derived Dialogue naturally exits and Gameplay baseline admission rearms");
+    for (const auto policy : {config::DialogueZoomPolicy::Native,
+            config::DialogueZoomPolicy::Adaptive, config::DialogueZoomPolicy::Reduced,
+            config::DialogueZoomPolicy::Disabled}) {
+        Fixture policyFixture;
+        policyFixture.exclusion.Arm(126.16f);
+        const auto changedSelection = policy == config::DialogueZoomPolicy::Reduced
+            ? config::DialogueZoomPolicy::Adaptive
+            : config::DialogueZoomPolicy::Reduced;
+        policyFixture.selectedPolicy.store(changedSelection);
+        dialogue::PostExitProviderHandoff policyProvider;
+        auto policyActivation = handled;
+        policyActivation.dialoguePolicy = policy;
+        policyProvider.ObserveArmer(true, policyActivation);
+        policyProvider.CompleteRecovery();
+        const bool admission = policyProvider.ConsumeDialogueAdmission(0x1000,
+            0x2000, 7, 1, 1, 126.16f, 70.0f);
+        plugin::DialogueBoundaryInput policyInput{70.0f, 0x1028, 70.0f, true,
+            0.01f, 0.02f, 3, admission, 0x2000, 1, 0x2000, 90.3115f,
+            true, policy, admission};
+        policyInput.threadId = 7;
+        const auto result = plugin::ProcessDialogueBoundary(policyFixture.View(),
+            policyInput);
+        const float target = dialogue::ResolveDialogueDestinationTarget(policy,
+            90.3115f, 70.0f);
+        const bool expectedMutation = policy != config::DialogueZoomPolicy::Native;
+        pass &= Check(result.action == plugin::DialogueBoundaryAction::ProviderDialogueStarted &&
+            result.activePolicy == policy &&
+            result.mutateXmm1 == expectedMutation &&
+            std::fabs(result.outputFov - (expectedMutation ? target : 70.0f)) < 0.01f,
+            "provider endpoint admission honors each effective Dialogue policy");
+    }
+    Fixture foreignProviderContinuation;
+    foreignProviderContinuation.exclusion.Arm(126.16f);
+    plugin::DialogueBoundaryInput foreignProviderStart{70.0f, 0x1028, 70.0f,
+        true, 0.01f, 0.02f, 3, true, 0x2000, 1, 0x2000, 90.3115f,
+        true, config::DialogueZoomPolicy::Reduced, true};
+    foreignProviderStart.threadId = 7;
+    const auto providerActivation = plugin::ProcessDialogueBoundary(
+        foreignProviderContinuation.View(), foreignProviderStart);
+    plugin::DialogueBoundaryInput unrelatedProviderInput{130.0f, 0x2028,
+        70.0f, true, 0.01f, 0.02f, 3, false, 0x2000, 1, 0x2000};
+    unrelatedProviderInput.threadId = 7;
+    const auto unrelatedProviderCallback = plugin::ProcessDialogueBoundary(
+        foreignProviderContinuation.View(), unrelatedProviderInput);
+    const bool providerOwnershipRetained =
+        foreignProviderContinuation.postExitProviderOwned &&
+        foreignProviderContinuation.phase == dialogue::Phase::Active;
+    plugin::DialogueBoundaryInput providerContinuationInput{69.9f, 0x1028,
+        70.0f, true, 0.01f, 0.02f, 3, false, 0x2000, 1, 0x2000};
+    providerContinuationInput.threadId = 7;
+    const auto providerContinuation = plugin::ProcessDialogueBoundary(
+        foreignProviderContinuation.View(), providerContinuationInput);
+    plugin::DialogueBoundaryInput foreignProviderInput{69.9f, 0x1028,
+        70.0f, true, 0.01f, 0.02f, 3, false, 0x3000, 1, 0x3000};
+    foreignProviderInput.threadId = 7;
+    const auto foreignProviderEvent = plugin::ProcessDialogueBoundary(
+        foreignProviderContinuation.View(), foreignProviderInput);
+    pass &= Check(providerActivation.action ==
+            plugin::DialogueBoundaryAction::ProviderDialogueStarted &&
+        unrelatedProviderCallback.action ==
+            plugin::DialogueBoundaryAction::ProviderCallbackIgnored &&
+        providerOwnershipRetained && providerContinuation.mutateXmm1 &&
+        foreignProviderEvent.action == plugin::DialogueBoundaryAction::ExclusionReset &&
+        foreignProviderContinuation.phase == dialogue::Phase::Inactive &&
+        !foreignProviderContinuation.postExitProviderOwned,
+        "provider Dialogue keeps exact callback ownership and resets on receiver replacement");
+    pass &= Check(!provider.BlocksRepeatedAdmission(0x3000, 0x2000, 7, 1, 1,
+        126.16f, 70.0f), "independent component is not blocked");
+    pass &= Check(provider.BlocksGameplayBaselineAdmission(0x2000, 7, 1, 1,
+            70.0856f, 0.02f) &&
+        !provider.BlocksGameplayBaselineAdmission(0x2001, 7, 1, 1,
+            70.0856f, 0.02f) &&
+        !provider.BlocksGameplayBaselineAdmission(0x2000, 8, 1, 1,
+            70.0856f, 0.02f) &&
+        !provider.BlocksGameplayBaselineAdmission(0x2000, 7, 2, 1,
+            70.0856f, 0.02f) &&
+        !provider.BlocksGameplayBaselineAdmission(0x2000, 7, 1, 2,
+            70.0856f, 0.02f) &&
+        !provider.BlocksGameplayBaselineAdmission(0x2000, 7, 1, 1,
+            70.3f, 0.02f),
+        "post-exit endpoint quarantine is limited to activation identity and endpoint neighborhood");
+    pass &= Check(!provider.BlocksRepeatedAdmission(0x1000, 0x3000, 7, 1, 1,
+        126.16f, 70.0f), "foreign receiver is not blocked");
+    pass &= Check(!provider.BlocksRepeatedAdmission(0x1000, 0x2000, 8, 1, 1,
+        126.16f, 70.0f), "foreign thread is not blocked");
+    pass &= Check(!provider.BlocksRepeatedAdmission(0x1000, 0x2000, 7, 1, 2,
+        126.16f, 70.0f) && !provider.RecoveryCompleted(),
+        "settings epoch invalidates completed activation");
+    provider.ObserveArmer(true, handled);
+    provider.CompleteRecovery();
+    provider.ObserveArmer(false, handled);
+    pass &= Check(!provider.RecoveryCompleted(),
+        "new native initialization clears suppression even without recovery admission");
+    provider.ObserveArmer(true, handled);
+    provider.CompleteRecovery();
+    pass &= Check(!provider.BlocksRepeatedAdmission(0x1000, 0x2000, 7, 2, 1,
+        126.16f, 70.0f) && !provider.RecoveryCompleted(),
+        "new cinematic generation retires suppression");
+    provider.ObserveArmer(true, handled);
+    provider.CompleteRecovery();
+    provider.Reset();
+    pass &= Check(!provider.RecoveryCompleted(), "lifecycle reset releases admission");
     Fixture state;
     const auto candidate = state.Event(100.0f, 0xA);
     const auto active = state.Event(99.8f, 0xA);
@@ -167,6 +578,24 @@ int main()
         invalidTarget.phase == dialogue::Phase::Inactive &&
         !invalidTarget.snapshotTargetValid.load(),
         "unreadable native target fails closed without candidate ownership");
+
+    Fixture exitingOwner;
+    exitingOwner.coordinator.store(camera::CoordinatorState::CinematicExiting);
+    const auto rejectedDuringExit = exitingOwner.Event(70.0f, 0xD);
+    pass &= Check(rejectedDuringExit.action ==
+            plugin::DialogueBoundaryAction::NonGameplayReset &&
+        rejectedDuringExit.earlyReturn && !rejectedDuringExit.mutateXmm1 &&
+        exitingOwner.phase == dialogue::Phase::Inactive,
+        "dialogue_callback_during_cinematic_exiting_reports_non_gameplay_guard");
+
+    Fixture excludedRecovery;
+    excludedRecovery.exclusion.Arm(90.0f);
+    const auto rejectedByExclusion = excludedRecovery.Event(70.0f, 0xD);
+    pass &= Check(rejectedByExclusion.action ==
+            plugin::DialogueBoundaryAction::ExclusionReset &&
+        rejectedByExclusion.earlyReturn && !rejectedByExclusion.mutateXmm1 &&
+        excludedRecovery.phase == dialogue::Phase::Inactive,
+        "dialogue_callback_during_post_cinematic_exclusion_reports_exact_guard");
 
     // Dialogue OFF-first: use the production setting transaction, then the
     // same event decision path. Lifecycle observation is retained; XMM1 is not.

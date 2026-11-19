@@ -1,0 +1,16 @@
+{
+  "readiness": "NO-GO",
+  "differential_exit_code": 1,
+  "field_checks": {
+    "0": 139,
+    "1": 175
+  },
+  "divergences": {
+    "0": 13,
+    "1": 13
+  },
+  "common_fields": 139,
+  "diagnostics_common_results_equal": true,
+  "diagnostics_fov_traces_equal": true,
+  "cleanup_verified": true
+}

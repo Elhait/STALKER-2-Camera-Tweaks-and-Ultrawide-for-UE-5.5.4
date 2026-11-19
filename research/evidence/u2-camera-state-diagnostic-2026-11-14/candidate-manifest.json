@@ -1,0 +1,22 @@
+{
+  "artifact": "build-artifacts/u2-camera-state-diagnostic-2026-11-14/production/STALKER2CameraTweaks.asi",
+  "profile": "Production Release",
+  "diagnostics_default": false,
+  "diagnostics_setting": "[Diagnostics] Enabled=true",
+  "size_bytes": 3928064,
+  "sha256": "7654E719E4593B7D3073EDF5C962BB733961C897324AAF01E14FE7692381B4F6",
+  "pe": {
+    "signature": "PE",
+    "machine": "AMD64",
+    "optional_header": "PE32+"
+  },
+  "installed_in_game": true,
+  "production_fov_algorithms_changed": false,
+  "runtime_observation": {
+    "result": "startup_crash_before_capture",
+    "diagnostics_enabled": true,
+    "mod_hash_observed": "7654E719E4593B7D3073EDF5C962BB733961C897324AAF01E14FE7692381B4F6",
+    "crash_assessment": "runtime-startup-crash-assessment.md",
+    "u2_transition_capture": "not_obtained"
+  }
+}

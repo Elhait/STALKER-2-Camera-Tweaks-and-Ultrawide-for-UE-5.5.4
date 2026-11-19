@@ -28,6 +28,13 @@ namespace dialogue
     {
         pending_ = false;
         source_ = 0;
+        receiver_ = 0;
+        conflictingReceiver_ = 0;
+        receiverIdentityConflict_ = false;
+        receiverEpoch_ = 0;
+        receiverGeneration_ = 0;
+        receiverConflict_ = false;
+        receiverValidated_ = false;
         nativeTarget_ = std::numeric_limits<float>::quiet_NaN();
         baseline_ = std::numeric_limits<float>::quiet_NaN();
         previous_ = std::numeric_limits<float>::quiet_NaN();
@@ -37,6 +44,13 @@ namespace dialogue
 
     void CandidateTracker::Begin(float initialSample) noexcept
     {
+        receiver_ = 0;
+        conflictingReceiver_ = 0;
+        receiverIdentityConflict_ = false;
+        receiverEpoch_ = 0;
+        receiverGeneration_ = 0;
+        receiverConflict_ = false;
+        receiverValidated_ = false;
         pending_ = std::isfinite(initialSample);
         source_ = 0;
         nativeTarget_ = std::numeric_limits<float>::quiet_NaN();
@@ -49,6 +63,13 @@ namespace dialogue
     void CandidateTracker::Begin(float initialSample, std::uintptr_t source,
         float nativeTarget) noexcept
     {
+        receiver_ = 0;
+        conflictingReceiver_ = 0;
+        receiverIdentityConflict_ = false;
+        receiverEpoch_ = 0;
+        receiverGeneration_ = 0;
+        receiverConflict_ = false;
+        receiverValidated_ = false;
         pending_ = source != 0 && std::isfinite(initialSample) &&
             std::isfinite(nativeTarget);
         source_ = source;
@@ -122,6 +143,76 @@ namespace dialogue
     bool CandidateTracker::HasContext() const noexcept
     {
         return pending_ && source_ != 0 && std::isfinite(nativeTarget_);
+    }
+
+    bool CandidateTracker::IsStationaryAtReference(float reference,
+        float tolerance) const noexcept
+    {
+        return HasContext() && std::isfinite(reference) &&
+            std::isfinite(tolerance) && tolerance >= 0.0f &&
+            std::fabs(baseline_ - reference) <= tolerance &&
+            std::fabs(nativeTarget_ - reference) <= tolerance &&
+            std::fabs(previous_ - reference) <= tolerance &&
+            cumulativeDescent_ <= tolerance;
+    }
+
+    void CandidateTracker::BindReceiver(std::uintptr_t receiver, std::uint64_t epoch,
+        std::uintptr_t callbackSource, std::uint64_t generation, bool validated) noexcept
+    {
+        if (receiverIdentityConflict_) return;
+        if (!receiver) {
+            // Missing RCX evidence cannot identify a source. Do not turn a
+            // later validated observation into a permanent conflict.
+            receiverValidated_ = false;
+            return;
+        }
+        if ((callbackSource && callbackSource != source_) ||
+            (receiver_ && (receiver_ != receiver ||
+                receiverGeneration_ != generation))) {
+            if (receiver && receiver != receiver_) conflictingReceiver_ = receiver;
+            receiverConflict_ = true;
+            receiverIdentityConflict_ = true;
+            return;
+        }
+        if (receiver_ && receiverEpoch_ != epoch) {
+            receiverConflict_ = true;
+            return;
+        }
+        receiver_ = receiver;
+        receiverEpoch_ = epoch;
+        receiverGeneration_ = generation;
+        receiverValidated_ = validated;
+    }
+
+    std::uintptr_t CandidateTracker::Receiver(std::uint64_t epoch) const noexcept
+    {
+        return !receiverConflict_ && receiverValidated_ && receiverEpoch_ == epoch ? receiver_ : 0;
+    }
+
+    bool CandidateTracker::AffectsReceiver(std::uintptr_t receiver,
+        std::uint64_t epoch, std::uint64_t generation) const noexcept
+    {
+        (void)epoch;
+        (void)generation;
+        // This is only a source-scoped ambiguity, never ownership. An epoch
+        // mismatch invalidates HasReceiverBinding but must not silently turn
+        // the same still-active source into confirmed Gameplay.
+        return receiver && (receiver_ == receiver || conflictingReceiver_ == receiver);
+    }
+
+    bool CandidateTracker::HasReceiverBinding(std::uintptr_t receiver,
+        std::uint64_t epoch, std::uint64_t generation) const noexcept
+    {
+        return !receiverConflict_ && receiverValidated_ && receiver && receiver_ == receiver &&
+            receiverEpoch_ == epoch && receiverGeneration_ == generation;
+    }
+
+    bool CandidateTracker::HasReceiverIdentity(std::uintptr_t receiver,
+        std::uintptr_t callbackSource, std::uint64_t generation) const noexcept
+    {
+        return !receiverIdentityConflict_ && receiverValidated_ && receiver != 0 &&
+            callbackSource != 0 && receiver_ == receiver && source_ == callbackSource &&
+            receiverGeneration_ == generation;
     }
 
     void PolicySnapshot::Clear() noexcept

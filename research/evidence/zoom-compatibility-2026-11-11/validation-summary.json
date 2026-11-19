@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-11",
+  "focused": {
+    "invocations": 17,
+    "exit": 0
+  },
+  "canonical": {
+    "command": "test.cmd -NonGraphics",
+    "invocations": 62,
+    "native_fresh_processes": 222,
+    "graphics_omitted": true,
+    "exit": 0,
+    "execution": "outside initial filesystem restrictions; preceded by passing isolated filesystem checks"
+  },
+  "registry_audit": {
+    "exit": 0,
+    "targets": 59,
+    "runner_invocations": 62,
+    "native_cases": 114,
+    "native_children": 228
+  },
+  "candidate": {
+    "path": "build-artifacts/cg01-cg03/release/production-tOFF-dOFF/bin/STALKER2CameraTweaks.asi",
+    "sha256": "55DB2E4C4DEB92F2BD2F7C1EE99D2E5336DB51C9F9C0331E3887DD2DB6C7D872",
+    "version": "3.2.2.0"
+  },
+  "original_root_and_installed_sha256": "A9A38A68E4F69FFB6C0127E4C8A430268C79C60AB7619BCF008E2805B91F9842",
+  "runtime_acceptance": "pending",
+  "source_sha256": {
+    "src/plugin/runtime.cpp": "1f849575aceb67663d4d06e3bdb0df7bd8c67cff67e1957a7e140dbaf874cfd0",
+    "src/hooks/zoom_transition_resolver.hpp": "3cd4d32813cd188f0f8df440b8a558eea56b5ec59f5f8be21ca9230b18ab0ee6",
+    "src/camera/camera_state_publication.hpp": "864cf878decd29379658d92331cb4c61a3187dde3fc79978368963368a599174",
+    "tests/plugin/zoom_compatibility_cases.hpp": "217ad037e8b6243377482803390fd3e4cbcbab9afadd907d99179a73d0da6d7f",
+    "tests/plugin/runtime_native_adapter_harness.cpp": "243a6d6b84666c4064d984d85ff5df4228154305d26a792f90f48d4e5ca717a5",
+    "tests/plugin/camera_writer_transaction_harness.cpp": "121cc05f0e16f6c5c906c0eac3bfb1c31ead766d838b15d0e6452b7711551ece",
+    "tests/camera/camera_state_snapshot_harness.cpp": "614fec065ba6406681c636477b4a5577a2ce4276e78cc94f9513bd9f167d7617",
+    "tests/test_harnesses.json": "24b4fda18a8c2a87b378bfc949b8b30b7121a6b6bf0f317a1a7e6fd84cecd5c4"
+  }
+}

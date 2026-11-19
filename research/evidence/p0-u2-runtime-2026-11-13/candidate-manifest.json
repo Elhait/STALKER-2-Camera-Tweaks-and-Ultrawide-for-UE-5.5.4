@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-13",
+  "scope": "Controlled P0 baseline admission and U2 Cinematic1-Dialogue-Cinematic2 runtime preparation",
+  "artifact": "build-artifacts/p0-u2-runtime-2026-11-13/STALKER2CameraTweaks.asi",
+  "sha256": "2D952B287FB9DB55A7FA789F767F5CA9E6395EF1D41F0BB6EDA5BF7C3D23295A",
+  "bytes": 3866112,
+  "fileVersion": "3.2.2.0",
+  "productVersion": "3.2.2",
+  "profile": "production-release",
+  "startupTimeline": false,
+  "dialogueDiscovery": false,
+  "diagnostics": "runtime INI switch; compiled into ordinary Production ASI",
+  "sourceHead": "54212ee8bb94f451d9ff5c45a2b97bf23b757c2e",
+  "sourceTree": "dirty; build used current working tree",
+  "sourceSha256": {
+    "src/plugin/runtime.cpp": "32594DDF65D87FBAF5ED70DC09B9B0C38803BEC1FB93C99091197D542510E7BD",
+    "src/plugin/dialogue_boundary_transaction.hpp": "A03B36C4A05F349AC6D3A7809D75BD6194818FC318943A842FAA8CA34BDE614F",
+    "src/dialogue/dialogue_fov.cpp": "6E0B350A0A82B70554B340B97495854F469588F83327BB6A8E1D1D1C8A9D9076",
+    "src/diagnostics/u2_shadow.hpp": "29B751D8B721EC97B4BDD0C322801A9E7E610CD7FEA2292BEFAC8E807A5EE033",
+    "src/hooks/blend_producer_resolver.hpp": "A1CC03D59D589BB8B45FBE067E4C9F9C71FFC8EC7AFDE026086B332EAEE4AB4C",
+    "src/diagnostics/cinematic_consumer_observation.hpp": "FF9E390D32D6B9285ACC5D9E5B70A0DB8F75BFF363A8E51AE23AA35F3628D6EC",
+    "src/diagnostics/dialogue_boundary_observation.hpp": "67F0205A9682DFE7B0A7ACDB4CBB117CE81A12E666A7612C9C775510F5B5BA3D",
+    "tests/plugin/runtime_native_adapter_harness.cpp": "6540101F0426C2D5DF6B1A0B1C2D9E624CFC1B7670F1BCA8ACAABC32ADC499C5"
+  },
+  "diagnosticsOnlyChangeForThisRun": "FOV_OBSERVATION and GAMEPLAY_BASELINE_PROJECTION now report writerContext and paired input_sequence",
+  "productionFovPolicyChanged": false,
+  "installation": "not performed",
+  "gameRuntime": "not yet executed",
+  "validation": {
+    "cleanReleaseBuild": "PASS; isolated production-tOFF-dOFF CMake tree",
+    "incrementalDiagnosticLogRebuild": "PASS",
+    "dialogueFovHarness": "PASS",
+    "cameraWriterTransactionHarness": "PASS",
+    "runtimeAdapterDialogueBaselineContextOff": "PASS",
+    "runtimeAdapterDialogueBaselineContextOn": "PASS",
+    "gameProcessDuringBuild": 0,
+    "debuggerProcessDuringBuild": 0
+  },
+  "warnings": [
+    "CMake emitted the existing long object-file-directory warning for a large test target; the production target built and linked.",
+    "Third-party Zydis emitted existing C4201 warnings."
+  ]
+}

@@ -13,12 +13,207 @@ namespace
         if (!value) std::cerr << "FAIL: " << name << "\n";
         return value;
     }
+
+    bool CheckAdmittedReferenceAndOriginalInputContract()
+    {
+        using namespace camera;
+        CameraStateSnapshot snapshot{};
+        bool valid{};
+        float neutralCandidate{NAN};
+        std::uint32_t neutralSamples{};
+        std::uintptr_t neutralSource{};
+        std::atomic<bool> hold{};
+        std::atomic<std::uint64_t> sequence{};
+        CameraStatePublicationView view{snapshot, valid, neutralCandidate,
+            neutralSamples, neutralSource, hold, sequence};
+        CameraStatePublicationInput input{};
+        input.observationPublished = true;
+        input.presentation = PresentationState::Gameplay;
+        input.dialogue = DialogueState::Inactive;
+        input.source = 0xA;
+        input.applied = true;
+        input.nativeAspect = 16.0f / 9.0f;
+        auto& observation = input.observation;
+        observation.boundary = FovObservationBoundary::CameraWriter;
+        observation.observedDuringGameplay = true;
+        observation.writerContext = WriterContext::GameplayEligible;
+        observation.writerSource = {0xA, true};
+        observation.inputFov = {130.3115f, FovSpace::Native,
+            FovProvenance::NativeRegisterInput, true};
+        observation.resultFov = {153.931f, FovSpace::Transformed,
+            FovProvenance::ModTransformResult, true};
+        observation.aspect = {32.0f / 9.0f,
+            FovProvenance::NativeWriterAspect, true};
+        observation.writerFlags = 0x4;
+        observation.writerFlagsValid = true;
+        observation.publicationSequence = 1;
+        GameplayBaselineStore baselineStore;
+        const auto baseline = baselineStore.Project(observation, true);
+        bool pass = Check(IsUsableGameplayBaseline(baseline.baseline),
+            "reference_contract_production_baseline_admitted_without_zoom");
+        input.gameplayReference = baseline.baseline;
+        input.gameplayReferenceProvided = true;
+        input.originalInputAvailable = true;
+        for (unsigned sample = 0; sample < 4; ++sample)
+            PublishCameraStateSnapshotLocked(view, input);
+        pass &= Check(snapshot.evidence.gameplayFov.valid &&
+            std::fabs(snapshot.evidence.gameplayFov.value - 130.3115f) < 0.001f &&
+            snapshot.evidence.gameplayFov.source == 0xA &&
+            snapshot.evidence.gameplayFov.freshness == SnapshotFreshness::Current,
+            "admitted_gameplay_reference_must_be_visible_without_any_zoom_event");
+
+        input.dialogue = DialogueState::Active;
+        observation.observedDuringGameplay = false;
+        observation.writerContext = WriterContext::ConfirmedProviderDialogueLifecycleObserved;
+        observation.inputFov.value = 122.087f;
+        observation.resultFov.value = 149.071f;
+        observation.publicationSequence = 2;
+        const auto retained = baselineStore.Project(observation, false);
+        pass &= Check(IsUsableGameplayBaseline(retained.baseline) &&
+            std::fabs(retained.baseline.nativeFov.value - 130.3115f) < 0.001f,
+            "reference_contract_confirmed_dialogue_retains_production_reference");
+        input.gameplayReference = retained.baseline;
+        input.originalInputAvailable = false;
+        PublishCameraStateSnapshotLocked(view, input);
+        pass &= Check(IsUsableGameplayBaseline(retained.baseline) &&
+            snapshot.evidence.gameplayFov.valid &&
+            std::fabs(snapshot.evidence.gameplayFov.value - 130.3115f) < 0.001f &&
+            snapshot.evidence.gameplayFov.freshness == SnapshotFreshness::Retained,
+            "confirmed_dialogue_keeps_admitted_reference_visible_as_retained_not_live");
+
+        // Drive receiver invalidation through the real store and the actual publisher inputs.
+        input.source = 0xB;
+        observation.writerSource = {0xB, true};
+        observation.writerContext = WriterContext::TransitionAmbiguous;
+        input.gameplayReference = baselineStore.Project(observation, false).baseline;
+        PublishCameraStateSnapshotLocked(view, input);
+        pass &= Check(!snapshot.evidence.gameplayReferenceUsable &&
+            snapshot.evidence.gameplayFov.freshness == SnapshotFreshness::Historical,
+            "publisher_cannot_show_foreign_receiver_baseline_as_current_or_usable");
+        input.source = 0xA;
+        observation.writerSource = {0xA, true};
+        observation.writerContext = WriterContext::ConfirmedProviderDialogueLifecycleObserved;
+        input.gameplayReference = baselineStore.Project(observation, false).baseline;
+        PublishCameraStateSnapshotLocked(view, input);
+        pass &= Check(!snapshot.evidence.gameplayReferenceUsable &&
+            snapshot.evidence.gameplayFov.freshness == SnapshotFreshness::Historical,
+            "confirmed_dialogue_cannot_resurrect_invalidated_reference");
+        input.gameplayReference = baselineStore.Invalidate().baseline;
+        PublishCameraStateSnapshotLocked(view, input);
+        pass &= Check(!snapshot.evidence.gameplayReferenceUsable,
+            "production_invalidation_reaches_ui_publication");
+
+        // Known upstream-corrected input cannot establish an original FOV.
+        CameraFovTransactionPublication prepared{};
+        prepared.nativeInput = 122.087f;
+        prepared.nativeInputValid = true;
+        prepared.nativeProvenance = EvidenceProvenance::ModDerivedState;
+        prepared.output = 149.071f;
+        prepared.outputValid = true;
+        prepared.outputProvenance = EvidenceProvenance::ModDerivedState;
+        prepared.source = 0xA;
+        prepared.sequence = 3;
+        prepared.transactionOwner = PresentationState::Gameplay;
+        CameraStateSnapshot originalUnknown{};
+        bool originalUnknownValid{};
+        PublishCameraFovTransactionLocked(originalUnknown, originalUnknownValid, prepared);
+        pass &= Check(!originalUnknown.evidence.nativeFov.valid,
+            "upstream_corrected_writer_input_must_not_create_original_native_fov");
+
+        auto captured = prepared;
+        captured.nativeInput = 70.0f;
+        captured.nativeProvenance = EvidenceProvenance::NativeNumericObservation;
+        captured.sequence = 4;
+        PublishCameraFovTransactionLocked(originalUnknown, originalUnknownValid, captured);
+        pass &= Check(originalUnknown.evidence.nativeFov.valid &&
+            originalUnknown.evidence.nativeFov.value == 70.0f &&
+            originalUnknown.evidence.nativeFov.source == 0xA,
+            "reference_contract_direct_original_capture_is_published");
+        prepared.nativeInput = 153.931f;
+        prepared.output = 153.931f;
+        prepared.sequence = 5;
+        prepared.transactionOwner = PresentationState::CinematicActive;
+        PublishCameraFovTransactionLocked(originalUnknown, originalUnknownValid, prepared);
+        pass &= Check(!originalUnknown.evidence.nativeFov.valid ||
+            (std::fabs(originalUnknown.evidence.nativeFov.value - 70.0f) < 0.001f &&
+                originalUnknown.evidence.nativeFov.freshness != SnapshotFreshness::Current),
+            "prepared_cinematic_input_cannot_replace_original_capture_as_current_native");
+        return pass;
+    }
+    bool CheckWriterReadbackContract()
+    {
+        using namespace camera;
+        bool pass = true, valid = false;
+        CameraStateSnapshot snapshot{};
+        CameraFovTransactionPublication plan{};
+        plan.nativeInput = 122.087f; plan.nativeInputValid = true;
+        plan.nativeProvenance = EvidenceProvenance::ModDerivedState;
+        plan.writerInputPublication = true;
+        plan.output = 149.071f; plan.outputValid = true;
+        plan.source = 0xA; plan.writerTransaction = {11, 0xA, 0xB, 7, 42};
+        PublishCameraFovTransactionLocked(snapshot, valid, plan);
+        pass &= Check(!EffectiveCameraFov(snapshot.evidence).valid,
+            "planned_is_not_effective_without_readback");
+        CameraFovReadbackPublication read{plan.writerTransaction,
+            CameraFovBoundary::PrimaryPostStore, 148.0f, true, true};
+        pass &= Check(PublishCameraFovReadbackLocked(snapshot, valid, read) &&
+            EffectiveCameraFov(snapshot.evidence).value == 148.0f,
+            "actual_mismatch_is_observed_not_replaced_with_plan");
+        read.boundary = CameraFovBoundary::PostHelper; read.value = 147.0f;
+        PublishCameraFovReadbackLocked(snapshot, valid, read);
+        read.boundary = CameraFovBoundary::PrimaryPostStore; read.value = 148.0f;
+        PublishCameraFovReadbackLocked(snapshot, valid, read);
+        pass &= Check(snapshot.evidence.postStoreFov.value == 148.0f &&
+            snapshot.evidence.postHelperFov.value == 147.0f &&
+            EffectiveCameraFov(snapshot.evidence).boundary == CameraFovBoundary::PostHelper,
+            "both_readback_boundaries_remain_distinct_in_either_delivery_order");
+        ++plan.writerTransaction.id;
+        PublishCameraFovTransactionLocked(snapshot, valid, plan);
+        pass &= Check(!PublishCameraFovReadbackLocked(snapshot, valid, read) &&
+            !EffectiveCameraFov(snapshot.evidence).valid, "readback_N_cannot_verify_N_plus_1");
+        for (unsigned mismatch = 0; mismatch < 5; ++mismatch) {
+            read.identity = plan.writerTransaction;
+            switch (mismatch) {
+            case 0: ++read.identity.id; break;
+            case 1: ++read.identity.receiver; break;
+            case 2: ++read.identity.output; break;
+            case 3: ++read.identity.thread; break;
+            case 4: ++read.identity.lifecycle; break;
+            }
+            pass &= Check(!PublishCameraFovReadbackLocked(snapshot, valid, read),
+                "foreign_transaction_identity_rejected");
+        }
+        read.identity = plan.writerTransaction; read.readable = false;
+        PublishCameraFovReadbackLocked(snapshot, valid, read);
+        pass &= Check(!EffectiveCameraFov(snapshot.evidence).valid, "unreadable_is_unavailable");
+        read.readable = true; read.correlated = false;
+        pass &= Check(!PublishCameraFovReadbackLocked(snapshot, valid, read),
+            "uncertain_correlation_never_verifies");
+        read.correlated = true;
+        read.boundary = CameraFovBoundary::Unavailable;
+        pass &= Check(!PublishCameraFovReadbackLocked(snapshot, valid, read),
+            "unnamed_boundary_cannot_verify_output");
+        read.boundary = CameraFovBoundary::PrimaryPostStore;
+        PublishCameraFovReadbackLocked(snapshot, valid, read);
+        MarkCameraPresentationTransition(snapshot, valid);
+        pass &= Check(!EffectiveCameraFov(snapshot.evidence).valid &&
+            !PublishCameraFovReadbackLocked(snapshot, valid, read),
+            "lifecycle_boundary_retires_the_prior_readback_identity");
+        plan.writerTransaction = {};
+        PublishCameraFovTransactionLocked(snapshot, valid, plan);
+        pass &= Check(!EffectiveCameraFov(snapshot.evidence).valid &&
+            snapshot.evidence.currentOutputFov.value == 149.071f,
+            "diagnostics_off_keeps_plan_without_invented_effective");
+        return pass;
+    }
+
 }
 
 int main()
 {
     using namespace camera;
-    bool pass = true;
+    bool pass = CheckAdmittedReferenceAndOriginalInputContract();
+    pass &= CheckWriterReadbackContract();
 
     CameraStateInput input{};
     input.presentation = { PresentationState::Gameplay,
@@ -194,14 +389,26 @@ int main()
         IsUsableGameplayBaseline(productionBaseline.baseline),
         "production_baseline_accepts_valid_native_aspect_pass_through");
     CameraStatePublicationResult publication{};
+    for (int sample = 0; sample < 4; ++sample)
+        publication = PublishCameraStateSnapshotLocked(publicationView, publicationInput);
+    pass &= Check(!publication.current.evidence.neutralGameplayFov.valid,
+        "unavailable_zoom_cannot_confirm_neutral_fov");
+    publicationInput.zoomObserverAvailable = true;
+    for (int sample = 0; sample < 4; ++sample)
+        publication = PublishCameraStateSnapshotLocked(publicationView, publicationInput);
+    pass &= Check(!publication.current.evidence.neutralGameplayFov.valid,
+        "installed_but_unobserved_zoom_cannot_confirm_neutral_fov");
+    publicationInput.zoomObservationValid = true;
+    zoomHold = true;
+
     for (std::uint64_t sequence = 1; sequence <= 3; ++sequence) {
         publicationInput.observation.publicationSequence = sequence;
         publication = PublishCameraStateSnapshotLocked(publicationView,
             publicationInput);
     }
-    pass &= Check(publication.current.evidence.gameplayFov.valid &&
-        publication.current.evidence.gameplayFov.freshness == SnapshotFreshness::Current &&
-        std::fabs(publication.current.evidence.gameplayFov.value - 90.6557f) < 0.001f,
+    pass &= Check(publication.current.evidence.neutralGameplayFov.valid &&
+        publication.current.evidence.neutralGameplayFov.freshness == SnapshotFreshness::Current &&
+        std::fabs(publication.current.evidence.neutralGameplayFov.value - 90.6557f) < 0.001f,
         "stable_native_16x9_pass_through_confirms_shared_gameplay_baseline");
     publicationInput.observation.publicationSequence = 4;
     publication = PublishCameraStateSnapshotLocked(publicationView, publicationInput);
@@ -242,9 +449,17 @@ int main()
         std::fabs(zoomBaseline.baseline.nativeFov.value - 26.14f) < 0.001f,
         "production_store_value_alone_is_not_a_zoom_neutral_gameplay_reference");
     publication = PublishCameraStateSnapshotLocked(publicationView, publicationInput);
-    pass &= Check(publication.current.evidence.gameplayFov.valid &&
-        std::fabs(publication.current.evidence.gameplayFov.value - 90.6557f) < 0.001f,
+    pass &= Check(publication.current.evidence.neutralGameplayFov.valid &&
+        std::fabs(publication.current.evidence.neutralGameplayFov.value - 90.6557f) < 0.001f,
         "zoom_source_observation_cannot_replace_neutral_gameplay_baseline");
+
+    publicationInput.zoomActive = false;
+    publicationInput.zoomObserverAvailable = false;
+    for (int sample = 0; sample < 4; ++sample)
+        publication = PublishCameraStateSnapshotLocked(publicationView, publicationInput);
+    pass &= Check(std::fabs(publication.current.evidence.neutralGameplayFov.value - 90.6557f) < 0.001f &&
+        publication.current.evidence.neutralGameplayFov.freshness == SnapshotFreshness::Historical,
+        "capability_loss_preserves_old_reference_as_historical");
 
     input.generation.presentationEpoch = 3;
     const auto stale = BuildCameraStateSnapshot(input);

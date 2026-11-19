@@ -105,16 +105,16 @@ namespace
     bool TestHotkeyPlusDiagnosticWorkerCapacity()
     {
         plugin::WorkerLifecycle lifecycle;
-        std::atomic<bool> started[4]{};
-        WorkerContext contexts[4]{};
+        std::atomic<bool> started[5]{};
+        WorkerContext contexts[5]{};
         if (!lifecycle.Initialize()) return false;
-        for (int index = 0; index < 4; ++index) {
+        for (int index = 0; index < 5; ++index) {
             contexts[index] = { &lifecycle, &started[index] };
             if (!lifecycle.Start(WaitingWorker, &contexts[index])) return false;
         }
         for (const auto& workerStarted : started)
             if (!WaitUntilStarted(workerStarted)) return false;
-        return lifecycle.WorkerCount() == 4 && lifecycle.StopAndJoin() &&
+        return lifecycle.WorkerCount() == 5 && lifecycle.StopAndJoin() &&
             lifecycle.WorkerCount() == 0;
     }
 
@@ -126,6 +126,48 @@ namespace
 
     bool TestNativeLogsAndStorage(const std::filesystem::path& directory)
     {
+        const auto sharedPath = directory / L"overlapping-startup.log";
+        const auto processPath = directory / L"overlapping-startup.PID.log";
+        bool overlappingLogs{};
+        {
+            platform::win32::NativeLogFile first, second;
+            overlappingLogs = first.Open(sharedPath.c_str()) &&
+                first.Write("first process remains intact") &&
+                second.Open(sharedPath.c_str()) &&
+                second.Write("second process can initialize");
+            platform::win32::NativeLogFile third;
+            overlappingLogs = overlappingLogs && !third.Open(sharedPath.c_str());
+            // A later launch reuses the closed fallback file, truncating the
+            // previous session while the canonical owner remains untouched.
+            overlappingLogs = overlappingLogs && second.Close() &&
+                second.Open(sharedPath.c_str()) && second.Write("latest session");
+        }
+        std::string firstText, secondText;
+        overlappingLogs = overlappingLogs &&
+            platform::win32::ReadNativeFile(sharedPath.c_str(), firstText) &&
+            platform::win32::ReadNativeFile(processPath.c_str(), secondText) &&
+            firstText == "first process remains intact" &&
+            secondText == "latest session";
+        bool fallbackCleanup = overlappingLogs;
+        {
+            platform::win32::NativeLogFile canonical, fallback, nextCanonical;
+            fallbackCleanup = fallbackCleanup && canonical.Open(sharedPath.c_str()) &&
+                GetFileAttributesW(processPath.c_str()) == INVALID_FILE_ATTRIBUTES &&
+                fallback.Open(sharedPath.c_str()) && fallback.Write("live fallback") &&
+                canonical.Close() && nextCanonical.Open(sharedPath.c_str()) &&
+                platform::win32::ReadNativeFile(processPath.c_str(), secondText) &&
+                secondText == "live fallback" && fallback.Close() &&
+                nextCanonical.Close() && nextCanonical.Open(sharedPath.c_str()) &&
+                GetFileAttributesW(processPath.c_str()) == INVALID_FILE_ATTRIBUTES;
+        }
+        DeleteFileW(sharedPath.c_str());
+        DeleteFileW(processPath.c_str());
+        std::printf("overlapping_startup_log_ownership=%s\n",
+            overlappingLogs ? "PASS" : "FAIL");
+        if (!overlappingLogs) return false;
+        std::printf("unused_fallback_removed_live_fallback_preserved=%s\n",
+            fallbackCleanup ? "PASS" : "FAIL");
+        if (!fallbackCleanup) return false;
         static_assert(std::is_trivially_destructible_v<
             platform::ProcessLifetime<LifetimeProbe>>);
         unsigned destructions{};

@@ -9,10 +9,10 @@ The mod is especially useful if you play with a Gameplay FOV other than the game
 ## Features
 
 - **Independent modules.** Gameplay, Cinematics, Dialogue and Overlay each have their own enable/disable setting. Turning one off does not disable the others. Camera modules still coordinate camera ownership during transitions when enabled.
-- Uses the Gameplay FOV selected in the game's own settings as its baseline—no separate mod FOV value needs to be configured. Aspect-aware correction follows it during gameplay; by default, cinematics also use that value as their baseline while preserving authored FOV changes.
+- Uses the Gameplay FOV selected in the game's own settings as its baseline—no separate mod FOV value needs to be configured. Aspect-aware correction follows it during gameplay. Cinematic `GameplayHorPlus` follows the current Gameplay baseline while preserving cinematic variation; `NativeHorPlus` transforms the authored ENTER FOV independently.
 - `Gameplay.Mode` selects `HorPlus`, native `AspectRecalculation`, or `RuntimeCombine` (`RuntimeCombine` is the recommended default). `HorPlus` applies the existing Hor+ policy to the native Gameplay writer aspect. `RuntimeCombine` instead synchronizes a mismatched Gameplay camera aspect to the validated current viewport aspect, confirms the read-back, and only then applies Hor+; if synchronization cannot be confirmed, it fails closed without applying Hor+ in the unconfirmed domain. RuntimeCombine accepts arbitrary valid aspect ratios.
 - Supports cinematic aspect policies `Auto`, `16:9`, `21:9` and `32:9`, independently of the display aspect. Set `Cinematics.Enabled=false` to leave cinematic camera output native.
-- `Cinematics.FovMode` selects `GameplayHorPlus`, which uses the game-selected FOV as its cinematic baseline, or `NativeHorPlus`, which applies Hor+ to the game's authored cinematic FOV independently of Gameplay FOV.
+- Cinematic FOV offers `GameplayHorPlus`, which follows the current Gameplay FOV while preserving cinematic variation and falls back to `NativeHorPlus` when its required context is unavailable, and `NativeHorPlus`, which corrects each cinematic's authored ENTER FOV independently of the Gameplay setting. The FOV mode can be selected in the Overlay or cycled with the configured Cinematic FOV hotkey for the next cinematic.
 - Offers three FOV-aware Dialogue zoom modes: `Adaptive`, `Reduced` and `Disabled`. Set `Dialogue.Enabled=false` to leave dialogue camera output entirely to the game; the game's default dialogue zoom targets 70° FOV.
 - Includes an in-game overlay for settings, runtime status, hotkeys and a read-only Camera State view in a separate, independently scrollable panel. The Overlay has its own click-through display window; the game window retains host input and discovery responsibilities.
 - The Overlay waits for a suitable game window before initializing its presenter; on some launches it may become available after the game has progressed through startup.
@@ -23,6 +23,15 @@ The mod is especially useful if you play with a Gameplay FOV other than the game
 - Creates and documents `STALKER2CameraTweaks.ini` automatically; overlay settings are saved there as well.
 - Keeps the configuration and diagnostic logs local beside the ASI; no network service is needed for normal use.
 - Resolves gameplay and cinematic hooks through guarded signatures and fails safely when validation is ambiguous or unsuccessful.
+
+## Changes since 3.2.2
+
+- Centralized Gameplay, Cinematics and Dialogue transitions so camera ownership, recovery and FOV references are updated together. A verified dialogue after cinematic EXIT can receive correction while Gameplay recovery still protects its baseline.
+- Fixed repeated Dialogue correction during departure and preserved the corrected start of the next cinematic blend. In `RuntimeCombine`, the first eligible writer call after a camera receiver change can apply Hor+ once the new aspect is confirmed.
+- Expanded Camera State to show the Gameplay reference, captured native FOV, writer input, planned output and confirmed read-back separately. Updated the localized controls and FOV help across all 18 languages.
+- Added process IDs to session logs and a reusable fallback for overlapping launches that cannot open the main log. Log output is bounded.
+
+See the [full change record](CHANGES_SINCE_3.2.2_to_4.md).
 
 ## In-game settings overlay
 
@@ -59,7 +68,7 @@ For manual installation:
 3. Copy `STALKER2CameraTweaks.asi` to `Stalker2\Binaries\Win64`. The mod creates `STALKER2CameraTweaks.ini` beside the ASI on first launch; existing settings are migrated where recognized.
 4. Start the game normally.
 
-The plugin creates `STALKER2CameraTweaks.log` beside the game executable. The startup log includes SHA-256 values for the loaded mod and game executable, which helps verify support reports.
+The plugin writes its logs beside the game executable. Session records include the process ID, and a sharing conflict can use the corresponding `.PID.log` fallback.
 
 ## Configuration
 
@@ -94,11 +103,12 @@ FontSize=13
 Enabled=false
 GameplayCycle=F9
 CinematicCycle=F10
+# When hotkeys are enabled, cycles the FOV mode for the next cinematic.
 CinematicFovCycle=F11
 DialogueCycle=F12
 ```
 
-The generated INI documents each setting's available values and examples. You can edit it manually while the game is closed; restart the game after manual changes. Diagnostics are startup-only and default to off.
+The generated INI documents each setting's available values and examples. Configure the `CinematicFovCycle` binding in the INI or use the Overlay selector to choose the policy directly. Edit the INI while the game is closed. Diagnostics are startup-only and default to off.
 
 ## Screenshots
 
@@ -124,9 +134,9 @@ The same cinematic framing policy can be selected independently of the physical 
 | Forced `32:9` at 5120x1440 | ![Forced 32:9 cinematic framing](screens/Cutscene%2032-9%20in%205120x1440jpg.jpg) |
 | Forced `32:9` at 2560x1440 | ![Forced 32:9 cinematic letterbox](screens/Cutscene%2032-9%20in%202560x1440.jpg) |
 
-`GameplayHorPlus` can also use the selected Gameplay FOV as the baseline for cinematics while preserving authored cinematic FOV changes. Custom cinematic framing is available even on a 16:9 display:
+Each cinematic uses its own authored ENTER FOV while applying the selected aspect framing. Custom cinematic framing is available even on a 16:9 display:
 
-<p align="center"><img src="screens/Cutscene%20gameplay%20FOV.gif" alt="GameplayHorPlus cinematic FOV following the selected Gameplay FOV" width="850"></p>
+<p align="center"><img src="screens/Cutscene%20gameplay%20FOV.gif" alt="Cinematic framing using the cinematic's authored FOV" width="850"></p>
 
 <p align="center"><img src="screens/Cutscene%2016-9%20custom%20framing.gif" alt="Custom cinematic framing on a 16:9 display" width="850"></p>
 
@@ -158,12 +168,12 @@ These recordings show additional runtime behavior of the unified ASI:
 
 ## Tested scope and limitations
 
-- In-game validation on Steam build `2.0.6` with Unreal Engine `5.5.4` covered Gameplay correction, cinematic transitions and recovery, Dialogue behavior, aspect changes, and Overlay operation with the Overlay enabled and disabled. See the [supported-build evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md) for the tested game-build boundary.
+- Earlier in-game validation on Steam build `2.0.6` with Unreal Engine `5.5.4` covered Gameplay correction, cinematic transitions and recovery, Dialogue behavior, aspect changes and Overlay operation. See the [supported-build evidence matrix](docs/SUPPORTED_BUILD_MANIFEST.md).
+- The non-graphics suite passed all 64 invocations, with one hardlink subcase skipped. In-game verification of the fix for camera receiver changes and the comparison of brief visual hitches remain pending. See [Testing and Research](TESTING_AND_RESEARCH.md).
 - Gameplay supports arbitrary valid aspect ratios; `16:9`, `21:9` and `32:9` are cinematic framing presets, not Gameplay limits.
 - The Overlay includes 18 embedded languages. Arabic shaping, bidirectional text, RTL layout and runtime rendering of every glyph are not guaranteed.
-- Older Steam builds have static resolver research but no separate runtime validation. A future game patch may require updated signatures; successful resolution does not guarantee compatibility.
-- Detailed accumulated findings are summarized in [TESTING_AND_RESEARCH.md](TESTING_AND_RESEARCH.md).
-- The game retains its native post-cinematic FOV recovery; this mod does not force or rewrite that native transition.
+- The v4 required camera/provider resolver set statically matched on retained Steam 2.0.2–2.0.6 images and the installed image reported as 2.1. This is not proof that v4 launches or behaves correctly in-game on those builds. The optional Zoom observer signatures are absent on 2.0.2–2.0.4, which removes zoom observations from Camera State there but does not disable camera correction. See the [v4 resolver audit](research/evidence/v4-resolver-cross-build-2026-11-19/README.md).
+- The game supplies the native post-cinematic recovery. Camera Tweaks can preserve corrected FOV through a validated transition and resume Gameplay correction after recovery.
 - Weapon/viewmodel FOV can remain incorrectly framed after a cinematic, load or gameplay-camera rebuild. This is a separate game-side issue and is not fixed by this mod.
 - In windowed mode, a custom resolution whose aspect is not represented by a native game aspect mode may be resized by the game's native `AspectRecalculation` return to `Auto`. This does not mean arbitrary-aspect HorPlus is unsupported.
 - Changing the game resolution during a session is validated for `Cinematics.Mode=Auto`; restart the game after changing the configuration file itself.

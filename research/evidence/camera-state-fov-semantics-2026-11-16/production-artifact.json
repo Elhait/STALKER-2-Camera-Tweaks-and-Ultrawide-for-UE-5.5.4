@@ -1,0 +1,10 @@
+{
+  "artifact": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\STALKER2CameraTweaks.asi",
+  "sha256": "55AA5082A3A9B5A4BFB7BFB267B081994061686CC47B89A5DD9770A51DB78DB8",
+  "bytes": 4013056,
+  "profile": "production-tOFF-dOFF",
+  "game_directory_modified": false,
+  "suite": "62/62 PASS; hardlink_ownership SKIP error=5; non_graphics=0; WARP_case_omitted=0",
+  "cleanup": "supervisor verified; separate host process check found no compiler/harness/helper residuals",
+  "runtime_display_confirmation": "pending user run"
+}

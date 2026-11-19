@@ -1,0 +1,60 @@
+{
+  "date": "2026-11-13",
+  "scope": "P0 post-exit provider endpoint baseline admission fix",
+  "artifact": "build-artifacts/p0-u2-baseline-admission-fix-2026-11-13/STALKER2CameraTweaks.asi",
+  "sha256": "4BB15CE7EBC500B117F482CD1EF200929EEDE1C0F9C1577DAD42D1A28CA8CF0F",
+  "bytes": 3874304,
+  "fileVersion": "3.2.2.0",
+  "productVersion": "3.2.2",
+  "profile": "production-release",
+  "startupTimeline": false,
+  "dialogueDiscovery": false,
+  "sourceHead": "54212ee8bb94f451d9ff5c45a2b97bf23b757c2e",
+  "sourceTree": "dirty; isolated current-tree Production Release",
+  "buildRoot": "build-artifacts/cm/p0-u2-baseline-admission-fix-2026-11-13/production-tOFF-dOFF",
+  "sourceSha256": {
+    "src/plugin/runtime.cpp": "469FC5D0733D938A7AC16CEB14D670CBF001E1574D50BD48DACCBB3C931F7D21",
+    "tests/plugin/dialogue_boundary_transaction_harness.cpp": "ECFEC03748D24D4F7CE098928CEC88BCF5572CA2B07486A1251ECA713A88CC4B",
+    "src/dialogue/post_exit_provider_handoff.hpp": "5DEEBD1251581CBB3929B14817ED0442019B38FA70AEADBC00571F68D7FA2185",
+    "src/plugin/dialogue_boundary_transaction.hpp": "DA9BD33067952B7DA116EA33007B37A0142A46AEC89999A4E4E60BFCC32D4208",
+    "tests/plugin/camera_writer_transaction_harness.cpp": "E6329CA27D3FD794E080CCA1EC85EAA3D6A8A88CA880C7B86AA0109212ED5DB8"
+  },
+  "validation": {
+    "canonicalTestCmd": "PASS on final source",
+    "registryTargets": 59,
+    "runnerInvocations": 62,
+    "graphicsCasesOmitted": 0,
+    "processTreeCleanup": "verified",
+    "diagnosticHardlinkSandboxFailure": "initial sandbox run denied hardlink; canonical run out-of-sandbox passed",
+    "productionReleaseBuild": "PASS on final source",
+    "gitDiffCheck": "PASS",
+    "gameRuntime": "executed; targeted P0 endpoint verification PASS; U2 visual acceptance unobserved",
+    "installation": "manually loaded by user; runtime mod hash matches"
+  },
+  "behavior": "baseline-only quarantine for completed post-exit provider activation identity and native endpoint neighborhood; Gameplay HorPlus unchanged",
+  "runtimePending": "final producer/def-use for camera+0x230, broad native-origin proof, and U2 active-view/visual continuity",
+  "gameImageSha256": "2BD3F115B959A8EEE7E5C4B42B0142DD0025BD437E1014F92DFC60B9AFEE5479",
+  "runtimeRecheck": {
+    "date": "2026-11-14",
+    "log": "STALKER2CameraTweaks-retest-2026-11-14.log",
+    "logSha256": "ED04EDE69BC886963AAA4AA1DBEE2CC093F6896E63885F15BAD70B01A4311496",
+    "candidateIdentity": "PASS exact mod hash match",
+    "providerEndpointInput": 70.2322,
+    "providerNativeTarget": 70.0,
+    "writerPairChanged": false,
+    "endpointBaselineSamples": [
+      70.109,
+      70.0334,
+      70.0019
+    ],
+    "endpointWriterContext": "TransitionAmbiguous",
+    "baselineDisposition": "RETAIN",
+    "retainedNativeBaseline": 90.3115,
+    "baselineSequence": 1340,
+    "phase1Begin": "Gameplay/exclusion inactive",
+    "phase1LaterGameplayBaseline": 90.3069,
+    "phase2Begin": "Gameplay/exclusion inactive",
+    "phase2LaterGameplayBaseline": 90.3032,
+    "status": "targeted P0 runtime verification PASS; final camera+0x230 producer and U2 visual continuity remain open"
+  }
+}

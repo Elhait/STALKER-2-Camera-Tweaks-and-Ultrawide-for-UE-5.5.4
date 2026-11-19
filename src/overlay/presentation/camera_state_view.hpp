@@ -5,6 +5,7 @@
 
 namespace overlay
 {
+    class LocalizationManager;
     void DrawCameraStateView(const plugin::OverlaySemanticSnapshot& semantic,
-        const CameraIntegrationStatus& integration);
+        const CameraIntegrationStatus& integration, const LocalizationManager& localization);
 }

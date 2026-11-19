@@ -1,0 +1,8 @@
+{
+  "first_build_supervision": "timeout; owned tree cleanup verified; bounded build recheck PASS",
+  "artifact": "E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\build-artifacts\\cm\\u2-dialogue-handoff\\bin\\STALKER2CameraTweaks.asi",
+  "batch2": "assessment only",
+  "profile": "Release single ASI",
+  "runtime": "not exercised",
+  "sha256": "F07C4FC1F44783A46379D059F84BD9C4A5B077AA51CD877EE488D56CE5849CFD"
+}

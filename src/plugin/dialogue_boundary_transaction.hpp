@@ -4,9 +4,12 @@
 #include "runtime_settings.hpp"
 #include "../camera/fov_semantics.hpp"
 #include "../camera/presentation_state.hpp"
+#include "../camera/fov_observation.hpp"
+#include "../camera/gameplay_baseline.hpp"
 #include "../config/feature_config.hpp"
 #include "../dialogue/dialogue_state.hpp"
 #include "../dialogue/dialogue_fov.hpp"
+#include "../dialogue/post_exit_provider_handoff.hpp"
 
 #include <atomic>
 #include <cmath>
@@ -22,6 +25,12 @@ namespace plugin
         std::atomic<camera::CoordinatorState>& coordinator;
         dialogue::PostCinematicRecoveryExclusion& exclusion;
         dialogue::Phase& phase;
+        bool& postExitProviderOwned;
+        std::uintptr_t& postExitProviderCallbackSource;
+        std::uintptr_t& postExitProviderReceiver;
+        std::uint64_t& postExitProviderGeneration;
+        std::uint64_t& postExitProviderSettingsEpoch;
+        std::uint32_t& postExitProviderThreadId;
         dialogue::PolicySnapshot& activePolicy;
         dialogue::CorrectionActivation& correctionActivation;
         float& baseline;
@@ -47,13 +56,26 @@ namespace plugin
         float transformEpsilon{0.01f};
         float recoveryEndpointTolerance{0.02f};
         std::uint32_t candidateStableSamples{3};
+        bool handledProviderActivation{};
+        std::uintptr_t validatedReceiver{};
+        std::uint64_t generation{};
+        std::uintptr_t observedReceiver{};
+        float providerGameplayBaseline{std::numeric_limits<float>::quiet_NaN()};
+        bool providerGameplayBaselineValid{};
+        config::DialogueZoomPolicy providerDialoguePolicy{
+            config::DialogueZoomPolicy::Native};
+        bool providerDialoguePolicyValid{};
+        std::uint32_t threadId{};
     };
 
     enum class DialogueBoundaryAction : std::uint8_t
     {
         InvalidInput,
         ExclusionReset,
+        ProviderCallbackIgnored,
         NonGameplayReset,
+        HandledProviderReset,
+        ProviderDialogueStarted,
         CandidateCaptured,
         CandidateRejected,
         CandidatePending,
@@ -92,6 +114,12 @@ namespace plugin
     inline void ResetDialogueBoundaryState(DialogueBoundaryStateView state) noexcept
     {
         state.phase = dialogue::Phase::Inactive;
+        state.postExitProviderOwned = false;
+        state.postExitProviderCallbackSource = 0;
+        state.postExitProviderReceiver = 0;
+        state.postExitProviderGeneration = 0;
+        state.postExitProviderSettingsEpoch = 0;
+        state.postExitProviderThreadId = 0;
         state.activePolicy.Clear();
         state.correctionActivation.Reset();
         state.baseline = std::numeric_limits<float>::quiet_NaN();
@@ -111,6 +139,105 @@ namespace plugin
         const DialogueBoundaryStateView& state) noexcept
     {
         return state.phase != dialogue::Phase::Inactive;
+    }
+
+    // Confirms the provider activation captured at the accepted post-EXIT
+    // handoff. The active policy epoch may advance independently; receiver,
+    // callback source, provider generation, and thread identity may not.
+    inline bool IsConfirmedProviderDialogueLifecycle(
+        const DialogueBoundaryStateView& state,
+        const dialogue::PostExitProviderActivation& activation,
+        std::uintptr_t writerSource, std::uint32_t writerThreadId,
+        std::uint64_t generation) noexcept
+    {
+        return state.phase == dialogue::Phase::Active &&
+            state.postExitProviderOwned && state.activePolicy.IsValid() &&
+            state.activePolicy.Value() == activation.dialoguePolicy &&
+            activation.receiver != 0 && activation.threadId != 0 &&
+            activation.generation != 0 &&
+            activation.receiver == state.postExitProviderReceiver &&
+            activation.threadId == state.postExitProviderThreadId &&
+            activation.generation == state.postExitProviderGeneration &&
+            activation.dialogueSettingsEpoch == state.postExitProviderSettingsEpoch &&
+            writerSource == activation.receiver && writerThreadId == activation.threadId &&
+            generation == activation.generation &&
+            state.postExitProviderCallbackSource != 0 &&
+            state.candidate.HasReceiverIdentity(activation.receiver,
+                state.postExitProviderCallbackSource, activation.generation);
+    }
+
+    // Called at the setter-argument boundary under the Dialogue mutex and
+    // camera gate. Record every accepted corrected update, not just admission.
+    inline void RecordProviderDialogueSetterResult(
+        const DialogueBoundaryStateView& state, const DialogueBoundaryInput& input,
+        const DialogueBoundaryResult& result,
+        dialogue::PostExitProviderHandoff& handoff) noexcept
+    {
+        if (result.action == DialogueBoundaryAction::ProviderCallbackIgnored) return;
+        const auto& activation = handoff.Activation();
+        const bool owned = handoff.RecoveryCompleted() &&
+            handoff.DialogueAdmissionConsumed() &&
+            input.validatedReceiver != 0 &&
+            input.callbackSource == state.postExitProviderCallbackSource &&
+            IsConfirmedProviderDialogueLifecycle(state, activation,
+                input.validatedReceiver, input.threadId, input.generation);
+        if (owned && result.mutateXmm1 && !result.earlyReturn)
+            static_cast<void>(handoff.RecordCorrectedDialogueSetterSample(result.outputFov));
+        else
+            handoff.ClearCorrectedDialogueSetterSample();
+    }
+
+    // A stationary setter callback after recovery is only a hypothesis. A
+    // matching, still-current production Gameplay reference supplies a terminal
+    // writer boundary without waiting for another setter. Never revive a stale
+    // baseline, infer Gameplay from a foreign camera, or retire an active policy.
+    // Caller holds the correction gate and Dialogue mutex.
+    inline bool RetireStationaryDialogueCandidateOnGameplayWriter(
+        DialogueBoundaryStateView state, const camera::GameplayBaseline& baseline,
+        std::uintptr_t source, float inputFov, float aspect, bool aspectValid,
+        std::uint64_t generation, bool providerEndpoint, float endpointTolerance) noexcept
+    {
+        if (state.phase != dialogue::Phase::Candidate ||
+            state.coordinator.load(std::memory_order_acquire) != camera::CoordinatorState::Gameplay ||
+            state.exclusion.IsActive() || providerEndpoint || state.postExitProviderOwned ||
+            state.activePolicy.IsValid() ||
+            !camera::IsUsableGameplayBaseline(baseline) ||
+            !baseline.source.valid || baseline.source.value != source ||
+            baseline.observationSequence == 0 || !aspectValid ||
+            !std::isfinite(aspect) || std::fabs(aspect - baseline.aspect) > 0.001f ||
+            !std::isfinite(inputFov) || !std::isfinite(endpointTolerance) ||
+            endpointTolerance < 0.0f ||
+            std::fabs(inputFov - baseline.nativeFov.value) > endpointTolerance ||
+            !state.candidate.HasReceiverBinding(source,
+                state.settingsEpoch.load(std::memory_order_acquire), generation) ||
+            !state.candidate.IsStationaryAtReference(baseline.nativeFov.value, endpointTolerance))
+            return false;
+        ResetDialogueBoundaryState(state);
+        return true;
+    }
+
+    // Caller holds the Dialogue mutex; snapshot before any writer-triggered reset.
+    inline camera::WriterContext ClassifyDialogueWriterContext(
+        const DialogueBoundaryStateView& state, std::uintptr_t writerSource,
+        std::uint64_t settingsEpoch, std::uint64_t generation = 0,
+        bool postExitProviderEndpoint = false,
+        bool confirmedProviderDialogue = false) noexcept
+    {
+        if (state.phase != dialogue::Phase::Inactive) {
+            if (confirmedProviderDialogue)
+                return camera::WriterContext::ConfirmedProviderDialogueLifecycleObserved;
+            if (state.candidate.AffectsReceiver(writerSource, settingsEpoch, generation) &&
+                state.phase == dialogue::Phase::Active &&
+                state.candidate.HasReceiverBinding(writerSource, settingsEpoch, generation))
+                return camera::WriterContext::DialogueLifecycleObserved;
+            // A raw writer-source mismatch does not establish that this is an
+            // independent Gameplay camera. Preserve the correction path, but
+            // keep baseline admission ambiguous until ownership is evidenced.
+            return camera::WriterContext::TransitionAmbiguous;
+        }
+        if (postExitProviderEndpoint)
+            return camera::WriterContext::TransitionAmbiguous;
+        return camera::WriterContext::GameplayEligible;
     }
 
     // Caller owns cameraCorrectionGate before this function and the dialogue
@@ -152,13 +279,46 @@ namespace plugin
             std::memory_order_release);
         result.snapshotPublished = true;
 
-        if (state.exclusion.IsActive()) {
+        const auto receiver = input.validatedReceiver
+            ? input.validatedReceiver : input.observedReceiver;
+        const auto settingsEpoch = state.settingsEpoch.load(std::memory_order_acquire);
+        const bool providerLifecyclePhase = state.postExitProviderOwned &&
+            (state.phase == dialogue::Phase::Active ||
+                state.phase == dialogue::Phase::Exiting ||
+                state.phase == dialogue::Phase::RearmPending);
+        const bool providerReceiverAndLifecycleMatch = providerLifecyclePhase &&
+            state.coordinator.load(std::memory_order_acquire) ==
+                camera::CoordinatorState::Gameplay &&
+            receiver != 0 && receiver == state.postExitProviderReceiver &&
+            input.threadId != 0 && input.threadId == state.postExitProviderThreadId &&
+            input.generation == state.postExitProviderGeneration &&
+            state.candidate.HasReceiverIdentity(receiver,
+                state.postExitProviderCallbackSource, input.generation);
+        const bool providerLifecycleContinuation =
+            providerReceiverAndLifecycleMatch &&
+            input.callbackSource == state.postExitProviderCallbackSource;
+        if (state.exclusion.IsActive() && !input.handledProviderActivation &&
+            providerReceiverAndLifecycleMatch && !providerLifecycleContinuation) {
+            result.action = DialogueBoundaryAction::ProviderCallbackIgnored;
+            result.earlyReturn = true;
+            result.phaseAfter = state.phase;
+            return result;
+        }
+        if (state.exclusion.IsActive() && !input.handledProviderActivation &&
+            !providerLifecycleContinuation) {
             resetState();
             result.action = DialogueBoundaryAction::ExclusionReset;
             result.earlyReturn = true;
             result.phaseAfter = state.phase;
             return result;
         }
+
+        if (state.phase == dialogue::Phase::Active ||
+            state.phase == dialogue::Phase::Exiting ||
+            state.phase == dialogue::Phase::RearmPending)
+            state.candidate.BindReceiver(receiver, settingsEpoch,
+                input.callbackSource, input.generation,
+                input.validatedReceiver != 0);
         if (state.coordinator.load(std::memory_order_acquire) !=
             camera::CoordinatorState::Gameplay) {
             resetState();
@@ -172,6 +332,52 @@ namespace plugin
         result.selectedPolicy = enabled
             ? state.selectedPolicy.load(std::memory_order_acquire)
             : config::DialogueZoomPolicy::Native;
+        if (input.handledProviderActivation) {
+            const auto baselineSource = input.validatedReceiver
+                ? input.validatedReceiver : input.observedReceiver;
+            const bool providerBaselineValid = input.providerGameplayBaselineValid &&
+                baselineSource != 0 && input.nativeTargetReadable &&
+                std::isfinite(input.providerGameplayBaseline) &&
+                input.providerGameplayBaseline > 1.0f &&
+                input.providerGameplayBaseline < 179.0f;
+            if (!providerBaselineValid || !input.providerDialoguePolicyValid) {
+                resetState();
+                result.action = DialogueBoundaryAction::HandledProviderReset;
+                result.earlyReturn = true;
+                result.phaseAfter = state.phase;
+                return result;
+            }
+
+            // The exact post-recovery provider activation is the Dialogue
+            // lifecycle evidence. Seed its baseline from the previously
+            // admitted Gameplay reference, never from the native ~70 degree
+            // endpoint, so policy correction can take ownership without
+            // granting that endpoint Gameplay baseline admission.
+            state.baseline = input.providerGameplayBaseline;
+            state.phase = dialogue::Phase::Active;
+            state.postExitProviderOwned = true;
+            state.postExitProviderCallbackSource = input.callbackSource;
+            state.postExitProviderReceiver = baselineSource;
+            state.postExitProviderGeneration = input.generation;
+            state.postExitProviderSettingsEpoch = settingsEpoch;
+            state.postExitProviderThreadId = input.threadId;
+            result.activePolicy = input.providerDialoguePolicy;
+            state.activePolicy.Capture(result.activePolicy);
+            state.correctionActivation.AcceptedStart(enabled);
+            state.activeSettingsEpoch.store(enabled
+                    ? state.settingsEpoch.load(std::memory_order_acquire) : 0,
+                std::memory_order_release);
+            state.candidate.Begin(state.baseline, input.callbackSource,
+                input.nativeTarget);
+            state.candidate.BindReceiver(baselineSource,
+                state.settingsEpoch.load(std::memory_order_acquire),
+                input.callbackSource, input.generation, true);
+            state.exitIncomingStart = std::numeric_limits<float>::quiet_NaN();
+            result.baseline = state.baseline;
+            result.candidateContextValid = true;
+            result.acceptedSource = input.callbackSource;
+            result.action = DialogueBoundaryAction::ProviderDialogueStarted;
+        }
         const bool lifecycleUsesActivePolicy = state.phase == dialogue::Phase::Active ||
             state.phase == dialogue::Phase::Exiting ||
             state.phase == dialogue::Phase::RearmPending;
@@ -214,10 +420,16 @@ namespace plugin
                 state.phase = dialogue::Phase::Candidate;
                 state.candidate.Begin(input.incomingFov, input.callbackSource,
                     input.nativeTarget);
+                state.candidate.BindReceiver(input.validatedReceiver ? input.validatedReceiver : input.observedReceiver,
+                    state.settingsEpoch.load(std::memory_order_acquire), input.callbackSource,
+                    input.generation, input.validatedReceiver != 0);
                 state.exitIncomingStart = std::numeric_limits<float>::quiet_NaN();
                 result.action = DialogueBoundaryAction::CandidateCaptured;
             }
         } else if (state.phase == dialogue::Phase::Candidate) {
+            state.candidate.BindReceiver(input.validatedReceiver ? input.validatedReceiver : input.observedReceiver,
+                state.settingsEpoch.load(std::memory_order_acquire), input.callbackSource,
+                input.generation, input.validatedReceiver != 0);
             result.candidateContextValid = input.callbackSource != 0 &&
                 input.nativeTargetReadable &&
                 input.nativeTarget > 1.0f && input.nativeTarget < 179.0f;
@@ -279,9 +491,8 @@ namespace plugin
             (state.phase == dialogue::Phase::Active ||
                 state.phase == dialogue::Phase::Exiting) &&
             std::isfinite(state.baseline)) {
-            const float target = policy == config::DialogueZoomPolicy::Adaptive
-                ? dialogue::AdaptiveTarget(state.baseline)
-                : dialogue::ReducedTarget(state.baseline);
+            const float target = dialogue::ResolveDialogueDestinationTarget(
+                policy, state.baseline, input.nativeTarget);
             result.outputFov = state.phase == dialogue::Phase::Exiting &&
                 std::isfinite(state.exitIncomingStart)
                 ? dialogue::TransformExitSample(input.incomingFov,
@@ -293,7 +504,8 @@ namespace plugin
             (state.phase == dialogue::Phase::Active ||
                 state.phase == dialogue::Phase::Exiting) &&
             std::isfinite(state.baseline)) {
-            result.outputFov = state.baseline;
+            result.outputFov = dialogue::ResolveDialogueDestinationTarget(
+                policy, state.baseline, input.nativeTarget);
             result.mutateXmm1 = true;
         }
         if (!std::isfinite(result.outputFov) || result.outputFov <= 1.0f ||

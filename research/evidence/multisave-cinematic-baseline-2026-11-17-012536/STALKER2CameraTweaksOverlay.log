@@ -1,0 +1,46 @@
+OVERLAY_SESSION pid=24512
+OVERLAY_MESSAGE_QUEUE_READY owner_thread=10624
+OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2
+OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0
+OVERLAY_DISPLAY_WINDOW_CREATED owner_thread=1 unowned=1
+OVERLAY_COMPOSITOR_CLOCK_READY
+OVERLAY_WINDOW_EVENT_HOOK kind=create_show result=ok win32_error=0
+OVERLAY_WINDOW_EVENT_HOOK kind=location_change result=ok win32_error=0
+OVERLAY_WINDOW_EVENTS_ARMED
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=1248392 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_STATE state=camera_core_not_ready hwnd=0 client=0x0 queue_ready=1 refresh_pending=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=1248392 event=32769 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REDRAW_POST result=ok thread=10624 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_STATE state=no_eligible_game_window hwnd=0 client=0x0 queue_ready=1 refresh_pending=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=789700 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=789700 event=32769 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=855236 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=855236 event=32769 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=2 overlay=1 invisible=1 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=199880 client=0x0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=920772 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=986240 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=986240 event=32769 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0

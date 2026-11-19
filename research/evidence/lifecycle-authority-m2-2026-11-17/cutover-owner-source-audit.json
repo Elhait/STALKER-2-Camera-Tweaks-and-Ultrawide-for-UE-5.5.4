@@ -1,0 +1,19 @@
+{
+  "profile_defines": [
+    "DIALOGUE_BOUNDARY_PROVENANCE_DIAGNOSTIC",
+    "IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS",
+    "IMGUI_DISABLE_FILE_FUNCTIONS",
+    "IMGUI_IMPL_WIN32_DISABLE_GAMEPAD",
+    "NDEBUG",
+    "OVERLAY_COMBINED",
+    "OVERLAY_PRODUCTION",
+    "OVERLAY_SETTINGS_FRONTEND",
+    "OVERLAY_STARTUP_JOURNAL",
+    "POST_EXIT_BLEND_OBSERVATION",
+    "SPDLOG_WCHAR_FILENAMES",
+    "_MSC_VER",
+    "_WIN64"
+  ],
+  "legacy_mutation_symbols": [],
+  "missing_authority_boundaries": []
+}

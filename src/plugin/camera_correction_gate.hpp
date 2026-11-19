@@ -69,4 +69,11 @@ namespace plugin
         inline static thread_local std::vector<std::function<void()>> deferredActions_{};
         std::mutex mutex_;
     };
+
+    // Native callbacks cannot recursively acquire the non-recursive gate.
+    // A nested callback must leave its native invocation untouched.
+    inline bool CanEnterCameraCallback(const CameraCorrectionGate& gate) noexcept
+    {
+        return !gate.IsHeldByCurrentThread();
+    }
 }

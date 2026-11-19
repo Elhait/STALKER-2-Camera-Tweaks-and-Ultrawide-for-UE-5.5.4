@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "target": "LifecycleTransitionOracle-R1",
+  "oracle_model_sha256": "E5F520535514C041E0422164131DC9E09D2160D0DE415D986E6C4C8DDAA529ED",
+  "oracle_result_sha256": "F9A8447BD5E80AD31008DD3AE26FDA6D76277C29CF8B2603416F4E9B9E35C32D",
+  "projection_kind": "reviewed event-to-symbolic-fact mapping; R1 is not imported or modified",
+  "cases": [
+    {
+      "harness_assertion": "r1_t01_initialize",
+      "r1_event": "T01",
+      "facts": ["accepted initialization"],
+      "expected": "admission ready"
+    },
+    {
+      "harness_assertion": "r1_t02_accept_cinematic_enter",
+      "r1_event": "T02",
+      "facts": ["valid=true", "generation=1"],
+      "expected": "source-scoped Cinematic activation accepted"
+    },
+    {
+      "harness_assertion": "r1_t08_exit_transfers_to_recovery",
+      "r1_event": "T08",
+      "facts": ["exact source relation", "accepted EXIT"],
+      "expected": "activation retired and recovery pending"
+    },
+    {
+      "harness_assertion": "r1_t18_armer_has_authority_event_identity",
+      "r1_event": "T18",
+      "facts": ["exact producer candidate", "component/thread/generation compatibility"],
+      "expected": "handoff arm accepted; M1 additionally allocates its own event ID"
+    },
+    {
+      "harness_assertion": "r1_t19_setter_bound_to_arm",
+      "r1_event": "T19",
+      "facts": ["exact identity", "setter evidence"],
+      "expected": "setter matched"
+    },
+    {
+      "harness_assertion": "r1_t20_writer_confirmed_for_same_arm",
+      "r1_event": "T20",
+      "facts": ["exact identity", "trajectory confirmed"],
+      "expected": "writer confirmation for the same active arm"
+    },
+    {
+      "harness_assertion": "r1_t13_provider_transfer_has_no_intermediate_gameplay",
+      "r1_event": "T13 with transfer=true after T18-T20",
+      "facts": ["native recovery endpoint", "confirmed provider handoff"],
+      "expected": "Dialogue transfer; no intermediate Gameplay baseline update"
+    },
+    {
+      "harness_assertion": "r1_t21_dialogue_retains_compatible_gameplay_reference",
+      "r1_event": "T21",
+      "facts": ["confirmed handoff", "compatible retained baseline"],
+      "expected": "Dialogue ownership with retained reference, not a fresh Gameplay sample"
+    },
+    {
+      "harness_assertion": "no_gameplay_role_proof_means_no_bootstrap_baseline",
+      "r1_event": "T28 without nativeProof",
+      "facts": ["original input alone; no native Gameplay role proof"],
+      "expected": "no baseline update"
+    },
+    {
+      "harness_assertion": "source_replacement_invalidates_old_baseline",
+      "r1_event": "T11 replacement",
+      "facts": ["explicit replacement relation"],
+      "expected": "old source baseline invalidated; new source not automatically admitted"
+    },
+    {
+      "harness_assertion": "foreign_candidate_does_not_globally_veto_proven_gameplay",
+      "r1_event": "T23 on source B then T28 on source A",
+      "facts": ["independent scopes", "Gameplay proof only on A"],
+      "expected": "A may update its baseline while B candidate remains scoped"
+    },
+    {
+      "harness_assertion": "settings_revoke_prevents_fabricated_applied_result",
+      "r1_event": "T30 then T31",
+      "facts": ["settings epoch change between intent and result"],
+      "expected": "late effect result rejected"
+    }
+  ],
+  "explicit_out_of_domain": [
+    "R1 does not encode a separate arming episode ID for same tuple rearming; M1 rearming regressions test an extension, not R1 parity.",
+    "R1 uses symbolic nativeProof/original booleans; this projection does not establish native binding availability.",
+    "The C++ relation is not a differential execution of the JavaScript oracle. It is a reviewed projection of selected R1 contracts; numerical FOV, ABI, callback completeness, and all T01-T36 paths remain outside this M1 harness."
+  ]
+}

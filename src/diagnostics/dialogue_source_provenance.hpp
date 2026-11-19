@@ -22,6 +22,11 @@ namespace diagnostics
         std::uint64_t identityEpoch{};
         std::uintptr_t rsi{};
         std::uintptr_t rbx{};
+        float rawFov{};
+        float aspect{};
+        std::uint8_t flags{};
+        bool aspectValid{};
+        bool flagsValid{};
     };
 
     struct DialogueSourceEvent

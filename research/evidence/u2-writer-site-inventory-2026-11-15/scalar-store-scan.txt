@@ -1,0 +1,190 @@
+EXE=E:\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Binaries\Win64\Stalker2-Win64-Shipping.exe
+SHA256=2bd3f115b959a8eee7e5c4b42b0142dd0025bd437e1014f92dfc60b9afee5479
+IMAGE_BASE=0x140000000 TEXT_RVA=0x1000 TEXT_SIZE=0x7cae8c8
+STORE offset=0x230 rva=0x4d2463 function=0x4d2412-0x4d25ab relatedOffsets=none instruction=movss dword ptr [rsi + 0x230], xmm1
+    0x4d243b: movss xmm0, dword ptr [rsi + 0x230]
+    0x4d2443: ucomiss xmm0, xmm1
+    0x4d2446: jne 0x1404d2463
+    0x4d2448: jp 0x1404d2463
+    0x4d244a: mov rcx, qword ptr [rsp + 0x38]
+    0x4d244f: xor rcx, rsp
+    0x4d2452: call 0x14275db10
+    0x4d2457: movaps xmm6, xmmword ptr [rsp + 0x40]
+    0x4d245c: add rsp, 0x58
+    0x4d2460: pop rdi
+    0x4d2461: pop rsi
+    0x4d2462: ret 
+  > 0x4d2463: movss dword ptr [rsi + 0x230], xmm1
+    0x4d246b: cmp byte ptr [rip + 0x9dcf88b], 0
+    0x4d2472: jne 0x1404d244a
+    0x4d2474: mov rdi, qword ptr [rip + 0x9dcfdd5]
+    0x4d247b: test rdi, rdi
+    0x4d247e: je 0x1404d251c
+    0x4d2484: mov rdi, qword ptr [rdi + 0x10]
+    0x4d2488: test rdi, rdi
+    0x4d248b: je 0x1404d244a
+    0x4d248d: movss xmm6, dword ptr [rsi + 0x230]
+    0x4d2495: mov rcx, qword ptr [rsp + 0x38]
+    0x4d249a: xor rcx, rsp
+    0x4d249d: call 0x14275db10
+    0x4d24a2: mov rcx, rdi
+    0x4d24a5: mov rdx, rsi
+    0x4d24a8: movaps xmm2, xmm6
+STORE offset=0x230 rva=0x1f88edc function=unknown relatedOffsets=none instruction=movss dword ptr [rcx + 0x230], xmm1
+STORE offset=0x230 rva=0x3eee1c9 function=0x3eee13a-0x3eee29e relatedOffsets=0x234 instruction=movss dword ptr [rsi + 0x230], xmm0
+    0x3eee19b: mov dword ptr [rax], ebp
+    0x3eee19d: mov rcx, rdi
+    0x3eee1a0: mov dl, 0x25
+    0x3eee1a2: mov r8, rbx
+    0x3eee1a5: mov r9b, 1
+    0x3eee1a8: call 0x140420b5e
+    0x3eee1ad: mov rcx, qword ptr [rbx]
+    0x3eee1b0: test rcx, rcx
+    0x3eee1b3: je 0x143eee1ba
+    0x3eee1b5: call 0x141fedb86
+    0x3eee1ba: mov rax, qword ptr [rip + 0x63da3e7]
+    0x3eee1c1: cvtsd2ss xmm0, qword ptr [rax + 0xa0]
+  > 0x3eee1c9: movss dword ptr [rsi + 0x230], xmm0
+    0x3eee1d1: mov byte ptr [rsi + 0x234], r14b
+    0x3eee1d8: mov rcx, rsi
+    0x3eee1db: call 0x14317d68e
+    0x3eee1e0: lea r8, [rsp + 0x40]
+    0x3eee1e5: mov qword ptr [r8 + 0x20], r14
+    0x3eee1e9: mov dword ptr [r8 + 0x28], r14d
+    0x3eee1ed: xorps xmm0, xmm0
+    0x3eee1f0: movaps xmmword ptr [r8], xmm0
+    0x3eee1f4: movabs rax, 0xffffffff00000080
+    0x3eee1fe: mov qword ptr [r8 + 0x2c], rax
+    0x3eee202: mov dword ptr [r8 + 0x34], r14d
+    0x3eee206: mov qword ptr [r8 + 0x40], r14
+    0x3eee20a: mov dword ptr [r8 + 0x48], r14d
+    0x3eee20e: lea rdx, [rsp + 0x20]
+    0x3eee213: mov byte ptr [rdx + 0x18], r14b
+STORE offset=0x230 rva=0x5353cd8 function=0x5353cc8-0x5353d61 relatedOffsets=none instruction=movss dword ptr [rcx + 0x230], xmm1
+    0x5353cc8: push rsi
+    0x5353cc9: sub rsp, 0x30
+    0x5353ccd: movaps xmmword ptr [rsp + 0x20], xmm6
+    0x5353cd2: movaps xmm0, xmm1
+    0x5353cd5: mov rsi, rcx
+  > 0x5353cd8: movss dword ptr [rcx + 0x230], xmm1
+    0x5353ce0: movss xmm6, dword ptr [rcx + 0xbe4]
+    0x5353ce8: mulss xmm6, dword ptr [rcx + 0xc0c]
+    0x5353cf0: movss xmm1, dword ptr [rcx + 0xc78]
+    0x5353cf8: xorps xmm2, xmm2
+    0x5353cfb: ucomiss xmm1, xmm2
+    0x5353cfe: jbe 0x145353d2c
+    0x5353d00: movaps xmm2, xmm6
+    0x5353d03: divss xmm2, dword ptr [rsi + 0xbe8]
+    0x5353d0b: movaps xmm3, xmm1
+    0x5353d0e: divss xmm3, xmm2
+    0x5353d12: cmpltss xmm1, xmm2
+    0x5353d17: andps xmm3, xmm1
+    0x5353d1a: movss xmm2, dword ptr [rip + 0x295c4fe]
+    0x5353d22: andnps xmm1, xmm2
+    0x5353d25: orps xmm1, xmm3
+STORE offset=0x230 rva=0x54638dd function=0x5463746-0x5463b2d relatedOffsets=none instruction=movss dword ptr [rsi + 0x230], xmm0
+    0x546388c: add rcx, 0x1cc
+    0x5463893: call 0x144b15a2c
+    0x5463898: lea rcx, [rsi + 0x1e4]
+    0x546389f: movss xmm1, dword ptr [rip + 0x2b942f1]
+    0x54638a7: call 0x143117498
+    0x54638ac: lea rcx, [rsi + 0x200]
+    0x54638b3: movss xmm1, dword ptr [rip + 0x284c965]
+    0x54638bb: call 0x143117498
+    0x54638c0: movaps xmm0, xmmword ptr [rip + 0x31973b9]
+    0x54638c7: movups xmmword ptr [rsi + 0x21c], xmm0
+    0x54638ce: mov dword ptr [rsi + 0x22c], 0xff7fffff
+    0x54638d8: call 0x1432013ba
+  > 0x54638dd: movss dword ptr [rsi + 0x230], xmm0
+    0x54638e5: movaps xmmword ptr [rsi + 0x240], xmm6
+    0x54638ec: xorps xmm0, xmm0
+    0x54638ef: movhps xmm0, qword ptr [rip + 0x284c70a]
+    0x54638f6: movaps xmmword ptr [rsi + 0x250], xmm0
+    0x54638fd: movsd xmm0, qword ptr [rip + 0x284c6fb]
+    0x5463905: movaps xmmword ptr [rsi + 0x260], xmm6
+    0x546390c: movaps xmmword ptr [rsi + 0x270], xmm6
+    0x5463913: movaps xmm1, xmmword ptr [rip + 0x2850466]
+    0x546391a: movaps xmmword ptr [rsi + 0x280], xmm1
+    0x5463921: movaps xmmword ptr [rsi + 0x290], xmm0
+    0x5463928: movaps xmm0, xmmword ptr [rip + 0x2aa2381]
+    0x546392f: movaps xmmword ptr [rsi + 0x2a0], xmm0
+    0x5463936: movabs rax, 0x3f8000003f800000
+    0x5463940: mov qword ptr [rsi + 0x2b0], rax
+    0x5463947: mov dword ptr [rsi + 0x2b8], 0x3f800000
+STORE offset=0x230 rva=0x5a9d4e7 function=0x5a9d35e-0x5a9d564 relatedOffsets=none instruction=movss dword ptr [rbx + 0x230], xmm0
+    0x5a9d48b: movsd qword ptr [rbx + 0x1e8], xmm7
+    0x5a9d493: movsd qword ptr [rbx + 0x1f0], xmm8
+    0x5a9d49c: movsd qword ptr [rbx + 0x1f8], xmm9
+    0x5a9d4a5: movsd qword ptr [rbx + 0x200], xmm10
+    0x5a9d4ae: movsd qword ptr [rbx + 0x208], xmm11
+    0x5a9d4b7: movsd qword ptr [rbx + 0x210], xmm12
+    0x5a9d4c0: movsd qword ptr [rbx + 0x218], xmm13
+    0x5a9d4c9: movsd qword ptr [rbx + 0x220], xmm14
+    0x5a9d4d2: movsd qword ptr [rbx + 0x228], xmm15
+    0x5a9d4db: mov rcx, r14
+    0x5a9d4de: call 0x1425f0ebe
+    0x5a9d4e3: cvtsd2ss xmm0, xmm0
+  > 0x5a9d4e7: movss dword ptr [rbx + 0x230], xmm0
+    0x5a9d4ef: mov rcx, qword ptr [rsp + 0xa8]
+    0x5a9d4f7: xor rcx, rsp
+    0x5a9d4fa: call 0x14275db10
+    0x5a9d4ff: movaps xmm6, xmmword ptr [rsp + 0xb0]
+    0x5a9d507: movaps xmm7, xmmword ptr [rsp + 0xc0]
+    0x5a9d50f: movaps xmm8, xmmword ptr [rsp + 0xd0]
+    0x5a9d518: movaps xmm9, xmmword ptr [rsp + 0xe0]
+    0x5a9d521: movaps xmm10, xmmword ptr [rsp + 0xf0]
+    0x5a9d52a: movaps xmm11, xmmword ptr [rsp + 0x100]
+    0x5a9d533: movaps xmm12, xmmword ptr [rsp + 0x110]
+    0x5a9d53c: movaps xmm13, xmmword ptr [rsp + 0x120]
+    0x5a9d545: movaps xmm14, xmmword ptr [rsp + 0x130]
+    0x5a9d54e: movaps xmm15, xmmword ptr [rsp + 0x140]
+    0x5a9d557: add rsp, 0x158
+    0x5a9d55e: pop rbx
+STORE offset=0x230 rva=0x5f201ce function=0x5f201be-0x5f201f8 relatedOffsets=none instruction=movss dword ptr [rcx + 0x230], xmm1
+    0x5f201be: push rsi
+    0x5f201bf: sub rsp, 0x20
+    0x5f201c3: mov rsi, rcx
+    0x5f201c6: addss xmm1, dword ptr [rcx + 0x230]
+  > 0x5f201ce: movss dword ptr [rcx + 0x230], xmm1
+    0x5f201d6: call 0x145f201f8
+    0x5f201db: mov rcx, rsi
+    0x5f201de: call 0x145f2036e
+    0x5f201e3: mov rcx, rsi
+    0x5f201e6: call 0x145f206a0
+    0x5f201eb: mov rcx, rsi
+    0x5f201ee: add rsp, 0x20
+    0x5f201f2: pop rsi
+    0x5f201f3: jmp 0x145f2075e
+STORE offset=0x230 rva=0x681e8d6 function=0x681e89e-0x681e919 relatedOffsets=none instruction=movss dword ptr [rsi + 0x230], xmm0
+    0x681e89e: push rsi
+    0x681e89f: sub rsp, 0x30
+    0x681e8a3: movaps xmmword ptr [rsp + 0x20], xmm6
+    0x681e8a8: movaps xmm6, xmm1
+    0x681e8ab: mov rsi, rcx
+    0x681e8ae: call 0x14267a034
+    0x681e8b3: mulss xmm6, dword ptr [rsi + 0x224]
+    0x681e8bb: movss xmm0, dword ptr [rsi + 0x230]
+    0x681e8c3: subss xmm0, xmm6
+    0x681e8c7: minss xmm0, dword ptr [rip + 0x1491951]
+    0x681e8cf: xorps xmm1, xmm1
+    0x681e8d2: maxss xmm0, xmm1
+  > 0x681e8d6: movss dword ptr [rsi + 0x230], xmm0
+    0x681e8de: andps xmm0, xmmword ptr [rip + 0x14920bb]
+    0x681e8e5: movss xmm1, dword ptr [rip + 0x149193b]
+    0x681e8ed: ucomiss xmm1, xmm0
+    0x681e8f0: jae 0x14681e8fd
+    0x681e8f2: movaps xmm6, xmmword ptr [rsp + 0x20]
+    0x681e8f7: add rsp, 0x30
+    0x681e8fb: pop rsi
+    0x681e8fc: ret 
+    0x681e8fd: mov rax, qword ptr [rsi]
+    0x681e900: mov rax, qword ptr [rax + 0x3e8]
+    0x681e907: mov rcx, rsi
+    0x681e90a: xor edx, edx
+    0x681e90c: movaps xmm6, xmmword ptr [rsp + 0x20]
+    0x681e911: add rsp, 0x30
+    0x681e915: pop rsi
+DECODED_STORE_COUNT offset=0x230 count=8
+STORE offset=0x30 rva=0x9cd2eb function=0x9cd16c-0x9ce0ee relatedOffsets=0x234,0x254,0x259 instruction=movss dword ptr [rbx + 0x30], xmm0
+BYTE_PATTERN_CANDIDATE_COUNT offset=0x30 count=135
+

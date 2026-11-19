@@ -1,0 +1,16 @@
+{
+  "path": "E:\\Steam\\steamapps\\common\\S.T.A.L.K.E.R. 2 Heart of Chornobyl\\Stalker2\\Binaries\\Win64\\STALKER2CameraTweaks.log",
+  "sha256": "143b3eb3d8fd611abb0be5d18501b8f0992651c05ba3e8f4fe4d7abf511f824a",
+  "bytes": 8486585,
+  "records": 14228,
+  "counts": {
+    "other": 527,
+    "CAMERA_WRITER_IDENTITY_CHANGED": 6835,
+    "HORPLUS_CINEMATIC_WRITER": 6866
+  },
+  "bytes_by_type": {
+    "other": 204512,
+    "CAMERA_WRITER_IDENTITY_CHANGED": 3185523,
+    "HORPLUS_CINEMATIC_WRITER": 5096550
+  }
+}

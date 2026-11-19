@@ -36,6 +36,8 @@ namespace gameplay
     };
 
     bool IsCinematicOwnershipContinuation(const CinematicReentrySample& sample) noexcept;
+    bool IsCinematicReferenceContinuation(const CinematicReentrySample& sample,
+        bool selectionUnchanged, float gameplayReference) noexcept;
 
     CinematicExitTransition ResolveCinematicExitTransition(bool gameplayAvailable);
     CinematicExitTransition ResolveCinematicExitTransition(

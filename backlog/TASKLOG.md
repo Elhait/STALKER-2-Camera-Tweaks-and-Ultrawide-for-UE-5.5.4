@@ -11,6 +11,40 @@ approved cleanup batches are recorded here from 2026-09-22 onward.
 > diary; where the source records only offline validation or a specific older
 > artifact, that boundary is retained.
 
+## 2026-11-19 — Camera lifecycle, diagnostics and validation since v3.2.2
+
+- **Camera lifecycle.** Moved production Gameplay, Cinematics, Dialogue,
+  provider handoff, recovery and settings decisions into Lifecycle Authority.
+  Scoped Gameplay baselines to the camera source, preserved valid references
+  across confirmed transitions and enabled aspect synchronization on the first
+  eligible writer after receiver replacement in `RuntimeCombine`. Prevented
+  repeated Dialogue correction and preserved the corrected start of the next
+  cinematic blend. Choices within an active cinematic retain cinematic ownership.
+- **Overlay, configuration and diagnostics.** Separated the Gameplay reference,
+  original FOV, writer input, planned output and confirmed read-back in Camera
+  State. Updated the embedded locale catalogs and font subsets, canonicalized
+  recognized Cinematic FOV settings on save, and documented the
+  `CinematicFovCycle` INI binding. Added session PID records, reusable
+  `.PID.log` fallbacks and bounded log output. Expanded native observation
+  coverage and validated paired Zoom IN/OUT signature resolution.
+- **Test and release tooling.** Extended the production cutover fixtures,
+  transition matrix, independent callback generator and mutation checks.
+  `test.cmd` continues independent checks after failures and reports the
+  aggregate result and skips. Added contract checks for the release ZIP and
+  publication of the build output.
+- **Recorded validation.** The non-graphics suite passed 64/64 invocations,
+  with one hardlink subcase skipped and WARP omitted. Focused CTest passed
+  6/6. The native adapter suite exercised 232 processes with Diagnostics
+  OFF and ON. The callback generator exercised 3,008 sequences and 68,432
+  modeled FOV frames. The earlier mutation run detected all five injected faults.
+- **Open runtime checks.** In-game verification of the first eligible writer
+  after receiver replacement and the paired comparison of transition hitches
+  remain pending. The observed hitches have no established cause.
+- **Change record.** The file inventory, technical reports and evidence are
+  linked in [Changes since v3.2.2](../CHANGES_SINCE_3.2.2_to_4.md).
+  Updated [Project Summary](../SUMMARY.md), [README](../README.md) and
+  [Testing and Research](../TESTING_AND_RESEARCH.md) to reflect the diff.
+
 ## 2026-10-17 — Compare v3.1.0 with proposed v3.2.0
 
 - Scope: review the complete staged source diff from the exact `v3.1.0` tag and

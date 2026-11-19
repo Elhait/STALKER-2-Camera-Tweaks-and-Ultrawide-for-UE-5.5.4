@@ -15,26 +15,33 @@ Gameplay, Cinematics, Dialogue and Overlay have independent enable settings. Cam
 - `RuntimeCombine` is the recommended default. It synchronizes the Gameplay camera aspect with the current viewport, confirms the read-back, then applies Hor+ FOV correction.
 - `HorPlus` adapts Gameplay FOV to the aspect observed at the camera writer. `AspectRecalculation` uses the game's native aspect transition while preserving the selected Gameplay FOV.
 - Aspect handling responds to runtime resolution changes and supports arbitrary valid ratios.
+- On the first eligible writer call after a camera receiver change, `RuntimeCombine` can synchronize aspect and apply Hor+ once read-back confirms the new aspect. The previous receiver's baseline is invalidated for the new source.
 
 ### Cinematics and Dialogue
 
 - Cinematic framing supports automatic/native selection and forced `16:9`, `21:9` and `32:9` presets, independently of physical display aspect.
-- Cinematic FOV policies are `GameplayHorPlus` and `NativeHorPlus`; lifecycle handling coordinates ENTER, continuation, EXIT and Gameplay recovery.
-- Dialogue correction modes are `Adaptive`, `Reduced` and `Disabled`. There is no `Native` Dialogue mode. Disabling correction leaves the game's camera behavior in control; the default dialogue zoom targets 70° FOV.
+- `GameplayHorPlus` uses an eligible Gameplay reference at cinematic ENTER and preserves authored FOV variation. If that reference is unavailable, correction uses the authored ENTER FOV, as in `NativeHorPlus`.
+- A verified dialogue provider can take over after cinematic EXIT while Gameplay recovery still protects the baseline. A response choice inside an active cinematic retains cinematic ownership. A following cinematic can start its blend from the last confirmed corrected Dialogue FOV.
+- The selectable Dialogue modes are `Adaptive`, `Reduced` and `Disabled`. With Dialogue correction disabled, the game controls the camera and normally targets 70° FOV.
 
 ### Overlay and configuration
 
 - The settings Overlay has localized controls, tooltips, hotkey rebinding, Camera Integration status and a read-only Camera State inspector. Camera State can expand into a separately scrollable third column; its toggle is localized across the 18 embedded locales.
+- Camera State distinguishes the admitted Gameplay reference, original native FOV, writer input, planned output and transaction-correlated read-back. Each value carries its own availability and freshness. Neutral zoom observation is tracked separately.
+- With hotkeys enabled, `CinematicFovCycle` (F11 by default) cycles the FOV policy for the next cinematic. Its binding is configured in the INI. The Overlay selector also sets the policy directly.
 - The Overlay uses its own unowned top-level `OverlayHwnd` and persistent DirectComposition target. `GameHwnd` remains the host/input/language/geometry boundary. The display HWND is click-through; the existing owner thread owns ImGui, D3D11, DirectComposition and display-window teardown.
 - Startup discovery is event-driven: the Overlay worker creates its message queue before publishing its thread ID, coalesces refresh requests, and can wait for a suitable visible game HWND before initializing the presenter. A live run confirmed that discovery can remain pending for tens of seconds and later initialize successfully without restarting the worker; this does not establish identical timing on every launch.
 - The startup welcome toast is gated on runtime/Overlay readiness and observed game data (or the defined safe fallback); its one-shot lifetime remains draw/commit-gated at 10 seconds. User observation confirmed one visible startup run; visibility has not been established as universal across runs.
-- Auto interface language resolves its reader with a unique code signature and its matching game-buffer release function with a unique interior anchor mapped through the AMD64 PE exception table. Static checks found one match for each on retained game images 2.0.2–2.0.6, excluding 1.9; the current game executable and runtime behavior on it remain unverified.
+- Auto interface language resolves its reader with a unique code signature and its matching game-buffer release function with a unique interior anchor mapped through the AMD64 PE exception table. Static checks found one match for each on retained game images 2.0.2–2.0.6 and the installed image reported as 2.1; function-entry mapping and runtime language behavior on the latter remain unverified.
+- The v4 required camera/provider resolver set statically matched on retained game images 2.0.2–2.0.6 and the installed image reported as 2.1. This does not establish v4 runtime support; optional Zoom observations are unavailable on 2.0.2–2.0.4. [Evidence and limits](docs/SUPPORTED_BUILD_MANIFEST.md#build-support-and-evidence-matrix).
 - `[Overlay] Enabled=false` disables the Overlay subsystem after restart; it does not disable Gameplay, Cinematics or Dialogue correction. Passive runtime diagnostics are part of the ordinary ASI and controlled by `[Diagnostics] Enabled` in the INI.
 - The INI is a user-owned runtime file generated beside the ASI and excluded from the release ZIP. Known older layouts are rebuilt while preserving compatible values; malformed input is backed up before supported recovery. A canonical unchanged file is not rewritten. User-authored comments are not preserved; canonical documentation is regenerated.
 
 ## Architecture and workflow
 
-- `src/plugin/runtime.cpp` is the single runtime composition root for native callbacks, hooks, workers, lifecycle and cross-domain camera coordination.
+- `src/plugin/runtime.cpp` wires native callbacks, hooks and workers. The production Lifecycle Authority owns camera transitions, provider handoff, recovery, baseline eligibility and camera settings changes. It commits decisions under `CameraCorrectionGate`. Overlay, zoom and telemetry consume read-only projections.
+- Writer preparation, native execution and read-back are separate stages. Diagnostics can observe the result, and correction remains available if observation storage is full.
+- Runtime, startup and Overlay logs include the process ID. They use a reusable `.PID.log` fallback on a sharing conflict, and logging failure is handled independently of camera hook initialization.
 - SafetyHook validates and intercepts authored game-image sites in-process. Its patch transactions track page-protection recovery and trap generations; emitted trampoline/stub code is published RX, and continuations exposed to concurrent execution retain process-lifetime storage when required. These are selected-path safety guarantees, not proof against every OS failure or thread schedule.
 - Domain calculations and transaction helpers are separated where they have useful independent responsibilities. Runtime decomposition B1–B7 is complete with documented `Remain` decisions; further file splitting is not a goal by itself.
 - Overlay code is divided among composition, input, localization, presentation and presenter responsibilities. Game callbacks use nonblocking admission/command paths; the Overlay owner performs graphics teardown.
@@ -50,6 +57,7 @@ Gameplay, Cinematics, Dialogue and Overlay have independent enable settings. Cam
 
 ## Known boundaries
 
+- The first-writer receiver fix is verified offline. Its in-game check and the paired comparison of brief visual hitches remain pending. Existing writer and read-back observations establish camera values at those boundaries, with final presentation still unverified.
 - Weapon/viewmodel FOV behavior after some camera transitions follows a separate game-side path. Its reference mechanism is researched, but production repair is deferred because no validated, patch-resilient UE reflection/invocation bridge exists.
 - Subtitle horizontal centering is a vanilla UI issue; no production subtitle hook or heuristic offset is included.
 - Offline glyph/resource checks do not guarantee every runtime glyph, Arabic shaping or right-to-left layout. Compatibility with every graphics wrapper, Frame Generation/VRR combination, or HDR/scRGB presentation is not guaranteed.

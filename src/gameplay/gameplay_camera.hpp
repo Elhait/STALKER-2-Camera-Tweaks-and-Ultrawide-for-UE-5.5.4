@@ -12,9 +12,13 @@ namespace gameplay
         std::uint8_t* writeAddress{};
         std::size_t matches{};
         bool imageValid{};
+        std::uint8_t* postStoreObservationAddress{};
+        std::uint8_t* postProcessObservationAddress{};
+        std::uint8_t* postProcessHelperAddress{};
     };
 
-    CameraWriterResolution ResolveCameraWriter(void* executable);
+    CameraWriterResolution ResolveCameraWriter(void* executable,
+        bool resolvePostStoreObservation = false);
 
     bool WriteAspectAndFlags(std::uintptr_t source, std::uintptr_t aspectOffset,
         std::uintptr_t flagsOffset, float aspect, std::uint8_t flags,

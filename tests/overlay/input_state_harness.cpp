@@ -362,8 +362,13 @@ int main()
         const auto* presentation = overlay::FindHotkeyPresentation(binding.id);
         const int key = VK_F1 + static_cast<int>(index);
         config::SetHotkeyBindingValue(configuredBindings, binding.id, key);
+        if (binding.id == config::HotkeyBindingId::CinematicFov) {
+            pass &= Check(presentation == nullptr,
+                "deprecated_cinematic_fov_cycle_has_no_ui_entry");
+            continue;
+        }
         pass &= Check(presentation && !presentation->label.path.empty(),
-            "every_config_binding_has_a_ui_label");
+            "every_active_config_binding_has_a_ui_label");
         if (!presentation) continue;
         const plugin::RuntimeSettingsSnapshot runtimeDefaults{};
         pass &= Check(runtimeDefaults.*(presentation->settingKey) ==
@@ -385,9 +390,10 @@ int main()
                     config::HotkeyBindingRegistry[other].id != binding.id,
                 "binding_identities_are_unique");
     }
-    pass &= Check(overlay::HotkeyBindingPresentations.size() ==
-            config::HotkeyBindingRegistry.size(),
-        "ui_and_config_binding_inventory_sizes_match");
+    pass &= Check(overlay::HotkeyBindingPresentations.size() + 1 ==
+            config::HotkeyBindingRegistry.size() &&
+        overlay::FindHotkeyPresentation(config::HotkeyBindingId::CinematicFov) == nullptr,
+        "deprecated_cinematic_fov_cycle_is_not_presented_in_ui");
     pass &= Check(!input.visible() && !input.ShouldCapture(WM_MOUSEMOVE),
         "hidden_by_default");
     overlay::InputEventBridge bridge;

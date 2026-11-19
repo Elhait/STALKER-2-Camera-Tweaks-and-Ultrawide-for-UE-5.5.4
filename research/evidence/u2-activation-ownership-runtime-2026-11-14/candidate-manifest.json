@@ -1,0 +1,19 @@
+{
+  "candidate": "build-artifacts/p0-u2-runtime-candidate-2026-11-14/STALKER2CameraTweaks.asi",
+  "sha256": "0BB27A9F536436C07F7EDFEF89061A040B775FE52FAFCC702EECC41DAFD21853",
+  "bytes": 3910144,
+  "profile": "Production Release",
+  "startup_timeline": "OFF",
+  "dialogue_discovery": "OFF",
+  "single_asi": true,
+  "diagnostics": "existing INI-gated setting; no separate diagnostic ASI",
+  "source_head": "54212ee8bb94f451d9ff5c45a2b97bf23b757c2e",
+  "working_tree_dirty": true,
+  "validation": {
+    "release_build": "PASS",
+    "focused_camera_u2_harnesses": "PASS",
+    "runtime_native_adapter_harness": "PASS (228 fresh processes; OFF/ON)",
+    "canonical_non_graphics_runner": "INCOMPLETE: config_persistence_harness hardlink fixture setup failed (CreateHardLinkW error 5, occupied=1); localization_harness later failed generated-INI text equality assertion at localization_harness.cpp:271. All other registered invocations were run, including the final four N06 cases; process cleanup verified.",
+    "visual_runtime": "PENDING"
+  }
+}

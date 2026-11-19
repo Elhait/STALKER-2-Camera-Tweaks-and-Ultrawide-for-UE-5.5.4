@@ -1,0 +1,131 @@
+OVERLAY_MESSAGE_QUEUE_READY owner_thread=14684
+OVERLAY_DPI_THREAD_CONTEXT=PER_MONITOR_V2
+OVERLAY_DCOMP_RUNTIME v=1 dxgi_factory_hooks=0 swapchain_hooks=0
+OVERLAY_DISPLAY_WINDOW_CREATED owner_thread=1 unowned=1
+OVERLAY_COMPOSITOR_CLOCK_READY
+OVERLAY_WINDOW_EVENT_HOOK kind=create_show result=ok win32_error=0
+OVERLAY_WINDOW_EVENT_HOOK kind=location_change result=ok win32_error=0
+OVERLAY_WINDOW_EVENTS_ARMED
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=1116366 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_STATE state=camera_core_not_ready hwnd=0 client=0x0 queue_ready=1 refresh_pending=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=723410 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=1313028 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=460972 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=329946 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=329946 event=32779 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=460972 event=32779 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=526590 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_DISCOVERY_SCAN result=complete process_windows=4 overlay=1 invisible=3 owned=0 child=0 client_rect_failed=0 undersized=0 eligible=0 selected=0 selected_client=0x0
+OVERLAY_DISCOVERY_REJECT reason=invisible hwnd=723410 client=350x160
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=395532 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=330096 event=32768 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=1313028 event=32779 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=460972 event=32779 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=329946 event=32779 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=723410 event=32779 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=723410 event=32770 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_REQUEST source=window_event hwnd=723410 event=32769 queue_ready=1 pending=1 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REFRESH_DISPATCH source=owner_event pending_consumed=1 hwnd=0
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_REFRESH_STATE state=no_eligible_game_window hwnd=0 client=0x0 queue_ready=1 refresh_pending=0
+OVERLAY_REFRESH_STATE state=eligible_game_window hwnd=5311232 client=5138x1487 queue_ready=1 refresh_pending=0
+OVERLAY_REFRESH_STATE state=initializing_presenter hwnd=5311232 client=5138x1487 queue_ready=1 refresh_pending=0
+STARTUP_GATE_RUNTIME_READY ts_ms=4483609 reason=camera_core_initialization_complete
+STARTUP_GATE_WAITING ts_ms=4483609 reason=overlay_presenter_and_input_binding
+OVERLAY_DPI_CHANGED dpi=120 scale=1.250000 coordinate_contract=physical_client_pixels
+OVERLAY_DCOMP_INIT_BEGIN
+OVERLAY_DCOMP_DEVICE_READY featureLevel=45312
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_TOAST_LIFECYCLE ts_ms=4483750 tid=14684 event=root_attach reason=initial_surface_commit id=0 queue_count=0 queue=- startup_pending=1 menu_requested=0 root_attached=1 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=1 z_above_host=0
+OVERLAY_DCOMP_SURFACE_READY generation=1 width=5138 height=1487
+OVERLAY_FIRST_FRAME
+OVERLAY_DISPLAY_STATE requested=0 root_attached=1 host_active=1 host_minimized=0 display_visible=1 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_INPUT_BINDING_PENDING game_thread_install=1
+OVERLAY_PRESENTER_ATTACHED hwnd=5311232
+OVERLAY_REFRESH_STATE state=eligible_game_window hwnd=5311232 client=5120x1440 queue_ready=1 refresh_pending=0
+OVERLAY_DCOMP_SURFACE_RESIZED generation=2 width=5120 height=1440
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_WINDOW_GEOMETRY_UPDATED width=5120 height=1440
+STARTUP_GATE_OVERLAY_READY ts_ms=4498843 reason=presenter_and_game_input_binding_ready
+OVERLAY_INPUT_HOOK_OK game_thread_install=1
+STARTUP_GATE_WAITING ts_ms=4498843 reason=validated_game_interface_language_probe
+OVERLAY_STARTUP_HINT_WAITING_FOR_AUTO_LOCALE
+OVERLAY_TOAST_LIFECYCLE ts_ms=4498843 tid=14684 event=startup_wait_locale reason=accepted_startup_game_data_probe id=0 queue_count=0 queue=- startup_pending=1 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+STARTUP_GATE_GAME_DATA_OBSERVED ts_ms=4499203 reason=validated_interface_language_read
+STARTUP_GATE_ELIGIBLE ts_ms=4499203 reason=runtime_overlay_and_game_data_ready
+OVERLAY_STARTUP_HINT_CREATED presenter_lifecycle=1
+OVERLAY_TOAST_LIFECYCLE ts_ms=4499203 tid=14684 event=startup_created reason=ready_and_locale_resolved id=0 queue_count=1 queue=0:pending:220:0 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_FONT_ATLAS_REBUILT size=19 profile=base
+OVERLAY_TOAST_LIFECYCLE ts_ms=4499203 tid=14684 event=toast_draw_submitted reason=imgui_drawlist_has_vertices id=0 queue_count=1 queue=0:pending:220:0 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_NOTIFICATION_LIFETIME_STARTED id=0
+OVERLAY_TOAST_LIFECYCLE ts_ms=4499203 tid=14684 event=ttl_start reason=submitted_draw_and_attachment_commit id=0 queue_count=1 queue=0:started:0:4509203 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_STARTUP_HINT_DRAWN_AND_COMMITTED
+OVERLAY_TOAST_LIFECYCLE ts_ms=4509203 tid=14684 event=queue_expire reason=ttl_deadline id=0 queue_count=1 queue=0:started:10000:4509203 startup_pending=0 menu_requested=0 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_TOAST_LIFECYCLE ts_ms=4509203 tid=14684 event=display_hide reason=display_visibility_reconciled id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_TOAST_LIFECYCLE ts_ms=4509203 tid=14684 event=root_detach reason=no_display_demand id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=0 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=66166 display_hwnd=657808
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_DISPLAY_STATE requested=1 root_attached=1 host_active=1 host_minimized=0 display_visible=1 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_TOAST_LIFECYCLE ts_ms=4627312 tid=14684 event=root_attach reason=menu_requested id=0 queue_count=0 queue=- startup_pending=0 menu_requested=1 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_INPUT_ABSOLUTE_MOUSE_APPLIED x=4233 y=1072
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_REDRAW_POST result=ok thread=14684 owner_event_signaled=1 win32_error=0
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_TOAST_LIFECYCLE ts_ms=4629484 tid=14684 event=display_hide reason=display_visibility_reconciled id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_TOAST_LIFECYCLE ts_ms=4629484 tid=14684 event=root_detach reason=no_display_demand id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_VISIBILITY=VISIBLE
+OVERLAY_DISPLAY_STATE requested=1 root_attached=1 host_active=1 host_minimized=0 display_visible=1 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=1
+OVERLAY_TOAST_LIFECYCLE ts_ms=4630218 tid=14684 event=root_attach reason=menu_requested id=0 queue_count=0 queue=- startup_pending=0 menu_requested=1 root_attached=1 display_visible=1 hwnd_visible=1 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_INPUT_OWNERSHIP=OVERLAY_ACTIVE source=game_hwnd_bridge
+OVERLAY_CURSOR_RESTORE=GAME_WNDPROC
+OVERLAY_VISIBILITY=HIDDEN
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=1 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=5311232 display_hwnd=657808
+OVERLAY_TOAST_LIFECYCLE ts_ms=4630656 tid=14684 event=display_hide reason=display_visibility_reconciled id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_DCOMP_ROOT_ATTACHMENT attached=0
+OVERLAY_TOAST_LIFECYCLE ts_ms=4630656 tid=14684 event=root_detach reason=no_display_demand id=0 queue_count=0 queue=- startup_pending=0 menu_requested=0 root_attached=0 display_visible=0 hwnd_visible=0 host_active=1 minimized=0 generation=2 z_above_host=1
+OVERLAY_REFRESH_STATE state=no_eligible_game_window hwnd=0 client=0x0 queue_ready=1 refresh_pending=0
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=0 host_minimized=0 display_visible=0 z_order_above_game=1 game_hwnd=5311232 foreground_hwnd=66166 display_hwnd=657808
+OVERLAY_DISPLAY_STATE requested=0 root_attached=0 host_active=0 host_minimized=0 display_visible=0 z_order_above_game=0 game_hwnd=5311232 foreground_hwnd=66166 display_hwnd=657808

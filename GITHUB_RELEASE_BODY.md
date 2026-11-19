@@ -26,7 +26,7 @@ Validated native Gameplay FOV interpolation after cinematic exit is mapped conti
 
 - Gameplay modes: `HorPlus` and native `AspectRecalculation`. HorPlus follows the game's selected Gameplay FOV, including ADS and binocular transitions.
 - Cinematic framing: `Auto`, `Native`, `16:9`, `21:9` or `32:9`, independently of physical display aspect. These presets do not limit gameplay aspect ratios.
-- Cinematic FOV: `GameplayHorPlus` uses the game's Gameplay FOV as its baseline while preserving authored cinematic FOV changes; `NativeHorPlus` applies HorPlus to authored cinematic FOV independently of Gameplay FOV.
+- Cinematic FOV offers `GameplayHorPlus`, following the current Gameplay FOV while preserving cinematic variation and falling back to `NativeHorPlus` if needed context is unavailable, and `NativeHorPlus`, which transforms the authored ENTER FOV independently of Gameplay FOV. The configured Cinematic FOV hotkey cycles these modes for the next cinematic.
 - Dialogue zoom: `Native`, `Adaptive`, `Reduced` or `Disabled`.
 - In-game settings Overlay with runtime status, hotkey rebinding, localized selector help and a read-only Camera State view.
 - 18 embedded interface languages. `Auto (Game Language)` follows the game's interface language.
@@ -67,6 +67,7 @@ ToggleKey=VK_2E
 Enabled=false
 GameplayCycle=F9
 CinematicCycle=F10
+# Cycles the Cinematic FOV mode for the next cinematic.
 CinematicFovCycle=F11
 DialogueCycle=F12
 ```

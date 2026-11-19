@@ -1,0 +1,11 @@
+{
+  "ExitCode": 1,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": true,
+  "ExpectedDescendantsCleaned": true,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "33120:E:\\Work\\Visual Studio Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\vctip.exe",
+  "Output": "**********************************************************************\r\n** Visual Studio 2022 Developer Command Prompt v17.14.28\r\n** Copyright (c) 2025 Microsoft Corporation\r\n**********************************************************************\r\nninja: Entering directory `build-artifacts/cm/test-suite'\r\n[1/2] Building CXX object CMakeFiles\\cinematic_lifecycle_transaction_harness.dir\\tests\\plugin\\cinematic_lifecycle_transaction_harness.cpp.obj\r\n[2/2] Linking CXX executable tests\\cinematic_lifecycle_transaction_harness.exe\r\nFAIL: empty_generation_preserves_usable_high_Gameplay_reference_instead_of_authored_90\r\nFAIL: cinematic lifecycle transaction\r\n",
+  "ProcessId": 1836
+}

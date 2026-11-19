@@ -1,0 +1,11 @@
+{
+  "ExitCode": 0,
+  "TimedOut": false,
+  "DescendantsOutlivedRoot": false,
+  "ExpectedDescendantsCleaned": false,
+  "CleanupVerified": true,
+  "OutputTruncated": false,
+  "RemainingProcesses": "",
+  "Output": "consumer_site=0 rva=0x35c7da6\r\nconsumer_site=1 rva=0x30db9cf\r\nconsumer_site=2 rva=0x30dba00\r\nconsumer_site=3 rva=0x30dbadc\r\nconsumer-resolver-image diagnostic=off: PASS\r\n",
+  "ProcessId": 28156
+}

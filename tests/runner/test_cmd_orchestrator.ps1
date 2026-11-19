@@ -19,6 +19,8 @@ if ([string]::IsNullOrWhiteSpace($cmakeDirectory)) { throw 'CMAKE_DIR must be pr
 $cmakeExecutable = Join-Path $cmakeDirectory 'cmake.exe'
 $auditScript = Join-Path $PSScriptRoot 'test_cmd_audit.ps1'
 $exitContractScript = Join-Path $PSScriptRoot 'test_cmd_exit_code_contract.ps1'
+$releasePackageScript = Join-Path $PSScriptRoot 'release_package_contract.ps1'
+$publishAsiScript = Join-Path $PSScriptRoot 'publish_asi_contract.ps1'
 $runnerScript = Join-Path $PSScriptRoot 'test_harness_runner.ps1'
 $powershellExecutable = (Get-Command powershell.exe -ErrorAction Stop).Source
 $buildDirectory = $env:BUILD_DIR
@@ -66,6 +68,14 @@ function Invoke-ContainedStep {
 Invoke-ContainedStep -Name 'test registry audit' -Executable $powershellExecutable `
     -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $auditScript,
         '-RunnerPath', 'test.cmd', '-RegistryPath', $RegistryPath) -TimeoutMilliseconds 30000
+
+Invoke-ContainedStep -Name 'release package contract' -Executable $powershellExecutable `
+    -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $releasePackageScript) `
+    -TimeoutMilliseconds 60000
+
+Invoke-ContainedStep -Name 'release publish contract' -Executable $powershellExecutable `
+    -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $publishAsiScript) `
+    -TimeoutMilliseconds 60000
 
 Invoke-ContainedStep -Name 'CMake configure' -Executable $cmakeExecutable `
     -Arguments @('-S', '.', '-B', $buildDirectory, '-G', 'Ninja',

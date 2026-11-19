@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-13",
+  "artifact": "build-artifacts/d1-diagnostics/STALKER2CameraTweaks.asi",
+  "sha256": "818C76E05A899E98A9F5D28FAF4767A82730A3106235A563E9B728043AE5EB29",
+  "bytes": 3729920,
+  "profile": "production; INI-gated diagnostics",
+  "camera_policy_changed": false,
+  "adapter_cases": 224,
+  "adapter_exit": 0,
+  "build_exit": 0,
+  "cleanup_verified": true,
+  "capture_seconds": 60,
+  "blend_record_budget": 192,
+  "game_runtime": "not_exercised",
+  "U1": "awaiting_capture",
+  "U2": "awaiting_capture",
+  "D1": "implemented_actual_relocated_call_adapter_PASS"
+}

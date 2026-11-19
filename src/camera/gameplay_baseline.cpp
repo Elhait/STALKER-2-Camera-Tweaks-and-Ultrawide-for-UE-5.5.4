@@ -18,7 +18,7 @@ namespace camera
 
     bool IsUsableGameplayBaseline(const GameplayBaseline& baseline) noexcept
     {
-        return baseline.valid && baseline.nativeFov.valid &&
+        return baseline.valid && baseline.current && baseline.nativeFov.valid &&
             baseline.nativeFov.space == FovSpace::Native &&
             baseline.nativeFov.provenance == FovProvenance::NativeRegisterInput &&
             std::isfinite(baseline.nativeFov.value) && baseline.nativeFov.value > 1.0f &&
@@ -42,6 +42,7 @@ namespace camera
             observation.resultFov.provenance == FovProvenance::PassThroughResult &&
             std::isfinite(observation.resultFov.value);
         return gameplayEligible &&
+            observation.writerContext == WriterContext::GameplayEligible &&
             observation.boundary == FovObservationBoundary::CameraWriter &&
             validNativeInput && (validTransformedResult || validPassThroughResult) &&
             observation.aspect.valid &&
@@ -57,7 +58,30 @@ namespace camera
         GameplayBaselineProjectionResult result{};
         result.baseline = baseline_;
         result.eligible = IsEligibleObservation(observation, gameplayEligible);
-        if (!result.eligible) return result;
+        if (!result.eligible) {
+            const bool primaryWriterSourceChanged =
+                observation.boundary == FovObservationBoundary::CameraWriter &&
+                baseline_.valid && baseline_.current && baseline_.source.valid &&
+                observation.writerSource.valid &&
+                baseline_.source.value != observation.writerSource.value;
+            const bool ambiguousSampleFromCurrentSource =
+                observation.writerContext != WriterContext::GameplayEligible &&
+                observation.boundary == FovObservationBoundary::CameraWriter &&
+                baseline_.valid && baseline_.current && baseline_.source.valid &&
+                observation.writerSource.valid &&
+                baseline_.source.value == observation.writerSource.value;
+            const bool knownTransition =
+                observation.writerContext == WriterContext::ProviderTransitionObserved ||
+                observation.writerContext ==
+                    WriterContext::ConfirmedProviderDialogueLifecycleObserved ||
+                observation.writerContext == WriterContext::PostCinematicRecoveryExcluded;
+            if (primaryWriterSourceChanged ||
+                (ambiguousSampleFromCurrentSource && !knownTransition)) {
+                baseline_.current = false;
+                result.baseline = baseline_;
+            }
+            return result;
+        }
 
         baseline_.nativeFov = observation.inputFov;
         baseline_.horPlusFov = observation.resultFov.space == FovSpace::Transformed
@@ -66,6 +90,7 @@ namespace camera
         baseline_.source = observation.writerSource;
         baseline_.observationSequence = observation.publicationSequence;
         baseline_.valid = true;
+        baseline_.current = true;
         result.disposition = GameplayBaselineProjectionDisposition::Updated;
         result.baseline = baseline_;
         return result;

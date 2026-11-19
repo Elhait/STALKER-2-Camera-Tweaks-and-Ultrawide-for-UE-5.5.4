@@ -295,11 +295,15 @@ $cameraStateViewBoundary = (Test-CameraStateReadOnlyBoundary $cameraStateViewHea
     $cameraStateView -match 'ImGui::BeginTable\(' -and
     $cameraStateView -match 'Writer Observation Freshness' -and
     $cameraStateView -match 'HorPlus Target' -and
-    $cameraStateView -match 'Current Output FOV' -and
+    $cameraStateView -match 'loc::camera_state::CurrentOutput' -and
+    $cameraStateView -match 'loc::camera_state::WriterInput' -and
+    $cameraStateView -match 'EffectiveCameraFov' -and
+    $cameraStateView -match 'PostStoreFov' -and
+    $cameraStateView -match 'PostHelperFov' -and
     $cameraStateView -match 'Readback Valid' -and
-    $cameraStateView -notmatch '\b(?:Tr|Format)\s*\(|LocalizationManager|loc::|SetTooltip|BeginTooltip' -and
+    $cameraStateView -notmatch '\b(?:Tr|Format)\s*\(|SetTooltip|BeginTooltip' -and
     $renderer -match 'DrawCameraStateToggle\(localization_, cameraStateExpanded_\)' -and
-    $renderer -match 'DrawCameraStateView\(semantic, integration\)' -and
+    $renderer -match 'DrawCameraStateView\(semantic, integration, localization_\)' -and
     $renderer -notmatch 'void DrawCameraState\('
 $rightTooltipPaths = @(
     'tooltip.runtime.viewport', 'tooltip.runtime.writer_aspect',
@@ -307,6 +311,7 @@ $rightTooltipPaths = @(
     'tooltip.runtime.gameplay_fov_unavailable', 'tooltip.runtime.native_fov',
     'tooltip.runtime.native_fov_unavailable', 'tooltip.runtime.horplus_fov',
     'tooltip.runtime.horplus_fov_unavailable', 'tooltip.runtime.current_output_fov',
+    'tooltip.runtime.writer_input_fov', 'tooltip.runtime.effective_fov',
     'tooltip.runtime.transition_evidence', 'tooltip.runtime.transition_generation',
     'tooltip.runtime.gameplay_boundary_aspect', 'tooltip.runtime.cinematic_enter_aspect',
     'tooltip.runtime.aspect_delta', 'tooltip.runtime.aspect_matched',
@@ -637,10 +642,10 @@ $rightDashboardLayout = $renderer -notmatch 'DrawSectionHeading|LocalizedLabelWi
     $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Viewport Aspect"' -and
     $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Writer Aspect"' -and
     $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Policy Aspect"' -and
-    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Gameplay FOV"' -and
-    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Native FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\(localization_\.Text\(loc::camera_state::GameplayFov\)' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\(localization_\.Text\(loc::camera_state::Native\)' -and
     $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("HorPlus Target"' -and
-    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Current Output FOV"' -and
+    $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\(localization_\.Text\(loc::camera_state::CurrentOutput\)' -and
     $runtimeTelemetryBlock -match 'loc::tooltip::runtime::CurrentOutputFov' -and
     $runtimeTelemetryBlock -notmatch 'DrawRuntimeTelemetryRow\("HorPlus FOV"' -and
     $runtimeTelemetryBlock -match 'DrawRuntimeTelemetryRow\("Aspect Match"' -and

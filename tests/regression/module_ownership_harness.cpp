@@ -46,8 +46,11 @@ int main()
     const auto matchingWriter = association.ObserveWriter(
         CoordinatorState::CinematicActive, source, 0xA000, authored,
         32.0f / 9.0f, true, 0x5, true);
+    const bool matchingOutputAdmitted = association.AdmitWriterOutput(
+        CoordinatorState::CinematicActive, true, 11, source, 0xA000,
+        matchingWriter.latestWriter.sequence);
     pass &= Check(matchingWriter.associationValid &&
-        matchingWriter.associatedWriterRsi == source,
+        matchingWriter.associatedWriterRsi == source && matchingOutputAdmitted,
         "aspect_store_object_equal_to_writer_rsi_associates");
 
     // Initial Establishment authorization/output combinations are covered by
@@ -97,16 +100,22 @@ int main()
             cinematics::InitialEstablishmentEndReason::None,
         "accepted_new_generation_resets_association_and_starts_establishment");
     association.ObserveAspectStoreTarget(13, source);
-    association.ObserveWriter(CoordinatorState::CinematicActive, source,
+    const auto generationWriter = association.ObserveWriter(
+        CoordinatorState::CinematicActive, source,
         0xA200, authored, 32.0f / 9.0f, true, 0x5, true);
+    const bool generationOutputAdmitted = association.AdmitWriterOutput(
+        CoordinatorState::CinematicActive, true, 13, source, 0xA200,
+        generationWriter.latestWriter.sequence);
     const bool nextGenerationRetains =
         association.AuthorizeInitialEstablishmentRetention(
-            CoordinatorState::CinematicActive, true, true, true, 13, source, authored);
+            CoordinatorState::CinematicActive, true, true, true, 13, source,
+            0xA200, generationWriter.latestWriter.sequence, authored);
     association.InvalidateGeneration(13);
     const auto exitedGeneration = association.Read();
     pass &= Check(!exitedGeneration.generationActive &&
         !exitedGeneration.associationValid &&
-        exitedGeneration.associatedWriterRsi == 0 && nextGenerationRetains &&
+        exitedGeneration.associatedWriterRsi == 0 && generationOutputAdmitted &&
+        nextGenerationRetains &&
         !exitedGeneration.initialEstablishmentActive &&
         exitedGeneration.initialEstablishmentEnded &&
         exitedGeneration.initialEstablishmentEndReason ==
@@ -125,17 +134,43 @@ int main()
         conflict.conflictingAspectStoreTargetObject == source + 0x40,
         "conflicting_aspect_store_target_fails_closed");
 
-    cinematics::CinematicWriterAssociation conflictingOutput;
-    conflictingOutput.BeginGeneration(15, authored, target,
+    cinematics::CinematicWriterAssociation transitioningOutput;
+    transitioningOutput.BeginGeneration(15, authored, target,
         { true, config::CinematicAspectPolicy::Auto,
             config::CinematicFovMode::GameplayHorPlus });
-    conflictingOutput.ObserveAspectStoreTarget(15, source);
-    conflictingOutput.ObserveWriter(CoordinatorState::CinematicActive,
+    transitioningOutput.ObserveAspectStoreTarget(15, source);
+    auto writerA = transitioningOutput.ObserveWriter(CoordinatorState::CinematicActive,
         source, 0xA400, authored, 32.0f / 9.0f, true, 0x5, true);
-    conflict = conflictingOutput.ObserveWriter(CoordinatorState::CinematicActive,
+    pass &= Check(transitioningOutput.AdmitWriterOutput(
+        CoordinatorState::CinematicActive, true, 15, source, 0xA400,
+        writerA.latestWriter.sequence),
+        "initial_output_a_is_admitted");
+    auto writerB = transitioningOutput.ObserveWriter(CoordinatorState::CinematicActive,
         source, 0xA401, authored, 32.0f / 9.0f, true, 0x5, true);
-    pass &= Check(conflict.associationConflict && !conflict.associationValid,
-        "same_rsi_with_conflicting_rbx_fails_closed");
+    pass &= Check(writerB.associationValid && !writerB.associationConflict &&
+        transitioningOutput.AdmitWriterOutput(
+            CoordinatorState::CinematicActive, true, 15, source, 0xA401,
+            writerB.latestWriter.sequence),
+        "same_source_output_transition_a_to_b_is_admitted");
+    auto writerAAgain = transitioningOutput.ObserveWriter(
+        CoordinatorState::CinematicActive, source, 0xA400, authored,
+        32.0f / 9.0f, true, 0x5, true);
+    pass &= Check(writerAAgain.associationValid && !writerAAgain.associationConflict &&
+        transitioningOutput.AdmitWriterOutput(
+            CoordinatorState::CinematicActive, true, 15, source, 0xA400,
+            writerAAgain.latestWriter.sequence) &&
+        writerAAgain.lastAdmittedOutput.output == 0xA401 &&
+        transitioningOutput.Read().lastAdmittedOutput.output == 0xA400,
+        "a_to_b_to_a_updates_only_current_admitted_output");
+
+    auto invalidOutput = transitioningOutput.ObserveWriter(
+        CoordinatorState::CinematicActive, source, 0, authored,
+        32.0f / 9.0f, true, 0x5, true);
+    pass &= Check(!transitioningOutput.AdmitWriterOutput(
+            CoordinatorState::CinematicActive, true, 15, source, 0,
+            invalidOutput.latestWriter.sequence) &&
+        transitioningOutput.Read().lastAdmittedOutput.output == 0xA400,
+        "invalid_output_does_not_replace_last_admitted_output");
 
     const auto unchangedDispatch = cinematics::DispatchCinematicWriter(
         CoordinatorState::CinematicActive, true, baseline);

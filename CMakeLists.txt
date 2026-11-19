@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
-project(STALKER2CameraTweaks VERSION 3.2.2 LANGUAGES C CXX)
+project(STALKER2CameraTweaks VERSION 4.0.0 LANGUAGES C CXX)
 
 # CMake's MSVC defaults inject WIN32/_WINDOWS. The legacy cl invocation did
 # not; keep only the explicitly reviewed project flags and definitions.
@@ -215,6 +215,12 @@ endif()
 if(CAMERA_TWEAKS_DIALOGUE_DISCOVERY)
     target_compile_definitions(STALKER2CameraTweaks PRIVATE DIALOGUE_DISCOVERY_DIAGNOSTIC)
 endif()
+target_compile_definitions(STALKER2CameraTweaks PRIVATE
+    DIALOGUE_BOUNDARY_PROVENANCE_DIAGNOSTIC)
+# Keep the validated blend activation point in the ordinary ASI. The bounded
+# EXIT-to-provider owner handoff uses it in production; extended records and
+# consumer observations remain gated by [Diagnostics] Enabled=true.
+target_compile_definitions(STALKER2CameraTweaks PRIVATE POST_EXIT_BLEND_OBSERVATION)
 if(CAMERA_TWEAKS_PROFILE STREQUAL "diagnostic")
     set(output_name STALKER2CameraTweaksDiagnostic)
 else()
@@ -252,7 +258,7 @@ enable_testing()
 file(READ "${CAMERA_TWEAKS_TEST_REGISTRY}" CAMERA_TWEAKS_TEST_REGISTRY_JSON)
 string(JSON CAMERA_TWEAKS_TEST_SCHEMA GET "${CAMERA_TWEAKS_TEST_REGISTRY_JSON}" schema_version)
 string(JSON CAMERA_TWEAKS_TEST_COUNT LENGTH "${CAMERA_TWEAKS_TEST_REGISTRY_JSON}" harnesses)
-if(NOT CAMERA_TWEAKS_TEST_SCHEMA EQUAL 1 OR NOT CAMERA_TWEAKS_TEST_COUNT EQUAL 59)
+if(NOT CAMERA_TWEAKS_TEST_SCHEMA EQUAL 1 OR NOT CAMERA_TWEAKS_TEST_COUNT EQUAL 60)
     message(FATAL_ERROR "Test harness registry contract failed: schema=${CAMERA_TWEAKS_TEST_SCHEMA}, targets=${CAMERA_TWEAKS_TEST_COUNT}")
 endif()
 
@@ -315,7 +321,7 @@ function(configure_test_harness_target target_name target_index)
         foreach(source_index RANGE 0 ${additional_source_last})
             string(JSON source_path GET "${CAMERA_TWEAKS_TEST_REGISTRY_JSON}" harnesses ${target_index} additional_sources ${source_index})
             set(source_absolute "${CMAKE_CURRENT_SOURCE_DIR}/${source_path}")
-            if(target_name MATCHES "^(runtime_native_adapter_harness|n06_m01_zoom_game_derived_harness)$" AND
+            if(target_name MATCHES "^(runtime_native_adapter_harness|runtime_authority_cutover_harness|n06_m01_zoom_game_derived_harness)$" AND
                (source_absolute IN_LIST CAMERA_TWEAKS_ADAPTER_DEPENDENCIES OR
                 source_path STREQUAL "tests/plugin/runtime_owner_binding_probe.cpp"))
                 continue()
@@ -330,6 +336,14 @@ function(configure_test_harness_target target_name target_index)
     endif()
 
     add_executable(${target_name} EXCLUDE_FROM_ALL ${target_sources})
+    if(target_name STREQUAL "lifecycle_authority_m1_harness")
+        set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/${entry_source}" APPEND PROPERTY
+            OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_core.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_policy.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_writer_port.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_gameplay_effects.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_cinematic_port.hpp;${CMAKE_CURRENT_SOURCE_DIR}/tests/plugin/lifecycle_authority_corrective_cases.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/dialogue_boundary_transaction.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/dialogue/post_exit_provider_handoff.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/dialogue/dialogue_state.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/cinematics/cinematic_fov.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/dialogue/dialogue_fov.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/camera/horplus.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/camera/gameplay_baseline.hpp")
+    endif()
+    if(target_name STREQUAL "camera_writer_transaction_harness")
+        set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/${entry_source}" APPEND PROPERTY
+            OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_core.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_policy.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_writer_port.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_gameplay_effects.hpp;${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/lifecycle_authority_cinematic_port.hpp;${CMAKE_CURRENT_SOURCE_DIR}/tests/plugin/lifecycle_authority_parity_cases.hpp;${CMAKE_CURRENT_SOURCE_DIR}/tests/plugin/lifecycle_authority_physical_cases.hpp;${CMAKE_CURRENT_SOURCE_DIR}/tests/plugin/lifecycle_authority_cinematic_cases.hpp;${CMAKE_CURRENT_SOURCE_DIR}/tests/plugin/lifecycle_authority_native_cinematic_cases.hpp")
+    endif()
     set_target_properties(${target_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CAMERA_TWEAKS_TEST_OUTPUT_ABSOLUTE}")
     target_include_directories(${target_name} PRIVATE
@@ -362,7 +376,7 @@ function(configure_test_harness_target target_name target_index)
         endforeach()
     endif()
 
-    if(target_name MATCHES "^(runtime_native_adapter_harness|n06_m01_zoom_game_derived_harness)$")
+    if(target_name MATCHES "^(runtime_native_adapter_harness|runtime_authority_cutover_harness|n06_m01_zoom_game_derived_harness)$")
         list(LENGTH CAMERA_TWEAKS_ADAPTER_DEPENDENCIES adapter_dependency_count)
         if(NOT adapter_dependency_count EQUAL 59)
             message(FATAL_ERROR "${target_name}: production adapter dependency count changed")
@@ -388,6 +402,12 @@ foreach(index RANGE 0 ${CAMERA_TWEAKS_TEST_LAST})
     configure_test_harness_target("${target_name}" ${index})
     list(APPEND CAMERA_TWEAKS_TEST_TARGETS "${target_name}")
 endforeach()
+
+# Characterization covers the last pre-cutover adapter. This target compiles
+# the shipping branches of those same callback entry points.
+configure_test_harness_target(runtime_authority_cutover_harness 0)
+target_compile_definitions(runtime_authority_cutover_harness PRIVATE RUNTIME_AUTHORITY_CUTOVER_FIXTURE)
+list(APPEND CAMERA_TWEAKS_TEST_TARGETS runtime_authority_cutover_harness)
 
 string(JSON CAMERA_TWEAKS_SUPPORT_COUNT LENGTH "${CAMERA_TWEAKS_TEST_REGISTRY_JSON}" support_targets)
 if(NOT CAMERA_TWEAKS_SUPPORT_COUNT EQUAL 1)
@@ -419,6 +439,33 @@ add_test(NAME runtime_native_adapter_matrix
     COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
         -Executable "$<TARGET_FILE:runtime_native_adapter_harness>")
+foreach(mode IN ITEMS off on)
+    add_test(NAME "runtime_authority_cutover_${mode}"
+        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+            -Executable "$<TARGET_FILE:runtime_authority_cutover_harness>"
+            -ArgumentsJson "[\"${mode}\"]")
+    set_tests_properties("runtime_authority_cutover_${mode}" PROPERTIES
+        RUN_SERIAL TRUE TIMEOUT 60 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endforeach()
+add_test(NAME lifecycle_authority_m1
+    COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+        -Executable "$<TARGET_FILE:lifecycle_authority_m1_harness>")
+add_test(NAME lifecycle_authority_parity
+    COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+        -Executable "$<TARGET_FILE:camera_writer_transaction_harness>"
+        -ArgumentsJson "[\"--authority-parity\"]")
+add_test(NAME lifecycle_authority_m2_transactions
+    COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+        -Executable "$<TARGET_FILE:camera_writer_transaction_harness>")
+add_test(NAME lifecycle_authority_transition_model
+    COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/runner/ctest_harness_runner.ps1"
+        -Executable "$<TARGET_FILE:camera_writer_transaction_harness>"
+        -ArgumentsJson "[\"--authority-transition-model\"]")
 foreach(fixture IN ITEMS zoom-in zoom-out)
     foreach(mode IN ITEMS off on)
         string(REPLACE "-" "_" fixture_id "${fixture}")
@@ -437,3 +484,7 @@ set_tests_properties(runtime_native_adapter_matrix
         TIMEOUT 330
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         ENVIRONMENT "TEMP=${CMAKE_CURRENT_BINARY_DIR}/tests/temp;TMP=${CMAKE_CURRENT_BINARY_DIR}/tests/temp")
+set_tests_properties(lifecycle_authority_m1 lifecycle_authority_parity lifecycle_authority_m2_transactions lifecycle_authority_transition_model PROPERTIES
+    RUN_SERIAL TRUE
+    TIMEOUT 60
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

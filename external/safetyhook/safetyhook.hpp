@@ -1020,6 +1020,9 @@ public:
     /// @return A vector of the original bytes of the target function.
     [[nodiscard]] const auto& original_bytes() const { return m_hook.m_original_bytes; }
 
+    /// Read-only relocation metadata; valid only while this hook owns its trampoline.
+    [[nodiscard]] const Allocation& trampoline() const { return m_hook.trampoline(); }
+
     /// @brief Tests if the hook is valid.
     /// @return true if the hook is valid, false otherwise.
     explicit operator bool() const { return static_cast<bool>(m_stub); }
