@@ -295,7 +295,7 @@ namespace authority_native_cinematic
                 memory.source = receiver;
             }
 
-            {
+            for (const bool foreignWriterInterleaves : {false, true}) {
                 la::Authority provider;
                 config::FeatureConfig providerConfig;
                 providerConfig.gameplayEnabled = providerConfig.cinematicsEnabled = providerConfig.dialogueEnabled = true;
@@ -394,11 +394,12 @@ namespace authority_native_cinematic
                     "native_provider_processed_setter_argument_is_not_mapped_twice");
                 // A foreign writer can be the most recent caller while the
                 // preceding Cinematic scope still owns the provider handoff.
-                capture.sourceIdentity = 0xE;
-                memory.source = capture.sourceIdentity;
-                write(130.311f);
+                if (foreignWriterInterleaves) {
+                    capture.sourceIdentity = memory.source = 0xE;
+                    write(130.311f);
+                }
                 authored = 90;
-                const auto next = cinematicPort.Enter({authored, 32.0f / 9.0f, true}, authored);
+                const auto next = cinematicPort.Enter({authored, 32.0f / 9.0f, true, 7}, authored);
                 const auto transferred = provider.Read();
                 pass &= Check(next.decision.accepted && transferred.scopes.contains(receiver) &&
                     transferred.scopes.at(receiver).dialogue == la::DialoguePhase::None &&
@@ -407,6 +408,28 @@ namespace authority_native_cinematic
                     !transferred.scopes.at(receiver).preparedDialogueFov,
                     "native_enter_revokes_provider_on_previous_cinematic_even_after_foreign_writer");
                 memory.source = receiver;
+                if (!foreignWriterInterleaves) {
+                    const float cinematicTarget = authored;
+                    cinematicPort.Aspect({receiver, capture.aspect, true}, engine);
+                    const la::NativeCinematicArmer afterDialogue{0xCA, receiver, 7,
+                        122.087f, cinematicTarget, 122.087f, capture.aspect, capture.aspect, 4, true, true};
+                    const auto dialogueStart = cinematicPort.Armer(afterDialogue);
+                    pass &= Check(dialogueStart.activation.correctedStartFromDialogue &&
+                        dialogueStart.activation.correctedStartWriterSequence == continuation.writerInvocationId &&
+                        std::fabs(dialogueStart.activation.correctedStart - 149.071f) < 0.005f,
+                        "writer_empty_cinematic_after_real_dialogue_uses_dialogue_writer_provenance");
+                    const auto emptyExit = cinematicPort.Exit({130.311f, true, true});
+                    pass &= Check(!emptyExit.writerObserved && !emptyExit.reentryWriterAfter,
+                        "writer_empty_dialogue_start_is_not_a_new_cinematic_writer_witness");
+                    authored = 90;
+                    cinematicPort.Enter({authored, capture.aspect, true, 7}, authored);
+                    cinematicPort.Aspect({receiver, capture.aspect, true}, engine);
+                    const auto rearmed = cinematicPort.Armer(afterDialogue);
+                    const auto first = write(149.0f);
+                    pass &= Check(rearmed.decision.accepted && !rearmed.activation.correctedStartValid &&
+                        !first.argumentPrepared && argument == 149.0f,
+                        "writer_empty_does_not_reuse_dialogue_correction_after_ownership_transfer");
+                }
                 pass &= Check(provider.Shutdown(gate) && provider.Read().scopes.empty() &&
                     provider.Read().armings.empty() && !provider.Read().baseline &&
                     !provider.Initialize(gate, providerConfig),
@@ -450,6 +473,264 @@ namespace authority_native_cinematic
                     std::fabs(argument - (validatedExit ? previousTarget : midpoint)) < 0.003f,
                     "native_cinematic_reentry_retains_target_without_armer_only_after_validated_exit");
             }
+
+            enum class ReentryVariation {
+                Matched, MissingWriter, ConflictingAspectSource, UnmatchedStart, Receiver, Component,
+                Thread, Output, Aspect, Flags, Target, GameplayEpoch, CinematicEpoch, DialogueEpoch,
+                Gameplay, Repeated
+            };
+            const ReentryVariation variations[] = {
+                ReentryVariation::Matched, ReentryVariation::MissingWriter,
+                ReentryVariation::ConflictingAspectSource, ReentryVariation::UnmatchedStart,
+                ReentryVariation::Receiver, ReentryVariation::Component, ReentryVariation::Thread,
+                ReentryVariation::Output, ReentryVariation::Aspect, ReentryVariation::Flags,
+                ReentryVariation::Target, ReentryVariation::GameplayEpoch, ReentryVariation::CinematicEpoch,
+                ReentryVariation::DialogueEpoch, ReentryVariation::Gameplay, ReentryVariation::Repeated
+            };
+            for (const auto variant : variations) {
+                using Variation = ReentryVariation;
+                using Status = cinematics::EnterActivationStatus;
+                la::Authority reentry;
+                reentry.Accept(init);
+                const auto selection = reentry.CinematicBoundary(gate);
+                const auto writerPort = reentry.WriterBoundary(gate);
+                constexpr float native = 130.934f;
+                constexpr float priorInput = 149.551f;
+                constexpr float firstInput = 149.990f;
+                constexpr float viewport = 32.0f / 9.0f;
+                plugin::CameraWriterInput capture;
+                capture.sourceIdentity = receiver;
+                capture.outputObjectIdentity = 0x701;
+                capture.threadId = 7;
+                capture.aspect = capture.currentViewportAspect = viewport;
+                capture.aspectValid = capture.currentViewportAspectValid = capture.flagsValid = true;
+                capture.flags = 4;
+                memory.source = receiver;
+                memory.aspect = viewport;
+
+                const auto write = [&](float fov) {
+                    argument = capture.incomingFov = fov;
+                    return writerPort.ProcessNative(capture, argument, engine, diagnosticsOn);
+                };
+                const auto check = [&](bool condition, const char* label) {
+                    if (!condition) std::cerr << "writer-empty variant=" << static_cast<int>(variant)
+                        << " diagnostics=" << diagnosticsOn << '\n';
+                    pass &= Check(condition, label);
+                };
+                write(native);
+                const float correctedTarget = argument;
+                la::NativeCinematicArmer blend{0xCA, receiver, 7, native, correctedTarget, native,
+                    viewport, viewport, 5, true, true};
+                const auto enterGeneration = [&](std::uintptr_t source, float aspect) {
+                    authored = 90.0f;
+                    const auto entered = selection.Enter({authored, aspect, true, 7}, authored);
+                    check(entered.decision.accepted, "writer_empty_enter_accepted");
+                    memory.source = source;
+                    check(selection.Aspect({source, aspect, true}, engine).decision.accepted,
+                        "writer_empty_aspect_source_bound");
+                    return entered.generation;
+                };
+
+                const auto predecessor = enterGeneration(receiver, viewport);
+                check(selection.Armer(blend).decision.accepted, "writer_empty_predecessor_armed");
+                capture.flags = 5;
+                la::TransactionId predecessorWriter{};
+                if (variant != Variation::MissingWriter) {
+                    const auto previous = write(priorInput);
+                    predecessorWriter = previous.writerInvocationId;
+                    check(previous.argumentPrepared && previous.decision.cinematicWriterAdmitted &&
+                        std::fabs(argument - correctedTarget) < 0.005f, "writer_empty_predecessor_has_corrected_writer");
+                }
+                const auto originalExit = selection.Exit({native, true, true});
+                check(originalExit.reentryWriterAfter == predecessorWriter,
+                    "writer_empty_exit_transfers_original_writer_provenance");
+                blend.start = priorInput;
+                blend.receiverFov = priorInput;
+
+                const auto emptyCount = variant == Variation::Repeated ? 3u : 1u;
+                for (unsigned index = 0; index < emptyCount; ++index) {
+                    check(enterGeneration(receiver, viewport) == predecessor + index + 1,
+                        "writer_empty_uses_new_generation");
+                    const auto armed = selection.Armer(blend);
+                    check(armed.decision.accepted &&
+                        armed.activation.correctedStartFromCinematic == (predecessorWriter != 0),
+                        "writer_empty_armer_confirms_only_available_predecessor_evidence");
+                    if (variant == Variation::ConflictingAspectSource)
+                        selection.Aspect({receiver + 1, viewport, true}, engine);
+                    const auto exited = selection.Exit({native, true, true});
+                    const auto expected = variant == Variation::ConflictingAspectSource ? 0 : predecessorWriter;
+                    check(!exited.writerObserved && !exited.lastAdmittedOutput.valid &&
+                        exited.reentryWriterAfter == expected,
+                        "writer_empty_does_not_invent_writer_or_recovery_ownership");
+                }
+
+                const auto setGate = [&](la::SettingsDomain domain, bool enabled) {
+                    auto settings = authority_parity::Facts(la::EventKind::SettingsChanged);
+                    settings.settingsDomain = domain;
+                    settings.enabled = enabled;
+                    check(reentry.Accept(settings).accepted, "writer_empty_settings_change_accepted");
+                };
+                if (variant == Variation::GameplayEpoch || variant == Variation::CinematicEpoch) {
+                    const auto domain = variant == Variation::GameplayEpoch ?
+                        la::SettingsDomain::Gameplay : la::SettingsDomain::Cinematic;
+                    setGate(domain, false);
+                    setGate(domain, true);
+                }
+                if (variant == Variation::DialogueEpoch) setGate(la::SettingsDomain::Dialogue, true);
+                if (variant == Variation::Gameplay) {
+                    capture.flags = 4;
+                    const auto gameplay = write(native);
+                    check(gameplay.decision.baseline == la::BaselineAction::Update &&
+                        gameplay.decision.correction == la::CorrectionOwner::Gameplay,
+                        "writer_empty_intervening_gameplay_establishes_its_own_reference");
+                    capture.flags = 5;
+                    blend.receiverFov = native;
+                }
+                if (variant == Variation::Target) {
+                    auto settings = authority_parity::Facts(la::EventKind::SettingsChanged);
+                    settings.settingsDomain = la::SettingsDomain::Cinematic;
+                    settings.settingsMutation = la::SettingsMutation::PolicySelection;
+                    settings.policySelection = static_cast<unsigned>(config::CinematicFovMode::NativeHorPlus);
+                    check(reentry.Accept(settings).accepted, "writer_empty_changes_next_target_policy");
+                }
+                if (variant == Variation::Receiver)
+                    blend.receiver = capture.sourceIdentity = receiver + 1;
+                if (variant == Variation::Component) ++blend.component;
+                if (variant == Variation::Thread) ++blend.thread;
+                if (variant == Variation::Output) ++capture.outputObjectIdentity;
+                if (variant == Variation::Aspect)
+                    blend.aspect = capture.aspect = capture.currentViewportAspect = 3.0f;
+                if (variant == Variation::Flags) blend.flags = capture.flags = 4;
+                if (variant == Variation::UnmatchedStart)
+                    blend.start = blend.receiverFov = 150.2f;
+                const auto finalGeneration = enterGeneration(blend.receiver, capture.aspect);
+                const auto armed = selection.Armer(blend);
+                const bool mayInherit = variant == Variation::Matched || variant == Variation::Repeated ||
+                    variant == Variation::Output || variant == Variation::Target || variant == Variation::DialogueEpoch;
+                check(armed.decision.accepted == (variant != Variation::Thread) &&
+                    armed.activation.correctedStartFromCinematic == (mayInherit || variant == Variation::Flags),
+                    "writer_empty_successor_revalidates_start_at_native_armer");
+                if (variant == Variation::UnmatchedStart)
+                    check(std::string_view(armed.inheritedStartStatus) == "native-start-mismatch",
+                        "writer_empty_trace_reports_native_start_rejection");
+                const auto first = write(firstInput);
+                const bool mayMap = mayInherit && variant != Variation::Target;
+                check(first.decision.accepted && first.decision.cinematicWriterAdmitted &&
+                    reentry.Read().scopes.at(blend.receiver).cinematicGeneration == finalGeneration,
+                    "writer_empty_first_writer_admission_bound_to_current_generation");
+                check(first.argumentPrepared == mayMap &&
+                    std::fabs(argument - (mayMap ? correctedTarget : firstInput)) < 0.005f,
+                    "writer_empty_first_writer_only_maps_a_proven_segment");
+                if (mayMap)
+                    check(first.decision.cinematicActivationStatus == Status::MatchedSample &&
+                        armed.activation.correctedStartWriterSequence == predecessorWriter,
+                        "writer_empty_mapping_correlates_to_original_predecessor");
+                if (variant == Variation::Target)
+                    check(first.decision.cinematicActivationStatus == Status::EndpointMismatch,
+                        "writer_empty_rejects_old_native_target_under_new_selection");
+            }
+
+            enum class ContinuationChange {
+                None, FlagsRestored, FlagsPersist, IndependentTarget, RebaseAttempt, ReplacedEmptyComponent, WriterEpoch
+            };
+            const auto checkContinuationDistance = [&](float distance, bool descending, ContinuationChange change) {
+                const bool transitFlags = change == ContinuationChange::FlagsRestored ||
+                    change == ContinuationChange::FlagsPersist;
+                const bool restoreFlags = change != ContinuationChange::FlagsPersist;
+                const bool rebaseAttempt = change == ContinuationChange::RebaseAttempt;
+                la::Authority chain;
+                chain.Accept(init);
+                const auto cinematic = chain.CinematicBoundary(gate);
+                const auto writerPort = chain.WriterBoundary(gate);
+                constexpr float viewport = 32.0f / 9.0f;
+                constexpr float native = 130.934f;
+                const float previousInput = descending ? 158.0f : 148.955f;
+                const float direction = descending ? -1.0f : 1.0f;
+                memory.source = receiver;
+                memory.aspect = viewport;
+                plugin::CameraWriterInput capture;
+                capture.sourceIdentity = receiver;
+                capture.outputObjectIdentity = 0x701;
+                capture.threadId = 7;
+                capture.aspect = capture.currentViewportAspect = viewport;
+                capture.aspectValid = capture.currentViewportAspectValid = capture.flagsValid = true;
+                capture.flags = 4;
+                const auto write = [&](float fov) {
+                    capture.incomingFov = argument = fov;
+                    return writerPort.ProcessNative(capture, argument, engine, diagnosticsOn);
+                };
+                write(native);
+                const float target = argument;
+                const auto enterSegment = [&] {
+                    authored = 90.0f;
+                    cinematic.Enter({authored, viewport, true, 7}, authored);
+                    cinematic.Aspect({receiver, viewport, true}, engine);
+                };
+                const float originalStart = descending ? 160.0f : native;
+                la::NativeCinematicArmer armer{0xCA, receiver, 7, originalStart,
+                    target, originalStart, viewport, viewport, 5, true, true};
+                enterSegment();
+                cinematic.Armer(armer);
+                capture.flags = 5;
+                const auto prior = write(previousInput);
+                const float confirmedOutput = argument;
+                pass &= Check(prior.argumentPrepared, "continuation_distance_has_a_corrected_predecessor");
+                const auto predecessorExit = cinematic.Exit({native, true, true});
+                pass &= Check(predecessorExit.reentryWriterAfter == prior.writerInvocationId,
+                    "continuation_distance_carries_the_admitted_writer");
+                const float start = previousInput + direction * distance;
+
+                enterSegment();
+                const float emptyStart = rebaseAttempt ? previousInput + direction * 0.4f :
+                    transitFlags ? start : previousInput;
+                armer.start = armer.receiverFov = emptyStart;
+                const bool replaced = change == ContinuationChange::ReplacedEmptyComponent;
+                if (replaced) ++armer.component;
+                cinematic.Armer(armer);
+                const auto empty = cinematic.Exit({native, true, true});
+                if (replaced) --armer.component;
+                pass &= Check(!empty.writerObserved && empty.reentryWriterAfter ==
+                    (replaced ? 0 : prior.writerInvocationId),
+                    "continuation_distance_empty_generation_does_not_refresh_writer_evidence");
+
+                enterSegment();
+                armer.start = armer.receiverFov = start;
+                if (transitFlags) armer.flags = 4;
+                if (change == ContinuationChange::IndependentTarget) armer.target = target + direction * 2.0f;
+                const auto successor = cinematic.Armer(armer);
+                if (transitFlags && !rebaseAttempt)
+                    pass &= Check(successor.activation.writerProjectionPending && !successor.activation.correctedStartValid,
+                        "continuation_distance_constraint_toggle_is_pending_until_writer");
+                if (!restoreFlags) capture.flags = 4;
+                if (change == ContinuationChange::WriterEpoch) {
+                    auto settings = authority_parity::Facts(la::EventKind::SettingsChanged);
+                    settings.settingsDomain = la::SettingsDomain::Gameplay;
+                    settings.enabled = false;
+                    pass &= Check(chain.Accept(settings).accepted, "continuation_distance_changes_gameplay_epoch_after_armer");
+                }
+                const auto first = write(start);
+                const bool mapped = distance <= 0.6f &&
+                    (change == ContinuationChange::None || change == ContinuationChange::FlagsRestored);
+                if (first.argumentPrepared != mapped)
+                    std::cerr << "continuation_distance delta=" << distance << " descending=" << descending
+                        << " change=" << static_cast<int>(change) << '\n';
+                pass &= Check(first.argumentPrepared == mapped &&
+                    std::fabs(argument - (mapped ? confirmedOutput : start)) < 0.005f,
+                    "continuation_distance_first_writer_requires_original_segment_and_projection");
+                if (!restoreFlags)
+                    pass &= Check(first.decision.cinematicActivationStatus ==
+                        cinematics::EnterActivationStatus::WriterProjectionMismatch,
+                        "continuation_distance_requires_original_constraint_at_writer");
+            };
+            for (const bool descending : {false, true})
+                for (const float delta : {0.0f, 0.05f, 0.495f, 0.599f, 0.6f, 0.601f, 1.0f})
+                    checkContinuationDistance(delta, descending, ContinuationChange::None);
+            checkContinuationDistance(0.495f, false, ContinuationChange::FlagsRestored);
+            checkContinuationDistance(0.495f, false, ContinuationChange::FlagsPersist);
+            checkContinuationDistance(0.495f, false, ContinuationChange::IndependentTarget);
+            checkContinuationDistance(0.8f, false, ContinuationChange::RebaseAttempt);
+            checkContinuationDistance(0.495f, false, ContinuationChange::ReplacedEmptyComponent);
+            checkContinuationDistance(0.495f, false, ContinuationChange::WriterEpoch);
 
             for (const auto mode : {config::GameplayMode::HorPlus, config::GameplayMode::RuntimeCombine}) {
                 for (const bool endpointArrivesFirst : {false, true}) {

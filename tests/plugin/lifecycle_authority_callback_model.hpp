@@ -15,7 +15,8 @@ namespace authority_transition_model
         ProviderArmer, ProviderSetter, ForeignWriter, ProviderFirstWriter, ProviderEndpoint,
         AdmitProvider, PreparedWriter, NativeEndpointWriter, DepartureWriter, ForeignSetter,
         CandidateSetter, DescentSetter, SteadySetter, BlendArmer, BlendStartWriter, BlendEndpoint,
-        ExitSetter, ExitMiddleSetter, ExitWriter, RearmSetter, TerminalSetter, DisableDialogue, ForeignReceiver
+        ExitSetter, ExitMiddleSetter, ExitWriter, RearmSetter, TerminalSetter, DisableDialogue, ForeignReceiver,
+        NativeGameplayFovChange, NativeRecoveryFovChange, ChangedExitEndpoint
     };
 
     using F = FactStage;
@@ -23,6 +24,7 @@ namespace authority_transition_model
     struct CallbackEdge { F before; C callback; F after; };
     constexpr CallbackEdge callbackEdges[]{
         {F::Gameplay, C::GameplayWriter, F::Gameplay},
+        {F::Gameplay, C::NativeGameplayFovChange, F::Gameplay},
         {F::Gameplay, C::Enter, F::Entered},
         {F::Entered, C::Aspect, F::AspectBound},
         {F::AspectBound, C::CinematicWriter, F::Cinematic},
@@ -74,7 +76,9 @@ namespace authority_transition_model
         {F::Exiting, C::ExitWriter, F::Exiting},
         {F::Exiting, C::ExitMiddleSetter, F::Exiting},
         {F::Exiting, C::RearmSetter, F::Rearm},
+        {F::Exiting, C::ChangedExitEndpoint, F::Returned},
         {F::Rearm, C::TerminalSetter, F::Returned},
+        {F::Rearm, C::NativeRecoveryFovChange, F::Rearm},
         {F::Returned, C::GameplayWriter, F::Gameplay},
     };
 
@@ -139,7 +143,21 @@ namespace authority_transition_model
                 f.phase_ = Milestone::Gameplay;
                 writer(base, target, Owner::Gameplay, "event/gameplay-writer");
                 break;
+            case C::NativeGameplayFovChange: {
+                const float changed = base >= 110.0f ? 90.0f : 130.0f;
+                const auto receiver = f.capture_.sourceIdentity;
+                f.options_.native = changed;
+                f.phase_ = Milestone::Gameplay;
+                writer(changed, f.HorPlus(changed), Owner::Gameplay, "event/native-gameplay-fov-change");
+                const auto reference = f.authority_.Read().baseline;
+                f.Expect(reference && reference->receiver == receiver &&
+                    reference->trust == la::BaselineTrust::Current &&
+                    std::fabs(reference->fov - changed) < 0.001f,
+                    "same-receiver FOV change refreshes the reference for subsequent events");
+                break;
+            }
             case C::ProviderArmer: {
+                f.setter_.nativeStart = base;
                 const auto result = f.authority_.DialogueBoundary(f.gate_).Arm(
                     {0xDA, f.options_.source, 7, base, dialogueTarget, base, true});
                 f.phase_ = Milestone::Armed;
@@ -246,6 +264,27 @@ namespace authority_transition_model
                 f.phase_ = Milestone::Rearm;
                 f.Setter(base, base, "event/rearm-setter");
                 break;
+            case C::NativeRecoveryFovChange:
+                // The next setter reports the new endpoint. Changing the
+                // setting supplies no callback or lifecycle proof by itself.
+                f.options_.native = base >= 110.0f ? 90.0f : 130.0f;
+                f.Observe("event/native-recovery-fov-change");
+                break;
+            case C::ChangedExitEndpoint: {
+                // The modeled terminal sample is on the return trajectory.
+                // After an intermediate setter, a fixed lower value could
+                // instead describe a new descent and would not prove a return.
+                const float changed = base >= 110.0f
+                    ? std::lerp(f.setter_.incomingFov, base, 0.5f) : 145.0f;
+                f.options_.native = changed;
+                f.setter_.nativeTarget = changed;
+                f.phase_ = Milestone::Returned;
+                f.Setter(changed, changed, "event/changed-exit-endpoint");
+                f.setter_.nativeTarget = dialogueTarget;
+                f.Expect(f.authority_.Read().scopes.at(f.options_.source).dialogue ==
+                    la::DialoguePhase::None, "verified changed endpoint completes Dialogue on the same receiver");
+                break;
+            }
             case C::TerminalSetter:
                 f.setter_.nativeTarget = base;
                 f.phase_ = Milestone::Returned;

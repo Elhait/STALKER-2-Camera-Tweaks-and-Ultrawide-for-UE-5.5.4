@@ -29,6 +29,12 @@ namespace plugin::lifecycle_authority
         config::CinematicAspectPolicy aspectPolicy{config::CinematicAspectPolicy::Native};
         config::CinematicFovMode fovMode{config::CinematicFovMode::NativeHorPlus};
         cinematics::CinematicBaselineSelection reference;
+        cinematics::EnterActivationSnapshot activation;
+        cinematics::AdmittedWriterOutput lastAdmittedOutput;
+        std::uintptr_t aspectSource{};
+        bool associationConflict{}, writerObserved{};
+        TransactionId reentryWriterBefore{}, reentryWriterAfter{};
+        const char* inheritedStartStatus{"not-evaluated"};
     };
 
     inline NativeCinematicResult Authority::Accept(const NativeCinematicEnter& input)
@@ -243,7 +249,8 @@ namespace plugin::lifecycle_authority
         auto* scope = BindNativeCinematic(w, input.receiver);
         if (!scope || (scope->thread && scope->thread != input.thread)) return result;
         auto start = scope->cinematicActivation.InheritedWriterStart(input.receiver, input.start, input.aspect,
-            input.flags, input.thread, w.settings.gameplayEpoch, w.settings.dialogueEpoch, input.component);
+            input.flags, input.thread, w.settings.gameplayEpoch, w.settings.dialogueEpoch,
+            input.component, &result.inheritedStartStatus, input.target, input.receiverFov);
         if (!start.cinematicContextActive && !scope->cinematicDialogueStart.dialogueContextActive &&
             plugin::IsValidCameraWriterFov(input.receiverFov) && std::fabs(input.start - input.receiverFov) <= 0.05f) {
             float corrected = input.receiverFov;
@@ -266,9 +273,11 @@ namespace plugin::lifecycle_authority
                 start.dialogueSettingsEpoch = w.settings.dialogueEpoch;
             }
         }
+        result.reentryWriterBefore = scope->cinematicActivation.ReentryWriterSequence();
         if (!scope->cinematicActivation.Capture(true, scope->cinematicGeneration,
             scope->cinematicSettingsEpoch, input.component, input.receiver, input.thread,
             input.start, input.target, w.settings.dialogueEpoch, start)) return result;
+        result.activation = scope->cinematicActivation.Read();
         result.decision.accepted = true;
         result.decision.authorityEventId = w.nextAuthorityEventId++;
         scope->writerInputFov.reset();
@@ -292,7 +301,7 @@ namespace plugin::lifecycle_authority
         if (!input.validated || !state_.ready || state_.stopping || !state_.cinematicSelectionActive) return result;
         auto w = state_;
         const auto current = w.scopes.find(w.selectedCinematicScope);
-        const auto retireActivation = [](ScopeState& scope) {
+        const auto retireActivation = [&](ScopeState& scope) {
             cinematics::CinematicWriterAssociationSnapshot association;
             association.generationActive = true;
             association.generation = scope.cinematicGeneration;
@@ -304,7 +313,13 @@ namespace plugin::lifecycle_authority
             if (scope.writerInputFov) {
                 association.latestWriter.sequence = scope.writerInputFov->transactionId;
             }
+            result.aspectSource = association.aspectStoreTargetObject;
+            result.associationConflict = association.associationConflict;
+            result.writerObserved = association.writerObserved;
+            result.lastAdmittedOutput = association.lastAdmittedOutput;
+            result.reentryWriterBefore = scope.cinematicActivation.ReentryWriterSequence();
             scope.cinematicActivation.RetireForReentry(association);
+            result.reentryWriterAfter = scope.cinematicActivation.ReentryWriterSequence();
         };
         if (current != w.scopes.end()) {
             auto& scope = current->second;

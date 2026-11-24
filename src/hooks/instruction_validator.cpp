@@ -8,7 +8,8 @@ namespace hooks::validation
     bool IsExecutable(std::uintptr_t address)
     {
         MEMORY_BASIC_INFORMATION info{};
-        if (!VirtualQuery(reinterpret_cast<const void*>(address), &info, sizeof(info))) return false;
+        if (!address || !VirtualQuery(reinterpret_cast<const void*>(address), &info, sizeof(info)) ||
+            info.State != MEM_COMMIT || (info.Protect & PAGE_GUARD)) return false;
         const auto protection = info.Protect & 0xFF;
         return protection == PAGE_EXECUTE || protection == PAGE_EXECUTE_READ ||
             protection == PAGE_EXECUTE_READWRITE || protection == PAGE_EXECUTE_WRITECOPY;

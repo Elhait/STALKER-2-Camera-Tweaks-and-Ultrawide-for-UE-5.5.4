@@ -1,0 +1,20 @@
+[
+  {
+    "Version": "3.2.2",
+    "Hash": "896C4923ECB3C8D4321FB84D73AEE94C5FAD6582594427FD379E84B41AFA7590",
+    "ExitCode": 0,
+    "TimedOut": false,
+    "Cleanup": true,
+    "Output": "Scan starting...\r\nScan finished.\r\nScanning E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\build-artifacts\\v4-4556-local-scan\\v3.2.2.asi found no threats.\r\n",
+    "Unchanged": true
+  },
+  {
+    "Version": "4.0.0",
+    "Hash": "A4C4219F4C788DED356EB468A87BAA5FD3C8B40F9480045CC8559980E3563A3C",
+    "ExitCode": 0,
+    "TimedOut": false,
+    "Cleanup": true,
+    "Output": "Scan starting...\r\nScan finished.\r\nScanning E:\\Work\\Slaker2 mods\\01-Projects\\STALKER-2-Ultrawide-Fix-for-UE-5.5.4\\build-artifacts\\v4-4556-local-scan\\v4.0.0.asi found no threats.\r\n",
+    "Unchanged": true
+  }
+]

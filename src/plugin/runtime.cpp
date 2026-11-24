@@ -3851,6 +3851,36 @@ namespace
         return true;
     }
 
+    bool CameraHookPatchesOverlap(const safetyhook::MidHook& first,
+        const safetyhook::MidHook& second)
+    {
+        return first && second && hooks::validation::PatchSpansOverlap(
+            first.target_address(), first.original_bytes().size(),
+            second.target_address(), second.original_bytes().size());
+    }
+
+    bool ConflictsWithPreparedCameraHook(const safetyhook::MidHook& candidate)
+    {
+        for (const auto* existing : {&g_zoomInHook, &g_zoomOutHook,
+                &g_cinematicAspectStoreHook, &g_cinematicEnterHook, &g_cinematicExitHook,
+                &g_hook, &g_gameplayWriterPostStoreHook, &g_gameplayWriterPostProcessHook,
+                &g_dialogueBoundaryHook}) {
+            if (existing != &candidate && CameraHookPatchesOverlap(candidate, *existing))
+                return true;
+        }
+#ifdef POST_EXIT_BLEND_OBSERVATION
+        for (const auto* existing : {&g_postExitBlendActivationHook, &g_postExitBlendSetterReturnHook}) {
+            if (existing != &candidate && CameraHookPatchesOverlap(candidate, *existing))
+                return true;
+        }
+        for (const auto& existing : g_hooks.cinematicConsumer) {
+            if (&existing != &candidate && CameraHookPatchesOverlap(candidate, existing))
+                return true;
+        }
+#endif
+        return false;
+    }
+
     bool InstallCinematicAspect(std::uint8_t* store)
     {
         g_cinematicAspectStore = store;
@@ -3865,7 +3895,7 @@ namespace
             g_cinematicAspectStore,
             SafeMidHookEntry<&ApplyCinematicAspectStore, &PassThroughCinematicAspectStore>,
             safetyhook::MidHook::StartDisabled);
-        if (!hook) return false;
+        if (!hook || ConflictsWithPreparedCameraHook(*hook)) return false;
         g_cinematicAspectStoreHook = std::move(*hook);
         g_cinematicAspectPatched = true;
         return true;
@@ -4401,9 +4431,24 @@ namespace
                     receiverFovReadable ? capture.receiverField : NAN, sampled.aspect,
                     platform::win32::ReadCurrentProcessClientViewportAspect(), sampled.flags,
                     true, startReadable && targetReadable});
-            if (result.decision.accepted && diagnostics::Enabled())
+            if (result.decision.accepted && diagnostics::Enabled()) {
+                const auto& activation = result.activation;
                 Log("CINEMATIC_ENTER_ACTIVATION_PROVENANCE status=captured generation=", result.generation,
-                    " receiver=0x", std::hex, capture.receiver, std::dec, ".");
+                    " component=0x", std::hex, capture.component, " receiver=0x", capture.receiver,
+                    " flags=0x", unsigned(sampled.flags), std::dec, " thread=", capture.thread,
+                    " aspect=", sampled.aspect, " native_start=", activation.nativeStart,
+                    " native_target=", activation.nativeTarget, " corrected_target=", activation.correctedTarget,
+                    " gameplay_epoch=", state.gameplayEpoch, " cinematic_epoch=", activation.settingsEpoch,
+                    " dialogue_epoch=", state.dialogueEpoch, " prior_writer_invocation=", result.reentryWriterBefore,
+                    " inherited_start_status=", result.inheritedStartStatus,
+                    " corrected_start_valid=", activation.correctedStartValid,
+                    " writer_projection_pending=", activation.writerProjectionPending,
+                    " corrected_start=", activation.correctedStart,
+                    " from_cinematic=", activation.correctedStartFromCinematic,
+                    " from_dialogue=", activation.correctedStartFromDialogue,
+                    " from_current_sample=", activation.correctedStartFromCurrentSample,
+                    " confirmed_writer_invocation=", activation.correctedStartWriterSequence, ".");
+            }
         }
 #else
         const float startFov = capture.start;
@@ -4992,8 +5037,15 @@ namespace
                 g_runtime.dialogueBoundaryObservation.Arm(result.generation);
 #endif
             FlushCinematicContinuationTrace("cinematic_exit");
+            const auto& writer = result.lastAdmittedOutput;
             Log("CINEMATIC_EXIT generation=", result.generation,
-                " native_fov=", context.xmm0.f32[0], ".");
+                " native_fov=", context.xmm0.f32[0],
+                " aspect_source=0x", std::hex, result.aspectSource, " writer_receiver=0x", writer.source,
+                " writer_output=0x", writer.output, std::dec,
+                " association_conflict=", result.associationConflict, " writer_observed=", result.writerObserved,
+                " writer_admitted=", writer.valid, " writer_generation=", writer.generation,
+                " writer_invocation=", writer.sequence, " evidence_before=", result.reentryWriterBefore,
+                " evidence_after=", result.reentryWriterAfter, ".");
         }
         PublishAuthorityCameraState();
 #else
@@ -5254,7 +5306,9 @@ namespace
             cinematicEnter, SafeMidHookEntry<&TraceCinematicEnter>, safetyhook::MidHook::StartDisabled);
         auto exitHook = safetyhook::MidHook::create(
             cinematicExit, SafeMidHookEntry<&TraceCinematicExit>, safetyhook::MidHook::StartDisabled);
-        if (!enterHook || !exitHook) return false;
+        if (!enterHook || !exitHook || ConflictsWithPreparedCameraHook(*enterHook) ||
+            ConflictsWithPreparedCameraHook(*exitHook) ||
+            CameraHookPatchesOverlap(*enterHook, *exitHook)) return false;
         g_cinematicEnterHook = std::move(*enterHook);
         g_cinematicExitHook = std::move(*exitHook);
         if (!g_cinematicEnterHook || !g_cinematicExitHook) return false;
@@ -5287,20 +5341,8 @@ namespace
                 activationResolution.hook,
                 SafeMidHookEntry<&TracePostExitBlendStartCapture>,
                 safetyhook::MidHook::StartDisabled);
-            if (activationHook) {
-                const auto overlaps = [](const safetyhook::MidHook& a,
-                    const safetyhook::MidHook& b) {
-                    if (!a || !b) return false;
-                    const auto first = a.target_address();
-                    const auto second = b.target_address();
-                    return first < second + b.original_bytes().size() &&
-                        second < first + a.original_bytes().size();
-                };
-                if (!overlaps(*activationHook, g_cinematicEnterHook) &&
-                    !overlaps(*activationHook, g_cinematicExitHook) &&
-                    !overlaps(*activationHook, g_cinematicAspectStoreHook))
-                    g_postExitBlendActivationHook = std::move(*activationHook);
-            }
+            if (activationHook && !ConflictsWithPreparedCameraHook(*activationHook))
+                g_postExitBlendActivationHook = std::move(*activationHook);
         }
         if (diagnostics::Enabled()) {
             Log("POST_EXIT_BLEND_ACTIVATION_CAPABILITY resolver=",
@@ -5335,23 +5377,13 @@ namespace
             for (std::size_t i = 0; ready && i < blendSites.points.size(); ++i) {
                 auto hook = safetyhook::MidHook::create(blendSites.points[i], callbacks[i],
                     safetyhook::MidHook::StartDisabled);
-                ready = static_cast<bool>(hook);
+                ready = hook && !ConflictsWithPreparedCameraHook(*hook);
                 if (ready) g_hooks.cinematicConsumer[i] = std::move(*hook);
             }
-            const auto overlaps = [](const safetyhook::MidHook& a, const safetyhook::MidHook& b) {
-                if (!a || !b) return false;
-                const auto x = a.target_address(), y = b.target_address();
-                return x < y + b.original_bytes().size() && y < x + a.original_bytes().size();
-            };
             for (std::size_t i = 0; ready && i < 4; ++i) {
                 auto& probe = g_hooks.cinematicConsumer[i];
                 ready = probe.original_bytes().size() <= 16 &&
                     blendTextSpan.Contains(probe.target(), probe.original_bytes().size());
-                for (auto* existing : {&g_cinematicEnterHook, &g_cinematicExitHook,
-                    &g_cinematicAspectStoreHook, &g_postExitBlendActivationHook})
-                    ready = ready && !overlaps(probe, *existing);
-                for (std::size_t j = 0; j < i; ++j)
-                    ready = ready && !overlaps(probe, g_hooks.cinematicConsumer[j]);
             }
             if (!ready) for (auto& hook : g_hooks.cinematicConsumer) hook.reset();
             Log("CINEMATIC_CONSUMER_CAPABILITY resolver=", blendSites.reason,
@@ -5950,7 +5982,7 @@ namespace
                 auto postHook = safetyhook::MidHook::create(
                     postSetter.hook, SafeMidHookEntry<&TracePostExitBlendSetterReturn>,
                     safetyhook::MidHook::StartDisabled);
-                if (postHook)
+                if (postHook && !ConflictsWithPreparedCameraHook(*postHook))
                     g_postExitBlendSetterReturnHook = std::move(*postHook);
                 else
                     Log("POST_EXIT_BLEND_POST_SETTER_CAPABILITY installation=unavailable reason=create_failed.");
@@ -5960,16 +5992,30 @@ namespace
         }
 #endif
         constexpr std::uint8_t expected[] = { 0xFF, 0x90, 0x08, 0x06, 0x00, 0x00 };
-        if (std::memcmp(hook, expected, sizeof(expected)) != 0) {
+        if (!hooks::validation::IsExecutable(reinterpret_cast<std::uintptr_t>(hook)) ||
+            std::memcmp(hook, expected, sizeof(expected)) != 0) {
 #ifdef POST_EXIT_BLEND_OBSERVATION
             g_postExitBlendSetterReturnHook.reset();
 #endif
             Log("Dialogue boundary instruction contract rejected. Native pass-through retained.");
             return false;
         }
-        g_dialogueBoundaryHook = safetyhook::create_mid(
-            hook, SafeMidHookEntry<&TraceDialogueBoundary>);
-        if (!g_dialogueBoundaryHook || !g_dialogueBoundaryHook.enable()) {
+        auto primary = safetyhook::MidHook::create(
+            hook, SafeMidHookEntry<&TraceDialogueBoundary>, safetyhook::MidHook::StartDisabled);
+        if (primary) g_dialogueBoundaryHook = std::move(*primary);
+#ifdef POST_EXIT_BLEND_OBSERVATION
+        if (g_postExitBlendSetterReturnHook && (!g_dialogueBoundaryHook ||
+                !hooks::IsIndependentDialogueSetterReturn(hook,
+                    g_dialogueBoundaryHook.original_bytes().size(),
+                    g_postExitBlendSetterReturnHook.target(), blendText) ||
+                !blendText.Contains(g_postExitBlendSetterReturnHook.target(),
+                    g_postExitBlendSetterReturnHook.original_bytes().size()))) {
+            g_postExitBlendSetterReturnHook.reset();
+            Log("POST_EXIT_BLEND_POST_SETTER_CAPABILITY hook=unavailable reason=primary_hook_span.");
+        }
+#endif
+        if (!g_dialogueBoundaryHook ||
+            ConflictsWithPreparedCameraHook(g_dialogueBoundaryHook) || !g_dialogueBoundaryHook.enable()) {
             g_dialogueBoundaryHook.reset();
 #ifdef POST_EXIT_BLEND_OBSERVATION
             g_runtime.postExitBlendLayoutAvailable = false;
@@ -7478,6 +7524,26 @@ namespace
             if (committed.physical) observed.gameplay = *committed.physical;
             try {
                 CompleteCameraWriterPostStoreTrace(observed, input);
+                if (state.coordinator == CoordinatorState::CinematicActive) {
+                    // One first Writer and at most one later first admitted Writer per generation.
+                    static std::uint64_t tracedGeneration{};
+                    static bool tracedAdmission{};
+                    const bool first = tracedGeneration != state.generation;
+                    if (first) tracedAdmission = false;
+                    const bool admitted = committed.decision.cinematicWriterAdmitted;
+                    if (first || (admitted && !tracedAdmission)) {
+                        tracedGeneration = state.generation;
+                        tracedAdmission = admitted;
+                        Log("CINEMATIC_CONTINUATION_WRITER generation=", state.generation,
+                            " writer_invocation=", committed.writerInvocationId, " diagnostic_transaction=", frame.invocation,
+                            " first=", first, " admitted=", admitted, " thread=", input.threadId,
+                            " receiver=0x", std::hex, input.sourceIdentity, " output=0x", input.outputObjectIdentity,
+                            " flags=0x", unsigned(input.flags), std::dec, " aspect=", input.aspect,
+                            " input=", input.incomingFov, " prepared_argument=", context.xmm0.f32[0],
+                            " activation_status=", cinematics::EnterActivationStatusName(committed.decision.cinematicActivationStatus),
+                            " action=", CinematicDiagnosticActionName(observed.cinematicAction), ".");
+                    }
+                }
                 if (state.coordinator == CoordinatorState::CinematicActive && state.continuationSource) {
                     RecordCinematicContinuationTrace(true, true, input.sourceIdentity,
                         input.sourceIdentity == state.continuationSource,
@@ -8556,7 +8622,8 @@ namespace
             SafeMidHookEntry<&TraceZoomIn>, safetyhook::MidHook::StartDisabled);
         auto out = safetyhook::MidHook::create(resolution.out,
             SafeMidHookEntry<&TraceZoomOut>, safetyhook::MidHook::StartDisabled);
-        if (!in || !out) {
+        if (!in || !out || ConflictsWithPreparedCameraHook(*in) ||
+            ConflictsWithPreparedCameraHook(*out) || CameraHookPatchesOverlap(*in, *out)) {
             Log("Zoom observer unavailable: reason=hook-create; pair not committed.");
             return false;
         }
@@ -9922,7 +9989,8 @@ namespace
                 auto gameplayHook = safetyhook::MidHook::create(
                     g_fovWriteAddress, SafeMidHookEntry<&ReplayManualTransition>,
                     safetyhook::MidHook::StartDisabled);
-                if (!gameplayHook) throw std::runtime_error("validated gameplay hook creation failed");
+                if (!gameplayHook || ConflictsWithPreparedCameraHook(*gameplayHook))
+                    throw std::runtime_error("validated gameplay hook creation or span check failed");
                 g_hook = std::move(*gameplayHook);
                 bool postStoreTraceInstalled = false;
                 bool postProcessTraceInstalled = false;
@@ -9937,7 +10005,7 @@ namespace
                             g_cameraWriterPostStoreAddress,
                             SafeMidHookEntry<&ObserveCameraWriterPostStore>,
                             safetyhook::MidHook::StartDisabled);
-                        if (!postStoreHook) {
+                        if (!postStoreHook || ConflictsWithPreparedCameraHook(*postStoreHook)) {
                             Log("CAMERA_WRITER_STORE_TRACE capability=unavailable reason=post_store_hook_create_failed.");
                         } else {
                             g_gameplayWriterPostStoreHook = std::move(*postStoreHook);
@@ -9961,7 +10029,7 @@ namespace
                             g_cameraWriterPostProcessAddress,
                             SafeMidHookEntry<&ObserveCameraWriterPostProcess>,
                             safetyhook::MidHook::StartDisabled);
-                        if (!postProcessHook) {
+                        if (!postProcessHook || ConflictsWithPreparedCameraHook(*postProcessHook)) {
                             Log("CAMERA_POST_PROCESS capability=unavailable reason=hook_create_failed.");
                         } else {
                             g_gameplayWriterPostProcessHook = std::move(*postProcessHook);

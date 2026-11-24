@@ -112,6 +112,30 @@ bool ExerciseCorrectiveBindings()
         stationary.Read().scopes.at(1).dialogue == DialoguePhase::None,
         "writer_retires_stationary_candidate_from_production_predicate_without_adapter_terminal_verdict");
 
+    stationary.Accept(setter);
+    auto candidateMode = Basic(EventKind::SettingsChanged);
+    candidateMode.settingsDomain = SettingsDomain::Gameplay;
+    candidateMode.settingsMutation = SettingsMutation::PolicySelection;
+    candidateMode.policySelection = static_cast<unsigned>(config::GameplayMode::AspectRecalculation);
+    stationary.Accept(candidateMode);
+    candidateMode.policySelection = static_cast<unsigned>(config::GameplayMode::RuntimeCombine);
+    stationary.Accept(candidateMode);
+    auto changed = CorrectiveWriter(90.0f);
+    changed.input.evidence.gameplayRoleProven = false;
+    for (unsigned i = 0; i < 4; ++i) {
+        auto waiting = stationary.Accept(changed);
+        pass &= Check(!stationary.PrepareWriterArgument(waiting, argument) &&
+            stationary.Read().scopes.at(1).dialogue == DialoguePhase::Candidate &&
+            stationary.Read().baseline && stationary.Read().baseline->fov != 90.0,
+            "changed_scalar_alone_does_not_terminate_candidate");
+    }
+    changed.input.evidence.gameplayRoleProven = true;
+    auto confirmedChange = stationary.Accept(changed);
+    pass &= Check(stationary.PrepareWriterArgument(confirmedChange, argument) &&
+        stationary.Read().scopes.at(1).dialogue == DialoguePhase::None &&
+        stationary.Read().baseline && stationary.Read().baseline->fov == 90.0,
+        "proven_same_source_gameplay_retires_candidate_and_refreshes_changed_baseline");
+
     Authority provider;
     InitializeCorrective(provider);
     auto baseline = provider.Accept(CorrectiveWriter());

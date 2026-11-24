@@ -1,0 +1,1882 @@
+Archive: STALKER2CameraTweaks-UE5.5.4-v3.2.2.zip
+Archive SHA256: 84166e4fe6ae8636dd8ed8c9bf2564e9508085827a795d0aad5889923042fc0f
+Entries: ['STALKER2CameraTweaks.asi', 'README.txt', 'LICENSE.md', 'THIRD_PARTY_NOTICES.md']
+ASI SHA256: 896c4923ecb3c8d4321fb84d73aee94c5fad6582594427fd379e84b41afa7590
+ASI bytes: 3567104
+Microsoft (R) COFF/PE Dumper Version 14.44.35224.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file STALKER2CameraTweaks.asi
+
+PE signature found
+
+File Type: DLL
+
+FILE HEADER VALUES
+            8664 machine (x64)
+               7 number of sections
+        6AE20B1D time date stamp Wed Oct 28 16:47:57 2026
+               0 file pointer to symbol table
+               0 number of symbols
+              F0 size of optional header
+            2022 characteristics
+                   Executable
+                   Application can handle large (>2GB) addresses
+                   DLL
+
+OPTIONAL HEADER VALUES
+             20B magic # (PE32+)
+           14.44 linker version
+          175400 size of code
+          201E00 size of initialized data
+               0 size of uninitialized data
+          1402E8 entry point (00000001801402E8)
+            1000 base of code
+       180000000 image base (0000000180000000 to 000000018037CFFF)
+            1000 section alignment
+             200 file alignment
+            6.00 operating system version
+            0.00 image version
+            6.00 subsystem version
+               0 Win32 version
+          37D000 size of image
+             400 size of headers
+               0 checksum
+               2 subsystem (Windows GUI)
+             160 DLL characteristics
+                   High Entropy Virtual Addresses
+                   Dynamic base
+                   NX compatible
+          100000 size of stack reserve
+            1000 size of stack commit
+          100000 size of heap reserve
+            1000 size of heap commit
+               0 loader flags
+              10 number of directories
+               0 [       0] RVA [size] of Export Directory
+          239A2C [      A0] RVA [size] of Import Directory
+          278000 [  100270] RVA [size] of Resource Directory
+          26A000 [    C1D4] RVA [size] of Exception Directory
+               0 [       0] RVA [size] of Certificates Directory
+          379000 [    3B8C] RVA [size] of Base Relocation Directory
+          21AA80 [      1C] RVA [size] of Debug Directory
+               0 [       0] RVA [size] of Architecture Directory
+               0 [       0] RVA [size] of Global Pointer Directory
+          21AC00 [      28] RVA [size] of Thread Storage Directory
+          21A940 [     140] RVA [size] of Load Configuration Directory
+               0 [       0] RVA [size] of Bound Import Directory
+          177000 [     6D8] RVA [size] of Import Address Table Directory
+               0 [       0] RVA [size] of Delay Import Directory
+               0 [       0] RVA [size] of COM Descriptor Directory
+               0 [       0] RVA [size] of Reserved Directory
+
+
+SECTION HEADER #1
+   .text name
+  175328 virtual size
+    1000 virtual address (0000000180001000 to 0000000180176327)
+  175400 size of raw data
+     400 file pointer to raw data (00000400 to 001757FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+60000020 flags
+         Code
+         Execute Read
+
+SECTION HEADER #2
+  .rdata name
+   C41A4 virtual size
+  177000 virtual address (0000000180177000 to 000000018023B1A3)
+   C4200 size of raw data
+  175800 file pointer to raw data (00175800 to 002399FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+40000040 flags
+         Initialized Data
+         Read Only
+
+  Debug Directories
+
+        Time Type        Size      RVA  Pointer
+    -------- ------- -------- -------- --------
+    6AE20B1D coffgrp      444 00225EDC   2246DC
+
+  Image has the following dependencies:
+
+    USER32.dll
+    bcrypt.dll
+    d3d11.dll
+    dcomp.dll
+    D3DCOMPILER_47.dll
+    KERNEL32.dll
+    IMM32.dll
+
+  Section contains the following imports:
+
+    USER32.dll
+             180177488 Import Address Table
+             180239F58 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                         206 GetWindowThreadProcessId
+                         25C IsWindowVisible
+                         162 GetForegroundWindow
+                         3D5 UnhookWinEvent
+                         13A GetClientRect
+                         1F6 GetWindowLongPtrW
+                         111 EnumWindows
+                         138 GetClassNameW
+                         1E9 GetWindow
+                         106 EnumDisplaySettingsA
+                         2BC PostMessageW
+                         3D2 TranslateMessage
+                          C1 DispatchMessageW
+                         2B8 PeekMessageW
+                         2BF PostThreadMessageW
+                          AB DefWindowProcW
+                          22 CallWindowProcW
+                         264 LoadCursorA
+                         25B IsWindowUnicode
+                         310 ReleaseCapture
+                         332 SetCapture
+                         12C GetCapture
+                         172 GetKeyState
+                         190 GetMessageExtraInfo
+                         3CB TrackMouseEvent
+                         173 GetKeyboardLayout
+                          ED EmptyClipboard
+                         13D GetClipboardData
+                         33A SetClipboardData
+                          50 CloseClipboard
+                         2AA OpenClipboard
+                          4E ClientToScreen
+                         398 SetWindowPos
+                         1C2 GetRawInputData
+                         15E GetDpiForWindow
+                         383 SetThreadDpiAwarenessContext
+                         128 GetAsyncKeyState
+                         38B SetWinEventHook
+                         267 LoadCursorW
+                          20 CallNextHookEx
+                         3D7 UnhookWindowsHookEx
+                         3A2 SetWindowsHookExW
+                         394 SetWindowLongPtrW
+                         27C LogicalToPhysicalPointForPerMonitorDPI
+                         31E ScreenToClient
+                         14A GetCursorPos
+                         33F SetCursor
+                         317 RemovePropW
+                         1BF GetPropW
+                         373 SetPropW
+                         25F KillTimer
+                         386 SetTimer
+                         2A1 MsgWaitForMultipleObjectsEx
+                         243 IsIconic
+                         3B1 ShowWindow
+                          B9 DestroyWindow
+                         255 IsWindow
+                          7A CreateWindowExW
+                         131 GetClassInfoExW
+                         2EE RegisterClassExW
+                         3DD UnregisterClassW
+
+    bcrypt.dll
+             180177678 Import Address Table
+             18023A148 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                          23 BCryptGetProperty
+                           2 BCryptCloseAlgorithmProvider
+                           6 BCryptCreateHash
+                          25 BCryptHashData
+                          1D BCryptFinishHash
+                           E BCryptDestroyHash
+                          29 BCryptOpenAlgorithmProvider
+
+    d3d11.dll
+             1801776B8 Import Address Table
+             18023A188 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                           6 D3D11CreateDevice
+
+    dcomp.dll
+             1801776C8 Import Address Table
+             18023A198 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                           5 DCompositionCreateDevice2
+
+    D3DCOMPILER_47.dll
+             180177000 Import Address Table
+             180239AD0 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                           1 D3DCompile
+
+    KERNEL32.dll
+             180177038 Import Address Table
+             180239B08 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                         262 GetEnvironmentStringsW
+                         200 GetCommandLineW
+                         1FF GetCommandLineA
+                         2C6 GetOEMCP
+                         1DB GetACP
+                         3BE IsValidCodePage
+                         383 HeapReAlloc
+                         569 SetFilePointerEx
+                         343 GetTimeZoneInformation
+                         303 GetStdHandle
+                         17B EnumSystemLocalesW
+                         349 GetUserDefaultLCID
+                         3C0 IsValidLocale
+                         291 GetLocaleInfoW
+                         3E4 LCMapStringW
+                          B3 CompareStringW
+                         341 GetTimeFormatW
+                         24C GetDateFormatW
+                         1C3 FlsFree
+                         1C6 FlsSetValue
+                         1C4 FlsGetValue
+                         1C2 FlsAlloc
+                         380 HeapFree
+                         37C HeapAlloc
+                         186 ExitProcess
+                         3F6 LoadLibraryExW
+                         1D4 FreeLibrary
+                         5EB TlsFree
+                         5EE TlsSetValue
+                         5EC TlsGetValue
+                         5EA TlsAlloc
+                         396 InitializeCriticalSectionAndSpinCount
+                         39E InterlockedFlushSList
+                         517 RtlUnwindEx
+                         498 RaiseException
+                         513 RtlPcToFileHeader
+                         301 GetStartupInfoW
+                         3B0 IsDebuggerPresent
+                         39A InitializeSListHead
+                         3B8 IsProcessorFeaturePresent
+                         5D8 TerminateProcess
+                         5B8 SetUnhandledExceptionFilter
+                         5FB UnhandledExceptionFilter
+                         518 RtlVirtualUnwind
+                         511 RtlLookupFunctionEntry
+                         509 RtlCaptureContext
+                         1EA GetCPInfo
+                         308 GetStringTypeW
+                         3E3 LCMapStringEx
+                         128 DecodePointer
+                         153 EncodePointer
+                         1D3 FreeEnvironmentStringsW
+                         55A SetEnvironmentVariableW
+                         2E4 GetProcessHeap
+                          E6 CreateFileW
+                         272 GetFileInformationByHandle
+                         27A GetFileType
+                         556 SetEndOfFile
+                         660 WriteFile
+                         44A OutputDebugStringA
+                          9D CloseHandle
+                         28D GetLastError
+                         578 SetLastError
+                         481 QueryPerformanceCounter
+                         482 QueryPerformanceFrequency
+                         4EA ReleaseSRWLockExclusive
+                           0 AcquireSRWLockExclusive
+                         242 GetCurrentProcessId
+                         246 GetCurrentThreadId
+                         31A GetSystemTimeAsFileTime
+                         33D GetTickCount64
+                         2A1 GetModuleFileNameW
+                         2A2 GetModuleHandleA
+                         2A4 GetModuleHandleExW
+                         55C SetEvent
+                         625 WaitForSingleObject
+                          D9 CreateEventW
+                         10F CreateThread
+                         330 GetThreadId
+                         142 DisableThreadLibraryCalls
+                         136 DeleteFileW
+                         1C8 FlushFileBuffers
+                         278 GetFileSizeEx
+                         4A9 ReadFile
+                         41C MoveFileExW
+                         318 GetSystemTime
+                          C5 CopyFileW
+                         61C VirtualQuery
+                         682 lstrcmpW
+                         3FA LoadResource
+                         40E LockResource
+                         5C7 SizeofResource
+                         1BE FindResourceW
+                         241 GetCurrentProcess
+                         4AC ReadProcessMemory
+                         2A5 GetModuleHandleW
+                         3D7 K32GetModuleInformation
+                         623 WaitForMultipleObjects
+                         2DD GetProcAddress
+                          14 AddVectoredExceptionHandler
+                         499 RaiseFailFastException
+                         1C9 FlushInstructionCache
+                         314 GetSystemInfo
+                         614 VirtualAlloc
+                         61A VirtualProtect
+                         617 VirtualFree
+                         364 GlobalAlloc
+                         376 GlobalUnlock
+                         36F GlobalLock
+                         36B GlobalFree
+                         423 MultiByteToWideChar
+                         28F GetLocaleInfoA
+                         229 GetConsoleOutputCP
+                         225 GetConsoleMode
+                         593 SetStdHandle
+                         385 HeapSize
+                         65F WriteConsoleW
+                         64C WideCharToMultiByte
+                         402 LocalFree
+                         1CF FormatMessageA
+                         290 GetLocaleInfoEx
+                         5F2 TryAcquireSRWLockExclusive
+                         5CA SleepConditionVariableSRW
+                         5C8 Sleep
+                         19D FindClose
+                         1A8 FindFirstFileW
+                         1A3 FindFirstFileExW
+                         1B4 FindNextFileW
+                         26D GetFileAttributesExW
+                          25 AreFileApisANSI
+                         273 GetFileInformationByHandleEx
+                         62D WakeAllConditionVariable
+                         5D3 SwitchToThread
+                         157 EnterCriticalSection
+                         3F0 LeaveCriticalSection
+                         397 InitializeCriticalSectionEx
+                         12F DeleteCriticalSection
+
+    IMM32.dll
+             180177010 Import Address Table
+             180239AE0 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                          6B ImmReleaseContext
+                          77 ImmSetCompositionWindow
+                          72 ImmSetCandidateWindow
+                          3B ImmGetContext
+
+  Section contains the following load config:
+
+            00000140 size
+                   0 time date stamp
+                0.00 Version
+                   0 GlobalFlags Clear
+                   0 GlobalFlags Set
+                   0 Critical Section Default Timeout
+                   0 Decommit Free Block Threshold
+                   0 Decommit Total Free Threshold
+    0000000000000000 Lock Prefix Table
+                   0 Maximum Allocation Size
+                   0 Virtual Memory Threshold
+                   0 Process Affinity Mask
+                   0 Process Heap Flags
+                   0 CSD Version
+                0000 Dependent Load Flag
+    0000000000000000 Edit List
+    000000018023F480 Security Cookie
+    00000001801776D8 Guard CF address of check-function pointer
+    00000001801776E8 Guard CF address of dispatch-function pointer
+    0000000000000000 Guard CF function table
+                   0 Guard CF function count
+            00000100 Guard Flags
+                       CF instrumented
+                0000 Code Integrity Flags
+                0000 Code Integrity Catalog
+            00000000 Code Integrity Catalog Offset
+            00000000 Code Integrity Reserved
+    0000000000000000 Guard CF address taken IAT entry table
+                   0 Guard CF address taken IAT entry count
+    0000000000000000 Guard CF long jump target table
+                   0 Guard CF long jump target count
+    0000000000000000 Dynamic value relocation table
+    0000000000000000 Hybrid metadata pointer
+    0000000000000000 Guard RF address of failure-function
+    0000000000000000 Guard RF address of failure-function pointer
+            00000000 Dynamic value relocation table offset
+                0000 Dynamic value relocation table section
+                0000 Reserved2
+    0000000000000000 Guard RF address of stack pointer verification function pointer
+            00000000 Hot patching table offset
+                0000 Reserved3
+    0000000000000000 Enclave configuration pointer
+    00000001802249DC Volatile metadata pointer
+    0000000000000000 Guard EH continuation table
+                   0 Guard EH continuation count
+    00000001801776E0 Guard XFG address of check-function pointer
+    00000001801776F0 Guard XFG address of dispatch-function pointer
+    00000001801776F8 Guard XFG address of dispatch-table-function pointer
+    0000000180177700 CastGuard OS determined failure mode
+    0000000180177708 Guard memcpy function pointer
+
+    Volatile Metadata
+
+                      18 size
+                       3 min version (8003)
+                       3 max version (8003)
+        00000000002249F4 volatile access RVA table
+                    14A8 volatile access RVA table size
+        0000000000225E9C volatile range info table
+                      40 volatile range info table size
+
+    Volatile Access RVA Table
+
+          Address
+          --------
+           00000001800227CD
+           0000000180022800
+           000000018002280F
+           000000018002282E
+           00000001800228AA
+           00000001800228BF
+           00000001800228CD
+           00000001800228D5
+           00000001800228DD
+           00000001800228F5
+           000000018002290C
+           0000000180022913
+           000000018002291B
+           0000000180022936
+           0000000180022941
+           0000000180022976
+           000000018002298E
+           00000001800229B2
+           0000000180022A05
+           0000000180022A0E
+           0000000180022A1B
+           0000000180022A23
+           0000000180022A2B
+           0000000180022A38
+           0000000180022A40
+           0000000180022A48
+           0000000180022A50
+           0000000180022A58
+           0000000180050C2D
+           0000000180050CB4
+           0000000180050D3C
+           0000000180050DC4
+           0000000180050E4C
+           0000000180050ED6
+           0000000180050F5E
+           0000000180068303
+           000000018006B638
+           000000018006B643
+           000000018006B660
+           000000018006B66B
+           000000018006E56D
+           000000018006E578
+           0000000180070A17
+           0000000180070A22
+           0000000180070A3F
+           0000000180070A4A
+           0000000180070A67
+           0000000180070A72
+           0000000180070A8F
+           0000000180070A9A
+           0000000180070BC9
+           0000000180070BD5
+           0000000180070BF5
+           0000000180070C01
+           0000000180070C21
+           0000000180070C2D
+           0000000180070D46
+           0000000180070D51
+           0000000180070D6E
+           0000000180070D79
+           0000000180070D96
+           0000000180070DA1
+           0000000180071358
+           0000000180071363
+           0000000180071380
+           000000018007138B
+           00000001800713A8
+           00000001800713B3
+           00000001800713D0
+           00000001800713DB
+           00000001800713F8
+           0000000180071403
+           0000000180071420
+           000000018007142B
+           0000000180071448
+           0000000180071453
+           0000000180071470
+           000000018007147B
+           0000000180071498
+           00000001800714A3
+           00000001800714C0
+           00000001800714CB
+           00000001800714E8
+           00000001800714F3
+           0000000180071510
+           000000018007151B
+           0000000180071538
+           0000000180071543
+           0000000180071560
+           000000018007156B
+           0000000180071588
+           0000000180071593
+           00000001800715B0
+           00000001800715BB
+           00000001800715D8
+           00000001800715E3
+           0000000180071600
+           000000018007160B
+           0000000180071628
+           0000000180071633
+           0000000180071650
+           000000018007165B
+           0000000180071678
+           0000000180071683
+           00000001800716A0
+           00000001800716AB
+           00000001800716C8
+           00000001800716D3
+           00000001800716F0
+           00000001800716FB
+           00000001800717B3
+           00000001800717BF
+           00000001800718BE
+           00000001800718CA
+           00000001800719FC
+           0000000180071A07
+           0000000180071A24
+           0000000180071A2F
+           0000000180071A4C
+           0000000180071A57
+           0000000180071A74
+           0000000180071A7F
+           0000000180071A9C
+           0000000180071AA7
+           0000000180072CB1
+           0000000180072CBC
+           0000000180072CD9
+           0000000180072CE4
+           0000000180072D01
+           0000000180072D0C
+           0000000180072D29
+           0000000180072D34
+           0000000180072E83
+           0000000180072E8E
+           0000000180072EAB
+           0000000180072EB6
+           0000000180072ED3
+           0000000180072EDE
+           0000000180072EFB
+           0000000180072F06
+           0000000180072F23
+           0000000180072F2E
+           0000000180072F4B
+           0000000180072F56
+           0000000180072F73
+           0000000180072F7E
+           0000000180072F9B
+           0000000180072FA6
+           0000000180072FC3
+           0000000180072FCE
+           0000000180072FEB
+           0000000180072FF6
+           0000000180073013
+           000000018007301E
+           000000018007303B
+           0000000180073046
+           00000001800735B6
+           00000001800735C2
+           0000000180073E61
+           0000000180073E66
+           0000000180074560
+           0000000180074565
+           0000000180074898
+           000000018007489D
+           000000018007D199
+           000000018007D19C
+           000000018007D709
+           000000018007D70F
+           000000018007D9AA
+           000000018007D9BD
+           000000018007E3CC
+           000000018007E3E1
+           000000018007E71A
+           000000018007E72F
+           000000018007EA3D
+           000000018007F14E
+           000000018007F163
+           0000000180081D54
+           0000000180081D5F
+           0000000180081D69
+           0000000180081D74
+           0000000180081D7E
+           0000000180081DCA
+           0000000180081F86
+           0000000180082108
+           0000000180082195
+           000000018008379B
+           00000001800838D1
+           00000001800838E3
+           00000001800839A2
+           00000001800839B0
+           00000001800839BE
+           00000001800839CC
+           00000001800839DA
+           0000000180083D10
+           0000000180083D22
+           0000000180083E27
+           0000000180083F80
+           0000000180084028
+           00000001800841EA
+           0000000180084213
+           0000000180084222
+           00000001800842AD
+           00000001800842B8
+           00000001800842C3
+           00000001800842D0
+           0000000180084356
+           0000000180084D5F
+           0000000180084D72
+           0000000180084D83
+           0000000180084DA1
+           0000000180084DA9
+           0000000180084DB1
+           0000000180084DC9
+           0000000180084DE0
+           0000000180084DEB
+           0000000180084DFF
+           0000000180084E0A
+           0000000180084E22
+           0000000180084E35
+           0000000180084E4F
+           0000000180084E77
+           0000000180084EB9
+           0000000180084F01
+           0000000180084F2C
+           0000000180084F36
+           0000000180084F47
+           0000000180084F51
+           0000000180084F5B
+           0000000180084F65
+           0000000180084F6F
+           0000000180084F79
+           0000000180084FEA
+           0000000180085B36
+           0000000180085B5E
+           000000018008692C
+           000000018008693C
+           000000018008695F
+           00000001800869B9
+           0000000180086A83
+           0000000180086C23
+           0000000180086F8D
+           00000001800871C8
+           00000001800874C7
+           0000000180087697
+           00000001800876AA
+           00000001800876CC
+           00000001800876DF
+           0000000180087754
+           00000001800877E5
+           00000001800877FE
+           0000000180087EA4
+           0000000180087F7A
+           0000000180087FA2
+           0000000180087FB6
+           0000000180087FCA
+           0000000180087FF2
+           0000000180088093
+           00000001800880A8
+           00000001800880BC
+           00000001800880E4
+           00000001800880F7
+           00000001800883B6
+           00000001800883C0
+           000000018008849B
+           00000001800884A6
+           000000018008856F
+           000000018008858E
+           00000001800889C0
+           0000000180088D4E
+           0000000180088DA6
+           0000000180088DB0
+           0000000180088DC6
+           00000001800892B7
+           00000001800892C0
+           000000018008992C
+           000000018008A3E1
+           000000018008B105
+           000000018008B122
+           000000018008B13F
+           000000018008B15C
+           000000018008B179
+           000000018008B1A1
+           000000018008B1B1
+           000000018008B1C7
+           000000018008B1DD
+           000000018008B1E8
+           000000018008B1F3
+           000000018008B1FE
+           000000018008B5A1
+           000000018008B5DF
+           000000018008B7D8
+           000000018008B7E6
+           000000018008B7FE
+           000000018008B816
+           000000018008B82E
+           000000018008B926
+           000000018008BC9D
+           000000018008D000
+           000000018008D014
+           000000018008D01E
+           000000018008D02D
+           000000018008D037
+           000000018008D106
+           000000018008D110
+           000000018008D136
+           000000018008D1C4
+           000000018008DAF9
+           000000018008DB81
+           000000018008DC39
+           000000018008DC3D
+           000000018008DC6F
+           000000018008DD04
+           000000018008DD2E
+           000000018008DD3A
+           000000018008DEDD
+           000000018008DF22
+           000000018008DF2D
+           000000018008DF44
+           000000018008DF64
+           000000018008DF8C
+           000000018008DFA3
+           000000018008DFC3
+           000000018008DFE4
+           000000018008E00D
+           000000018008E03B
+           000000018008E04F
+           000000018008E0DC
+           000000018008E0E7
+           000000018008E0FD
+           000000018008E113
+           000000018008E12A
+           000000018008E135
+           000000018008E13D
+           000000018008E147
+           000000018008E14C
+           000000018008E26A
+           000000018008E278
+           000000018008E295
+           000000018008E2B0
+           000000018008E2C7
+           000000018008E2DA
+           000000018008E2F0
+           000000018008E3E1
+           000000018008E465
+           000000018008E475
+           000000018008E485
+           000000018008E495
+           000000018008E4A5
+           000000018008E4B3
+           000000018008E53F
+           000000018008E54A
+           000000018008E55A
+           000000018008E587
+           000000018008E58D
+           000000018008E598
+           000000018008E5BA
+           000000018008E5EE
+           000000018008E5FB
+           000000018008E631
+           000000018008E63E
+           000000018008E645
+           000000018008E64D
+           000000018008E6CE
+           000000018008E6EE
+           000000018008E716
+           000000018008E740
+           000000018008E74B
+           000000018008E774
+           000000018008E79A
+           000000018008E861
+           000000018008E86C
+           000000018008E893
+           000000018008E8B7
+           000000018008E8C6
+           000000018008E8D1
+           000000018008E8ED
+           000000018008EEA1
+           000000018008F0C6
+           000000018008F1C2
+           000000018008F1FA
+           000000018008F1FE
+           000000018008F210
+           000000018008F24D
+           000000018008F25C
+           000000018008F27A
+           000000018008F27E
+           000000018008F297
+           000000018008F2EE
+           000000018008F308
+           000000018008F32F
+           000000018008F365
+           000000018008F41A
+           000000018008F489
+           000000018008F494
+           000000018008F49B
+           000000018008F4A8
+           000000018008F4B6
+           000000018008F4CF
+           000000018008F4E5
+           000000018008F4F2
+           000000018008F50B
+           000000018008F5F3
+           000000018008F600
+           000000018008FA47
+           000000018008FA54
+           000000018008FE32
+           000000018008FE8B
+           000000018008FF2D
+           000000018008FF57
+           000000018008FF5B
+           000000018008FF6D
+           000000018008FFC0
+           00000001800900EA
+           00000001800900F6
+           00000001800900FE
+           0000000180090106
+           00000001800901AE
+           0000000180090266
+           00000001800902DC
+           00000001800902E0
+           00000001800902F2
+           000000018009032F
+           000000018009033E
+           000000018009035C
+           0000000180090360
+           0000000180090379
+           00000001800903D0
+           00000001800903EA
+           0000000180090411
+           0000000180090447
+           00000001800904FC
+           000000018009056B
+           0000000180090576
+           000000018009057D
+           000000018009058A
+           0000000180090598
+           00000001800905B1
+           00000001800905C7
+           00000001800905D4
+           00000001800905ED
+           000000018009069E
+           00000001800906AD
+           00000001800906BC
+           00000001800906C9
+           000000018009078C
+           0000000180090794
+           00000001800907A1
+           00000001800907C2
+           0000000180090900
+           000000018009090A
+           00000001800909A3
+           0000000180090D57
+           0000000180090D76
+           0000000180090D84
+           0000000180090DB0
+           0000000180090DC9
+           0000000180090DD6
+           0000000180091173
+           000000018009117D
+           00000001800917A7
+           00000001800917CE
+           000000018009184F
+           0000000180091879
+           0000000180091BCD
+           0000000180091C3F
+           0000000180091CBC
+           0000000180091CC6
+           0000000180091CCC
+           0000000180091CD4
+           0000000180091CDC
+           0000000180091DBB
+           0000000180091DD6
+           0000000180091DFB
+           0000000180091F46
+           0000000180091FA4
+           0000000180091FD0
+           0000000180091FE0
+           0000000180092004
+           0000000180092011
+           0000000180092034
+           000000018009204C
+           000000018009208C
+           00000001800920AF
+           00000001800920BB
+           00000001800920C5
+           000000018009255E
+           00000001800926FC
+           0000000180092723
+           0000000180092C3B
+           0000000180092C4F
+           0000000180092CBE
+           0000000180092CC6
+           0000000180092E07
+           0000000180092E1D
+           0000000180092E2D
+           0000000180092E3D
+           0000000180092F0E
+           0000000180092F22
+           0000000180093076
+           0000000180093086
+           00000001800930D8
+           00000001800930E3
+           00000001800930F3
+           0000000180093160
+           000000018009319A
+           000000018009321C
+           000000018009333C
+           0000000180093787
+           0000000180093791
+           000000018009379C
+           00000001800938A1
+           00000001800938AE
+           00000001800938BF
+           00000001800938D2
+           00000001800938E3
+           0000000180093991
+           00000001800939AA
+           00000001800939CD
+           0000000180094513
+           000000018009459A
+           0000000180094B44
+           0000000180095163
+           0000000180095171
+           000000018009527F
+           0000000180095344
+           0000000180095356
+           000000018009537C
+           000000018009538E
+           0000000180095786
+           000000018009579F
+           00000001800957B6
+           00000001800957CD
+           00000001800957E4
+           00000001800957FB
+           0000000180095812
+           0000000180095829
+           0000000180095840
+           0000000180095857
+           000000018009586E
+           0000000180095885
+           000000018009589C
+           00000001800958B3
+           00000001800958CE
+           00000001800958E5
+           00000001800958FC
+           0000000180095913
+           000000018009592A
+           000000018009599A
+           0000000180095C1E
+           0000000180095CF2
+           0000000180095D84
+           0000000180095DAD
+           0000000180095DC3
+           0000000180095DCF
+           0000000180095DDC
+           0000000180095DE9
+           0000000180095DF6
+           0000000180095E03
+           0000000180095E10
+           0000000180095E1D
+           0000000180095F7A
+           0000000180095F87
+           0000000180095F94
+           0000000180096042
+           0000000180096155
+           00000001800962B2
+           0000000180096385
+           000000018009647A
+           00000001800967EF
+           0000000180096801
+           0000000180096827
+           0000000180096839
+           000000018009684B
+           0000000180096917
+           0000000180096958
+           0000000180096963
+           0000000180096CDE
+           0000000180096CF5
+           0000000180096D03
+           00000001800971EC
+           000000018009848F
+           0000000180098499
+           00000001800985A4
+           00000001800985AF
+           00000001800985B9
+           00000001800985C3
+           00000001800985CD
+           00000001800985D7
+           00000001800986C1
+           00000001800986D0
+           00000001800986DF
+           00000001800986ED
+           00000001800986FB
+           0000000180098795
+           000000018009879F
+           00000001800987A9
+           00000001800987B3
+           00000001800987BD
+           0000000180098834
+           0000000180098848
+           0000000180098852
+           0000000180098CD6
+           0000000180098E20
+           0000000180098E7B
+           0000000180098EE8
+           0000000180098F4F
+           0000000180098F5B
+           0000000180098F9F
+           0000000180098FB5
+           0000000180098FC7
+           0000000180098FD2
+           0000000180099035
+           000000018009904A
+           0000000180099053
+           000000018009905D
+           0000000180099068
+           0000000180099088
+           000000018009909A
+           00000001800990A7
+           00000001800990B8
+           00000001800990EC
+           0000000180099100
+           0000000180099167
+           0000000180099172
+           000000018009918C
+           0000000180099251
+           000000018009929D
+           00000001800993CB
+           00000001800993D5
+           00000001800993F6
+           000000018009941C
+           000000018009968A
+           000000018009969C
+           00000001800996C2
+           00000001800996D4
+           00000001800996E6
+           0000000180099767
+           0000000180099791
+           00000001800997A0
+           00000001800997AD
+           00000001800997BA
+           00000001800997CA
+           00000001800997D5
+           00000001800998C3
+           00000001800998CD
+           0000000180099906
+           000000018009997D
+           000000018009A3FA
+           000000018009A404
+           000000018009A90C
+           000000018009A91E
+           000000018009A944
+           000000018009A956
+           000000018009A968
+           000000018009A978
+           000000018009A988
+           000000018009AADA
+           000000018009B0CB
+           000000018009B0DF
+           000000018009B490
+           000000018009B612
+           000000018009B98A
+           000000018009BE35
+           000000018009BF97
+           000000018009C09C
+           000000018009C0E9
+           000000018009C9AB
+           000000018009CDE9
+           000000018009CE7C
+           000000018009CE9E
+           000000018009CEAA
+           000000018009CEBA
+           000000018009CFA3
+           000000018009D089
+           000000018009D0A4
+           000000018009D0B6
+           000000018009D0C5
+           000000018009D0E7
+           000000018009D104
+           000000018009D11E
+           000000018009D131
+           000000018009D30A
+           000000018009D32A
+           00000001800A1468
+           00000001800A5BEC
+           00000001800A6F25
+           00000001800A6F3A
+           00000001800A7809
+           00000001800A7815
+           00000001800ACCEB
+           00000001800ACCF3
+           00000001800ADBBA
+           00000001800ADBC5
+           00000001800AE249
+           00000001800AE25E
+           00000001800AE980
+           00000001800AE9B3
+           00000001800B07DB
+           00000001800B0825
+           00000001800C150C
+           00000001800C1517
+           00000001800C2999
+           00000001800C29C4
+           00000001800C29D1
+           00000001800C29DF
+           00000001800C29F2
+           00000001800C2A07
+           00000001800C2A97
+           00000001800C2B51
+           00000001800C2B8B
+           00000001800C2BF2
+           00000001800C2C99
+           00000001800C2CB9
+           00000001800C2CC4
+           00000001800C2D0A
+           00000001800C2D18
+           00000001800C2D36
+           00000001800C2DB5
+           00000001800C2DDD
+           00000001800C2E5C
+           00000001800C2F0A
+           00000001800C2F7C
+           00000001800C2F80
+           00000001800C2F8E
+           00000001800C2FD6
+           00000001800C62D3
+           00000001800C62E5
+           00000001800C62ED
+           00000001800C6300
+           00000001800C6304
+           00000001800C641B
+           00000001800C6450
+           00000001800C645D
+           00000001800C67D9
+           00000001800C67EA
+           00000001800C6850
+           00000001800C685F
+           00000001800C6881
+           00000001800C68A1
+           00000001800C68B6
+           00000001800C6967
+           00000001800C697B
+           00000001800C6986
+           00000001800C698B
+           00000001800C699E
+           00000001800D29FE
+           00000001800D2A61
+           00000001800D2AE0
+           00000001800D2B14
+           00000001800D2B3A
+           00000001800D2CF0
+           00000001800D35BF
+           00000001800D3682
+           00000001800D3693
+           00000001800D369E
+           00000001800D3716
+           00000001800D3754
+           00000001800D3761
+           00000001800D3770
+           00000001800D3789
+           00000001800D379D
+           00000001800D37A8
+           00000001800D37B3
+           00000001800D38EA
+           00000001800D3925
+           00000001800D3934
+           00000001800D394D
+           00000001800D3961
+           00000001800D396C
+           00000001800D3977
+           00000001800D3AB8
+           00000001800D3AC5
+           00000001800D3AD0
+           00000001800D3B0D
+           00000001800D3B1A
+           00000001800D3BA4
+           00000001800D3BAF
+           00000001800D3BEC
+           00000001800D3C6E
+           00000001800D3C76
+           00000001800D3C92
+           00000001800D3CD3
+           00000001800D3CE0
+           00000001800D3CED
+           00000001800D3D6E
+           00000001800D3D98
+           00000001800D3EC5
+           00000001800D3EDB
+           00000001800D412C
+           00000001800D4209
+           00000001800D4238
+           00000001800D48D1
+           00000001800D48DF
+           00000001800D48EA
+           00000001800D497B
+           00000001800D4983
+           00000001800D498B
+           00000001800D49BC
+           00000001800D49C3
+           00000001800D49D6
+           00000001800D4A41
+           00000001800D4A48
+           00000001800D4A53
+           00000001800D4A6D
+           00000001800D4D2C
+           00000001800D4D69
+           00000001800D4D7A
+           00000001800D4DA9
+           00000001800D4DB9
+           00000001800D4DDA
+           00000001800D4DFB
+           00000001800D4E02
+           00000001800D4E0E
+           00000001800D4E23
+           00000001800D4E6D
+           00000001800D4E7F
+           00000001800D4E86
+           00000001800D4EBE
+           00000001800D4FD8
+           00000001800D5000
+           00000001800D5156
+           00000001800D5161
+           00000001800D5171
+           00000001800D526E
+           00000001800D527C
+           00000001800D52D6
+           00000001800D53F4
+           00000001800D5431
+           00000001800D54D2
+           00000001800D55D3
+           00000001800D56D0
+           00000001800D64AA
+           00000001800D64B3
+           00000001800D64BF
+           00000001800D64CD
+           00000001800D64D5
+           00000001800D6506
+           00000001800D655E
+           00000001800D656C
+           00000001800D6577
+           00000001800D658A
+           00000001800D660F
+           00000001800D664E
+           00000001800D667D
+           00000001800D6685
+           00000001800D66A7
+           00000001800D66B4
+           00000001800D66BF
+           00000001800D66E0
+           00000001800D66EC
+           00000001800D66F4
+           00000001800D66FB
+           00000001800D6734
+           00000001800D67EA
+           00000001800D6A06
+           00000001800D6A52
+           00000001800D6ADB
+           00000001800D6B1E
+           00000001800D6B29
+           00000001800D6B57
+           00000001800D6BE2
+           00000001800D6C3D
+           00000001800D6DA7
+           00000001800D6F30
+           00000001800D6F6E
+           00000001800D70C8
+           00000001800D70DE
+           00000001800D7423
+           00000001800D76BE
+           00000001800D76CC
+           00000001800D76D7
+           00000001800D776C
+           00000001800D779C
+           00000001800D77C9
+           00000001800D77DA
+           00000001800D7892
+           00000001800D789A
+           00000001800D78F1
+           00000001800D78F8
+           00000001800D793E
+           00000001800D7945
+           00000001800D7988
+           00000001800D79D2
+           00000001800D7A10
+           00000001800D7A17
+           00000001800D7A3A
+           00000001800D7A87
+           00000001800D7A9A
+           00000001800D7AA2
+           00000001800D7ACD
+           00000001800D7BC6
+           00000001800D7BD0
+           00000001800D7F40
+           00000001800D7F57
+           00000001800D7F72
+           00000001800D7F79
+           00000001800D8009
+           00000001800D80E6
+           00000001800D82DA
+           00000001800D8576
+           00000001800D857D
+           00000001800D8724
+           00000001800D872C
+           00000001800D872F
+           00000001800D875F
+           00000001800D876C
+           00000001800D8774
+           00000001800D877D
+           00000001800D878A
+           00000001800D8792
+           00000001800D87C0
+           00000001800D87DB
+           00000001800D88F8
+           00000001800D8903
+           00000001800D8956
+           00000001800D8A39
+           00000001800D8A4D
+           00000001800D8A52
+           00000001800D8A57
+           00000001800D8A5C
+           00000001800D8A60
+           00000001800D8AD3
+           00000001800D8AEF
+           00000001800D8AF2
+           00000001800D8BE0
+           00000001800D8E8B
+           00000001800D8E93
+           00000001800D8EA5
+           00000001800D8EAC
+           00000001800D8ED3
+           00000001800D8EDA
+           00000001800D8EEE
+           00000001800D8EF8
+           00000001800D8F02
+           00000001800D8F0A
+           00000001800D8F5E
+           00000001800D8FAA
+           00000001800D9055
+           00000001800D9088
+           00000001800D90C1
+           00000001800D90D0
+           00000001800D9107
+           00000001800D91BA
+           00000001800D91DF
+           00000001800D91F7
+           00000001800D91FF
+           00000001800D921C
+           00000001800D92D4
+           00000001800D92DB
+           00000001800D92E6
+           00000001800D92F9
+           00000001800D933C
+           00000001800D9355
+           00000001800D93D9
+           00000001800D947F
+           00000001800D94C0
+           00000001800D95C0
+           00000001800D95D0
+           00000001800D95DC
+           00000001800D95FA
+           00000001800D9635
+           00000001800D963D
+           00000001800D9696
+           00000001800D96C9
+           00000001800D9721
+           00000001800D979D
+           00000001800D99A1
+           00000001800D99B0
+           00000001800D9C01
+           00000001800D9D05
+           00000001800D9D50
+           00000001800D9E0B
+           00000001800D9E92
+           00000001800D9E9A
+           00000001800D9EA2
+           00000001800D9EAA
+           00000001800D9EF5
+           00000001800D9F17
+           00000001800D9F3F
+           00000001800D9F6B
+           00000001800D9F8C
+           00000001800D9FB9
+           00000001800D9FCF
+           00000001800DA069
+           00000001800DA1E1
+           00000001800DA212
+           00000001800DA21A
+           00000001800DA249
+           00000001800DA2D8
+           00000001800DA2DF
+           00000001800DA2EC
+           00000001800DA474
+           00000001800DA516
+           00000001800DA541
+           00000001800DAB2E
+           00000001800DAB36
+           00000001800DAD65
+           00000001800DAD6C
+           00000001800DAD73
+           00000001800DAD7E
+           00000001800DAD91
+           00000001800DADE8
+           00000001800DADF5
+           00000001800DAE07
+           00000001800DAE1F
+           00000001800DAE81
+           00000001800DAE88
+           00000001800DAEA9
+           00000001800DB140
+           00000001800DB439
+           00000001800DB473
+           00000001800DBC6A
+           00000001800DBDDE
+           00000001800DBDE3
+           00000001800DBE1C
+           00000001800DBE21
+           00000001800DBE28
+           00000001800DBE42
+           00000001800DBE46
+           00000001800DBE4B
+           00000001800DBE50
+           00000001800DBE72
+           00000001800DBE76
+           00000001800DBEBE
+           00000001800DBEE9
+           00000001800DBEED
+           00000001800DBF62
+           00000001800DBFF6
+           00000001800DBFFB
+           00000001800DC147
+           00000001800DC163
+           00000001800DC167
+           00000001800DC16B
+           00000001800DC177
+           00000001800DC28E
+           00000001800DC292
+           00000001800DC2A1
+           00000001800DC38B
+           00000001800DC3B1
+           00000001800DC3B6
+           00000001800DC3C7
+           00000001800DC400
+           00000001800DC469
+           00000001800DC46D
+           00000001800DC478
+           00000001800DC481
+           00000001800DC4C5
+           00000001800DC4C8
+           00000001800DC4CD
+           00000001800DC596
+           00000001800DC5B2
+           00000001800DC604
+           00000001800DC720
+           00000001800DC763
+           00000001800DC814
+           00000001800DC81B
+           00000001800DC8B2
+           00000001800DC8B6
+           00000001800DC8D4
+           00000001800DC8D9
+           00000001800DC922
+           00000001800DC9E0
+           00000001800DC9EA
+           00000001800DCA34
+           00000001800DCA38
+           00000001800DCA8D
+           00000001800DCA91
+           00000001800DCACA
+           00000001800DCAD1
+           00000001800DCAE2
+           00000001800DCB46
+           00000001800DCB76
+           00000001800DCBA0
+           00000001800DCBE0
+           00000001800DCBF3
+           00000001800DCC59
+           00000001800DCC61
+           00000001800DCC7B
+           00000001800DCC96
+           00000001800DCCA9
+           00000001800DCCD7
+           00000001800DCD50
+           00000001800DCDF8
+           00000001800DCE04
+           00000001800DCE0C
+           00000001800DCE1C
+           00000001800DCE30
+           00000001800DCE38
+           00000001800DD63B
+           00000001800DF61C
+           00000001800E0A53
+           00000001800E0D4A
+           00000001800E0D51
+           00000001800E0D5C
+           00000001800E0D6F
+           00000001800E0F09
+           00000001800E0FD4
+           00000001800E0FDB
+           00000001800E0FEA
+           00000001800E0FFD
+           00000001800E3D1E
+           00000001800E3D25
+           00000001800E3D30
+           00000001800E3D47
+           00000001800E3D86
+           00000001800E3D8D
+           00000001800E3D99
+           00000001800E3DA9
+           00000001800E3FE8
+           00000001800E40FC
+           00000001800E47F1
+           00000001800E60CE
+           00000001800E614C
+           00000001800E687D
+           00000001800E6A5D
+           00000001800EA8C5
+           00000001800EA936
+           00000001800EA93D
+           00000001800EA94E
+           00000001800EA962
+           00000001800EB0F4
+           00000001800ED981
+           00000001800EE136
+           00000001800EE149
+           00000001800EE166
+           00000001800EE17E
+           00000001800EE193
+           00000001800EE1EE
+           00000001800EE203
+           00000001800EE4C6
+           00000001800EE4DB
+           00000001800EE502
+           00000001800EE514
+           00000001800EE529
+           00000001800EE551
+           00000001800EF1BD
+           00000001800EF1EC
+           00000001800EF215
+           00000001800EF227
+           00000001800EFC1F
+           00000001800EFC32
+           00000001800F0D8D
+           00000001800F0DA2
+           00000001800F0EBC
+           00000001800F0EC4
+           00000001800F0EEA
+           00000001800F0EFF
+           00000001800F0F2F
+           00000001800F0F4C
+           00000001800F11C4
+           00000001800F11CC
+           00000001800F137A
+           00000001800F1389
+           00000001800F1393
+           00000001800F13AE
+           00000001800F13C0
+           00000001800F13EA
+           00000001800F13FC
+           00000001800F1404
+           00000001800F1435
+           00000001800F18B2
+           00000001800F18BE
+           00000001800F18C5
+           00000001800F18E9
+           00000001800F18FC
+           00000001800F1AC9
+           00000001800F1F14
+           00000001800F1F51
+           000000018013D275
+           000000018013D2F1
+           000000018013D66C
+           000000018013D688
+           000000018013E0C7
+           000000018013F2A4
+           000000018013F2AC
+           000000018013F2B2
+           000000018013F2BA
+           000000018013F2E7
+           000000018013F35B
+           000000018013F367
+           000000018013F36E
+           000000018013F378
+           000000018013F39D
+           000000018013F3C2
+           000000018013F484
+           000000018013F4BF
+           0000000180140335
+           000000018014034B
+           000000018014060B
+           00000001801407EF
+           00000001801407FE
+           0000000180140860
+           00000001801408B0
+           0000000180140901
+           000000018014098F
+           0000000180140A0B
+           0000000180140A20
+           0000000180140A77
+           0000000180140D79
+           0000000180140DAB
+           0000000180140EC8
+           00000001801412A0
+           00000001801412F4
+           0000000180144A3B
+           0000000180144C62
+           0000000180145904
+           0000000180145917
+           00000001801459EE
+           0000000180145A15
+           0000000180145A91
+           0000000180145AA6
+           0000000180145AD7
+           0000000180145B01
+           00000001801713E0
+           000000018017146C
+           000000018017149C
+           00000001801714D8
+           00000001801714F6
+           0000000180171520
+           000000018017154A
+           000000018017157A
+           00000001801715AA
+           00000001801715DA
+           000000018017160A
+           000000018017162E
+           000000018017167C
+           00000001801716AC
+           00000001801716DC
+           0000000180171706
+           0000000180171730
+           0000000180171760
+           0000000180171790
+           00000001801717C0
+           00000001801717F0
+           0000000180171820
+           000000018017185C
+           000000018017206C
+           00000001801721AD
+           000000018017262C
+           0000000180172688
+           00000001801727FE
+           0000000180172825
+           0000000180172874
+           00000001801728CA
+           0000000180172932
+           0000000180172BBA
+           0000000180172BF6
+           0000000180172C1A
+           0000000180172C61
+           0000000180172CEA
+           0000000180172D58
+           0000000180172D9B
+           0000000180172DB9
+           0000000180172DDB
+           000000018017308B
+           00000001801730E7
+           00000001801731A4
+           000000018017331E
+           0000000180173464
+           0000000180173771
+           000000018017397D
+           0000000180173A1D
+           0000000180173F4C
+           0000000180173FB7
+           0000000180174320
+           000000018017432D
+           000000018017435F
+           0000000180174390
+           00000001801743B5
+           00000001801743DA
+           0000000180174404
+           00000001801745B8
+           000000018017465A
+           00000001801746AE
+           000000018017473E
+           00000001801747CC
+           000000018017482D
+           000000018017483F
+           0000000180174843
+           0000000180174847
+           0000000180174869
+           000000018017489B
+           0000000180174A9C
+           0000000180174C99
+           0000000180174CD3
+           0000000180175216
+           0000000180175288
+           0000000180175319
+           0000000180175393
+           0000000180175A75
+           0000000180175A79
+           0000000180175A80
+           0000000180175A84
+           0000000180175A90
+           0000000180175A97
+           0000000180175AA1
+           0000000180175AA8
+           0000000180175B62
+           0000000180175B6C
+           0000000180175B73
+           0000000180175B77
+           0000000180175B83
+           0000000180175B8D
+           0000000180175B9A
+           0000000180175BA7
+           0000000180175BB9
+           0000000180175BC1
+           0000000180175BD8
+           0000000180175BDF
+           0000000180175BF5
+           0000000180175C1A
+           0000000180175C2E
+           0000000180175C77
+           0000000180175C7E
+           0000000180175C85
+           0000000180175C9C
+           0000000180175CC1
+           0000000180175CE3
+           0000000180175D2C
+           0000000180175D33
+           0000000180175D3A
+
+    Volatile Info Range Table
+
+          Ranges
+          -------
+          0000000180001000 - 000000018013D223
+          000000018013D268 - 000000018013FEA0
+          000000018013FF30 - 0000000180140EB0
+          0000000180140EC8 - 00000001801458A0
+          0000000180145904 - 0000000180145CA0
+          0000000180170090 - 0000000180170410
+          00000001801713A0 - 0000000180175F34
+          00000001801761B0 - 0000000180176328
+
+  Section contains the following TLS directory:
+
+    0000000180226370 Start of raw data
+    0000000180226741 End of raw data
+    00000001802685C8 Address of index
+    0000000180177BA0 Address of callbacks
+                   0 Size of zero fill
+            00500000 Characteristics
+                       16 byte align
+
+    TLS Callbacks
+
+          Address
+          ----------------
+          000000018013FF5C
+          000000018013FC58
+          0000000000000000
+
+SECTION HEADER #3
+   .data name
+   2D74C virtual size
+  23C000 virtual address (000000018023C000 to 000000018026974B)
+   1D000 size of raw data
+  239A00 file pointer to raw data (00239A00 to 002569FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0000040 flags
+         Initialized Data
+         Read Write
+
+SECTION HEADER #4
+  .pdata name
+    C1D4 virtual size
+  26A000 virtual address (000000018026A000 to 00000001802761D3)
+    C200 size of raw data
+  256A00 file pointer to raw data (00256A00 to 00262BFF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+40000040 flags
+         Initialized Data
+         Read Only
+
+SECTION HEADER #5
+.fptable name
+     100 virtual size
+  277000 virtual address (0000000180277000 to 00000001802770FF)
+     200 size of raw data
+  262C00 file pointer to raw data (00262C00 to 00262DFF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0000040 flags
+         Initialized Data
+         Read Write
+
+SECTION HEADER #6
+   .rsrc name
+  100270 virtual size
+  278000 virtual address (0000000180278000 to 000000018037826F)
+  100400 size of raw data
+  262E00 file pointer to raw data (00262E00 to 003631FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+40000040 flags
+         Initialized Data
+         Read Only
+
+SECTION HEADER #7
+  .reloc name
+    3B8C virtual size
+  379000 virtual address (0000000180379000 to 000000018037CB8B)
+    3C00 size of raw data
+  363200 file pointer to raw data (00363200 to 00366DFF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+42000040 flags
+         Initialized Data
+         Discardable
+         Read Only
+
+  Summary
+
+       2E000 .data
+        1000 .fptable
+        D000 .pdata
+       C5000 .rdata
+        4000 .reloc
+      101000 .rsrc
+      176000 .text

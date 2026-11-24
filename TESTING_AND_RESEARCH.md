@@ -15,13 +15,13 @@ This document summarizes the project's testing and research work across its majo
 ## Test infrastructure and current evidence
 
 - `test.cmd` is the canonical suite. CMake + Ninja builds isolated harnesses; the runner executes registered invocations serially, supervises process trees and propagates nonzero child results, including Windows exception codes and timeouts.
-- The recorded receiver-aspect non-graphics run registered **64 invocations** across **60 harness targets**. All 64 passed, including the native adapter run with **232 fresh processes** across Diagnostics OFF and ON. One hardlink subcase was skipped after Windows error 5. The non-graphics profile omitted WARP.
+- The v4.0.1 canonical non-graphics run passed **64/64 invocations** across **60 harness targets**, including **232 fresh native-adapter processes** across Diagnostics OFF and ON. One hardlink subcase was skipped after Windows error 5. The non-graphics profile omitted WARP.
 - The runner continues independent checks after a failure, reports skips separately and returns an aggregate exit code. The interactive entry point reports the result before waiting for a keypress. ZIP and ASI publication contract checks cover payload identity, user-owned INI exclusion, invalid paths and preservation of the previous ZIP on failure.
 - Hybrid migration established dependency-tracked incremental builds. The recorded warm-run medians (about 119 seconds versus about 391 seconds in the earlier runner) characterize the measured machine/setup, not universal performance.
 - Exit-contract fixtures cover success, positive/negative failures, access violation, timeout and prevention of running stale executables after compile failure. Localization/resource audits cover 18 locale catalogs and embedded resources; they do not prove perfect Arabic shaping, RTL layout or all runtime glyph rendering.
 - Focused policy, adapter and native-hook fixtures prove only their named contracts. Offline PASS does not prove game callback scheduling, live hook behavior, graphics presentation or full process/driver teardown.
 
-The v4 production resolver set was statically checked against retained game images 2.0.2–2.0.6 and the installed image reported as 2.1. Required Gameplay, Cinematic, Dialogue and provider activation patterns were unique and passed their applicable byte/instruction contracts. The optional Zoom observer pair was absent on 2.0.2–2.0.4; failure to install that observer does not abort camera correction, but Camera State cannot report those zoom observations on those builds. This audit does not establish a live v4 launch or runtime behavior, and no 2.0.0/2.0.1 images were available. The installed game-directory ASI was 3.2.2.0, so its prior successful runtime log is not v4 evidence. See the [cross-build resolver audit](research/evidence/v4-resolver-cross-build-2026-11-19/README.md).
+The v4 production resolver set was statically checked against retained game images 2.0.2–2.0.6 and the installed image reported as 2.1. Required Gameplay, Cinematic, Dialogue and provider activation patterns were unique and passed their applicable byte/instruction contracts. The optional Zoom observer pair was absent on 2.0.2–2.0.4; failure to install that observer does not abort camera correction, but Camera State cannot report those zoom observations on those builds. The audit covered static resolution, and 2.0.0/2.0.1 images were unavailable. Later runtime checks on the installed Steam image are recorded below. See the [cross-build resolver audit](research/evidence/v4-resolver-cross-build-2026-11-19/README.md).
 
 The Auto Interface Language resolver was checked statically against all retained Ghidra game images except 1.9: 2.0.2–2.0.6. The reader signature and game-buffer release anchor each had exactly one executable-image match on all five images. The release anchor mapped through each AMD64 PE exception table to the expected function entry; its offset varies between versions, so production resolves the entry from function metadata instead of a fixed offset. The reader signature and anchor also matched the installed image reported as 2.1, but function-entry mapping and runtime language behavior on that image were not validated. Per-image hashes and raw Ghidra output are recorded in [`language-signature-cross-build-audit-summary.md`](../../02-Research/evidence/language-signature-cross-build-audit-summary.md).
 
@@ -34,7 +34,18 @@ Infrastructure details: [test architecture audit](research/reports/TEST_INFRASTR
 - The production cutover exercises the Writer, Cinematic, Dialogue, provider and settings paths under one Authority. Focused checks cover parity with prior behavior, native argument preparation, committed state and projection reads, and separation of execution from optional observation. The cutover fixture exercises a SafetyHook trampoline and verifies registers and store results in Diagnostics OFF and ON. [Production cutover evidence](research/reports/LIFECYCLE_AUTHORITY_M2_PROGRESS_2026-11-17.md#production-cutover-2026-11-18)
 - The M3 matrix covered 388 sequences, 23,020 event checkpoints and 8,548 modeled FOV frames. The independent event generator covered 28 states, 54 edges, 3,008 sequences, 99,536 checkpoints and 68,432 FOV frames, including 48 seeded runs. Mutation testing detected all five injected failures. [M3 findings](research/reports/LIFECYCLE_AUTHORITY_M3_VALIDATION_2026-11-18.md) · [Callback generation and mutation results](research/reports/LIFECYCLE_CALLBACK_GENERATION_2026-11-18.md)
 - All 6 focused CTest checks passed. The camera receiver replacement regression verifies that the first eligible writer applies Hor+ after aspect read-back and that FOV correction and baseline admission are decided separately. [Change record and validation details](CHANGES_SINCE_3.2.2_to_4.md#зафіксовані-результати-й-межі)
-- In-game verification of the receiver replacement fix and comparison of the observed transition hitches remain pending. The cause of the hitches is unresolved. Current observations cover writer and read-back values. Correlation to the final displayed frame still needs verification. [Frame correlation plan](research/plans/CAMERA_TRANSITION_FRAME_CORRELATION_2026-11-19.md)
+- The receiver replacement fix has offline coverage. Earlier reports of brief transition hitches still lack frame-level attribution. [Frame correlation plan](research/plans/CAMERA_TRANSITION_FRAME_CORRELATION_2026-11-19.md)
+
+### v4.0.1 Camera Lifecycle regression checks
+
+| Scenario | Evidence |
+| --- | --- |
+| Gameplay OFF, game FOV change between dialogues, Gameplay ON | On the same receiver, the first eligible Writer corrected 90.967° to 127.640°. Gameplay returned to the same corrected FOV after the following dialogue. The session recorded 3,899 correlated readbacks with zero mismatches. |
+| Cinematic, Dialogue and Gameplay continuity | The user observed smooth transitions. After the Cinematic dialogue insert, the first Writer passed through the existing 154.289° target with matching readback. The game had replaced the blend component in this run. |
+| Exact Cinematic continuation counterexample | Offline regression covered the earlier 0.495° start advance and transient projection flags. Focused tests exercised the inclusive 0.6° boundary in both directions, rejected 0.601°, and checked stale and conflicting evidence through activations without a Writer. |
+| Native target change during active Dialogue recovery | Offline regression covered a changed return endpoint on the same receiver. Manual testing changed FOV between dialogues because the settings menu is unavailable during dialogue. |
+
+The original Gameplay report was not uniquely attributed to either offline fault. See the [Camera Lifecycle report](research/reports/V4_RUNTIME_FOV_REGRESSION_2026-11-24.md).
 
 ### Camera domains
 
@@ -87,6 +98,12 @@ Runtime, startup and Overlay log paths carry process identity and use a bounded 
 - Startup initialization has an outer exception boundary and guarded cleanup; controlled fixtures cover selected early/partial failures. Game-specific installer behavior is not fully reproduced offline.
 - The ordinary ASI contains passive diagnostics controlled by `[Diagnostics] Enabled`. OFF-path checks establish gating of diagnostic-only continuation traces, counters, predictions and selected reads; shared observations required by production behavior remain active. A local continuation-trace microbenchmark is not a whole-frame or FPS measurement.
 - Repeated restoration-state logging was reduced to state changes, removing the observed duplicate-log flood in the tested scenario; it does not prove logging caused earlier system-wide stalls.
+
+### v4.0.1 hook and log checks
+
+- Native fixtures exercise overlap detection using actual patch and relocation spans, rejection of `PAGE_GUARD` pages, and the bounds of the optional Dialogue return probe.
+- A fault-injection test throws after the fallback log has opened and verifies that the file remains writable.
+- Local Microsoft Defender scans of the final ASI and ZIP found no threats. v4.0.1 is expected to resolve the ASI Loader error 4556 reported for v4.0.0. The report concerns Windows Application Control reputation. Confirmation requires a load test on a system that reproduced the block. [Security investigation](research/reports/V4_DEFENDER_ASI_LOADER_4556_2026-11-24.md)
 
 ### SafetyHook hardening and follow-up findings
 

@@ -1,3 +1,25 @@
+# STALKER 2 Camera Tweaks v4.0.1
+
+## Camera and FOV
+
+- Gameplay HorPlus resumes when you change the game's FOV between dialogues, including after turning Gameplay correction off and back on with the same camera.
+- A pending Dialogue classification can clear when the mod has independent evidence that Gameplay has resumed. Dialogue recovery can also finish at a verified new native FOV target.
+- Cinematic FOV stays continuous when the game restarts a confirmed blend after a dialogue insert. The mod accepts up to 0.6° of progress toward the same target. A temporary change to projection flags is checked again at the first eligible Writer before the previous correction can be reused.
+
+## Reliability and diagnostics
+
+- Camera hooks are checked for overlapping patches before activation. Hook validation rejects guarded memory pages and checks that the optional Dialogue return hook is outside the main patch.
+- An already opened fallback log stays usable if formatting its diagnostic message fails.
+- With diagnostics enabled, the log shows whether Cinematic Writer evidence survived EXIT, whether the next activation confirmed the start, and which correction the first Writer chose.
+
+## Validation
+
+In-game checks confirmed smooth Cinematic, Dialogue and Gameplay transitions and same-camera Gameplay recovery after changing the FOV between dialogues. The exact earlier Cinematic FOV drop and a native target change during active Dialogue recovery passed offline regression tests.
+
+The canonical non-graphics suite passed **64/64** invocations. One hardlink subcase was skipped. WARP was outside this run. A local Microsoft Defender scan found no threats in the final ASI and ZIP. v4.0.1 is expected to resolve the reported ASI Loader error 4556. Confirmation on a system that reproduced the Windows Application Control block is pending.
+
+The archive includes the ASI, installation README and licenses. Replacing the ASI preserves your existing INI and settings. See the [installation guide](README.md) and [testing notes](TESTING_AND_RESEARCH.md).
+
 # STALKER 2 Camera Tweaks v4.0
 
 Version 4.0 brings Gameplay, Cinematic and Dialogue camera handling under one committed lifecycle authority. It also improves camera-state reporting, runtime diagnostics and automated validation while retaining the established correction modes.

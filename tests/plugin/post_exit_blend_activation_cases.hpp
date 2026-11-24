@@ -106,6 +106,22 @@ void PostExitBlendActivationCases()
         "Unique setter return continuation was not resolved after the call");
     Check(hooks::ValidatePostExitBlendPostSetterCall(setterCall, setterSpan),
         "Setter call and immediate continuation instruction contract was rejected");
+    Check(hooks::IsIndependentDialogueSetterReturn(setterCall, 6, setterResolution.hook, setterSpan),
+        "Normal six-byte primary hook rejected its own return observer");
+    Check(!hooks::IsIndependentDialogueSetterReturn(setterCall, 14, setterResolution.hook, setterSpan),
+        "Return observer overlapped a long primary trampoline span");
+    const auto patch = reinterpret_cast<std::uintptr_t>(setterCall);
+    Check(hooks::validation::PatchSpansOverlap(patch, 14, patch + 6, 8) &&
+        hooks::validation::PatchSpansOverlap(patch + 6, 8, patch, 14) &&
+        !hooks::validation::PatchSpansOverlap(patch, 6, patch + 6, 8),
+        "Patch spans must distinguish overlap from byte-adjacent relocation");
+    Check(!hooks::IsIndependentDialogueSetterReturn(setterCall, 6, setterCall + 10, setterSpan) &&
+        !hooks::IsIndependentDialogueSetterReturn(setterCall, 6, setterResolution.hook, {setterCall, 6}),
+        "Foreign or out-of-bounds Dialogue return observer was accepted");
+    setterCode.Protect(PAGE_EXECUTE_READ | PAGE_GUARD);
+    Check(!hooks::validation::IsExecutable(reinterpret_cast<std::uintptr_t>(setterCall)),
+        "Guard page was accepted as an executable hook site");
+    setterCode.Protect(PAGE_EXECUTE_READ);
 
     setterCode.Protect(PAGE_READWRITE);
     std::memcpy(setterCode.bytes + 768, setterCall,

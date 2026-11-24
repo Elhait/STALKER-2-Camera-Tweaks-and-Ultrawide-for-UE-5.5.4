@@ -11,6 +11,13 @@ approved cleanup batches are recorded here from 2026-09-22 onward.
 > diary; where the source records only offline validation or a specific older
 > artifact, that boundary is retained.
 
+## 2026-11-24 — Camera Lifecycle runtime acceptance
+
+- Closed the Camera Lifecycle task after user acceptance. Gameplay HorPlus now recovers on the same receiver after changes to the game's FOV between dialogues. PID 25940 confirmed the OFF → FOV change → ON sequence and recovery after the next dialogue with 3,899 correlated readbacks and zero mismatches.
+- PID 24148 confirmed visual continuity across the tested Cinematic, Dialogue and Gameplay transitions. The exact 0.495° Cinematic re-entry and a changed native target during active Dialogue recovery passed offline.
+- The canonical non-graphics suite passed 64/64 invocations with one hardlink subcase skipped. WARP remained outside the run. The original Gameplay report was not uniquely attributed to either offline fault. [Acceptance report](../research/reports/V4_RUNTIME_FOV_REGRESSION_2026-11-24.md)
+
+
 ## 2026-11-19 — Camera lifecycle, diagnostics and validation since v3.2.2
 
 - **Camera lifecycle.** Moved production Gameplay, Cinematics, Dialogue,

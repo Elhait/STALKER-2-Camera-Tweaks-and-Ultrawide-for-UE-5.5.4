@@ -168,6 +168,24 @@ namespace
         std::printf("unused_fallback_removed_live_fallback_preserved=%s\n",
             fallbackCleanup ? "PASS" : "FAIL");
         if (!fallbackCleanup) return false;
+        {
+            platform::win32::NativeLogFile canonical;
+            platform::win32::NativeFile fallback;
+            bool reportedAfterOpen = false;
+            if (!canonical.Open(sharedPath.c_str()) ||
+                !platform::win32::OpenProcessLogFile(fallback, sharedPath.c_str(),
+                    [&](const std::wstring& path) {
+                        reportedAfterOpen = fallback.isOpen() &&
+                            std::filesystem::path(path) == processPath;
+                        throw std::bad_alloc{};
+                    }) ||
+                !reportedAfterOpen || !fallback.Write("fallback survived") || !fallback.Close() ||
+                !platform::win32::ReadNativeFile(processPath.c_str(), secondText) ||
+                secondText != "fallback survived") return false;
+        }
+        DeleteFileW(sharedPath.c_str());
+        DeleteFileW(processPath.c_str());
+        std::printf("fallback_diagnostic_allocation_failure=PASS\n");
         static_assert(std::is_trivially_destructible_v<
             platform::ProcessLifetime<LifetimeProbe>>);
         unsigned destructions{};

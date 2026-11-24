@@ -43,6 +43,7 @@ namespace dialogue
             std::uint32_t stableSampleLimit = 3) noexcept;
         bool IsPending() const noexcept;
         float Baseline() const noexcept;
+        float NativeTarget() const noexcept { return nativeTarget_; }
         bool HasContext() const noexcept;
         bool IsStationaryAtReference(float reference, float tolerance) const noexcept;
         void BindReceiver(std::uintptr_t receiver, std::uint64_t epoch,

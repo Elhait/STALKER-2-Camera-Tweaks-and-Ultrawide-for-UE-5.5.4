@@ -78,6 +78,15 @@ start provenance, bound to receiver, generation, settings epochs, aspect, flags,
 thread and observed component. EXIT checks association before carrying it;
 successor capture checks its context and sample before using the prior corrected
 output. Settings/aspect conflicts or lost association retire this evidence.
+For a captured segment with an admitted Writer, a new armer may observe up to
+0.6 degrees of progress toward the same corroborated target. The camera field
+must confirm the new start, and neither arming nor empty generations move the
+Writer anchor. The approach is directional for ascending and descending
+segments. If this path is used, the first admitted Writer must confirm the
+original projection and thread for the current generation. This also covers
+the observed constraint bit transition from 0x5 to 0x4 during arming when the
+Writer restores 0x5. The narrow endpoint and other FOV comparisons retain
+their own tolerances.
 Prepared endpoints remain prepared after the native blend finishes; they are
 not transformed again solely because a new technical generation starts. Unknown
 starts do not gain a fresh-native claim. No camera pointer cached here is

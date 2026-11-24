@@ -468,7 +468,26 @@ namespace plugin
         }
 
         result.phaseAtCallback = state.phase;
-        if (state.phase == dialogue::Phase::Exiting && ascending &&
+        const bool boundReturnEndpoint = state.phase == dialogue::Phase::Exiting &&
+            input.validatedReceiver && state.candidate.HasReceiverBinding(
+                input.validatedReceiver, settingsEpoch, input.generation) &&
+            state.candidate.HasReceiverIdentity(input.validatedReceiver,
+                input.callbackSource, input.generation) &&
+            input.nativeTargetReadable && std::isfinite(input.nativeTarget) &&
+            input.nativeTarget > 1.0f && input.nativeTarget < 179.0f &&
+            std::isfinite(state.candidate.NativeTarget()) &&
+            std::fabs(input.nativeTarget - state.candidate.NativeTarget()) >
+                input.recoveryEndpointTolerance &&
+            std::isfinite(state.exitIncomingStart) &&
+            input.nativeTarget > state.exitIncomingStart + input.transformEpsilon &&
+            ascending &&
+            std::fabs(input.incomingFov - input.nativeTarget) <= input.recoveryEndpointTolerance;
+        if (boundReturnEndpoint &&
+            !camera::AreFovValuesSemanticallyEquivalent(input.incomingFov, state.baseline)) {
+            result.baseline = state.baseline;
+            resetState();
+            result.action = DialogueBoundaryAction::RecoveryCompleted;
+        } else if (state.phase == dialogue::Phase::Exiting && ascending &&
             std::isfinite(state.baseline) &&
             camera::AreFovValuesSemanticallyEquivalent(input.incomingFov,
                 state.baseline)) {

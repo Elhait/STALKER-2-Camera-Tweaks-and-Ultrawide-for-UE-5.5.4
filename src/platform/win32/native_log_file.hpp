@@ -8,7 +8,9 @@ namespace platform::win32
     // Keep the canonical path when available; use one reusable fallback slot
     // for sharing conflicts. Never overwrite a slot held by a live owner.
     // Configuration/staging NativeFile callers retain their strict semantics.
-    inline bool OpenProcessLogFile(NativeFile& file, const wchar_t* path) noexcept
+    template<class ReportFallback>
+    inline bool OpenProcessLogFile(NativeFile& file, const wchar_t* path,
+        ReportFallback reportFallback) noexcept
     {
         const bool canonicalOpened = file.Open(path, true);
         if (!canonicalOpened && GetLastError() != ERROR_SHARING_VIOLATION) return false;
@@ -23,14 +25,24 @@ namespace platform::win32
                 return true;
             }
             if (!file.Open(fallback.c_str(), true)) return false;
-            OutputDebugStringW((L"STALKER2CameraTweaks: process log fallback: " +
-                fallback + L"\n").c_str());
+            // Formatting a diagnostic cannot invalidate an open log.
+            try {
+                reportFallback(fallback);
+            } catch (...) {}
             return true;
         } catch (...) {
             if (canonicalOpened) return true;
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
             return false;
         }
+    }
+
+    inline bool OpenProcessLogFile(NativeFile& file, const wchar_t* path) noexcept
+    {
+        return OpenProcessLogFile(file, path, [](const std::wstring& fallback) {
+            OutputDebugStringW((L"STALKER2CameraTweaks: process log fallback: " +
+                fallback + L"\n").c_str());
+        });
     }
 
     // Session-local limit: retain the beginning and one explicit marker, then

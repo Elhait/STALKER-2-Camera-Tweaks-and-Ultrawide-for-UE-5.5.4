@@ -27,6 +27,7 @@ namespace cinematics
         bool writerFlagsValid{};
         bool cinematicContextActive{};
         bool fromCinematicWriter{};
+        bool verifyWriterProjection{};
         std::uint64_t cinematicGeneration{};
         float writerInputFov{std::numeric_limits<float>::quiet_NaN()};
     };
@@ -99,6 +100,7 @@ namespace cinematics
         InvalidSample,
         DegenerateEndpoints,
         OutsideNativeSegment,
+        WriterProjectionMismatch,
     };
 
     struct EnterActivationSnapshot
@@ -123,6 +125,8 @@ namespace cinematics
         bool correctedStartFromDialogue{};
         bool correctedStartFromCurrentSample{};
         bool correctedStartFromCinematic{};
+        bool writerProjectionPending{};
+        std::uint8_t correctedStartWriterFlags{};
         std::uint64_t correctedStartWriterSequence{};
         std::uint32_t correctedStartWriterThreadId{};
         float correctedStartWriterInput{std::numeric_limits<float>::quiet_NaN()};
@@ -225,6 +229,9 @@ namespace cinematics
                 currentStartMatches && !currentStart.fromCinematicWriter;
             state_.correctedStartFromCinematic = !dialogueStartMatches &&
                 currentStartMatches && currentStart.fromCinematicWriter;
+            state_.writerProjectionPending = state_.correctedStartFromCinematic && currentStart.verifyWriterProjection;
+            state_.correctedStartWriterFlags = state_.writerProjectionPending ? currentStart.writerFlags : 0;
+            if (state_.writerProjectionPending) state_.correctedStartValid = false;
             if (dialogueStartMatches) {
                 state_.correctedStartWriterSequence = dialogueStart_.writerSequence;
                 state_.correctedStartWriterThreadId = dialogueStart_.writerThreadId;
@@ -245,7 +252,9 @@ namespace cinematics
 
         EnterActivationSnapshot ObserveWriter(bool admitted,
             std::uint64_t generation, std::uint64_t settingsEpoch,
-            std::uintptr_t source, std::uintptr_t output, float nativeSample)
+            std::uintptr_t source, std::uintptr_t output, float nativeSample,
+            std::uint32_t thread = 0, float aspect = NAN, std::uint8_t flags = 0,
+            std::uint64_t gameplayEpoch = 0)
         {
             if (!state_.armed || !state_.captured) return {};
             if (generation != state_.generation) return Reject(EnterActivationStatus::StaleGeneration);
@@ -265,6 +274,14 @@ namespace cinematics
             state_.writerOutput = output;
             if (!Close(state_.nativeTarget, state_.correctedTarget))
                 return Reject(EnterActivationStatus::EndpointMismatch);
+            if (state_.correctedStartWriterFlags) {
+                if (gameplayEpoch != gameplaySettingsEpoch_) return Reject(EnterActivationStatus::SettingsChanged);
+                if (thread != state_.threadId || flags != state_.correctedStartWriterFlags ||
+                    !std::isfinite(aspect) || std::fabs(aspect - state_.correctedStartWriterAspect) > 0.001f)
+                    return Reject(EnterActivationStatus::WriterProjectionMismatch);
+                state_.writerProjectionPending = false;
+                state_.correctedStartValid = true;
+            }
             state_.status = state_.correctedStartValid
                 ? EnterActivationStatus::MatchedSample
                 : EnterActivationStatus::MissingCorrectedStart;
@@ -324,26 +341,53 @@ namespace cinematics
             writer_ = {true, generation, settingsEpoch, gameplaySettingsEpoch_,
                 receiver, output, thread, sequence, input, result, aspect, flags};
             writer_.component = state_.captured ? state_.component : 0;
+            // Only a Writer observed inside a captured segment can anchor
+            // forward progress. Empty activations never update this record.
+            if (state_.captured && state_.receiver == receiver && state_.threadId == thread &&
+                Close(state_.nativeTarget, state_.correctedTarget) &&
+                InSegment(input, state_.nativeStart, state_.nativeTarget))
+                writer_.nativeTarget = state_.nativeTarget;
         }
 
         EnterActivationCorrectedStartCandidate InheritedWriterStart(
             std::uintptr_t receiver, float start, float aspect, std::uint8_t flags,
             std::uint32_t thread, std::uint64_t gameplayEpoch,
-            std::uint64_t dialogueEpoch, std::uintptr_t component = 0) const noexcept
+            std::uint64_t dialogueEpoch, std::uintptr_t component = 0,
+            const char** evidenceStatus = nullptr, float nativeTarget = NAN, float receiverFov = NAN) const noexcept
         {
             EnterActivationCorrectedStartCandidate candidate{};
             // Also block blind native treatment while the current generation
             // has a known corrected writer, even before an EXIT is observed.
             candidate.cinematicContextActive = cinematicPredecessor_ || writer_.valid;
-            if (!candidate.cinematicContextActive) return candidate;
-            if (!writer_.valid || writer_.receiver != receiver || writer_.thread != thread ||
-                (writer_.component != 0 && writer_.component != component) ||
-                writer_.settingsEpoch != state_.settingsEpoch ||
-                writer_.gameplaySettingsEpoch != gameplayEpoch ||
-                !std::isfinite(aspect) || std::fabs(writer_.aspect - aspect) > 0.001f ||
-                writer_.flags != flags || !ValidFov(start) ||
-                (!Close(start, writer_.input) && !Close(start, writer_.result)))
+            const auto report = [&](const char* status) {
+                if (evidenceStatus) *evidenceStatus = status;
                 return candidate;
+            };
+            if (!writer_.valid) return report("no-writer-evidence");
+            if (writer_.receiver != receiver || writer_.thread != thread ||
+                (writer_.component != 0 && writer_.component != component))
+                return report("receiver-component-thread-mismatch");
+            if (writer_.settingsEpoch != state_.settingsEpoch || writer_.gameplaySettingsEpoch != gameplayEpoch)
+                return report("settings-epoch-mismatch");
+            if (!std::isfinite(aspect) || std::fabs(writer_.aspect - aspect) > 0.001f)
+                return report("aspect-or-flags-mismatch");
+            // Only forward progress from an admitted Writer on the captured
+            // segment qualifies for the wider comparison or constraint toggle.
+            const bool sameSegment = ValidFov(start) && writer_.component &&
+                ValidFov(writer_.nativeTarget) && Close(nativeTarget, writer_.nativeTarget) &&
+                Close(nativeTarget, state_.correctedTarget) && Close(start, receiverFov) &&
+                InSegment(start, writer_.input, writer_.nativeTarget);
+            const bool transientConstraint = sameSegment && writer_.flags == 0x5 && flags == 0x4;
+            if (writer_.flags != flags && !transientConstraint)
+                return report("aspect-or-flags-mismatch");
+            const bool exactStart = ValidFov(start) && (Close(start, writer_.input) || Close(start, writer_.result));
+            constexpr float maxContinuationStartAdvance = 0.6f;
+            // Representable bounds include the configured endpoint without
+            // widening any other FOV or endpoint comparison.
+            const bool advancedStart = sameSegment &&
+                start >= writer_.input - maxContinuationStartAdvance &&
+                start <= writer_.input + maxContinuationStartAdvance;
+            if (!exactStart && !advancedStart) return report("native-start-mismatch");
             candidate.receiver = receiver;
             candidate.activationStartSample = start;
             candidate.writerInputFov = writer_.input;
@@ -356,9 +400,15 @@ namespace cinematics
             candidate.writerFlags = writer_.flags;
             candidate.writerFlagsValid = true;
             candidate.fromCinematicWriter = true;
+            candidate.verifyWriterProjection = transientConstraint || !exactStart;
             candidate.cinematicGeneration = writer_.generation;
             candidate.valid = true;
-            return candidate;
+            return report("matched");
+        }
+
+        std::uint64_t ReentryWriterSequence() const noexcept
+        {
+            return writer_.valid ? writer_.sequence : 0;
         }
 
         void RetireForReentry(const CinematicWriterAssociationSnapshot& association) noexcept
@@ -376,7 +426,15 @@ namespace cinematics
                         association.lastAdmittedOutput.source == writer_.receiver &&
                         association.lastAdmittedOutput.output == writer_.output &&
                         association.latestWriter.sequence == writer_.sequence));
-            const auto writer = compatible ? writer_ : WriterProvenance{};
+            auto writer = compatible ? writer_ : WriterProvenance{};
+            if (writer.valid && !association.writerObserved && ValidFov(writer.nativeTarget)) {
+                if (!state_.captured)
+                    writer.nativeTarget = NAN;
+                else if (!state_.correctedStartFromCinematic || state_.component != writer.component ||
+                    !Close(state_.nativeTarget, writer.nativeTarget) ||
+                    !Close(state_.nativeTarget, state_.correctedTarget))
+                    writer = {};
+            }
             Retire();
             writer_ = writer;
             cinematicPredecessor_ = true;
@@ -399,6 +457,11 @@ namespace cinematics
         {
             return std::isfinite(value) && value > 1.0f && value < 179.0f;
         }
+        static bool InSegment(float value, float start, float target) noexcept
+        {
+            return value >= (std::min)(start, target) && value <= (std::max)(start, target);
+        }
+
         static bool Close(float a, float b) noexcept
         {
             return std::fabs(a - b) <= 0.05f;
@@ -430,6 +493,7 @@ namespace cinematics
             float input{}, result{}, aspect{};
             std::uint8_t flags{};
             std::uintptr_t component{};
+            float nativeTarget{NAN};
         } writer_{};
         bool cinematicPredecessor_{};
         std::uint64_t gameplaySettingsEpoch_{};
@@ -451,6 +515,7 @@ namespace cinematics
         case EnterActivationStatus::InvalidSample: return "invalid-sample";
         case EnterActivationStatus::DegenerateEndpoints: return "degenerate-endpoints";
         case EnterActivationStatus::OutsideNativeSegment: return "outside-native-segment";
+        case EnterActivationStatus::WriterProjectionMismatch: return "writer-projection-mismatch";
         default: return "unavailable";
         }
     }

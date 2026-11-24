@@ -265,6 +265,8 @@ namespace plugin::lifecycle_authority
         std::uint32_t selectedPolicy{};
         GameplayAdmission admission{GameplayAdmission::Unknown};
         bool correctionOnlyAdmitted{};
+        bool cinematicWriterAdmitted{};
+        cinematics::EnterActivationStatus cinematicActivationStatus{};
         cinematics::CinematicWriterAction cinematicAction{cinematics::CinematicWriterAction::PassThroughUnclassified};
     };
 
@@ -1593,6 +1595,24 @@ namespace plugin::lifecycle_authority
                 raw.generation != current->second.cinematicGeneration) return fail();
 
             if (current != working.state_.scopes.end() &&
+                current->second.dialogue == DialoguePhase::Candidate &&
+                !current->second.activeArmingId && !current->second.nativeProvider &&
+                !working.state_.cinematicSelectionActive && !current->second.cinematicActive &&
+                current->second.recovery != RecoveryPhase::Pending &&
+                !current->second.postCinematicExclusionActive &&
+                current->second.receiver == raw.receiver &&
+                raw.fovProvenance == FovProvenance::OriginalNative &&
+                raw.evidence.gameplayRoleProven && raw.evidence.sourceRelationValidated) {
+                // Independently proven Gameplay supersedes a hypothesis on the
+                // same camera even when its previous numeric reference changed.
+                auto terminal = facts;
+                terminal.kind = EventKind::DialogueTerminated;
+                terminal.evidence.dialogueTerminalProven = true;
+                if (!working.Accept(terminal).accepted) return fail();
+                current = working.state_.scopes.find(raw.scope);
+            }
+
+            if (current != working.state_.scopes.end() &&
                 current->second.dialogue == DialoguePhase::Candidate && !current->second.activeArmingId &&
                 raw.fovProvenance == FovProvenance::OriginalNative && working.state_.baseline) {
                 const auto& reference = *working.state_.baseline;
@@ -1954,7 +1974,10 @@ namespace plugin::lifecycle_authority
                 const auto progress = current->second.cinematicActivation.ObserveWriter(
                     current->second.writerSourceAdmitted, raw.generation,
                     w.settings.cinematicEpoch, raw.receiver, raw.outputObject,
-                    static_cast<float>(raw.fov));
+                    static_cast<float>(raw.fov), static_cast<std::uint32_t>(raw.thread),
+                    static_cast<float>(raw.aspect), raw.flags, w.settings.gameplayEpoch);
+                final.cinematicWriterAdmitted = current->second.writerSourceAdmitted;
+                final.cinematicActivationStatus = progress.status;
                 if (progress.status == cinematics::EnterActivationStatus::MatchedSample ||
                     progress.status == cinematics::EnterActivationStatus::CompletedEndpoint) {
                     if (std::isfinite(progress.mappedOutput)) proposal = WriterProposal{progress.mappedOutput, false,

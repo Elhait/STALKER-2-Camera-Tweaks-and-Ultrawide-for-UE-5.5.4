@@ -33,6 +33,15 @@ int main()
     pass &= Check(!recovery.IsPending(), "rearm_clears_pending_state");
 
     recovery.Begin(source, 89.4f, nativeTarget);
+    constexpr float changedTarget = 130.0f;
+    pass &= Check(recovery.Observe(source, nativeTarget, changedTarget, 0.01f) ==
+        dialogue::RecoveryRearm::Decision::Pending,
+        "same_source_old_endpoint_does_not_complete_after_native_target_change");
+    pass &= Check(recovery.Observe(source, changedTarget, changedTarget, 0.01f) ==
+        dialogue::RecoveryRearm::Decision::Complete && !recovery.IsPending(),
+        "same_source_new_native_endpoint_completes_pending_recovery");
+
+    recovery.Begin(source, 89.4f, nativeTarget);
     pass &= Check(recovery.Observe(source, 89.974f, nativeTarget, 0.01f) ==
         dialogue::RecoveryRearm::Decision::Pending,
         "sample_more_than_one_degree_from_target_does_not_rearm");

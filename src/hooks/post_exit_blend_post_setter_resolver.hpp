@@ -1,11 +1,25 @@
 #pragma once
 
 #include "instruction_validator.hpp"
+#include "signatures/signature_definitions.hpp"
 
 #include <cstring>
 
 namespace hooks
 {
+    inline constexpr std::size_t DialogueSetterCallLength = 6;
+
+    // The return probe must remain outside the primary trampoline's relocated
+    // instructions and belong to the same validated native call.
+    inline bool IsIndependentDialogueSetterReturn(const std::uint8_t* call,
+        std::size_t relocatedLength, const std::uint8_t* continuation,
+        const ExecutableSpan& span) noexcept
+    {
+        return relocatedLength == DialogueSetterCallLength &&
+            span.Contains(call, DialogueSetterCallLength + 1) &&
+            continuation == call + DialogueSetterCallLength;
+    }
+
     struct PostExitBlendPostSetterResolution
     {
         std::uint8_t* hook{};

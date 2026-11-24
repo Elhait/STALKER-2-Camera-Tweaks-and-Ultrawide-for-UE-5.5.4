@@ -120,7 +120,7 @@ int main()
     bool pass = true;
     // Writer-bound termination is justified by a current production reference,
     // never callback silence, elapsed time, or FOV equality on another source.
-    for (unsigned control = 0; control != 21; ++control) {
+    for (unsigned control = 0; control != 22; ++control) {
         Fixture stationary;
         plugin::DialogueBoundaryInput callback{130.311f, 0x77,
             control == 10 ? 70.0f : 130.311f, true, 0.01f, 0.02f, 3,
@@ -142,6 +142,7 @@ int main()
         if (control == 14) stationary.postExitProviderOwned = true;
         if (control == 15) stationary.activePolicy.Capture(config::DialogueZoomPolicy::Reduced);
         if (control == 17) stationary.coordinator = camera::CoordinatorState::CinematicActive;
+        if (control == 21) reference.nativeFov.value = 90.0f;
         const auto previousPhase = stationary.phase;
         auto gate = stationary.correctionGate.Acquire();
         std::lock_guard lock(stationary.mutex);
@@ -548,6 +549,33 @@ int main()
         rearmedB.phaseAfter == dialogue::Phase::Inactive &&
         !rearmedB.mutateXmm1,
         "RecoveryRearm completion clears lifecycle without changing native XMM1");
+
+    for (const float endpoint : {90.0f, 145.0f}) {
+        Fixture retargeted;
+        retargeted.Event(130.0f, 0x77, 70.0f, true, 0xA);
+        retargeted.Event(110.0f, 0x77, 70.0f, true, 0xA);
+        retargeted.Event(70.0f, 0x77, 70.0f, true, 0xA);
+        retargeted.Event(75.0f, 0x77, endpoint, true, 0xA);
+        const auto phaseBeforeEndpoint = retargeted.phase;
+        const bool receiverBound = retargeted.candidate.HasReceiverBinding(0xA, 1, 0) &&
+            retargeted.candidate.HasReceiverIdentity(0xA, 0x77, 0);
+        const auto endpointObservation = retargeted.Event(endpoint, 0x77, endpoint, true, 0xA);
+        if (endpointObservation.phaseAfter != dialogue::Phase::Inactive || endpointObservation.mutateXmm1)
+            std::cerr << "retargeted endpoint=" << endpoint
+                << " bound=" << receiverBound
+                << " before=" << static_cast<int>(phaseBeforeEndpoint)
+                << " after=" << static_cast<int>(endpointObservation.phaseAfter)
+                << " action=" << static_cast<int>(endpointObservation.action) << '\n';
+        pass &= Check(endpointObservation.phaseAfter == dialogue::Phase::Inactive &&
+            !endpointObservation.mutateXmm1,
+            "same_receiver_recovery_can_finish_at_changed_native_endpoint");
+    }
+    Fixture dialogueTargetReturn;
+    dialogueTargetReturn.Event(130.0f, 0x77, 70.0f, true, 0xA);
+    dialogueTargetReturn.Event(68.0f, 0x77, 70.0f, true, 0xA);
+    dialogueTargetReturn.Event(69.0f, 0x77, 70.0f, true, 0xA);
+    pass &= Check(dialogueTargetReturn.Event(70.0f, 0x77, 70.0f, true, 0xA).phaseAfter ==
+        dialogue::Phase::Exiting, "settling at the current dialogue target does not establish gameplay return");
 
     Fixture offStarted;
     offStarted.enabled.store(false);
